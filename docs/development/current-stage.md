@@ -83,6 +83,19 @@ GitHub Actions：Node.js 24 下安装、编译、测试全部 **PASS**。
 
 第一阶段 Architecture Review：**PASS**。
 
+第一阶段正式架构地图已经建立并纳入仓库：
+
+```text
+docs/diagrams/phase-1-runtime.architecture.json
+docs/diagrams/phase-1-runtime.html
+```
+
+其中 `.architecture.json` 是 Archify 可维护的架构源模型，`.html` 是独立、可交互的人类可读架构视图。
+
+Archify `showcase` 校验结果：**9 / 9 checks PASS，0 errors，0 warnings，repository evidence verified**。
+
+自动浏览器 `visual-check` 当前不作为阶段阻塞条件；现有机器上的 Edge DevTools 自动检查仍有兼容性问题，但确定性 `validate` / `deliver` 已通过，HTML 已人工打开并可正常交互。
+
 阶段标准：
 
 ```text
