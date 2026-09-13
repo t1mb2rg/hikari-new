@@ -2,6 +2,7 @@ export { defineEvent, defineService } from './runtime/contracts.js';
 export type { Cleanup, EventContract, ServiceContract } from './runtime/contracts.js';
 export { Runtime } from './runtime/runtime.js';
 export type {
+  PluginConfigSchema,
   PluginContext,
   PluginDefinition,
   PluginEventContext,
