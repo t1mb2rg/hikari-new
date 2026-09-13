@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Hikari Phase 1 Runtime 架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/t1mb2rg/hikari-new",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "e9785478f5482a838a60ddb368e7aa40f42b5bab"
+    },
+    "views": [
+      {
+        "id": "load-path",
+        "label": "Plugin 加载主路径",
+        "focus": ["host", "plugin-def", "runtime", "context", "setup"],
+        "note": "宿主把 PluginDefinition 交给 Runtime，Runtime 创建 PluginContext 后调用 setup。"
+      },
+      {
+        "id": "hard-dependency",
+        "label": "Service 硬依赖收敛",
+        "focus": ["runtime", "plugin-def", "services", "context"],
+        "note": "requires 未满足时 Plugin 停在 waiting，Provider 出现后由 reconcile 自动激活。"
+      },
+      {
+        "id": "resource-ownership",
+        "label": "资源归属与逆序清理",
+        "focus": ["context", "scope", "services", "events"],
+        "note": "Service 注册与 Event 订阅返回的 Cleanup 都登记进 Plugin 自己的 EffectScope。"
+      },
+      {
+        "id": "contract-keys",
+        "label": "契约与注册表键",
+        "focus": ["contracts", "plugin-def", "services", "events"],
+        "note": "ServiceContract / EventContract 以 id@version 为唯一键。"
+      }
+    ],
+    "viewBox": [1320, 985]
+  },
+  "components": [
+    {
+      "id": "host",
+      "type": "external",
+      "label": "宿主应用",
+      "sublabel": "Host Application",
+      "tag": "loadPlugin / unloadPlugin / shutdown",
+      "pos": [50, 250],
+      "size": [180, 100]
+    },
+    {
+      "id": "plugin-def",
+      "type": "backend",
+      "label": "PluginDefinition",
+      "sublabel": "插件声明，由宿主提供",
+      "tag": "id / version / requires / provides / config / setup",
+      "pos": [50, 790],
+      "size": [210, 100],
+      "sources": [
+        { "path": "src/runtime/plugin.ts", "line": 29, "label": "PluginDefinition 接口" },
+        { "path": "src/runtime/plugin.ts", "line": 40, "label": "validatePluginDefinition" }
+      ]
+    },
+    {
+      "id": "runtime",
+      "type": "backend",
+      "label": "Runtime",
+      "sublabel": "单 Runtime 生命周期编排",
+      "tag": "waiting → starting → active → stopping / failed",
+      "pos": [440, 245],
+      "size": [200, 120],
+      "sources": [
+        { "path": "src/runtime/runtime.ts", "line": 22, "label": "Runtime 类" },
+        { "path": "src/runtime/runtime.ts", "line": 68, "label": "#reconcile 收敛循环" }
+      ]
+    },
+    {
+      "id": "context",
+      "type": "backend",
+      "label": "PluginContext",
+      "sublabel": "按声明收窄的能力面",
+      "tag": "pluginId / services / events / defer",
+      "pos": [750, 250],
+      "size": [190, 110],
+      "sources": [
+        { "path": "src/runtime/plugin-context.ts", "line": 11, "label": "createPluginContext" }
+      ]
+    },
+    {
+      "id": "setup",
+      "type": "backend",
+      "label": "Plugin setup()",
+      "sublabel": "插件代码本体",
+      "tag": "可返回一个 Cleanup",
+      "pos": [1080, 250],
+      "size": [180, 110]
+    },
+    {
+      "id": "services",
+      "type": "database",
+      "label": "ServiceRegistry",
+      "sublabel": "Service 注册表",
+      "tag": "一个契约仅一个活动 Provider",
+      "pos": [452, 540],
+      "size": [176, 105],
+      "sources": [
+        { "path": "src/runtime/service-registry.ts", "line": 10, "label": "ServiceRegistry 类" }
+      ]
+    },
+    {
+      "id": "scope",
+      "type": "backend",
+      "label": "EffectScope",
+      "sublabel": "每个 Plugin 一个资源账本",
+      "tag": "逆序清理，单个失败不中断",
+      "pos": [757, 540],
+      "size": [176, 105],
+      "sources": [
+        { "path": "src/runtime/effect-scope.ts", "line": 3, "label": "EffectScope 类" }
+      ]
+    },
+    {
+      "id": "events",
+      "type": "messagebus",
+      "label": "EventBus",
+      "sublabel": "事件派发，不模拟请求响应",
+      "tag": "多订阅者，Promise.allSettled",
+      "pos": [1010, 540],
+      "size": [175, 105],
+      "sources": [
+        { "path": "src/runtime/event-bus.ts", "line": 11, "label": "EventBus 类" }
+      ]
+    },
+    {
+      "id": "contracts",
+      "type": "backend",
+      "label": "contracts",
+      "sublabel": "契约标识模块",
+      "tag": "defineService / defineEvent 产出冻结对象",
+      "pos": [755, 787],
+      "size": [210, 105],
+      "sources": [
+        { "path": "src/runtime/contracts.ts", "line": 16, "label": "defineService / defineEvent" },
+        { "path": "src/runtime/contracts.ts", "line": 28, "label": "serviceKey / eventKey" }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Phase 1 范围：单 Runtime 实例 · 全部运行于本地同一进程",
+      "wraps": ["host", "plugin-def", "runtime", "context", "setup", "services", "scope", "events", "contracts"],
+      "pad": 20
+    }
+  ],
+  "connections": [
+    {
+      "id": "host-load",
+      "from": "host",
+      "to": "runtime",
+      "label": "loadPlugin / unloadPlugin / shutdown",
+      "variant": "emphasis"
+    },
+    {
+      "id": "def-input",
+      "from": "plugin-def",
+      "to": "runtime",
+      "label": "definition + config"
+    },
+    {
+      "id": "runtime-context",
+      "from": "runtime",
+      "to": "context",
+      "label": "createPluginContext"
+    },
+    {
+      "id": "context-setup",
+      "from": "context",
+      "to": "setup",
+      "label": "setup(context, config)"
+    },
+    {
+      "id": "runtime-services",
+      "from": "runtime",
+      "to": "services",
+      "label": "has / isProvidedBy",
+      "labelAt": [540, 405]
+    },
+    {
+      "id": "context-services",
+      "from": "context",
+      "to": "services",
+      "label": "get / provide",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [700, 415]
+    },
+    {
+      "id": "context-scope",
+      "from": "context",
+      "to": "scope",
+      "label": "defer(cleanup)",
+      "labelAt": [845, 480]
+    },
+    {
+      "id": "context-events",
+      "from": "context",
+      "to": "events",
+      "label": "on / emit",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [1090, 415]
+    },
+    {
+      "id": "scope-services",
+      "from": "scope",
+      "to": "services",
+      "label": "注销 Provider",
+      "labelAt": [692, 592]
+    },
+    {
+      "id": "scope-events",
+      "from": "scope",
+      "to": "events",
+      "label": "退订 Event",
+      "labelAt": [971, 592]
+    },
+    {
+      "id": "contracts-def",
+      "from": "contracts",
+      "to": "plugin-def",
+      "label": "ServiceContract / EventContract",
+      "fromSide": "left",
+      "toSide": "right",
+      "labelAt": [507, 840]
+    },
+    {
+      "id": "contracts-services",
+      "from": "contracts",
+      "to": "services",
+      "label": "serviceKey = id@version",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [700, 700]
+    },
+    {
+      "id": "contracts-events",
+      "from": "contracts",
+      "to": "events",
+      "label": "eventKey = id@version",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "labelAt": [1010, 700]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "生命周期与收敛",
+      "items": [
+        "插件状态机只有五态：waiting / starting / active / stopping / failed",
+        "loadPlugin 先校验 definition，再用 config.parse 解析配置；失败则完全不注册",
+        "reconcile 循环收敛：requires 未满足停在 waiting，Provider 出现后自动激活",
+        "unloadPlugin 先递归停用依赖方（deactivateTree），再释放 Provider 自身",
+        "shutdown 按加载逆序逐个卸载"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "契约与依赖护栏",
+      "items": [
+        "ServiceContract / EventContract 以 id@version 为键，由 defineService / defineEvent 产出冻结对象",
+        "Consumer 只能 get 自己在 requires 声明的 Service，否则抛 UndeclaredServiceDependencyError",
+        "Provider 只能 provide 自己在 provides 声明的 Service，否则抛 UndeclaredServiceProviderError",
+        "声明了 provides 却没在 setup 中真正注册，激活以 MissingDeclaredServiceError 失败",
+        "一个契约同时只允许一个活动 Provider，重复注册抛 ServiceAlreadyProvidedError"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "资源归属与清理",
+      "items": [
+        "Service 注册与 Event 订阅返回的 Cleanup 都登记进该 Plugin 的 EffectScope",
+        "setup 返回的 Cleanup 同样由 scope.defer 接管",
+        "dispose 逆序执行；单个清理失败不会阻止其余资源释放，最后汇总为 AggregateError",
+        "setup 失败时先标记 failed，再把 setup 错误与清理错误合并为 AggregateError",
+        "EventBus.emit 用 Promise.allSettled 等待全部订阅者，有失败则抛 AggregateError"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Phase 1 边界：以下均未实现",
+      "items": [
+        "无跨 Runtime 通信、无网络 / RPC、无远程 Provider",
+        "无 Capability 第二注册表、无 Provider 智能选择、无全局状态中心",
+        "无 Chronicle / Memory / World / Goal 领域实现",
+        "无完整权限系统、无音视频流式资源框架",
+        "只有硬依赖，没有可选 Service 依赖；failed 不自动重试，需卸载后重新加载"
+      ]
+    }
+  ]
+}
