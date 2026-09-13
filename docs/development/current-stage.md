@@ -1,134 +1,137 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**核心架构 v0 已冻结，进入实现准备阶段**
+> 状态：**第一阶段 Runtime 基础完成，Functional PASS + Architecture PASS**
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 当前实现边界以 `docs/architecture/core-architecture-v0.md` 与 `docs/architecture/v0-boundary-review.md` 为准。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`。
 
 ---
 
 ## 当前结论
 
-核心架构已经通过第一轮 Boundary Review。
-
-当前不再继续扩张核心抽象，而开始验证最小运行生态：
+第一阶段已经完成新的最小运行生态：
 
 ```text
 Runtime
 + Plugin
 + Service
 + Event
-+ 生命周期 / 资源清理
++ Effect / 资源清理
++ 基础配置验证
 ```
 
-第一阶段目标不是迁移旧 Hikari，也不是直接实现完整 Awareness、Memory、Goal 或多节点系统。
+这一阶段没有迁移旧 Hikari，也没有实现完整 Awareness、Memory、Goal、Chronicle 或多节点系统。
 
-目标是证明新的插件运行基础可以稳定工作，并且不会重新长成中央大脑、万能通信层或业务类型树。
+当前已经证明：新的 Plugin 运行基础可以稳定工作，并且没有重新长成中央大脑、万能通信层或业务类型树。
 
 ---
 
-## 第一阶段实现范围
+## 已实现
 
-允许实现：
+### Runtime
 
-1. Runtime 最小骨架；
-2. Plugin 生命周期；
-3. 最小 Plugin Definition / Manifest；
-4. Service 注册、发现与依赖满足；
-5. Event 注册与派发；
-6. Effect / 资源归属与自动清理；
-7. 用于验证机制的测试插件；
-8. 自动化测试。
+负责：
 
-暂不实现：
+- Plugin 加载、启动、等待、停止与卸载；
+- Service 注册、发现与硬依赖满足；
+- Event 注册与派发；
+- Effect / 资源归属与自动清理；
+- Plugin 基础配置验证。
 
-- 跨 Runtime 通信；
-- 节点网络协议；
-- 远程 Provider；
-- 完整 Capability Registry；
-- Provider 智能选择；
-- 完整权限系统；
-- Chronicle / Memory / World / Goal 的完整领域实现；
-- 完整 Skill / Tool 体系；
-- 旧 Hikari 大规模迁移。
+### Plugin
 
----
+Runtime 只认识一种 `PluginDefinition`。
 
-## v0 插件模型
-
-Runtime 只认识一种 Plugin。
-
-不建立：
-
-```text
-AgentPlugin
-VoicePlugin
-SensorPlugin
-StatePlugin
-...
-```
-
-插件差异由它提供、依赖和监听的契约以及内部逻辑体现。
-
-最小声明目前只需要表达：
+当前最小声明：
 
 ```text
 id
 version
 requires
 provides
-config schema
+config schema（可选）
+setup
 ```
 
-具体文件格式在实现设计阶段决定，不在核心架构阶段继续推演。
+不建立 AgentPlugin / VoicePlugin / SensorPlugin 等业务继承树。
 
----
-
-## v0 交互模型
-
-```text
-需要能力
-→ Service
-
-通知变化
-→ Event
-
-长期事实
-→ Chronicle（后续领域阶段）
-
-真实副作用
-→ Action（后续领域阶段）
-```
-
-第一实现阶段只需要真正完成 Service 与 Event。
-
-必须保持：
+### Service
 
 - Service 承担主要有返回值的数据调用；
+- Consumer 只能使用自己声明的 `requires`；
+- Provider 只能提供自己声明的 `provides`；
+- 缺失依赖时 Consumer 等待；
+- Provider 出现后自动激活；
+- Provider 消失时依赖关系自动收敛；
+- Provider 恢复后 Consumer 可以重新激活。
+
+当前第一版故意只允许一个 Service 契约存在一个活动 Provider。
+
+### Event
+
 - Event 只承担实时通知；
-- 不设计万能消息对象；
-- 不要求同 Runtime 内调用序列化或经过网络式通信层。
+- 支持多个订阅者；
+- 订阅随 Plugin 生命周期自动清理；
+- 不承担普通查询，也不模拟 Service 请求 / 响应。
 
 ---
 
-## 下一步
+## 验收状态
 
-进入编码前只做一次短的实现设计讨论：
+本地自动化测试：**6 / 6 PASS**。
 
-1. 第一版语言与工具链；
-2. 最小目录结构；
-3. 测试框架；
-4. Runtime / Plugin / Service / Event 的第一组接口；
-5. 第一阶段验收命令。
+GitHub Actions：Node.js 24 下安装、编译、测试全部 **PASS**。
 
-完成后即可创建代码骨架。
+第一阶段 Architecture Review：**PASS**。
 
-不再继续讨论未来多节点、对象作用域、复杂 Provider 选择等问题，除非真实实现证明当前模型无法表达需求。
+阶段标准：
+
+```text
+Functional PASS
++
+Architecture PASS
++
+Docs / Contracts updated
+```
+
+已满足。
+
+---
+
+## 当前明确仍不做
+
+- 跨 Runtime 通信；
+- 节点网络协议；
+- 远程 Provider；
+- Capability 第二注册表；
+- Provider 智能选择；
+- 全局状态中心；
+- 完整权限系统；
+- Chronicle / Memory / World / Goal 的完整领域实现；
+- 完整 Skill / Tool 体系；
+- 音视频流式资源框架；
+- 旧 Hikari 大规模迁移。
+
+这些问题继续服从冻结规则：没有真实实现问题，不提前增加抽象。
+
+---
+
+## 下一阶段原则
+
+第一阶段 Runtime 地基已经完成。
+
+下一阶段不能直接继续堆功能，仍然需要先做一次新的 Boundary Review，明确首个真实 Hikari 领域 / 插件应该验证什么。
+
+优先目标应该是：
+
+> 用真实 Hikari 需求开始检验这套 Plugin / Service / Event 基础，而不是继续从纯理论中扩展 Runtime。
+
+候选方向可以包括连续性、事实史或一个足够小的真实能力插件，但需要在下一阶段开始前重新讨论边界。
 
 ---
 
 ## 开发纪律
 
-每个重要阶段遵循：
+继续遵循：
 
 ```text
 Boundary Review
@@ -140,16 +143,6 @@ Architecture Review
 文档 / 契约更新
 ```
 
-阶段通过标准：
+如果真实实现暴露当前边界不成立，不允许用隐藏依赖或临时特例绕过，应暂停实现并重新审查架构。
 
-```text
-Functional PASS
-+
-Architecture PASS
-+
-Docs / Contracts updated
-```
-
-如果实现中发现当前边界不成立，不允许用隐藏依赖或临时特例绕过，应暂停实现并重新审查架构。
-
-> 当前策略：让真实代码开始反过来教育架构。
+> 当前策略：让真实代码继续反过来教育架构。
