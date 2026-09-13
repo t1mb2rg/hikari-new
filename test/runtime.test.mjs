@@ -173,3 +173,31 @@ test('runtime does not need to know service business semantics', async () => {
 
   assert.equal(result, 42);
 });
+
+test('plugin config is validated before startup and parsed value is passed to setup', async () => {
+  const runtime = new Runtime();
+  let received;
+
+  const plugin = {
+    id: 'config.consumer',
+    version: '1.0.0',
+    config: {
+      parse(input) {
+        if (!input || typeof input !== 'object' || typeof input.name !== 'string') {
+          throw new Error('invalid config');
+        }
+        return { name: input.name.trim() };
+      },
+    },
+    setup(_ctx, config) {
+      received = config;
+    },
+  };
+
+  await runtime.loadPlugin(plugin, { name: ' hikari ' });
+  assert.deepEqual(received, { name: 'hikari' });
+
+  const invalidRuntime = new Runtime();
+  await assert.rejects(() => invalidRuntime.loadPlugin(plugin, {}), /invalid config/);
+  assert.equal(invalidRuntime.getPluginState('config.consumer'), undefined);
+});
