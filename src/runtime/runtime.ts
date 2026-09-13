@@ -4,6 +4,7 @@ import { EventBus } from './event-bus.js';
 import { DuplicatePluginError, MissingDeclaredServiceError } from './errors.js';
 import { createPluginContext } from './plugin-context.js';
 import {
+  type AnyPluginDefinition,
   type PluginDefinition,
   type PluginState,
   validatePluginDefinition,
@@ -11,7 +12,8 @@ import {
 import { ServiceRegistry } from './service-registry.js';
 
 interface PluginRecord {
-  readonly definition: PluginDefinition;
+  readonly definition: AnyPluginDefinition;
+  readonly config: unknown;
   state: PluginState;
   scope: EffectScope | undefined;
   error: unknown | undefined;
@@ -22,12 +24,17 @@ export class Runtime {
   readonly #events = new EventBus();
   readonly #plugins = new Map<string, PluginRecord>();
 
-  async loadPlugin(definition: PluginDefinition): Promise<PluginState> {
+  async loadPlugin<TConfig>(
+    definition: PluginDefinition<TConfig>,
+    configInput?: unknown,
+  ): Promise<PluginState> {
     validatePluginDefinition(definition);
     if (this.#plugins.has(definition.id)) throw new DuplicatePluginError(definition.id);
 
+    const config = definition.config ? definition.config.parse(configInput) : undefined;
     const record: PluginRecord = {
       definition,
+      config,
       state: 'waiting',
       scope: undefined,
       error: undefined,
@@ -77,7 +84,7 @@ export class Runtime {
     }
   }
 
-  #requirementsSatisfied(definition: PluginDefinition): boolean {
+  #requirementsSatisfied(definition: AnyPluginDefinition): boolean {
     return (definition.requires ?? []).every((contract) => this.#services.has(contract));
   }
 
@@ -90,7 +97,7 @@ export class Runtime {
 
     try {
       const context = createPluginContext(definition, scope, this.#services, this.#events);
-      const cleanup = await definition.setup(context);
+      const cleanup = await definition.setup(context, record.config);
       if (cleanup) scope.defer(cleanup);
 
       for (const contract of definition.provides ?? []) {
