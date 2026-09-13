@@ -2,3 +2,7 @@ node_modules/
 dist/
 coverage/
 *.log
+
+# Local AI development tooling
+.claude/
+.serena/
