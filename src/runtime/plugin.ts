@@ -22,15 +22,22 @@ export interface PluginContext {
   defer(cleanup: Cleanup): void;
 }
 
-export interface PluginDefinition {
+export interface PluginConfigSchema<T> {
+  parse(input: unknown): T;
+}
+
+export interface PluginDefinition<TConfig = undefined> {
   readonly id: string;
   readonly version: string;
   readonly requires?: readonly ServiceContract<unknown>[];
   readonly provides?: readonly ServiceContract<unknown>[];
-  setup(context: PluginContext): MaybePromise<void | Cleanup>;
+  readonly config?: PluginConfigSchema<TConfig>;
+  setup(context: PluginContext, config: TConfig): MaybePromise<void | Cleanup>;
 }
 
-export function validatePluginDefinition(definition: PluginDefinition): void {
+export type AnyPluginDefinition = PluginDefinition<any>;
+
+export function validatePluginDefinition(definition: AnyPluginDefinition): void {
   if (!definition.id.trim()) throw new Error('Plugin id must not be empty.');
   if (!definition.version.trim()) throw new Error(`Plugin ${definition.id} must have a version.`);
   assertUnique(definition.id, 'requires', definition.requires ?? []);
