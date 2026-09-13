@@ -5,11 +5,11 @@ import {
   UndeclaredServiceDependencyError,
   UndeclaredServiceProviderError,
 } from './errors.js';
-import type { PluginContext, PluginDefinition } from './plugin.js';
+import type { AnyPluginDefinition, PluginContext } from './plugin.js';
 import { ServiceRegistry } from './service-registry.js';
 
 export function createPluginContext(
-  definition: PluginDefinition,
+  definition: AnyPluginDefinition,
   scope: EffectScope,
   services: ServiceRegistry,
   events: EventBus,
