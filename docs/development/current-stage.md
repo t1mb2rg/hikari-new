@@ -1,14 +1,14 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**第一阶段 Runtime 基础完成，Functional PASS + Architecture PASS**
+> 状态：**第二阶段进行中——仅 P2-01 Continuity v1 完成（Functional PASS + Architecture PASS），P2-02 / P2-03 / P2-04 未完成**
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`。
 
 ---
 
 ## 当前结论
 
-第一阶段已经完成新的最小运行生态：
+第一阶段完成了新的最小运行生态：
 
 ```text
 Runtime
@@ -19,9 +19,34 @@ Runtime
 + 基础配置验证
 ```
 
-这一阶段没有迁移旧 Hikari，也没有实现完整 Awareness、Memory、Goal、Chronicle 或多节点系统。
+第二阶段在这套运行生态之上，开始生长第一个真实领域模块。
 
-当前已经证明：新的 Plugin 运行基础可以稳定工作，并且没有重新长成中央大脑、万能通信层或业务类型树。
+第二阶段分解为四项，当前进度：
+
+```text
+P2-01  Continuity v1       已完成
+P2-02  Chronicle           未开始
+P2-03  启动入口            未开始
+P2-04  生命周期验收        未开始
+```
+
+**P2-01 已完成的部分**：
+
+```text
+Continuity
++ 显式创建长期主体
++ 严格校验的持久化证据
++ 全新 Runtime 生命周期恢复同一主体
++ continuity.current Service
+```
+
+第二阶段整体**尚未收口**。P2-02 / P2-03 / P2-04 完成前，第二阶段不能按阶段标准归档，后续三项也各自需要先做 Boundary Review。
+
+两阶段都没有迁移旧 Hikari，也没有实现完整 Awareness、Memory、Goal、Chronicle 或多节点系统。
+
+当前已经证明：
+
+> 新的 Plugin 运行基础可以稳定工作，并且没有重新长成中央大脑、万能通信层或业务类型树；同时 Runtime 之上可以生长真实领域模块，而 Runtime 完全不需要知道该领域的语义。
 
 ---
 
@@ -73,17 +98,62 @@ setup
 - 订阅随 Plugin 生命周期自动清理；
 - 不承担普通查询，也不模拟 Service 请求 / 响应。
 
+### Continuity
+
+回答 `core-architecture-v0.md` §6.1 的问题：
+
+> “这些经历属于谁？”
+
+本阶段只实现其中的最小生命线：一个 Hikari 可以被显式创建，并在一次全新的 Runtime 生命周期中恢复为同一个长期主体。
+
+- 创建只能通过显式调用 `initializeHikari()`；
+- 恢复只能通过 `restoreHikari()`，且为纯读取；
+- 身份以 `continuity/origin.json` 持久化，写入采用临时文件 + 原子替换；
+- 对外只通过 `continuity.current@1` 暴露 `HikariIdentity`；
+- `OriginRecordV1` 持久化格式不暴露给消费者。
+
+Continuity 是 Runtime **之上**的模块，从独立入口导入，`src/index.ts` 未修改。
+
+Continuity **不**负责 Memory、World、Goal、设备认证或权限判断，也不知道 Chronicle。
+
 ---
 
 ## 验收状态
 
-本地自动化测试：**6 / 6 PASS**。
+### P2-01 Continuity v1
 
-GitHub Actions：Node.js 24 下安装、编译、测试全部 **PASS**。
+本次新增文件：**12 个**。
+
+```text
+src/continuity/  (9)
+  contracts.ts  errors.ts  index.ts  initialize.ts  origin-record.ts
+  plugin.ts  restore.ts  storage.ts  types.ts
+test/continuity.test.mjs                          (1)
+docs/development/phase-2-continuity.md            (1)
+docs/architecture/phase-2-continuity-architecture-review.md  (1)
+```
+
+修改文件：`package.json` 与 `package-lock.json`（新增 `@types/node` devDependency，工具链依赖）、`docs/development/current-stage.md`。
+
+`src/runtime/` 与 `src/index.ts` 未修改。
+
+本地自动化测试：**23 / 23 PASS**（17 个 Continuity + 6 个 Runtime）。
+
+编译：`tsc` 无错误。
+
+P2-01 Architecture Review：**PASS**。
+
+图谱变更分析（`git add` 后执行，实际覆盖 Continuity 新文件）：**15 files / 124 symbols / 18 flows，risk critical，无 partial / truncated**。critical 构成已定位——45 个为文档标题符号，79 个为 Continuity 代码符号，18 条受影响流程全部是本阶段新增流程，无任何 `src/runtime/` 符号或 Runtime 流程受影响。详见 P2-01 架构评审 §14。
+
+P2-01 尚未建立对应的架构地图，也未在 CI 上验证（尚未推送）。
+
+本机图谱工具限制：MCP `detect_changes` 因 LadybugDB 被其他 GitNexus 进程锁定而不可用，改用 CLI 兜底；`query()` 的关键词 / 语义检索因 FTS 扩展加载失败而不可用。二者均不影响图遍历能力。
+
+### 第一阶段
 
 第一阶段 Architecture Review：**PASS**。
 
-第一阶段正式架构地图已经建立并纳入仓库：
+第一阶段正式架构地图已纳入仓库：
 
 ```text
 docs/diagrams/phase-1-runtime.architecture.json
@@ -96,7 +166,7 @@ Archify `showcase` 校验结果：**9 / 9 checks PASS，0 errors，0 warnings，
 
 自动浏览器 `visual-check` 当前不作为阶段阻塞条件；现有机器上的 Edge DevTools 自动检查仍有兼容性问题，但确定性 `validate` / `deliver` 已通过，HTML 已人工打开并可正常交互。
 
-阶段标准：
+### 阶段标准
 
 ```text
 Functional PASS
@@ -106,7 +176,9 @@ Architecture PASS
 Docs / Contracts updated
 ```
 
-已满足。
+第一阶段：**已满足**。
+
+第二阶段：**未满足**——仅 P2-01 达到该标准，P2-02 / P2-03 / P2-04 未完成。
 
 ---
 
@@ -119,7 +191,10 @@ Docs / Contracts updated
 - Provider 智能选择；
 - 全局状态中心；
 - 完整权限系统；
-- Chronicle / Memory / World / Goal 的完整领域实现；
+- Memory / World / Goal 的领域实现；
+- Chronicle 的完整领域实现（P2-02 未开始；启动入口 P2-03、生命周期验收 P2-04 同样未开始）；
+- `getOrCreate` 与任何全局身份中心；
+- 身份迁移、备份、修复、升级；
 - 完整 Skill / Tool 体系；
 - 音视频流式资源框架；
 - 旧 Hikari 大规模迁移。
@@ -128,17 +203,23 @@ Docs / Contracts updated
 
 ---
 
-## 下一阶段原则
+## 第二阶段后续工作
 
-第一阶段 Runtime 地基已经完成。
+第二阶段尚未收口。剩余三项：
 
-下一阶段不能直接继续堆功能，仍然需要先做一次新的 Boundary Review，明确首个真实 Hikari 领域 / 插件应该验证什么。
+```text
+P2-02  Chronicle           未开始
+P2-03  启动入口            未开始
+P2-04  生命周期验收        未开始
+```
+
+每一项都需要先做自己的 Boundary Review，明确要验证什么，再进入实现。
+
+P2-01 刻意只覆盖了「身份是谁」这一条最小生命线。任何超出它的扩展——多主体、身份迁移、设备绑定、Memory——都不属于当前已批准范围。
 
 优先目标应该是：
 
-> 用真实 Hikari 需求开始检验这套 Plugin / Service / Event 基础，而不是继续从纯理论中扩展 Runtime。
-
-候选方向可以包括连续性、事实史或一个足够小的真实能力插件，但需要在下一阶段开始前重新讨论边界。
+> 继续用真实 Hikari 需求检验这套基础，而不是从纯理论中扩展 Runtime 或 Continuity。
 
 ---
 
