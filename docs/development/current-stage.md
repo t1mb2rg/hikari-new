@@ -1,8 +1,8 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**第二阶段进行中——P2-01 Continuity v1、P2-02 Chronicle v1 与 P2-03 启动入口完成（Functional PASS + Architecture PASS），P2-04 未完成**
+> 状态：**Phase 2 已完成本地最终验收并正式收口**（P2-01 ~ P2-04 全部通过 Functional / Architecture Review）；远端 CI 验证仍待 push 后执行
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`。
 
 ---
 
@@ -27,7 +27,7 @@ Runtime
 P2-01  Continuity v1       已完成
 P2-02  Chronicle v1        已完成
 P2-03  启动入口            已完成
-P2-04  生命周期验收        未开始
+P2-04  生命周期验收        已完成
 ```
 
 **P2-01 已完成的部分**：
@@ -61,7 +61,27 @@ Chronicle
 + 零创建恢复路径（start 前后持久字节不变）
 ```
 
-第二阶段整体**尚未收口**。P2-04 完成前，第二阶段不能按阶段标准归档，P2-04 也需要先做 Boundary Review。
+**P2-04 已完成的部分**：
+
+```text
+生命周期验收（跨 Runtime）
++ Runtime A 恢复主体 → 挂载事实史 → append Fact A → shutdown
++ 全新 Runtime B 恢复同一主体 → 挂载同一事实史 → 读回同一 Fact A
++ hikariId 与 DurableFact 全部字段跨 Runtime 一致
++ 两个 Runtime 不共享 Runtime / Context / Plugin / Service / identity 对象
++ 新 Runtime 读磁盘而非上一个 Runtime 的内存
++ 7 种可检测损坏诚实失败，不创建、不修复、不截断、不重写
+```
+
+P2-04 **没有新增任何生产代码**：`src/` 零改动，验收证据由一个不提供任何 Service 的测试专用 Plugin 承担。
+
+第二阶段四项验收全部达到阶段标准，**Phase 2 已完成本地最终验收并正式收口**。
+
+收口后仍有一个未结项：全部工作**尚未 push**（P2-01 / P2-02 / P2-03 已本地提交，P2-04 共 4 个文件待提交），因此**远端 CI 从未跑过这批测试**。
+
+**第二阶段不新增架构地图（已决定，非未结项）**：第一阶段的图存在，是因为那一步要固定「Runtime 不带领域语义」这条边界本身；第二阶段的产物是接线与验收——P2-01 / P2-02 / P2-03 的因果与边界已由各自的实现文档与架构评审完整保存，P2-04 **没有新增任何生产结构**。此时硬画一张图只会复述已有文字，不增加信息，因此**不以架构图作为第二阶段收口条件**。后续若出现真实的结构变化，再按那时的需要决定是否建图。
+
+另有一条已记录的格式限制随第二阶段进入下一阶段：**Chronicle v1 没有完整性标记**，因此「fact 行被删光、header 完好」的 store 与全新 store 在结构上无法区分，会被报告成空历史。它不影响关闭判断，但是任何后续 Chronicle 完整性工作的明确输入（详见 P2-04 实现文档 §9 与架构评审 §11）。
 
 两阶段都没有迁移旧 Hikari，也没有实现完整 Awareness、Memory、Goal、Chronicle 或多节点系统。
 
@@ -218,7 +238,7 @@ P2-01 Architecture Review：**PASS**。
 
 图谱变更分析（`git add` 后执行，实际覆盖 Continuity 新文件）：**15 files / 124 symbols / 18 flows，risk critical，无 partial / truncated**。critical 构成已定位——45 个为文档标题符号，79 个为 Continuity 代码符号，18 条受影响流程全部是本阶段新增流程，无任何 `src/runtime/` 符号或 Runtime 流程受影响。详见 P2-01 架构评审 §14。
 
-P2-01 尚未建立对应的架构地图，也未在 CI 上验证（尚未推送）。
+P2-01 尚未在 CI 上验证（尚未推送）。
 
 本机图谱工具限制：MCP `detect_changes` 因 LadybugDB 被其他 GitNexus 进程锁定而不可用，改用 CLI 兜底；`query()` 的关键词 / 语义检索因 FTS 扩展加载失败而不可用。二者均不影响图遍历能力。
 
@@ -247,7 +267,7 @@ P2-02 Architecture Review：**PASS**。
 
 图谱变更分析（`git add` 后执行，实际覆盖 Chronicle 新文件）：**14 files / 205 symbols / 46 flows，risk critical，无 partial / truncated**。critical 构成已定位——57 个为文档标题符号，148 个为 Chronicle 代码符号，46 条受影响流程全部是本阶段新增流程，无任何 `src/runtime/` 或 `src/continuity/` 符号、也无任何 Runtime / Continuity 流程受影响。详见 P2-02 架构评审 §21。
 
-P2-02 尚未建立对应的架构地图，也未在 CI 上验证（尚未推送）。
+P2-02 尚未在 CI 上验证（尚未推送）。
 
 本机图谱工具限制：索引中存在一处假阳性（`test/runtime.test.mjs ACCESSES test/chronicle.test.mjs` 三条边，而该文件实际零引用 Chronicle）；分析器自报流程分析未穷尽（24 个入口未追踪、7 条流程因 maxProcesses 丢弃、58 个 callee 因 maxBranching 跳过），因此受影响流程数只应读作下界。`query()` 的关键词 / 语义检索仍因 FTS 扩展加载失败而不可用。
 
@@ -275,9 +295,39 @@ P2-03 Architecture Review：**PASS**。
 
 图谱变更分析（`git add` 后执行，实际覆盖 CLI 新文件）：**10 files / 120 symbols / 27 flows，risk critical，无 partial / truncated**。critical 构成已定位——48 个为文档标题符号，72 个为 CLI 代码符号（`src/cli/` 60 个 + `test/cli.test.mjs` 12 个），无任何 `src/runtime/`、`src/continuity/`、`src/chronicle/` 或 `src/index.ts` 符号，27 条受影响流程全部是 CLI 自身流程。CLI 向外的 IMPORTS 边 14 条，全部指向公开入口，无一条指向存储模块。详见 P2-03 架构评审 §17。
 
-P2-03 尚未建立对应的架构地图，也未在 CI 上验证（尚未推送）。
+P2-03 尚未在 CI 上验证（尚未推送）。
 
 本机图谱工具限制：分析器自报流程分析未穷尽（33 个入口未追踪、10 条流程因 maxProcesses 丢弃、70 个 callee 因 maxBranching 跳过），因此受影响流程数只应读作下界；索引元数据自报落后一个提交，但 `src/cli/` 符号确实已在图内；跨语言字段解析不完整（`.code` / `.stdout` / `.stderr` 等字段的引用查询会返回空结果，空不等于无人使用）。`query()` 的关键词 / 语义检索仍因 FTS 扩展加载失败而不可用。
+
+### P2-04 生命周期验收
+
+本次新增文件：**3 个**。
+
+```text
+test/phase-2-lifecycle.test.mjs                                   (1)
+docs/development/phase-2-lifecycle.md                             (1)
+docs/architecture/phase-2-final-architecture-review.md            (1)
+```
+
+修改文件：`docs/development/current-stage.md`。
+
+**`src/` 零改动**（`git diff HEAD --stat -- src/` 输出为空）。本轮没有新增任何生产代码，也没有为测试修改 Runtime API。
+
+本地自动化测试：**98 / 98 PASS**（16 个 P2-04 + 26 个 CLI + 33 个 Chronicle + 17 个 Continuity + 6 个 Runtime）。
+
+编译：`tsc --noEmit` 无错误。
+
+验收本身经过变异测试：向 `dist/chronicle/service.js` 注入模块级共享缓存（模拟跨 Runtime 复用内存状态，`src/` 未改动、事后重建恢复）后 **3 个用例失败**。首次变异只触发 2 个，暴露出当时的磁盘测试对「内容是否来自内存」没有判别力，据此补写了真正有判别力的用例（`test/phase-2-lifecycle.test.mjs` 第 3 条）。详见 P2-04 实现文档 §10。
+
+P2-04 Architecture Review：**PASS**。
+
+图谱变更分析（`git add` + 重建索引后执行）：**4 files / 113 symbols / 0 flows，risk low，无 partial / truncated**。构成为测试代码 69 个 + 三份文档标题 44 个，`src/` 零符号，受影响流程 0 条。
+
+第一次执行返回 `changed_count: 0` 而 `changed_files: 1`——新文件从未被索引，没有符号可供映射。重建索引后才是有效结果，这一点已记入评审 §12。
+
+P2-04 尚未在 CI 上验证（全部工作尚未推送）。
+
+本机图谱工具限制：**图谱不解析 `.mjs` 的 IMPORTS 边**（全图 89 条 import 边全部来自 TypeScript scope），因此针对测试文件的导入查询返回空——这个空结果不是「没有依赖」的证据，本轮该结论改用文本检索获得；分析器自报流程分析未穷尽（29 个入口未追踪、74 个 callee 因 maxBranching 跳过、4 条 walk 被预算截断），因此受影响流程数只应读作下界；跨语言字段解析不完整（113 处），`.code` / `.stdout` / `.stderr` 等字段的引用查询会返回空结果，空不等于无人使用。`query()` 的关键词 / 语义检索仍因 FTS 扩展加载失败而不可用。
 
 ### 第一阶段
 
@@ -308,7 +358,7 @@ Docs / Contracts updated
 
 第一阶段：**已满足**。
 
-第二阶段：**未满足**——P2-01 / P2-02 / P2-03 达到该标准，P2-04 未完成。
+第二阶段：**已满足**——P2-01 / P2-02 / P2-03 / P2-04 四项全部达到该标准，已正式收口。
 
 ---
 
@@ -322,7 +372,8 @@ Docs / Contracts updated
 - 全局状态中心；
 - 完整权限系统；
 - Memory / World / Goal 的领域实现；
-- Chronicle 的完整领域实现（P2-02 只落地了最小事实史；生命周期验收 P2-04 未开始）；
+- Chronicle 的完整领域实现（P2-02 只落地了最小事实史，P2-04 只验收了它的跨 Runtime 生命周期）；
+- **Chronicle v1 存储格式的完整性标记**（事实计数 / 链式哈希 / 墓碑）——因此「fact 行被删光、header 完好」的 store 与全新 store 无法区分，会被报告成空历史。这是已记录的格式限制，不是实现缺陷；
 - Resident 常驻模式、守护进程、信号处理、后台服务；
 - 配置文件、环境 Profile、节点配置、用户配置中心——CLI 只有一个必填参数 `--data-dir`；
 - `hikari stop` / `hikari status` / `hikari log` 等运维命令；
@@ -340,25 +391,29 @@ Docs / Contracts updated
 
 ---
 
-## 第二阶段后续工作
+## 第二阶段的收尾项
 
-第二阶段尚未收口。剩余一项：
-
-```text
-P2-04  生命周期验收        未开始
-```
-
-P2-04 需要先做自己的 Boundary Review，明确要验证什么，再进入实现。
-
-P2-01 刻意只覆盖了「身份是谁」这一条最小生命线，P2-02 刻意只覆盖了「发生过什么」这一条最小事实史，P2-03 刻意只覆盖了「怎么把它们组合成一次真实启动」。任何超出它们的扩展——多主体、身份迁移、设备绑定、Memory、事实的修改与检索、Event 自动落库、常驻运行——都不属于当前已批准范围。
-
-P2-03 明确**没有**提前完成 P2-04：
+Phase 2 已完成本地最终验收并正式收口。收口后仍有一个未结项：
 
 ```text
-Runtime A → append Fact A → shutdown → 完全创建 Runtime B → 恢复主体 → 恢复事实
+全部工作尚未 push
+P2-01 / P2-02 / P2-03 已本地提交（194987c / e430358 / 86aa3fc）
+P2-04 共 4 个文件待提交
+origin/main 停在 b4e588b，因此远端 CI 从未跑过这批测试
 ```
 
-P2-03 只验证到「重复 `start` 不破坏已有事实」，完整的跨 Runtime 生命周期验收仍属于 P2-04。
+第二阶段**不新增架构地图**，这是决定而非未结项：第二阶段没有新增生产结构（P2-04 的 `src/` 零改动），因果与边界已保存在各阶段实现文档与架构评审中，此时建图只复述已有文字。远端 CI（`.github/workflows/runtime-tests.yml`，push 到 main 时执行 `npm test`）将在 push 后复核整套测试。
+
+以及一条随第二阶段进入下一阶段的**已记录格式限制**：
+
+```text
+Chronicle v1 无完整性标记
+→ 「fact 行被删光、header 完好」与「全新 store」结构上不可区分
+→ 该形状的损坏会被报告成空历史而非失败
+→ 要分辨它必须改格式，属于新工作，不属于当前已批准范围
+```
+
+P2-01 刻意只覆盖了「身份是谁」这一条最小生命线，P2-02 刻意只覆盖了「发生过什么」这一条最小事实史，P2-03 刻意只覆盖了「怎么把它们组合成一次真实启动」，P2-04 刻意只覆盖了「一次全新的 Runtime 生命周期能不能恢复出同一个主体与同一条事实」。任何超出它们的扩展——多主体、身份迁移、设备绑定、Memory、事实的修改与检索、Event 自动落库、常驻运行、多节点——都不属于当前已批准范围。
 
 优先目标应该是：
 
