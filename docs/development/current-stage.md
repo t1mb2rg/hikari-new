@@ -1,8 +1,8 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**第二阶段进行中——P2-01 Continuity v1 与 P2-02 Chronicle v1 完成（Functional PASS + Architecture PASS），P2-03 / P2-04 未完成**
+> 状态：**第二阶段进行中——P2-01 Continuity v1、P2-02 Chronicle v1 与 P2-03 启动入口完成（Functional PASS + Architecture PASS），P2-04 未完成**
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`。
 
 ---
 
@@ -26,7 +26,7 @@ Runtime
 ```text
 P2-01  Continuity v1       已完成
 P2-02  Chronicle v1        已完成
-P2-03  启动入口            未开始
+P2-03  启动入口            已完成
 P2-04  生命周期验收        未开始
 ```
 
@@ -51,7 +51,17 @@ Chronicle
 + chronicle Service
 ```
 
-第二阶段整体**尚未收口**。P2-03 / P2-04 完成前，第二阶段不能按阶段标准归档，后续两项也各自需要先做 Boundary Review。
+**P2-03 已完成的部分**：
+
+```text
+启动入口（CLI）
++ hikari init            → 只创建长期主体
++ hikari chronicle init  → 只创建事实史（Hikari 不存在则失败，不自动创建）
++ hikari start           → 真实 Runtime 启动组合 + 三种结果语义分离
++ 零创建恢复路径（start 前后持久字节不变）
+```
+
+第二阶段整体**尚未收口**。P2-04 完成前，第二阶段不能按阶段标准归档，P2-04 也需要先做 Boundary Review。
 
 两阶段都没有迁移旧 Hikari，也没有实现完整 Awareness、Memory、Goal、Chronicle 或多节点系统。
 
@@ -147,6 +157,38 @@ Chronicle 同样是 Runtime **之上**的模块，从独立入口导入，`src/i
 
 Chronicle **不**负责判断「什么值得长期记录」，**不**接管 Event、Memory、World、Goal、Action 或状态恢复，也**不是**所有 Plugin 的强制依赖。它只依赖 Continuity 的公开身份语义，且 Continuity 不知道 Chronicle 的存在。
 
+### 启动入口（CLI）
+
+回答一个很朴素的问题：
+
+> 已经存在的这些能力，怎么真正跑起来？
+
+```text
+hikari init --data-dir <path>            只创建长期主体
+hikari chronicle init --data-dir <path>  只为已确认存在的主体创建事实史
+hikari start --data-dir <path>           构造一次真实 Runtime 启动流程
+```
+
+`start` 的三种结果严格区分：
+
+```text
+A  Continuity active + Chronicle active   → 启动成功，exit 0
+B  Continuity failed + Chronicle waiting  → 无法确认长期主体
+C  Continuity active + Chronicle failed   → 主体已恢复，但事实史不可用
+```
+
+B 与 C 都返回非 0，但**都不等于「Hikari 不存在」**：B 描述的是本次恢复流程的结果，C 明确保留「主体在、能力不在」的区别。
+
+- CLI 只使用 Continuity / Chronicle / Runtime 的**公开 API**，不读 `origin.json`、不读 `chronicle.jsonl`、不检查 Store owner、不修复任何领域文件；
+- CLI 不是身份真源，也不是事实史真源；
+- `start` 是持久化意义上的**零创建路径**，前后所有文件字节不变；
+- 插件最终状态由 Runtime 的 `requires` 依赖图收敛得出，CLI 不轮询、不重试、不强制激活；
+- 没有引入 `HikariCore` / `ApplicationContext` / `BootstrapManager` 等中心对象，也没有新增全局可变状态。
+
+CLI 同样是 Runtime **之上**的模块，`src/index.ts` 未修改。
+
+**CLI 不拥有被组合者**：它不知道身份怎么创建、事实怎么落盘、Store 长什么样。如果实现 CLI 需要读一个领域文件，那说明该领域缺少一个公开 API——正确做法是补 API，而不是让入口下沉去读文件。
+
 ---
 
 ## 验收状态
@@ -209,6 +251,34 @@ P2-02 尚未建立对应的架构地图，也未在 CI 上验证（尚未推送�
 
 本机图谱工具限制：索引中存在一处假阳性（`test/runtime.test.mjs ACCESSES test/chronicle.test.mjs` 三条边，而该文件实际零引用 Chronicle）；分析器自报流程分析未穷尽（24 个入口未追踪、7 条流程因 maxProcesses 丢弃、58 个 callee 因 maxBranching 跳过），因此受影响流程数只应读作下界。`query()` 的关键词 / 语义检索仍因 FTS 扩展加载失败而不可用。
 
+### P2-03 启动入口
+
+本次新增文件：**6 个**。
+
+```text
+src/cli/  (5)
+  chronicle-init.ts  init.ts  main.ts  options.ts  start.ts
+test/cli.test.mjs                                            (1)
+```
+
+修改文件：`package.json`（新增 `bin` 入口）、`docs/development/current-stage.md`。
+
+`src/runtime/`、`src/continuity/`、`src/chronicle/` 与 `src/index.ts` 未修改（`git diff HEAD --stat` 对这四个路径输出为空，逐字节未改动）。
+
+本地自动化测试：**82 / 82 PASS**（26 个 CLI + 33 个 Chronicle + 17 个 Continuity + 6 个 Runtime）。
+
+CLI 测试用 `spawnSync` 拉起 `dist/cli/main.js`，断言的是**真实进程退出码与真实 stdout / stderr**。
+
+编译：`tsc` 无错误。
+
+P2-03 Architecture Review：**PASS**。
+
+图谱变更分析（`git add` 后执行，实际覆盖 CLI 新文件）：**10 files / 120 symbols / 27 flows，risk critical，无 partial / truncated**。critical 构成已定位——48 个为文档标题符号，72 个为 CLI 代码符号（`src/cli/` 60 个 + `test/cli.test.mjs` 12 个），无任何 `src/runtime/`、`src/continuity/`、`src/chronicle/` 或 `src/index.ts` 符号，27 条受影响流程全部是 CLI 自身流程。CLI 向外的 IMPORTS 边 14 条，全部指向公开入口，无一条指向存储模块。详见 P2-03 架构评审 §17。
+
+P2-03 尚未建立对应的架构地图，也未在 CI 上验证（尚未推送）。
+
+本机图谱工具限制：分析器自报流程分析未穷尽（33 个入口未追踪、10 条流程因 maxProcesses 丢弃、70 个 callee 因 maxBranching 跳过），因此受影响流程数只应读作下界；索引元数据自报落后一个提交，但 `src/cli/` 符号确实已在图内；跨语言字段解析不完整（`.code` / `.stdout` / `.stderr` 等字段的引用查询会返回空结果，空不等于无人使用）。`query()` 的关键词 / 语义检索仍因 FTS 扩展加载失败而不可用。
+
 ### 第一阶段
 
 第一阶段 Architecture Review：**PASS**。
@@ -238,7 +308,7 @@ Docs / Contracts updated
 
 第一阶段：**已满足**。
 
-第二阶段：**未满足**——P2-01 与 P2-02 达到该标准，P2-03 / P2-04 未完成。
+第二阶段：**未满足**——P2-01 / P2-02 / P2-03 达到该标准，P2-04 未完成。
 
 ---
 
@@ -252,7 +322,11 @@ Docs / Contracts updated
 - 全局状态中心；
 - 完整权限系统；
 - Memory / World / Goal 的领域实现；
-- Chronicle 的完整领域实现（P2-02 只落地了最小事实史；启动入口 P2-03、生命周期验收 P2-04 未开始）；
+- Chronicle 的完整领域实现（P2-02 只落地了最小事实史；生命周期验收 P2-04 未开始）；
+- Resident 常驻模式、守护进程、信号处理、后台服务；
+- 配置文件、环境 Profile、节点配置、用户配置中心——CLI 只有一个必填参数 `--data-dir`；
+- `hikari stop` / `hikari status` / `hikari log` 等运维命令；
+- 启动失败后的自动重试、自动修复、自动创建；
 - Event 自动转 Durable Fact，以及任何「什么值得长期记录」的自动判断；
 - 事实的 `update` / `delete` / 查询 DSL / 全文搜索 / 向量搜索；
 - 事实写入失败后的重试幂等语义（去重、幂等键、补偿读取、自动重试）——`ChroniclePersistenceError` 只表示本次写入未获得可靠持久化确认，**不**保证事实未落盘，调用方不得仅凭它判定事实不存在；
@@ -268,16 +342,23 @@ Docs / Contracts updated
 
 ## 第二阶段后续工作
 
-第二阶段尚未收口。剩余两项：
+第二阶段尚未收口。剩余一项：
 
 ```text
-P2-03  启动入口            未开始
 P2-04  生命周期验收        未开始
 ```
 
-每一项都需要先做自己的 Boundary Review，明确要验证什么，再进入实现。
+P2-04 需要先做自己的 Boundary Review，明确要验证什么，再进入实现。
 
-P2-01 刻意只覆盖了「身份是谁」这一条最小生命线，P2-02 刻意只覆盖了「发生过什么」这一条最小事实史。任何超出它们的扩展——多主体、身份迁移、设备绑定、Memory、事实的修改与检索、Event 自动落库——都不属于当前已批准范围。
+P2-01 刻意只覆盖了「身份是谁」这一条最小生命线，P2-02 刻意只覆盖了「发生过什么」这一条最小事实史，P2-03 刻意只覆盖了「怎么把它们组合成一次真实启动」。任何超出它们的扩展——多主体、身份迁移、设备绑定、Memory、事实的修改与检索、Event 自动落库、常驻运行——都不属于当前已批准范围。
+
+P2-03 明确**没有**提前完成 P2-04：
+
+```text
+Runtime A → append Fact A → shutdown → 完全创建 Runtime B → 恢复主体 → 恢复事实
+```
+
+P2-03 只验证到「重复 `start` 不破坏已有事实」，完整的跨 Runtime 生命周期验收仍属于 P2-04。
 
 优先目标应该是：
 
