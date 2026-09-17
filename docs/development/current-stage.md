@@ -1,8 +1,8 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 2 已完成最终验收并正式收口**（P2-01 ~ P2-04 全部通过 Functional / Architecture Review，已 push，CI 通过）；**Phase 3 P3-01 已完成、已提交、已 push**（commit `3d910ee`，Functional PASS + Architecture PASS，CI 通过）；**Phase 3 P3-02 实现完成**（Functional PASS + Architecture PASS），尚未提交、尚未 push
+> 状态：**Phase 2 已完成最终验收并正式收口**（P2-01 ~ P2-04 全部通过 Functional / Architecture Review，已 push，CI 通过）；**Phase 3 P3-01 已完成、已提交、已 push**（commit `3d910ee`，Functional PASS + Architecture PASS，CI 通过）；**Phase 3 P3-02 已完成、已提交、已 push**（commit `9495f7c`，Functional PASS + Architecture PASS，CI 通过）；**Phase 3 P3-03 实现完成并通过收口评审**（Functional PASS + Architecture PASS），尚未提交、尚未 push
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`。
 
 ---
 
@@ -30,13 +30,14 @@ P2-03  启动入口            已完成
 P2-04  生命周期验收        已完成
 ```
 
-第三阶段开始让 Runtime **感知现实**。当前进度：
+第三阶段开始让 Runtime **感知现实**，并首次进入 **World** 层。当前进度：
 
 ```text
 P3-01  Windows Foreground Perception v1      已完成、已提交、已 push
-P3-02  Windows Input Activity Perception v1  已完成（待提交）
+P3-02  Windows Input Activity Perception v1  已完成、已提交、已 push
+P3-03  Desktop Session World v1              已完成（待提交）
 
-P3-03  尚未冻结
+P3-04  尚未冻结
 ```
 
 **P2-01 已完成的部分**：
@@ -119,9 +120,30 @@ Windows Input Activity Perception v1
 
 P3-02 **没有修改任何已冻结模块**：`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/foreground/`、`src/cli/`、`src/index.ts`、`package.json`、`tsconfig.json` 的 `git diff HEAD --stat` 全部为空，逐字节未改动。全部产物是新增文件。
 
-P3-02 尚未提交、尚未 push。
+P3-02 已完成、已提交、已 push（commit `9495f7c`），CI 已对这批测试跑过并通过（run `35200893510`）。
 
-第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 也已 push，`origin/main` 现为 `3d910ee`。
+**P3-03 已完成的部分**：
+
+```text
+Desktop Session World v1
++ 自治 World Plugin desktop-session-world（requires: 两个感知契约，provider 缺席即 waiting）
++ desktop-session-world.current@1 Service 契约
++ 一次 current() 在同一个同步段内并发组合两次真实感知获取
++ snapshot 语义：snapshotAt + 逐 facet 的 available / unavailable
++ capability 缺席（Runtime 依赖图 → waiting）与 capability 失败
+  （World 内 allSettled → unavailable）分属两个不同机制，互不替代
++ current() 永不 reject：两个 source 都失败仍 resolve 出两个 unavailable facet
++ available + absent 与 unavailable 不塌缩
++ unavailable 不携带原因：World 不读 reason、不检查 error 类型
++ 无平台实现：模块内零 process.platform / 零 PowerShell / 零 Win32 字样
++ pull-only、零持久化、零后台机制、零 Manager、零新依赖
+```
+
+P3-03 **没有修改任何既有文件**：`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/foreground/`、`src/input-activity/`、`src/cli/`、`src/index.ts`、`package.json`、`tsconfig.json` 全部零改动，全部产物是新增文件。`package.json` 与 `tsconfig.json` 无需改动，因为二者的 `test` 与 `include` 都是通配。
+
+P3-03 尚未提交、尚未 push。
+
+第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 与 P3-02 也已 push，`origin/main` 现为 `9495f7c`。
 
 **第二阶段不新增架构地图（已决定，非未结项）**：第一阶段的图存在，是因为那一步要固定「Runtime 不带领域语义」这条边界本身；第二阶段的产物是接线与验收——P2-01 / P2-02 / P2-03 的因果与边界已由各自的实现文档与架构评审完整保存，P2-04 **没有新增任何生产结构**。此时硬画一张图只会复述已有文字，不增加信息，因此**不以架构图作为第二阶段收口条件**。后续若出现真实的结构变化，再按那时的需要决定是否建图。
 
@@ -129,9 +151,27 @@ P3-02 尚未提交、尚未 push。
 
 三个阶段都没有迁移旧 Hikari，也没有实现完整 Awareness、Memory、Goal 或多节点系统。
 
-第三阶段第一次让 Runtime **感知现实**，但只走到 witness 为止：Foreground 报告「谁在前台、什么时候看到的」，InputActivity 报告「系统记录的最后一次输入发生在哪个 tick」，**都不**判断这些意味着什么。
+第三阶段第一次让 Runtime **感知现实**：Foreground 报告「谁在前台、什么时候看到的」，InputActivity 报告「系统记录的最后一次输入发生在哪个 tick」，**都不**判断这些意味着什么。P3-03 在此之上首次进入 **World** 层，回答「在这个 scope 内，我现在掌握了哪些事实」。
 
-P3-02 的架构增量不在于新增能力，而在于证明**第二个感知不需要先长出协调层**：两个感知 Plugin 各自 `requires: []`、各自提供自己的 Service 契约、各自拥有自己的平台判断，Runtime 侧仍然零平台知识、零协调代码。
+三层分工与当前落点：
+
+```text
+Perception   这个 source 告诉了我什么？        P3-01 / P3-02 已交付
+World        在这个 scope 内我掌握了哪些事实？ P3-03 首次进入
+Awareness    这些事实意味着什么？              未进入，且未被预埋
+```
+
+三步的架构增量都不在于新增能力：
+
+```text
+P3-01  证明了一个感知可以存在
+P3-02  证明了第二个感知不需要先长出协调层
+P3-03  证明了组合两个感知也不需要先长出协调层
+```
+
+P3-02 的证明方式是：两个感知 Plugin 各自 `requires: []`、各自提供自己的 Service 契约、各自拥有自己的平台判断，Runtime 侧仍然零平台知识、零协调代码。
+
+P3-03 的证明方式是：World 是最容易长成 `PerceptionManager` / `ObservationBus` / `GlobalWorldState` 的地方，而它没有。它**没有为「我是组合者」这个身份要求任何特殊待遇**——取得两个 source 的方式与任何消费者取得任何 capability 的方式完全相同（`requires` 声明、`setup` 里 `get`、调用时 `await`），Runtime 也没有给它任何特殊待遇。Runtime 侧仍然零改动、零新 API。
 
 当前已经证明：
 
@@ -312,6 +352,78 @@ Unknown must not collapse into absence. → 元数据取不到只省略字段，
 Foreground 是 Runtime **之上**的模块，从独立入口 `src/foreground/index.ts` 导入，`src/index.ts` 未修改。
 
 Foreground **不**依赖 Continuity，**不**依赖 Chronicle，**不**写任何文件，**不**创建目录，也**没有**新的 Manager。资源所有权沿用既有的 `context.defer()`。
+
+### DesktopSessionWorld（P3-03）
+
+回答 World 层的第一个问题：
+
+> 在这个 scope 内，我现在掌握了哪些事实？
+
+```text
+desktop-session-world  Plugin（自治，requires: 两个感知契约）
+↓
+desktop-session-world.current@1
+↓
+current(): Promise<DesktopSessionWorldSnapshot>
+```
+
+**Snapshot 语义**：
+
+```ts
+{
+  snapshotAt: string,                    // World 组装完这次 snapshot 的时刻
+  foreground:    { kind: 'available', observation } | { kind: 'unavailable' },
+  inputActivity: { kind: 'available', observation } | { kind: 'unavailable' }
+}
+```
+
+四条语义是本阶段冻结的核心：
+
+```text
+Observed is observed.               → source 的 observation 按引用透传，不重建、不复制
+Failure to observe is not.          → 失败的 source 得到 unavailable，绝不伪造 observation
+The snapshot carries no interpretation. → 不做跨 facet 比较、关联、对齐或推断
+The snapshot is one instant.        → 两个 source 同段启动，snapshotAt 在两者都 settle 之后产生
+```
+
+**两套时间轴同时可见且不被比较**：`observation.observedAt` 是感知时刻，`snapshot.snapshotAt` 是组合时刻。World 不重打 source 的时间戳，也不声称两者是同时刻的事实。
+
+**Dependency 语义（本阶段最容易做错的一处）**：capability **缺席**与 capability **失败**分属两个不同机制，互不替代：
+
+```text
+capability 缺席（该感知根本没加载）  → Runtime 依赖图  → World waiting，current() 不可达
+capability 在位但本次获取失败        → World 内 allSettled → World 保持 active，该 facet unavailable
+```
+
+World **不**自己检查 Provider 是否存在，**不**把依赖声明成可选，**不**用运行时动态发现绕过依赖图。它不会在缺 provider 的情况下假装 `active`，也不会为了拿到 partial world 去绕过 Runtime 的依赖模型。provider 消失时走既有的 `#deactivateTree` 收敛回 `waiting`。
+
+**失败边界**：
+
+```text
+desktopSessionWorldService.current() 永不 reject
+→ 两个 source 同时失败时仍 resolve，返回两个 unavailable facet
+→ 「一条事实都没有」是 World 的一个合法答案，不是 World 自身的失败
+```
+
+World **不是错误总线**：不聚合、不转发、不分类 error，不读 `result.reason`，不检查 error 类型。同步抛出与 promise rejection 落到完全相同的位置（由 `Promise.resolve().then(...)` 折叠）。`unavailable` **不携带原因**——World 不拥有它所组合的 source 的失败分类学，把 transport 细节写进这个契约等于把 PowerShell 退出码提升成 World 层公开语义。
+
+**`available + absent` ≠ `unavailable`**：Foreground 的 `{ kind: 'absent' }` 是一次**成功的观测**（观测到「此刻没有前台目标」），与「没能观测」是两条完全不同的事实，实现上不可能塌缩——`available` 只由 `fulfilled` 分支产生，`unavailable` 只由 `rejected` 分支产生。
+
+**并发**：两个 source 在**同一个同步段**内启动，因此 snapshot 覆盖的是单次获取所能提供的最窄窗口。真实路径实测一次组合约 **386ms**，而同轮两个感知各自单独运行为 638ms / 674ms——串行应在 1300ms 量级。同段启动是真的在起作用。
+
+**Perception → World 边界（本阶段冻结）**：
+
+> **World 是 composer，不是 interpreter。**
+
+它只回答「我手里有什么」，不回答「这代表什么」。因此本阶段明确没有实现：`GlobalWorldState`、`WorldManager`、`PerceptionManager`、Awareness、Judgement、Salience、Importance、Attention、User Presence、Idle Detection、Activity Classification、freshness / stale / TTL / `ageMs`、缓存、latest snapshot、polling、timer、watcher、event、history、retry framework、dedup、debounce、rate limiting、Chronicle 集成、模型调用、跨 runtime / 跨 session 聚合。
+
+> **现实很奇怪就报告奇怪的现实**；解读属于第三层，不属于 P3-03。
+
+**命名**：模块名为 `desktop-session-world` 而非 `windows-session-world`，理由是结构性的——本模块**没有任何 Windows 专属实现**。把平台写进 World 的公开身份，会把「当前 provider 的实现平台」误固化成「World 的定义范围」。
+
+DesktopSessionWorld 是 Runtime **之上**的模块，从独立入口 `src/desktop-session-world/index.ts` 导入，`src/index.ts` 未修改。
+
+World **不**依赖 Continuity，**不**依赖 Chronicle，**不**写任何文件，**不**创建目录，**没有**新的 Manager，也**没有** `context.defer()`——它不拥有任何资源。与 P3-01 / P3-02 不同，World **没有内部 seam**：它的两个依赖就是两个 capability，二者都经 Runtime 的 service registry 取得，因此测试直接加载**生产 Plugin**，无需具名内部 import。
 
 ---
 
@@ -506,7 +618,7 @@ P3-01 已完成、已提交、已 push（commit `3d910ee`），CI 已跑过并�
 
 ### P3-02 Windows Input Activity Perception v1
 
-本次新增文件：**10 个**。
+本次新增文件：**11 个**（此前写作 10，与 `9495f7c` 的 `--name-status` 实际不符：7 个 src + 2 个 test + 2 个 docs 为新增，`current-stage.md` 为修改，合计 12 项改动。本轮一并更正）。
 
 ```text
 src/input-activity/  (7)
@@ -558,9 +670,80 @@ A 脚本往返 2 + B 调用顺序 3 + C readAcquisition 6 + D describeFailure 3 
 
 重复的理由是架构性的：两个实例不足以判定「稳定共享机制」与「各自 acquisition semantics」的边界在哪里，且错误的抽象比重复更难撤销——它一旦被两个已交付模块依赖，就获得事实上的冻结地位。重新评估触发条件是客观的：**出现第三个同型 Windows Perception，或 P3-01 因独立需求解冻**。
 
-P3-02 **尚未提交、尚未 push**。CI 尚未跑过本阶段的测试。
+P3-02 已完成、已提交、已 push（commit `9495f7c`），CI 已跑过并通过（run `35200893510`）。
 
 **P3-02 收口轮未做图谱变更分析**：`detect_changes({scope: "all"})` 返回「未检测到变更」，但该轮全部产物是未跟踪新文件，不进 `git diff`——**这个 0 必须读作「未看见」，不是「无影响」**。该轮为纯文档收口、未执行 `git add`，因此**没有可引用的图谱证据**。「无侵入」的结论由 `git diff HEAD --stat` 为空逐字节支撑。
+
+### P3-03 Desktop Session World v1
+
+本次新增文件：**7 个**（实现轮 6 个 + 收口轮新增架构评审文档 1 个）。
+
+```text
+src/desktop-session-world/  (4)
+  contracts.ts  index.ts  plugin.ts  types.ts
+test/desktop-session-world.test.mjs                                 (1)
+docs/development/phase-3-desktop-session-world.md                   (1)
+docs/architecture/phase-3-desktop-session-world-architecture-review.md  (1)
+```
+
+修改文件：`docs/development/current-stage.md`。
+
+**`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/foreground/`、`src/input-activity/`、`src/cli/`、`src/index.ts`、`package.json`、`tsconfig.json` 全部未修改**（`git diff HEAD --stat` 对这几个路径输出为空，逐字节未改动）。全部产物是新增文件。`package.json` 与 `tsconfig.json` 无需改动，因为二者的 `test` 与 `include` 都是通配。
+
+本地自动化测试：**154 / 154 PASS，0 skipped**（17 个 DesktopSessionWorld + 16 个 InputActivity 确定性 + 3 个 InputActivity Windows smoke + 18 个 Foreground 确定性 + 2 个 Foreground Windows smoke + 33 个 Chronicle + 17 个 Continuity + 26 个 CLI + 16 个生命周期 + 6 个 Runtime）。全量为 137（既有）+ 17（本阶段）。
+
+编译：`tsc --noEmit` 无错误。
+
+P3-03 Functional Review：**PASS**。P3-03 Architecture Review：**PASS**。
+
+**本阶段的主要架构结果**：World 是最容易长成 `PerceptionManager` / `ObservationBus` / `GlobalWorldState` 的地方，而它没有。组合是**在没有协调层的情况下**发生的——没有事件总线、没有通用 Observation 框架、没有中心注册表、没有 scope 注册表。World 取得两个 source 的方式与任何消费者取得任何 capability 的方式完全相同，Runtime 没有为它新增任何 API。
+
+**本阶段最重要的契约不变量**：`current()` 永不 reject。两个 source 同时失败时仍 resolve 出两个 `unavailable` facet。「一条事实都没有」是 World 的一个合法答案，不是 World 自身的失败。World 不是错误总线——不聚合、不转发、不分类 error，不读 reason，不检查 error 类型。
+
+**capability 缺席与 capability 失败分属两个机制**：缺席走 Runtime 依赖图（World `waiting`，`current()` 不可达），失败走 World 内的 `allSettled`（World 保持 `active`，该 facet `unavailable`）。World 不自己检查 Provider 是否存在，不把依赖声明成可选，不用运行时动态发现绕过依赖图。
+
+**本阶段拿到真实图谱证据（与前两轮收口不同）**。前两轮的收口是纯文档、未执行 `git add`，全部产物是未跟踪新文件，`changed_count: 0` 必须读作「未看见」。本轮先 `git add` 5 个代码 / 测试文件并重建索引，因此数字有效：
+
+```text
+detect_changes --scope staged
+  51 changed symbols / 5 files / affected_processes: [] / risk_level: low
+  无 partial，无 truncated，无 HIGH / CRITICAL
+
+changed_symbols 构成：
+  src/desktop-session-world/  16 个（contracts 3 + plugin 7 + types 6）
+  test/desktop-session-world.test.mjs  35 个
+
+IMPORTS 边：对外 12 条，外部目标恰好 4 个
+  runtime/contracts.ts、runtime/plugin.ts、foreground/index.ts、input-activity/index.ts
+  全部是公开入口；到任何内部模块的边 0 条
+指向 src/desktop-session-world/ 的入边：0 条
+```
+
+**17 条确定性测试中有 2 条（并发、`snapshotAt` 时序）的判别力由一次性变异探针验证**，因为「测试通过」不等于「测试有判别力」：
+
+```text
+基线                        17 pass / 0 fail
+两次获取改为串行            1 fail（测试 14）
+snapshotAt 上提到 await 之前 1 fail（测试 6）
+同上 + 加强前的弱断言        17 pass / 0 fail   ← 关键对照
+```
+
+最后一行是关键：同一个被破坏的实现，在换回弱断言后**重新变绿**，证明加强是承重的而非文字润色。**`snapshotAt` 测试的初始写法几乎没有判别力**——整个 snapshot 在远小于 1 毫秒内跑完，两个时间戳落在同一毫秒，`>=` 照样成立；改为等待**时钟本身**跨过毫秒边界（`nextMillisecond()`）后才真正生效。
+
+**已知 coverage gap 未加剧**：P3-01 / P3-02 的 `windows.ts` parser rejection branches 不在 `npm test` 内，该缺口仍涉及两个模块、无变化；P3-03 没有 parser、没有平台分支、没有内部 seam，其全部分支都在仓库测试覆盖内。本轮**没有**新增第二处具名内部 import——World 没有需要被替换的内部实现。
+
+**已知限制**：
+
+```text
+unavailable 不携带原因 → 只看 snapshot 无法区分超时 / 权限拒绝 / 无法启动
+World 结构上平台中立，但今天只在 Windows 上跑得起来（两个 provider 都是 Windows-only）
+snapshot 不判断新鲜度 —— 两套时间轴都在，但不比较
+两次子进程成本未被摊薄：World 没有让感知变快，只是没有让它更慢
+snapshot 原子性只到「单次获取的最窄窗口」，不声称两个 observation 同时刻
+World 不校验 observation 形状 → 其契约保真度依赖两个感知的契约保真度
+```
+
+P3-03 尚未提交、尚未 push。
 
 ### 第一阶段
 
@@ -595,7 +778,9 @@ Docs / Contracts updated
 
 第三阶段 P3-01：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push。
 
-第三阶段 P3-02：**已满足**——Functional PASS + Architecture PASS + Docs updated，**等待提交**。
+第三阶段 P3-02：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push。
+
+第三阶段 P3-03：**已满足**——Functional PASS + Architecture PASS + Docs updated，**等待提交**。
 
 ---
 
@@ -608,7 +793,7 @@ Docs / Contracts updated
 - Provider 智能选择；
 - 全局状态中心；
 - 完整权限系统；
-- Memory / World / Goal 的领域实现；
+- Memory / Goal 的领域实现，以及 **World 层的完整实现**——P3-03 只落地了一个 scope 的最小局部视图（一个桌面会话、两个来源、逐条可用性），没有 `GlobalWorldState`、没有 scope 注册表、没有跨 scope / 跨 runtime / 跨 session 聚合；
 - Chronicle 的完整领域实现（P2-02 只落地了最小事实史，P2-04 只验收了它的跨 Runtime 生命周期）；
 - **Chronicle v1 存储格式的完整性标记**（事实计数 / 链式哈希 / 墓碑）——因此「fact 行被删光、header 完好」的 store 与全新 store 无法区分，会被报告成空历史。这是已记录的格式限制，不是实现缺陷；
 - Resident 常驻模式、守护进程、信号处理、后台服务；
@@ -620,7 +805,8 @@ Docs / Contracts updated
 - 事实写入失败后的重试幂等语义（去重、幂等键、补偿读取、自动重试）——`ChroniclePersistenceError` 只表示本次写入未获得可靠持久化确认，**不**保证事实未落盘，调用方不得仅凭它判定事实不存在；
 - `getOrCreate` / `openOrCreate` 与任何全局身份中心；
 - 身份迁移、备份、修复、升级；
-- **感知的语义解读**——Salience / Importance / freshness 判断、基于标题的语义分类、模型调用、「什么值得记住」的判断。P3-01 / P3-02 只交付 witness，不交付 interpreter；
+- **感知的语义解读**——Salience / Importance / freshness 判断、基于标题的语义分类、模型调用、「什么值得记住」的判断。P3-01 / P3-02 只交付 witness，P3-03 只交付 composer，**都不**交付 interpreter；
+- **跨 source 的推断**——把「前台是 X」与「刚有输入」合起来推出「某人正在打字」这类结论。P3-03 把两条事实放进同一个信封，但**不**解释它们的关系；那是 Awareness 的句子；
 - **Input Activity 的在场解读**——`lastInputAt` / `idleForMs` / `idleSeconds` / `isActive` / `isIdle` / `userPresent`，以及任何阈值比较。`lastInputTick` 是 source fact，不是结论；
 - **感知结果的过滤**——过滤 Explorer / 任务栏 / 自身进程，或任何「这不像正常用户程序」的启发式；
 - **感知的后台化**——watcher、`changed` Event、轮询、订阅、缓存、保活、队列、速率限制、去重；
@@ -628,6 +814,13 @@ Docs / Contracts updated
 - **非 Windows 的感知实现**——macOS / Linux 宿主上 Plugin 直接 `failed`，这是设计意图；
 - **PowerShell 子进程成本的优化**（常驻子进程 / 预编译程序集 / 原生绑定）——两个感知都受此限制，任何高频感知需求都必须先解决它，但优化本身属于新工作；
 - **通用 Perception / Sensor 框架**——第二个感知 Provider 已经出现（P3-02），**结论仍然是不抽公共抽象**：两个实例不足以判定共享边界，且错误的抽象比重复更难撤销。重新评估触发条件已记录为「出现第三个同型 Windows Perception，或 P3-01 因独立需求解冻」（详见 P3-02 架构评审 §16）；
+- **World 的时间语义**——freshness / stale / TTL / `ageMs`、过期判断、`latest snapshot`、history。P3-03 同时暴露 `observedAt` 与 `snapshotAt` 两套时间轴但**不比较它们**：判断新旧属于 Awareness，不属于 World；
+- **World 的失败分类**——`unavailable` 不携带 reason。让 World 转述 source 的失败形态（退出码 / 超时 / 权限）等于把感知实现的细节提升成 World 层公开语义。需要诊断的调用方应当去问那个感知；
+- **World 的缓存与后台化**——缓存、latest snapshot、watcher、polling、timer、`changed` Event、重试框架、去重、限流。World 是 **pull-only** 的：没有 `current()` 调用就没有任何观测发生；
+- **World 的持久化**——把 snapshot 写进 Chronicle 或任何文件；
+- **World 的平台实现**——`desktop-session-world` 内零 `process.platform`。它是**结构上**平台中立的；「运行在 Windows 上」是它当前两个 provider 的事实，不是它的事实；
+- **第二个 scope 的 World**——第二个 scope 应当是一个**新 Plugin**，而不是给 `desktop-session-world` 加一个 scope 参数或一张 scope 注册表；
+- **facet 抽象**——两个 facet 类型的 `available | unavailable` 外壳重复是**刻意接受**的。用泛型 `Facet<T>` 消除它需要先说明两个 observation 之间的关系，而它们在本层**没有**关系；
 - 完整 Skill / Tool 体系；
 - 音视频流式资源框架；
 - 旧 Hikari 大规模迁移。
@@ -650,7 +843,7 @@ P2-01 ~ P2-04 共 4 个提交全部已 push
 CI（.github/workflows/runtime-tests.yml）: success，run 34955475103
 ```
 
-（`origin/main` 此后已随 P3-01 前进到 `3d910ee`——见「第三阶段的收尾项」。）
+（`origin/main` 此后已随 P3-01 / P3-02 前进到 `9495f7c`——见「第三阶段的收尾项」。）
 
 第二阶段**不新增架构地图**，这是决定而非未结项：第二阶段没有新增生产结构（P2-04 的 `src/` 零改动），因果与边界已保存在各阶段实现文档与架构评审中，此时建图只复述已有文字。
 
@@ -677,42 +870,71 @@ P3-01 已完成、已提交、已 push，**没有未结项**：
 
 ```text
 3d910ee  feat: 完成 P3-01 Windows 前台感知
-origin/main = 3d910ee
 CI（.github/workflows/runtime-tests.yml）: success，run 35053737581
 ```
 
-P3-02 已完成本地验收并写好评审文档，**尚未提交、尚未 push**：
+P3-02 已完成、已提交、已 push，**没有未结项**：
 
 ```text
-待提交：10 个文件（7 个 src/input-activity + 2 个 test + 2 个 docs）
+9495f7c  feat: 完成 P3-02 Windows 输入活动感知
+origin/main = 9495f7c（当前 HEAD）
+CI（.github/workflows/runtime-tests.yml）: success，run 35200893510
+```
+
+P3-03 已完成本地验收、写好评审文档并通过收口评审，**尚未提交、尚未 push**：
+
+```text
+待提交：7 个新增文件
+  （4 个 src/desktop-session-world + 1 个 test + 2 个 docs）
+  另修改 docs/development/current-stage.md
 CI 尚未跑过本阶段的测试
 ```
 
-**CI 与本机测试数会不同，这是预期而非异常**：CI 运行在 `ubuntu-latest`，五条 Windows 真实 smoke 测试会自我 skip（P3-01 的 2 条 + P3-02 的 3 条），因此 CI 上预期是 **132 pass / 5 skipped**；本机（Windows 11）是 **137 pass / 0 skipped**。两者都算通过。**该 CI 数字是预期值**——本轮未 push，尚未由 CI 实际跑过。
-
-有一条**随第三阶段进入下一阶段**的实现限制：**PowerShell 异步子进程 v1 的单次观测成本为 370–523 ms**（P3-01 实测 370–455 ms，P3-02 实测 523 ms）。它决定了两条感知目前都只能被显式调用，**不能作为高频采样源**；两个感知同时使用时是两个独立子进程，没有摊薄。任何高频感知需求都必须先解决这个成本，而优化本身属于新工作。
-
-以及两条**随 P3-02 进入下一阶段**的评审注意事项：
+**CI 与本机测试数会不同，这是预期而非异常**：CI 运行在 `ubuntu-latest`，五条 Windows 真实 smoke 测试会自我 skip（P3-01 的 2 条 + P3-02 的 3 条）。P3-02 的这组数字**已由 CI 实际跑过并确认**，不再是预期值：
 
 ```text
-1. 一次性探针的证据等级
+CI（ubuntu-latest，P3-02，run 35200893510）:  137 tests / 132 pass / 5 skipped / 0 fail
+本机（Windows 11，P3-02）:                   137 pass / 0 skipped
+本机（Windows 11，P3-03）:                   154 pass / 0 skipped
+```
+
+P3-03 在 CI 上的预期值相应为 **149 pass / 5 skipped / 0 fail**（总数 154 不变，仍是同样 5 条 Windows smoke 自我 skip）。该数字是**预期值**——本轮未 push，尚未由 CI 实际跑过。
+
+有一条**随第三阶段进入下一阶段**的实现限制：**PowerShell 异步子进程 v1 的单次观测成本为 370–674 ms**（P3-01 实测 370–455 ms，P3-02 实测 523 ms，P3-03 同轮单独实测 638 / 674 ms）。它决定了两条感知目前都只能被显式调用，**不能作为高频采样源**。任何高频感知需求都必须先解决这个成本，而优化本身属于新工作。
+
+P3-03 给出了这条限制在组合层的第一个真实数据点：World 在**同一个同步段**内并发启动两次获取，一次组合 snapshot 实测 **386 ms**，而同轮两个感知各自单独运行是 638 / 674 ms——串行应在 1300ms 量级。**并发让组合的墙钟约等于较慢的那个 source，但系统总开销仍是两个子进程**：World 没有让感知变快，只是没有让它更慢。
+
+以及三条**随 P3-03 进入下一阶段**的评审注意事项：
+
+```text
+1. 一次性探针的证据等级（累计）
    P3-01 的 66 条 + P3-02 的 142 条断言都是会话内一次性探针
+   P3-03 的判别力探针（4 行变异的结果）同样是会话内一次性
    不在仓库内、不进 CI、不可复现
    → 证明「当时确实验过」，不证明「以后不会被改坏」
 
-2. parser coverage gap 已涉及两个模块
+2. 「测试通过」不等于「测试有判别力」
+   P3-03 的 snapshotAt 测试初版几乎没有判别力：
+   整个 snapshot 在远小于 1 毫秒内跑完，两处时间戳落在同一毫秒，
+   原 >= 断言在正确实现与错误实现下都成立
+   → 改为等待时钟本身跨过毫秒边界后才真正生效
+   → 凡断言「A 发生在 B 之后」而 A、B 都很快，都应警惕这一类失效
+
+3. parser coverage gap 仍涉及两个模块（本轮未加剧）
    windows.ts 的 parser rejection branches 不在 npm test 内
-   本轮结论仍是不为测试覆盖扩大 public API、不改 seam
+   P3-03 没有加剧它：World 没有 parser、没有平台分支、没有内部 seam，
+   其全部分支都在仓库测试覆盖内，也没有新增第二处具名内部 import
+   结论仍是不为测试覆盖扩大 public API、不改 seam
    若出现第三个同型 parser，应重新评估 test seam 与 transport seam
 ```
 
-P3-01 与 P3-02 各自只覆盖一条最小感知线——「此刻人正在看什么」与「系统记录的最后一次输入发生在哪个 tick」——且都只交付 **witness 而非 interpreter**：它们不判断什么重要、什么正常、什么值得记住。任何超出它们的扩展——语义解读、过滤、后台化、持久化、非 Windows 实现、通用 Perception 框架——都不属于当前已批准范围。
+P3-01 / P3-02 / P3-03 各自只覆盖一条最小线——「此刻人正在看什么」、「系统记录的最后一次输入发生在哪个 tick」、「在这个 scope 内我现在掌握了哪些事实」——且只交付 **witness 与 composer，不交付 interpreter**：它们不判断什么重要、什么正常、什么值得记住。任何超出它们的扩展——语义解读、跨 source 推断、过滤、后台化、持久化、非 Windows 实现、通用 Perception 框架、`GlobalWorldState`——都不属于当前已批准范围。
 
-**P3-03 尚未冻结**，本轮不对它做任何命名或规划。
+**P3-04 尚未冻结**，本轮不对它做任何命名或规划。
 
 第三阶段的优先目标与第二阶段一致：
 
-> 继续用真实 Hikari 需求检验这套基础，而不是从纯理论中扩展 Runtime 或 Perception。
+> 继续用真实 Hikari 需求检验这套基础，而不是从纯理论中扩展 Runtime、Perception 或 World。
 
 ---
 
