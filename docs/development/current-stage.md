@@ -1,8 +1,8 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 2 已完成最终验收并正式收口**（P2-01 ~ P2-04 全部通过 Functional / Architecture Review，已 push，CI 通过）；**Phase 3 P3-01 已完成本地验收**（Functional PASS + Architecture PASS），尚未提交、尚未 push，等待人工复核
+> 状态：**Phase 2 已完成最终验收并正式收口**（P2-01 ~ P2-04 全部通过 Functional / Architecture Review，已 push，CI 通过）；**Phase 3 P3-01 已完成、已提交、已 push**（commit `3d910ee`，Functional PASS + Architecture PASS，CI 通过）；**Phase 3 P3-02 实现完成**（Functional PASS + Architecture PASS），尚未提交、尚未 push
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`。
 
 ---
 
@@ -33,7 +33,10 @@ P2-04  生命周期验收        已完成
 第三阶段开始让 Runtime **感知现实**。当前进度：
 
 ```text
-P3-01  Windows Foreground Perception v1   已完成（尚未提交）
+P3-01  Windows Foreground Perception v1      已完成、已提交、已 push
+P3-02  Windows Input Activity Perception v1  已完成（待提交）
+
+P3-03  尚未冻结
 ```
 
 **P2-01 已完成的部分**：
@@ -98,9 +101,27 @@ Windows Foreground Perception v1
 
 P3-01 **没有修改任何已冻结模块**：`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/cli/`、`src/index.ts` 的 `git diff HEAD --stat` 全部为空，逐字节未改动。全部产物是新增文件。
 
-P3-01 尚未提交、尚未 push，**等待人工复核**。CI 尚未跑过本阶段的测试。
+P3-01 已完成、已提交、已 push（commit `3d910ee`），CI 已对这批测试跑过并通过（run `35053737581`）。
 
-第二阶段**已全部 push**：`origin/main` 现为 `58bb596`，P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。
+**P3-02 已完成的部分**：
+
+```text
+Windows Input Activity Perception v1
++ 自治 Perception Plugin input-activity.windows（requires: []）
++ input-activity.current@1 Service 契约
++ 异步 PowerShell 子进程 + 直接 Win32 P/Invoke 的 GetLastInputInfo 获取
++ observation 语义：observedAt / source / lastInputTick（原始事实，无解释）
++ dwTime = 0 是合法 tick 而非缺失；uint32 两端边界原样保持，较小的后续 tick 不被修正
++ 无后台观测：pull-only，加载 / 空闲 / 卸载零观测
++ 与 Foreground 并列、互不依赖、互不调用，Runtime 不协调二者，无 PerceptionManager
++ 非 Windows 宿主 → Plugin failed、消费者 waiting（Runtime 零平台判断）
+```
+
+P3-02 **没有修改任何已冻结模块**：`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/foreground/`、`src/cli/`、`src/index.ts`、`package.json`、`tsconfig.json` 的 `git diff HEAD --stat` 全部为空，逐字节未改动。全部产物是新增文件。
+
+P3-02 尚未提交、尚未 push。
+
+第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 也已 push，`origin/main` 现为 `3d910ee`。
 
 **第二阶段不新增架构地图（已决定，非未结项）**：第一阶段的图存在，是因为那一步要固定「Runtime 不带领域语义」这条边界本身；第二阶段的产物是接线与验收——P2-01 / P2-02 / P2-03 的因果与边界已由各自的实现文档与架构评审完整保存，P2-04 **没有新增任何生产结构**。此时硬画一张图只会复述已有文字，不增加信息，因此**不以架构图作为第二阶段收口条件**。后续若出现真实的结构变化，再按那时的需要决定是否建图。
 
@@ -108,7 +129,9 @@ P3-01 尚未提交、尚未 push，**等待人工复核**。CI 尚未跑过本�
 
 三个阶段都没有迁移旧 Hikari，也没有实现完整 Awareness、Memory、Goal 或多节点系统。
 
-第三阶段第一次让 Runtime **感知现实**，但只走到 witness 为止：Foreground 报告「谁在前台、什么时候看到的」，**不**判断这件事意味着什么。
+第三阶段第一次让 Runtime **感知现实**，但只走到 witness 为止：Foreground 报告「谁在前台、什么时候看到的」，InputActivity 报告「系统记录的最后一次输入发生在哪个 tick」，**都不**判断这些意味着什么。
+
+P3-02 的架构增量不在于新增能力，而在于证明**第二个感知不需要先长出协调层**：两个感知 Plugin 各自 `requires: []`、各自提供自己的 Service 契约、各自拥有自己的平台判断，Runtime 侧仍然零平台知识、零协调代码。
 
 当前已经证明：
 
@@ -475,11 +498,69 @@ probe-parsers 31 + probe-transport 17 + probe-runtime 18 = 66，全绿
 
 选择异步子进程而非 `spawnSync` 是**架构性**理由而非性能优化：Runtime 未来承载多个自治 Plugin，不应为了单次前台观测长时间整体阻塞 event loop。代价是本阶段刻意保留的 v1 实现限制，不设 SLA、不预先优化。它决定了 **Foreground 目前只能被显式调用，不能作为高频采样源**——任何高频前台感知需求都必须先解决这个成本。
 
-P3-01 **尚未提交、尚未 push**。
+P3-01 已完成、已提交、已 push（commit `3d910ee`），CI 已跑过并通过（run `35053737581`）。
 
-**本轮未做图谱变更分析**：`detect_changes({scope: "all"})` 返回 `changed_count: 0`，但本轮全部产物是未跟踪新文件，不进 `git diff`，索引也早于本次改动——**这个 0 必须读作「未看见」，不是「无影响」**（与 P2-04 §12 记录的是同一类）。收口为纯文档、未执行 `git add`，因此本轮**没有可引用的图谱证据**。「无侵入」的结论由 `git diff HEAD --stat` 为空逐字节支撑，不依赖索引新鲜度。
+**P3-01 收口轮未做图谱变更分析**：`detect_changes({scope: "all"})` 返回 `changed_count: 0`，但该轮全部产物是未跟踪新文件，不进 `git diff`，索引也早于该轮改动——**这个 0 必须读作「未看见」，不是「无影响」**（与 P2-04 §12 记录的是同一类）。该轮为纯文档收口、未执行 `git add`，因此**没有可引用的图谱证据**。「无侵入」的结论由 `git diff HEAD --stat` 为空逐字节支撑，不依赖索引新鲜度。
 
 本机图谱工具限制：**图谱不解析 `.mjs` 的 IMPORTS 边**，针对测试文件的导入查询返回空——本轮涉及测试对 `dist/foreground/plugin.js` 的 import，属同一情形，空结果不是「没有依赖」的证据；`query()` 的关键词 / 语义检索仍因 FTS 扩展加载失败而不可用。
+
+### P3-02 Windows Input Activity Perception v1
+
+本次新增文件：**10 个**。
+
+```text
+src/input-activity/  (7)
+  acquisition.ts  contracts.ts  errors.ts  index.ts  plugin.ts  types.ts  windows.ts
+test/input-activity.test.mjs                                      (1)
+test/input-activity-windows.test.mjs                              (1)
+docs/development/phase-3-input-activity.md                        (1)
+docs/architecture/phase-3-input-activity-architecture-review.md   (1)
+```
+
+修改文件：`docs/development/current-stage.md`。
+
+**`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/foreground/`、`src/cli/`、`src/index.ts`、`package.json`、`tsconfig.json` 全部未修改**（`git diff HEAD --stat` 对这几个路径输出为空，逐字节未改动）。全部产物是新增文件。
+
+本地自动化测试：**137 / 137 PASS，0 skipped**（16 个 InputActivity 确定性 + 3 个 InputActivity Windows smoke + 18 个 Foreground 确定性 + 2 个 Foreground Windows smoke + 33 个 Chronicle + 17 个 Continuity + 26 个 CLI + 16 个生命周期 + 6 个 Runtime）。
+
+编译：`tsc --noEmit` 无错误。
+
+P3-02 Functional Review：**PASS**。P3-02 Architecture Review：**PASS**。
+
+**本阶段的主要架构结果**：多个自治 Perception Plugin 可以**并列存在，而无需中央 Perception Manager**。两个感知互不 `requires`、互不调用、互不持有内部对象，Runtime 不协调二者；全 `src/` 中 `process.platform` 只出现两处，都在各自的平台实现内，`src/runtime/` 零命中。
+
+**与 P3-01 最尖锐的不对称：P3-02 没有 absent 分支。** `GetLastInputInfo` 只有成功 / 失败两种返回，而 `dwTime = 0` 是**合法 tick**（约等于系统启动时刻），不是「从未有输入」的哨兵。把 `0` 当作缺失正是冻结原则所禁止的无依据解释，因此 `0` / `1` / `0xFFFFFFFF` 一律原样报告，`isUint32` 只拒绝结构上不可能的值。代价已如实记入限制：本模块无法区分「自启动以来没有输入」与「tick 恰好很小」。
+
+**142 条探针断言的性质（必须与结论同时阅读）**：
+
+```text
+A 脚本往返 2 + B 调用顺序 3 + C readAcquisition 6 + D describeFailure 3 + E 无解释 4 + F 真实传输 3
+= 21 组 / 142 条断言，全绿
+
+但它们是：会话临时目录中的一次性探针，不在仓库内、不进 CI、不可复现
+它们不是：可复现的回归覆盖
+```
+
+价值在于验证对象是从 dist 取出的真实生产常量，而非手写副本：`ENCODED_ACQUISITION_SCRIPT` 被断言解码后与 `ACQUISITION_SCRIPT` 字节一致；`ok: false` 分支由对真实常量做一处 token 替换（`$info.cbSize = 0`）得到，实测 exit code 1、`killed: false`、**stdout 为空字符串**；uint32 两端悬崖 `4294967295` 接受 / `4294967296` 拒绝。本轮探针**未发现实现缺陷**。
+
+**已知 coverage gap（watch item）**：`windows.ts` 的 parser rejection branches 不在 `npm test` 内，由探针覆盖。P3-01 已采用相同取舍，**现在该缺口已涉及两个模块**。本轮结论仍是不为测试覆盖扩大 public API、不改 seam；若未来出现第三个同型 parser，应重新评估 test seam 与 transport seam。
+
+**P3-01 的 teardown bug 在 P3-02 中没有重新出现**，且这次有持久回归覆盖：Windows smoke 断言拒绝为 `InputActivityObservationError` 且消息不得包含 `did not finish in time`。
+
+**已知限制**：
+
+```text
+每次 current() ≈ 523 ms（PowerShell 进程启动 + Add-Type 编译 P/Invoke）
+两个感知并列使用时是两个独立子进程，无摊薄、无预热、无常驻
+单次 observation 本身不提供 idle duration —— 这是冻结边界，不是缺陷
+传输外壳与 P3-01 重复 68 行逐字相同的非平凡行，本轮刻意不抽公共 helper
+```
+
+重复的理由是架构性的：两个实例不足以判定「稳定共享机制」与「各自 acquisition semantics」的边界在哪里，且错误的抽象比重复更难撤销——它一旦被两个已交付模块依赖，就获得事实上的冻结地位。重新评估触发条件是客观的：**出现第三个同型 Windows Perception，或 P3-01 因独立需求解冻**。
+
+P3-02 **尚未提交、尚未 push**。CI 尚未跑过本阶段的测试。
+
+**P3-02 收口轮未做图谱变更分析**：`detect_changes({scope: "all"})` 返回「未检测到变更」，但该轮全部产物是未跟踪新文件，不进 `git diff`——**这个 0 必须读作「未看见」，不是「无影响」**。该轮为纯文档收口、未执行 `git add`，因此**没有可引用的图谱证据**。「无侵入」的结论由 `git diff HEAD --stat` 为空逐字节支撑。
 
 ### 第一阶段
 
@@ -512,7 +593,9 @@ Docs / Contracts updated
 
 第二阶段：**已满足**——P2-01 / P2-02 / P2-03 / P2-04 四项全部达到该标准，已正式收口。
 
-第三阶段 P3-01：**已满足**——Functional PASS + Architecture PASS + Docs updated，**等待人工复核与提交**。
+第三阶段 P3-01：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push。
+
+第三阶段 P3-02：**已满足**——Functional PASS + Architecture PASS + Docs updated，**等待提交**。
 
 ---
 
@@ -537,13 +620,14 @@ Docs / Contracts updated
 - 事实写入失败后的重试幂等语义（去重、幂等键、补偿读取、自动重试）——`ChroniclePersistenceError` 只表示本次写入未获得可靠持久化确认，**不**保证事实未落盘，调用方不得仅凭它判定事实不存在；
 - `getOrCreate` / `openOrCreate` 与任何全局身份中心；
 - 身份迁移、备份、修复、升级；
-- **前台感知的语义解读**——Salience / Importance / freshness 判断、基于标题的语义分类、模型调用、「什么值得记住」的判断。P3-01 只交付 witness，不交付 interpreter；
+- **感知的语义解读**——Salience / Importance / freshness 判断、基于标题的语义分类、模型调用、「什么值得记住」的判断。P3-01 / P3-02 只交付 witness，不交付 interpreter；
+- **Input Activity 的在场解读**——`lastInputAt` / `idleForMs` / `idleSeconds` / `isActive` / `isIdle` / `userPresent`，以及任何阈值比较。`lastInputTick` 是 source fact，不是结论；
 - **感知结果的过滤**——过滤 Explorer / 任务栏 / 自身进程，或任何「这不像正常用户程序」的启发式；
-- **Foreground 的后台化**——watcher、`changed` Event、轮询、订阅、缓存、保活、队列、速率限制、去重；
-- **Foreground 的持久化**——把观测写进 Chronicle 或任何文件；
-- **非 Windows 的前台感知实现**——macOS / Linux 宿主上 Plugin 直接 `failed`，这是设计意图；
-- **PowerShell 子进程成本的优化**（常驻子进程 / 预编译程序集 / 原生绑定）——任何高频前台感知需求都必须先解决它，但优化本身属于新工作；
-- **通用 Perception / Sensor 框架**——只有真实出现第二个感知 Provider，且它确实需要共享抽象时再考虑；
+- **感知的后台化**——watcher、`changed` Event、轮询、订阅、缓存、保活、队列、速率限制、去重；
+- **感知的持久化**——把观测写进 Chronicle 或任何文件；
+- **非 Windows 的感知实现**——macOS / Linux 宿主上 Plugin 直接 `failed`，这是设计意图；
+- **PowerShell 子进程成本的优化**（常驻子进程 / 预编译程序集 / 原生绑定）——两个感知都受此限制，任何高频感知需求都必须先解决它，但优化本身属于新工作；
+- **通用 Perception / Sensor 框架**——第二个感知 Provider 已经出现（P3-02），**结论仍然是不抽公共抽象**：两个实例不足以判定共享边界，且错误的抽象比重复更难撤销。重新评估触发条件已记录为「出现第三个同型 Windows Perception，或 P3-01 因独立需求解冻」（详见 P3-02 架构评审 §16）；
 - 完整 Skill / Tool 体系；
 - 音视频流式资源框架；
 - 旧 Hikari 大规模迁移。
@@ -562,9 +646,11 @@ P2-01 ~ P2-04 共 4 个提交全部已 push
   e430358  feat: 完成 P2-02 事实史 v1
   86aa3fc  feat: 完成 P2-03 启动入口
   58bb596  test: 完成 P2-04 生命周期验收
-origin/main = 58bb596
+收口时 origin/main = 58bb596
 CI（.github/workflows/runtime-tests.yml）: success，run 34955475103
 ```
+
+（`origin/main` 此后已随 P3-01 前进到 `3d910ee`——见「第三阶段的收尾项」。）
 
 第二阶段**不新增架构地图**，这是决定而非未结项：第二阶段没有新增生产结构（P2-04 的 `src/` 零改动），因果与边界已保存在各阶段实现文档与架构评审中，此时建图只复述已有文字。
 
@@ -587,22 +673,44 @@ P2-01 刻意只覆盖了「身份是谁」这一条最小生命线，P2-02 刻�
 
 ## 第三阶段的收尾项
 
-P3-01 已完成本地验收并写好评审文档，**尚未提交、尚未 push**：
+P3-01 已完成、已提交、已 push，**没有未结项**：
 
 ```text
-待提交：11 个文件（7 个 src/foreground + 2 个 test + 2 个 docs）
+3d910ee  feat: 完成 P3-01 Windows 前台感知
+origin/main = 3d910ee
+CI（.github/workflows/runtime-tests.yml）: success，run 35053737581
+```
+
+P3-02 已完成本地验收并写好评审文档，**尚未提交、尚未 push**：
+
+```text
+待提交：10 个文件（7 个 src/input-activity + 2 个 test + 2 个 docs）
 CI 尚未跑过本阶段的测试
 ```
 
-**CI 与本机测试数会不同，这是预期而非异常**：CI 运行在 `ubuntu-latest`，两条 Windows 真实 smoke 测试会自我 skip，因此 CI 上预期是 **116 pass / 2 skipped**；本机（Windows 11）是 **118 pass / 0 skipped**。两者都算通过。
+**CI 与本机测试数会不同，这是预期而非异常**：CI 运行在 `ubuntu-latest`，五条 Windows 真实 smoke 测试会自我 skip（P3-01 的 2 条 + P3-02 的 3 条），因此 CI 上预期是 **132 pass / 5 skipped**；本机（Windows 11）是 **137 pass / 0 skipped**。两者都算通过。**该 CI 数字是预期值**——本轮未 push，尚未由 CI 实际跑过。
 
-有一条**随第三阶段进入下一阶段**的实现限制：**PowerShell 异步子进程 v1 的单次观测成本为 370–455 ms**。它决定了 Foreground 目前只能被显式调用，**不能作为高频采样源**；任何高频前台感知需求都必须先解决这个成本，而优化本身属于新工作。
+有一条**随第三阶段进入下一阶段**的实现限制：**PowerShell 异步子进程 v1 的单次观测成本为 370–523 ms**（P3-01 实测 370–455 ms，P3-02 实测 523 ms）。它决定了两条感知目前都只能被显式调用，**不能作为高频采样源**；两个感知同时使用时是两个独立子进程，没有摊薄。任何高频感知需求都必须先解决这个成本，而优化本身属于新工作。
 
-以及一条**本轮新增的评审注意事项**：P3-01 的 66 条边界验证断言是**会话内一次性探针**，不在仓库内、不进 CI、不可复现。它们证明了「当时确实验过」，不证明「以后不会被改坏」。是否把它们改写成持久测试，需要单独决定（详见 P3-01 架构评审 §14）。
+以及两条**随 P3-02 进入下一阶段**的评审注意事项：
 
-P3-01 刻意只覆盖了「此刻人正在看什么」这一条最小感知线，且只交付 **witness 而非 interpreter**：它不判断什么重要、什么正常、什么值得记住。任何超出它的扩展——语义解读、过滤、后台化、持久化、非 Windows 实现、通用 Perception 框架——都不属于当前已批准范围。
+```text
+1. 一次性探针的证据等级
+   P3-01 的 66 条 + P3-02 的 142 条断言都是会话内一次性探针
+   不在仓库内、不进 CI、不可复现
+   → 证明「当时确实验过」，不证明「以后不会被改坏」
 
-P3-01 的优先目标与第二阶段一致：
+2. parser coverage gap 已涉及两个模块
+   windows.ts 的 parser rejection branches 不在 npm test 内
+   本轮结论仍是不为测试覆盖扩大 public API、不改 seam
+   若出现第三个同型 parser，应重新评估 test seam 与 transport seam
+```
+
+P3-01 与 P3-02 各自只覆盖一条最小感知线——「此刻人正在看什么」与「系统记录的最后一次输入发生在哪个 tick」——且都只交付 **witness 而非 interpreter**：它们不判断什么重要、什么正常、什么值得记住。任何超出它们的扩展——语义解读、过滤、后台化、持久化、非 Windows 实现、通用 Perception 框架——都不属于当前已批准范围。
+
+**P3-03 尚未冻结**，本轮不对它做任何命名或规划。
+
+第三阶段的优先目标与第二阶段一致：
 
 > 继续用真实 Hikari 需求检验这套基础，而不是从纯理论中扩展 Runtime 或 Perception。
 
