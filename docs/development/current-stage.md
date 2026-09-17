@@ -1,8 +1,8 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 2 已完成最终验收并正式收口**（P2-01 ~ P2-04 全部通过 Functional / Architecture Review，已 push，CI 通过）；**Phase 3 P3-01 已完成、已提交、已 push**（commit `3d910ee`，Functional PASS + Architecture PASS，CI 通过）；**Phase 3 P3-02 已完成、已提交、已 push**（commit `9495f7c`，Functional PASS + Architecture PASS，CI 通过）；**Phase 3 P3-03 实现完成并通过收口评审**（Functional PASS + Architecture PASS），尚未提交、尚未 push
+> 状态：**Phase 2 已完成最终验收并正式收口**（P2-01 ~ P2-04 全部通过 Functional / Architecture Review，已 push，CI 通过）；**Phase 3 P3-01 已完成、已提交、已 push**（commit `3d910ee`，Functional PASS + Architecture PASS，CI 通过）；**Phase 3 P3-02 已完成、已提交、已 push**（commit `9495f7c`，Functional PASS + Architecture PASS，CI 通过）；**Phase 3 P3-03 已完成、已提交、已 push**（commit `a4f5c94`，Functional PASS + Architecture PASS，CI 通过：154 tests / 149 pass / 5 skipped / 0 fail）；**Phase 3 P3-04 实现完成并通过收口评审**（Functional PASS + Architecture PASS），为 `complete (awaiting commit)`，尚未提交、尚未 push；**P3-05 尚未冻结**
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`。
 
 ---
 
@@ -35,9 +35,10 @@ P2-04  生命周期验收        已完成
 ```text
 P3-01  Windows Foreground Perception v1      已完成、已提交、已 push
 P3-02  Windows Input Activity Perception v1  已完成、已提交、已 push
-P3-03  Desktop Session World v1              已完成（待提交）
+P3-03  Desktop Session World v1              已完成、已提交、已 push
+P3-04  Desktop Session Awareness v1          已完成、已收口（待提交）
 
-P3-04  尚未冻结
+P3-05  尚未冻结
 ```
 
 **P2-01 已完成的部分**：
@@ -141,9 +142,31 @@ Desktop Session World v1
 
 P3-03 **没有修改任何既有文件**：`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/foreground/`、`src/input-activity/`、`src/cli/`、`src/index.ts`、`package.json`、`tsconfig.json` 全部零改动，全部产物是新增文件。`package.json` 与 `tsconfig.json` 无需改动，因为二者的 `test` 与 `include` 都是通配。
 
-P3-03 尚未提交、尚未 push。
+P3-03 已完成、已提交、已 push（commit `a4f5c94`），CI 已对这批测试跑过并通过（154 tests / 149 pass / 5 skipped / 0 fail）。
 
-第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 与 P3-02 也已 push，`origin/main` 现为 `9495f7c`。
+**P3-04 已完成的部分**：
+
+```text
+Desktop Session Change Awareness v1
++ 自治 Awareness Plugin desktop-session-awareness（requires: World 契约，provider 缺席即 waiting）
++ desktop-session-awareness.current@1 Service 契约
++ 第一次 current() 返回 baseline，第二次起返回 comparison
++ 三个判定值：facet 级 changed / unchanged / indeterminate，整体级 changed / stable / indeterminate
++ 只比较相邻两次 snapshot；不比较 snapshotAt / observedAt（否则恒为 changed）
++ 任一 facet 任一侧 unavailable → 该 facet indeterminate，绝不伪装成 unchanged
++ 不对称优先级：changed 压过 indeterminate；stable 仅在两个 facet 都 unchanged 时成立
++ title 的 omitted / undefined、null、string 三态用 === 保持可分，不做归一化
++ lastInputTick 只比较相等性：不推断方向、时长、活跃度
++ World rejection 原样传播，且失败调用不推进 baseline
++ baseline 是 activation-local（setup 作用域），停用再激活自然回到 baseline
++ pull-only、零持久化、零后台机制、零 Manager、零新依赖、零平台实现
+```
+
+P3-04 **没有修改任何既有文件**：`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/foreground/`、`src/input-activity/`、`src/desktop-session-world/`、`src/cli/`、`src/index.ts`、`package.json`、`tsconfig.json` 全部零改动（`git diff --name-only` 输出为空），全部产物是新增文件。`package.json` 与 `tsconfig.json` 无需改动，因为二者的 `test` 与 `include` 都是通配。
+
+P3-04 尚未提交、尚未 push。
+
+第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 ~ P3-03 也已 push，`origin/main` 现为 `a4f5c94`（已比对确认与本地 HEAD 逐字符相同）。
 
 **第二阶段不新增架构地图（已决定，非未结项）**：第一阶段的图存在，是因为那一步要固定「Runtime 不带领域语义」这条边界本身；第二阶段的产物是接线与验收——P2-01 / P2-02 / P2-03 的因果与边界已由各自的实现文档与架构评审完整保存，P2-04 **没有新增任何生产结构**。此时硬画一张图只会复述已有文字，不增加信息，因此**不以架构图作为第二阶段收口条件**。后续若出现真实的结构变化，再按那时的需要决定是否建图。
 
@@ -153,25 +176,57 @@ P3-03 尚未提交、尚未 push。
 
 第三阶段第一次让 Runtime **感知现实**：Foreground 报告「谁在前台、什么时候看到的」，InputActivity 报告「系统记录的最后一次输入发生在哪个 tick」，**都不**判断这些意味着什么。P3-03 在此之上首次进入 **World** 层，回答「在这个 scope 内，我现在掌握了哪些事实」。
 
-三层分工与当前落点：
+三层分工与当前落点（**领域定义**，以 `principles.md` §14 为准，继续冻结）：
 
 ```text
-Perception   这个 source 告诉了我什么？        P3-01 / P3-02 已交付
-World        在这个 scope 内我掌握了哪些事实？ P3-03 首次进入
-Awareness    这些事实意味着什么？              未进入，且未被预埋
+Perception   我观察到了什么？                      P3-01 / P3-02 已交付
+World        在某个 scope 内现在掌握哪些事实？     P3-03 已交付
+Awareness    这些事实意味着什么 / 什么值得在意？   P3-04 首次进入（仅最小切片）
 ```
 
-三步的架构增量都不在于新增能力：
+**P3-04 并不实现完整 Awareness。** 它只是 Awareness 层的**第一个最小 contextualization primitive**，当前只回答：
+
+> 相邻两个 DesktopSessionWorld snapshot 的**可比较 payload** 有没有变化？
+
+对照 `principles.md` §14 给出的推荐链路：
+
+```text
+世界变化 → Perception → Observation → 事实标准化 / Contextualization
+         → Salience / Importance Judgement → Ignore / Remember / Ask / Notify / Act
+```
+
+P3-04 落在链路中的 **Contextualization** 这一格，并且只落在这一格的最窄面：它把「本次事实」与「上一次事实」放进同一个上下文（相邻两次比较）从而给事实一个坐标。**它不进入 Salience / Importance Judgement，更不进入 Ignore / Remember / Ask / Notify / Act。**
+
+因此本阶段的三条语义分界必须与上面的领域定义同时阅读：
+
+```text
+changed       不蕴含「重要」
+stable        不蕴含「无事发生」；它是关于观测值的陈述，不是关于世界的陈述
+indeterminate 不蕴含「出了问题」；它只蕴含「这一项没法比」
+```
+
+这正是 §14 那句「不应把 Foreground、Calendar、DeviceActivity 等传感器集合本身称为完整 Awareness」的同型纪律：**P3-04 是 Awareness 的一个 slice，不是 Awareness。** 把它读成完整的 Awareness，与把一组感知读成完整 Awareness 是同一类错误。
+
+**准确的说法是**：P3-04 **首次让 Perception → World → Awareness 三层在真实代码中贯通**——在此之前，第三层从未有过任何真实实现，"三层"只是文档里的分工。但**贯通不等于完整实现 Awareness**；P3-04 只落实了 Awareness 的**最小 change-contextualization slice**。三层在代码中贯通，与第三层被实现完整，是两件不同的事，不得互相替代。
+
+（本轮更正的一处口径：上一版本文档把 Awareness 的领域定义改写为「这些事实之间有没有差别」，并把「意味着什么」划出 Awareness 层。那是**错误的范围收窄**——§14 定义的 Awareness 明确包含「值不值得在意 / 是否需要记住、提醒或行动」。「有没有差别」是 P3-04 这个 primitive 的能力边界，不是 Awareness 层的定义。）
+
+四步的架构增量都不在于新增能力：
 
 ```text
 P3-01  证明了一个感知可以存在
 P3-02  证明了第二个感知不需要先长出协调层
 P3-03  证明了组合两个感知也不需要先长出协调层
+P3-04  证明了在组合之上做变化判断，仍然不需要协调层，也不需要 Memory
 ```
 
 P3-02 的证明方式是：两个感知 Plugin 各自 `requires: []`、各自提供自己的 Service 契约、各自拥有自己的平台判断，Runtime 侧仍然零平台知识、零协调代码。
 
 P3-03 的证明方式是：World 是最容易长成 `PerceptionManager` / `ObservationBus` / `GlobalWorldState` 的地方，而它没有。它**没有为「我是组合者」这个身份要求任何特殊待遇**——取得两个 source 的方式与任何消费者取得任何 capability 的方式完全相同（`requires` 声明、`setup` 里 `get`、调用时 `await`），Runtime 也没有给它任何特殊待遇。Runtime 侧仍然零改动、零新 API。
+
+P3-04 的证明方式是：Awareness 是最容易长成 `AwarenessManager` / `GlobalAwareness` / Super Orchestrator 的地方（「我知道所有事实，所以由我来协调」），而它没有；它也是**第一次出现「需要记住上一次」的诱因**的地方，而它只用一个 `setup` 作用域内的局部变量解决，没有长成 Memory。它取得 World 的方式同样与任何消费者取得任何 capability 的方式完全相同。Runtime 侧仍然零改动、零新 API。
+
+**P3-04 同时确立了一条进入后续阶段的语义分界**：`stable` **是关于观测值的陈述，不是关于世界的陈述**。它只说「两次 snapshot 之间两个可比的 payload 没有差别」，**不表示**用户空闲、不表示用户离开、不表示没有活动、不表示现实世界没有变化。这条分界由模块内的禁用词表在结构上守住（`isIdle` / `isAway` / `userPresent` / `userAway` / `idleFor` 出现即测试失败）。
 
 当前已经证明：
 
@@ -743,7 +798,72 @@ snapshot 原子性只到「单次获取的最窄窗口」，不声称两个 obse
 World 不校验 observation 形状 → 其契约保真度依赖两个感知的契约保真度
 ```
 
-P3-03 尚未提交、尚未 push。
+P3-03 已完成、已提交、已 push（commit `a4f5c94c5987b51a3c2439742c39158f7f70686c`）。CI 已对这批测试跑过并通过：**154 tests / 149 pass / 5 skipped / 0 fail**（同样 5 条 Windows smoke 在 `ubuntu-latest` 上自我 skip）。
+
+### P3-04 Desktop Session Awareness v1
+
+本次新增文件：**6 个**（实现轮 5 个 + 收口轮新增架构评审文档 1 个）。
+
+```text
+src/desktop-session-awareness/  (4)
+  contracts.ts  index.ts  plugin.ts  types.ts
+test/desktop-session-awareness.test.mjs                                 (1)
+docs/architecture/phase-3-desktop-session-awareness-architecture-review.md  (1)
+```
+
+修改文件：`docs/development/current-stage.md`（本轮），以及 `docs/development/phase-3-desktop-session-awareness.md` 的三处最小事实修正（术语、并发语义、限制 6）。
+
+**`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/foreground/`、`src/input-activity/`、`src/desktop-session-world/`、`src/cli/`、`src/index.ts`、`package.json`、`tsconfig.json` 全部未修改**（`git diff --name-only` 输出为空，逐字节未改动）。全部产物是新增文件。**特别注意：P3-03 的 `src/desktop-session-world/` 一个字节都没动**，本阶段只消费它的公开契约。`package.json` 与 `tsconfig.json` 无需改动，因为二者的 `test` 与 `include` 都是通配。
+
+本地自动化测试：**176 / 176 PASS，0 skipped**（22 个 DesktopSessionAwareness + 17 个 DesktopSessionWorld + 16 个 InputActivity 确定性 + 3 个 InputActivity Windows smoke + 18 个 Foreground 确定性 + 2 个 Foreground Windows smoke + 33 个 Chronicle + 17 个 Continuity + 26 个 CLI + 16 个生命周期 + 6 个 Runtime）。全量为 154（既有）+ 22（本阶段）。
+
+编译：`tsc --noEmit` 无错误。
+
+P3-04 Functional Review：**PASS**。P3-04 Architecture Review：**PASS**。
+
+**本阶段的主要架构结果**：P3-04 **首次让 Perception → World → Awareness 三层在真实代码中贯通**，三层第一次**同时**运行在同一个 Runtime 中，而 Runtime 对三层语义的知晓量仍是 0——`baseline` / `changed` / `stable` / `indeterminate` 这四个词没有出现在 `src/runtime/` 的任何一行。**贯通不等于完整实现 Awareness**；P3-04 只落实了 Awareness 的最小 change-contextualization slice（详见上文「三层分工与当前落点」）。Awareness 是第一个消费 World 的模块，它消费的是 World 的**结论**，不是 World 的**原料**；它没有直连 Foreground / InputActivity（源码 allowlist + 图谱 IMPORTS 边 + Serena 符号引用三层证据一致）。
+
+**本阶段最重要的语义不变量**：**没有数据 ≠ 没有变化。**「没拿到数据」写成 `unchanged` 会让调用方以为「确认过，没变」，实际是「根本没看」——这两种情形语义相反。因此任一 facet 任一侧 `unavailable` → 该 facet 是 `indeterminate`，绝不伪装成 `unchanged`。
+
+**判定代数是刻意不对称的**：`changed` 优先于 `indeterminate`，`stable` 仅在两个 facet 都 `unchanged` 时成立。理由是 `changed` 是**存在性**断言（「至少有一处不同」），可以由局部证据支撑；`stable` 是**全称**断言（「没有任何一处不同」），必须覆盖所有可比项。
+
+**baseline 的 reset 是派生性质，不是新增机制**：`previous` 声明在 `setup` 作用域内，于是 World 消失 → `#deactivateTree` → 再激活时 `setup` 重跑 → 第一次 `current()` 自然回到 `baseline`。**本阶段为此没有写一行代码**。
+
+**`title` 的三态保持是刻意的**：`exactOptionalPropertyTypes: true` 下 `title?: string | null` 在生产环境有三个可观察状态（omitted / `undefined`、`null`、`string`），三者都真的会发生，比较用 `===` 使它们两两可分。折叠（`?? null`）会把「读不到标题」与「读到了，是空标题」这两种不同事实判为 `unchanged`。
+
+**关于 `detect_changes`：本轮的 0 必须读作「未看见」，且比 P3-03 更强**。本轮未执行 `git add`（收口纪律禁止 stage），全部产物是**未跟踪**文件，`detect_changes` 读的 `git diff` 按定义看不见它们——**重建索引后重测仍然是 0**，证明与索引新鲜度无关。这与 P3-03 那一轮（先 `git add` 因此拿到有效的 51 changed symbols）的差别，是收口纪律的直接后果，不是退步。本阶段的边界结论因此改由**源码 allowlist 断言 + 图谱 IMPORTS 边 + Serena 符号引用**三层证据支撑。
+
+**`staleness.commitsBehind` 不可按数值采信（本轮拿到比 P3-03 更硬的证据）**：重建索引后 `.gitnexus/meta.json` 的 `lastCommit` 与 HEAD **逐字符相同**（已用 `git rev-parse HEAD` 比对），而该字段**仍报 `commitsBehind: 4`**——它很可能在服务进程启动时被缓存，重建之后没有重读。判定索引新鲜度只能靠 `meta.json` 与 `git rev-parse HEAD` 的直接比对。
+
+**22 条确定性测试中有 3 条关键性质的判别力由一次性变异探针验证**，因为「测试通过」不等于「测试有判别力」：
+
+```text
+基线                                        22 pass / 0 fail
+M1  title 比较改用 ==                        1 fail（测试 10）
+M2  overallChange 让 indeterminate 优先      1 fail（测试 13）
+M3  let previous 上提到模块作用域            9 fail（含测试 16）
+```
+
+M1、M2 各自**只**打翻应当打翻的那一条，说明两条性质被精确钉住。探针自身出过一次错误：第一版三次变异**全报 MISSED 且零失败**，原因是脚本用行首锚点 `^✖` 匹配 Node reporter 输出而 `✖` 前带 ANSI 色码，**探针把「有失败」读成了「无失败」**。修正后才得到上表。教训：**一个会把自己读错的探针比没有探针更危险。**
+
+**已知 coverage gap 未加剧**：`src/foreground/windows.ts` 与 `src/input-activity/windows.ts` 的 parser rejection branches 不在 `npm test` 内（P3-01 / P3-02 已记录），缺口仍涉及两个模块、无变化；P3-04 没有 parser、没有平台分支、没有子进程、没有内部 seam，其全部分支都在仓库测试覆盖内，**也没有新增第二处具名内部 import**。
+
+**已知限制**：
+
+```text
+不区分「变了」的种类 → title 改了与进程换了都是同一个 changed
+stable 在真人使用下偏少 → 只要用户有输入，inputActivity 就是 changed
+indeterminate 不携带原因 → 与 World 的 unavailable 同源决定
+只比较相邻两次 → 「A → B → A」在第三次报 changed，不报「回到原状」
+previous / current 是引用 → 靠快照已冻结的约定，本层不做防御性拷贝
+并发下不保证 invocation-order baseline → baseline 按【成功 World acquisition
+  的完成顺序】前进，不按调用发起顺序。v1 明确不增加 mutex / queue / serialization
+本层不校验 World 返回的快照形状 → 契约保真度依赖 World，World 又依赖两个感知
+```
+
+**并发语义（须与限制同时阅读，勿读作保证）**：v1 不保证 concurrent `current()` 的调用顺序与 baseline 推进顺序一致。先被调用、但 World 后返回的那次，会成为后一次比较的 `previous`。单个 assessment 不受影响——每一次 `current()` 自身仍然完整、自洽、可引用；受影响的只是「哪两次读数被拿来配对」。理由：v1 的调用方只需要「拿两次读数做个比较」，在出现真实需求之前引入排队，是为想象中的调用方付协调成本。
+
+P3-04 尚未提交、尚未 push。
 
 ### 第一阶段
 
@@ -805,8 +925,9 @@ Docs / Contracts updated
 - 事实写入失败后的重试幂等语义（去重、幂等键、补偿读取、自动重试）——`ChroniclePersistenceError` 只表示本次写入未获得可靠持久化确认，**不**保证事实未落盘，调用方不得仅凭它判定事实不存在；
 - `getOrCreate` / `openOrCreate` 与任何全局身份中心；
 - 身份迁移、备份、修复、升级；
-- **感知的语义解读**——Salience / Importance / freshness 判断、基于标题的语义分类、模型调用、「什么值得记住」的判断。P3-01 / P3-02 只交付 witness，P3-03 只交付 composer，**都不**交付 interpreter；
-- **跨 source 的推断**——把「前台是 X」与「刚有输入」合起来推出「某人正在打字」这类结论。P3-03 把两条事实放进同一个信封，但**不**解释它们的关系；那是 Awareness 的句子；
+- **感知的语义解读**——Salience / Importance / freshness 判断、基于标题的语义分类、模型调用、「什么值得记住」的判断。P3-01 / P3-02 只交付 witness，P3-03 只交付 composer，P3-04 只交付 comparator，**都不**交付 interpreter；
+- **Awareness 的完整实现**——`principles.md` §14 定义 Awareness 负责「这件事意味着什么？值不值得在意？是否需要记住、提醒或行动？」，其链路为 Contextualization → Salience / Importance Judgement → Ignore / Remember / Ask / Notify / Act。**P3-04 只落实了这条链路的第一个最小 contextualization slice**（相邻两个 World snapshot 的 payload 变化比较），链路其余部分——Salience / Importance 判断、Ignore / Remember / Ask / Notify / Act——**均未进入，且未被预埋**；
+- **跨 source 的推断**——把「前台是 X」与「刚有输入」合起来推出「某人正在打字」这类结论。P3-03 把两条事实放进同一个信封，但**不**解释它们的关系；P3-04 只比较相邻两次信封的 payload 是否变化，同样**不**解释它们的关系；那是 Awareness 的句子，而 P3-04 只说出了其中最短的一句；
 - **Input Activity 的在场解读**——`lastInputAt` / `idleForMs` / `idleSeconds` / `isActive` / `isIdle` / `userPresent`，以及任何阈值比较。`lastInputTick` 是 source fact，不是结论；
 - **感知结果的过滤**——过滤 Explorer / 任务栏 / 自身进程，或任何「这不像正常用户程序」的启发式；
 - **感知的后台化**——watcher、`changed` Event、轮询、订阅、缓存、保活、队列、速率限制、去重；
@@ -881,24 +1002,35 @@ origin/main = 9495f7c（当前 HEAD）
 CI（.github/workflows/runtime-tests.yml）: success，run 35200893510
 ```
 
-P3-03 已完成本地验收、写好评审文档并通过收口评审，**尚未提交、尚未 push**：
+P3-03 已完成、已提交、已 push，**没有未结项**：
 
 ```text
-待提交：7 个新增文件
-  （4 个 src/desktop-session-world + 1 个 test + 2 个 docs）
+a4f5c94  feat: 完成 P3-03 桌面会话 World v1
+origin/main = a4f5c94（已比对确认与本地 HEAD 逐字符相同）
+CI（.github/workflows/runtime-tests.yml）: success，154 tests / 149 pass / 5 skipped / 0 fail
+```
+
+P3-04 已完成本地验收、写好评审文档并通过收口评审，**尚未提交、尚未 push**：
+
+```text
+待提交：6 个新增文件
+  （4 个 src/desktop-session-awareness + 1 个 test + 1 个 docs）
   另修改 docs/development/current-stage.md
+  以及 docs/development/phase-3-desktop-session-awareness.md（3 处最小事实修正）
 CI 尚未跑过本阶段的测试
 ```
 
-**CI 与本机测试数会不同，这是预期而非异常**：CI 运行在 `ubuntu-latest`，五条 Windows 真实 smoke 测试会自我 skip（P3-01 的 2 条 + P3-02 的 3 条）。P3-02 的这组数字**已由 CI 实际跑过并确认**，不再是预期值：
+**CI 与本机测试数会不同，这是预期而非异常**：CI 运行在 `ubuntu-latest`，五条 Windows 真实 smoke 测试会自我 skip（P3-01 的 2 条 + P3-02 的 3 条）。下面每一个数字都**已由 CI 或本机实际跑过并确认**，没有预期值：
 
 ```text
 CI（ubuntu-latest，P3-02，run 35200893510）:  137 tests / 132 pass / 5 skipped / 0 fail
+CI（ubuntu-latest，P3-03）:                  154 tests / 149 pass / 5 skipped / 0 fail
 本机（Windows 11，P3-02）:                   137 pass / 0 skipped
 本机（Windows 11，P3-03）:                   154 pass / 0 skipped
+本机（Windows 11，P3-04）:                   176 pass / 0 skipped
 ```
 
-P3-03 在 CI 上的预期值相应为 **149 pass / 5 skipped / 0 fail**（总数 154 不变，仍是同样 5 条 Windows smoke 自我 skip）。该数字是**预期值**——本轮未 push，尚未由 CI 实际跑过。
+P3-04 在 CI 上的**预期**值为 **171 pass / 5 skipped / 0 fail**（总数 176，仍是同样 5 条 Windows smoke 自我 skip）。该数字是**预期值**——本轮未 push，尚未由 CI 实际跑过，不得当作已确认值引用。
 
 有一条**随第三阶段进入下一阶段**的实现限制：**PowerShell 异步子进程 v1 的单次观测成本为 370–674 ms**（P3-01 实测 370–455 ms，P3-02 实测 523 ms，P3-03 同轮单独实测 638 / 674 ms）。它决定了两条感知目前都只能被显式调用，**不能作为高频采样源**。任何高频感知需求都必须先解决这个成本，而优化本身属于新工作。
 
@@ -928,13 +1060,63 @@ P3-03 给出了这条限制在组合层的第一个真实数据点：World 在**
    若出现第三个同型 parser，应重新评估 test seam 与 transport seam
 ```
 
-P3-01 / P3-02 / P3-03 各自只覆盖一条最小线——「此刻人正在看什么」、「系统记录的最后一次输入发生在哪个 tick」、「在这个 scope 内我现在掌握了哪些事实」——且只交付 **witness 与 composer，不交付 interpreter**：它们不判断什么重要、什么正常、什么值得记住。任何超出它们的扩展——语义解读、跨 source 推断、过滤、后台化、持久化、非 Windows 实现、通用 Perception 框架、`GlobalWorldState`——都不属于当前已批准范围。
+以及四条**随 P3-04 进入下一阶段**的评审注意事项：
 
-**P3-04 尚未冻结**，本轮不对它做任何命名或规划。
+```text
+1. 一次性探针的证据等级（累计，本轮新增一条反例）
+   P3-01 的 66 条 + P3-02 的 142 条断言是会话内一次性探针
+   P3-03 / P3-04 的判别力探针同样是会话内一次性
+   不在仓库内、不进 CI、不可复现
+   → 证明「当时确实验过」，不证明「以后不会被改坏」
+
+   本轮新增的反例不是「探针无用」，而是【探针会把自己读错】：
+   P3-04 第一版探针三次变异全报 MISSED 且零失败，原因是
+   用行首锚点 ^✖ 匹配 Node reporter 输出，而 ✖ 前带 ANSI 色码，
+   脚本把「有失败」读成了「无失败」。
+   → 一个会把自己读错的探针比没有探针更危险：
+     它既给假警报，也给假安心。
+   → 凡探针报「全部 MISSED」，应先怀疑探针，再怀疑测试
+     （这是 P3-03「先怀疑变异，再怀疑测试」的同型镜像）
+
+2. 并发语义不是保证，已知限制
+   v1 不保证 concurrent awareness.current() 的
+   invocation-order baseline：baseline 按【成功 World acquisition
+   的完成顺序】前进，不按调用发起顺序。
+   单个 assessment 不受影响（每次调用自身完整、自洽、可引用），
+   受影响的只是「哪两次读数被拿来配对」。
+   v1 明确【不】增加 mutex / queue / serialization。
+   → 若将来出现需要「第 N 次与第 N-1 次配对」的调用方，
+     那应是一次独立的语义变更，而不是在本层顺手加锁。
+
+3. detect_changes 在未跟踪文件上不可用（本轮为收口纪律的直接后果）
+   P3-04 收口轮按纪律不 stage，全部产物是未跟踪文件，
+   detect_changes 读的 git diff 按定义看不见它们，返回 0。
+   【重建索引后重测仍是 0】，证明与索引新鲜度无关。
+   → 这个 0 必须读作「未看见」，不是「无影响」，不得当 clean 用。
+   → 另：staleness.commitsBehind 在本轮被证伪 ——
+     重建索引后 meta.json 的 lastCommit 与 HEAD 逐字符相同，
+     该字段仍报 commitsBehind: 4（疑似进程启动时缓存、之后不重读）。
+     判定索引新鲜度只能靠 meta.json 与 git rev-parse HEAD 直接比对。
+
+4. parser coverage gap 仍涉及两个模块（本轮未加剧）
+   windows.ts 的 parser rejection branches 不在 npm test 内
+   P3-04 没有加剧它：无 parser、无平台分支、无子进程、无内部 seam，
+   其全部分支都在仓库测试覆盖内，也没有新增第二处具名内部 import
+   结论仍是不为测试覆盖扩大 public API、不改 seam
+   若出现第三个同型 parser，应重新评估 test seam 与 transport seam
+```
+
+P3-01 / P3-02 / P3-03 / P3-04 各自只覆盖一条最小线——「此刻人正在看什么」、「系统记录的最后一次输入发生在哪个 tick」、「在这个 scope 内我现在掌握了哪些事实」、「这些事实之间有没有差别」——且始终**只交付 witness / composer / comparator，不交付 interpreter**：它们不判断什么重要、什么正常、什么值得记住。任何超出它们的扩展——语义解读、跨 source 推断、过滤、后台化、持久化、非 Windows 实现、通用 Perception 框架、`GlobalWorldState`、通用 Comparison 框架——都不属于当前已批准范围。
+
+**P3-05 尚未冻结**，本轮不对它做任何命名或规划。
+
+有一条由 P3-04 产生、应作为下一阶段输入的观察，此处只记录、不规划：
+
+> Awareness 是第一个消费 World 的模块。若将来出现**第二个 World 消费者**，或出现需要**跨快照历史**判断的需求（例如「A → B → A 算不算回到原状」），则「Awareness 是否该有历史窗口」必须作为一次**独立的设计决定**被提出，而不是搭在某个消费者身上顺手长出来。现在样本仍然只有一例，因此**不提前抽象**。
 
 第三阶段的优先目标与第二阶段一致：
 
-> 继续用真实 Hikari 需求检验这套基础，而不是从纯理论中扩展 Runtime、Perception 或 World。
+> 继续用真实 Hikari 需求检验这套基础，而不是从纯理论中扩展 Runtime、Perception、World 或 Awareness。
 
 ---
 
