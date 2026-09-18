@@ -347,9 +347,13 @@ setup() → createWindowsAcquirer() → process.platform !== 'win32' → throw F
 | 环境 | 结果 | 来源 |
 | --- | --- | --- |
 | 本机 Windows 11 | **184 tests / 184 pass / 0 fail / 0 skipped** | **实际跑过** |
-| CI（ubuntu-latest） | 预计 **184 / 179 pass / 5 skipped / 0 fail** | **预期值** |
+| CI（ubuntu-latest，run #14） | **184 tests / 178 pass / 6 skipped / 0 fail** | **实际跑过**（已 push 后由 CI 确认） |
 
-**预期值说明**：本轮**未 push**，CI 尚未实际跑过。184 = 176（P3-04 基线）+ 8（本阶段）；CI 的 5 条跳过全部来自 P3-01/P3-02 的感知平台 smoke，与本阶段无关。**该组数字不得当作已确认值引用。**
+184 = 176（P3-04 基线）+ 8（本阶段）。
+
+**CI 的 6 条跳过**全部是**平台门控，不是失败**：5 条来自 P3-01/P3-02 的感知平台 smoke，1 条来自本阶段新增的真实 Windows vertical smoke（用例 8，在非 win32 host 上按设计自我 skip）。
+
+**关于本轮修正**：本文件在**未 push** 时曾给出预期值 `179 pass / 5 skipped`。该预测**少算了一条**——新增的真实 Windows vertical smoke 在 `ubuntu-latest` 上同样会自我 skip，因此 skipped 从 5 变为 6。**真实数字是 178 pass / 6 skipped / 0 fail**，以上表为准。
 
 ---
 
@@ -430,7 +434,7 @@ Windows smoke 实际 **846 ms**（两次 awareness 调用 = 两次 World acquisi
 4. **F1 不断言桌面状态** —— `change` 是 `changed` 还是 `stable`、标题是什么、tick 往哪走，都取决于此刻这台机器上的人在做什么。
 5. **`absent` 前景在活桌面不可触发**（P3-01 已知限制 2）—— F1 同时接受 present 与合法 absent。
 6. **探针一次性、不可复现**（§11）。
-7. **CI 计数为预期值**（§10）—— 本轮未 push。
+7. **CI 的 6 条跳过不在本机复现** —— Windows 本机为 184 pass / 0 skipped，CI 为 178 pass / 6 skipped。差的 6 条全部是平台门控（§10），不是被掩盖的失败。**已 push，CI 已在 `c07ad36` 上实际跑过并确认。**
 
 ---
 

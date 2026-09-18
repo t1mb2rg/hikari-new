@@ -45,7 +45,11 @@ $ npm test
 
 **Windows 本机 184 / 184 / 0 / 0，实际跑过，非预期值。**
 
-CI（ubuntu-latest）预计 **184 / 179 pass / 5 skipped / 0 fail** —— 本轮**未 push**，该组数字是**预期值**，不得当作已确认值引用。5 条跳过全部来自 P3-01/P3-02 的感知平台 smoke，与本阶段无关。
+CI（ubuntu-latest，run #14，commit `c07ad36`）：**184 tests / 178 pass / 6 skipped / 0 fail**，实际跑过，已确认。
+
+**本文件在未 push 时曾给出预期值 `179 pass / 5 skipped`，该预测少算一条。** 新增的真实 Windows vertical smoke（用例 8）在 `ubuntu-latest` 上同样按设计自我 skip，因此 skipped 为 6 而非 5，pass 为 178 而非 179。**以 178 / 6 / 0 为准。**
+
+6 条跳过全部是**平台门控，不是失败**：5 条来自 P3-01/P3-02 的感知平台 smoke，1 条来自本阶段的用例 8。
 
 ### 1.4 Functional PASS
 
@@ -323,6 +327,19 @@ P2-04 记录过该证据的两个前置条件：**索引重建 + `git add`**。�
 >
 > 本阶段（P3-05）证明的是这三层的**组合性质**，**不是** Awareness 层的完成度。**不得把"第三层已贯通"读成"第三层已验证"，也不得把 Awareness 等同于 change detection。**
 
+**Phase 3 明确未证明**（以下全部不在已证明范围内，与 `current-stage.md` §「第三阶段收口结论」一致）：
+
+```text
+完整 Awareness · salience · importance
+remember / ask / notify / act
+user presence · idle / away · application semantics
+background resident loop
+multi-runtime federation · cross-device awareness
+Memory / Goal integration
+```
+
+Phase 3 证明的是「**第一条真实纵向链路及其生命周期**」，不是其中任何一层的完整能力。
+
 ### 14.3 第三阶段整体关闭条件
 
 | 维度 | 结论 | 依据 |
@@ -338,14 +355,27 @@ P2-04 记录过该证据的两个前置条件：**索引重建 + `git add`**。�
 | P3-02 Input Activity | PASS | PASS | PASS | complete |
 | P3-03 Desktop Session World | PASS | PASS | PASS | complete |
 | P3-04 Desktop Session Change Awareness | PASS | PASS | PASS | complete |
-| **P3-05 Vertical Slice Acceptance** | **PASS** | **PASS** | **PASS** | **complete（待 closeout 提交）** |
+| **P3-05 Vertical Slice Acceptance** | **PASS** | **PASS** | **PASS** | **complete** |
 
-### 14.4 closeout 时仍需完成的事项（不在本轮）
+**Phase 3 COMPLETE。** 第三阶段至此正式收口：P3-01 ~ P3-05 五项全部通过 Functional / Architecture Review，已提交（`ead4d7c` / `c07ad36`）、已 push、CI 通过。
 
-1. `docs/development/current-stage.md` 更新为 `ead4d7c`（及本阶段提交）、push DONE、CI **实际**计数，标记 Phase 3 COMPLETE。
-2. 该文件中两处 `P3-05 尚未冻结`（`:41`、`:1111`）与 CI 计数块（`:1023-1033`，其中 P3-04 行仍标注为"预期值"，**现已经 CI 实际确认**）为已知 stale，由 closeout 一并修正。
+### 14.4 closeout 结果（已完成，本轮记录）
 
-**本轮按纪律未修改 `current-stage.md`。**
+1. `docs/development/current-stage.md` 已更新为 `origin/main = c07ad36`、push DONE、CI **实际**计数（P3-04: 176/171/5/0；P3-05: 184/178/6/0），并标记 Phase 3 COMPLETE。
+2. 该文件与两份 P3-05 文档中的 stale 项（两处 `P3-05 尚未冻结`、CI 计数块中的 P3-04「预期值」标注、以及本阶段 `179 pass / 5 skipped` 的预测值）已由 closeout 一并修正为已确认事实。
+3. 一致性审查另发现 `docs/architecture/phase-2-final-architecture-review.md` 仍写着「全部工作尚未 push / P2-04 共 4 个文件待提交 / CI 从未跑过这批测试」，与 `current-stage.md`「第二阶段没有未结项」直接矛盾。该状态在第二阶段收口当时属实、此后已全部关闭，本轮按事实状态作最小更正。
+
+**本轮为纯文档收口（docs-only），不重新制造证据。** 已复核的替代证据：
+
+```text
+git diff --name-only -- src/    → 空
+git diff --name-only -- test/   → 空
+.gitnexus/meta.json lastCommit  == git rev-parse HEAD  (c07ad3677b9db91f7bf554e4d9ea37d17589967e)
+```
+
+**No additional evidence required for docs-only closeout.**
+
+**本文件记录的 §1.3 与 §14 状态现已与 HEAD `c07ad36` 一致。**
 
 ---
 

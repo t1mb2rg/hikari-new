@@ -1,8 +1,8 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 2 已完成最终验收并正式收口**（P2-01 ~ P2-04 全部通过 Functional / Architecture Review，已 push，CI 通过）；**Phase 3 P3-01 已完成、已提交、已 push**（commit `3d910ee`，Functional PASS + Architecture PASS，CI 通过）；**Phase 3 P3-02 已完成、已提交、已 push**（commit `9495f7c`，Functional PASS + Architecture PASS，CI 通过）；**Phase 3 P3-03 已完成、已提交、已 push**（commit `a4f5c94`，Functional PASS + Architecture PASS，CI 通过：154 tests / 149 pass / 5 skipped / 0 fail）；**Phase 3 P3-04 实现完成并通过收口评审**（Functional PASS + Architecture PASS），为 `complete (awaiting commit)`，尚未提交、尚未 push；**P3-05 尚未冻结**
+> 状态：**Phase 2 已完成最终验收并正式收口**（P2-01 ~ P2-04 全部通过 Functional / Architecture Review，已 push，CI 通过）；**Phase 3 已完成最终验收并正式收口**（P3-01 ~ P3-05 五项全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。`origin/main` = `c07ad3677b9db91f7bf554e4d9ea37d17589967e`（已比对确认与本地 HEAD 逐字符相同）。
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）。
 
 ---
 
@@ -33,13 +33,16 @@ P2-04  生命周期验收        已完成
 第三阶段开始让 Runtime **感知现实**，并首次进入 **World** 层。当前进度：
 
 ```text
-P3-01  Windows Foreground Perception v1      已完成、已提交、已 push
-P3-02  Windows Input Activity Perception v1  已完成、已提交、已 push
-P3-03  Desktop Session World v1              已完成、已提交、已 push
-P3-04  Desktop Session Awareness v1          已完成、已收口（待提交）
+P3-01  Windows Foreground Perception v1       complete
+P3-02  Windows Input Activity Perception v1   complete
+P3-03  Desktop Session World v1               complete
+P3-04  Desktop Session Change Awareness v1    complete
+P3-05  Phase 3 Vertical Slice Acceptance      complete
 
-P3-05  尚未冻结
+Phase 3 COMPLETE
 ```
+
+**Phase 3 已完成 Perception → World → Awareness minimal slice 的第一条真实纵向链路及其生命周期验收。** P3-04 / P3-05 只证明 Awareness 的最小 change-contextualization slice，**不是完整 Awareness**（见 §「第三阶段收口结论」）。
 
 **P2-01 已完成的部分**：
 
@@ -164,9 +167,9 @@ Desktop Session Change Awareness v1
 
 P3-04 **没有修改任何既有文件**：`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/foreground/`、`src/input-activity/`、`src/desktop-session-world/`、`src/cli/`、`src/index.ts`、`package.json`、`tsconfig.json` 全部零改动（`git diff --name-only` 输出为空），全部产物是新增文件。`package.json` 与 `tsconfig.json` 无需改动，因为二者的 `test` 与 `include` 都是通配。
 
-P3-04 尚未提交、尚未 push。
+P3-04 已完成、已提交、已 push（commit `ead4d7c594b38abaa621fbfc0604a2e73f3d4562`，message `feat: 完成 P3-04 桌面会话变化感知 v1`），CI **success**：176 tests / 171 pass / 5 skipped / 0 fail。
 
-第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 ~ P3-03 也已 push，`origin/main` 现为 `a4f5c94`（已比对确认与本地 HEAD 逐字符相同）。
+第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 ~ P3-05 也已全部 push，`origin/main` 现为 `c07ad36`（已比对确认与本地 HEAD 逐字符相同）。
 
 **第二阶段不新增架构地图（已决定，非未结项）**：第一阶段的图存在，是因为那一步要固定「Runtime 不带领域语义」这条边界本身；第二阶段的产物是接线与验收——P2-01 / P2-02 / P2-03 的因果与边界已由各自的实现文档与架构评审完整保存，P2-04 **没有新增任何生产结构**。此时硬画一张图只会复述已有文字，不增加信息，因此**不以架构图作为第二阶段收口条件**。后续若出现真实的结构变化，再按那时的需要决定是否建图。
 
@@ -863,7 +866,7 @@ previous / current 是引用 → 靠快照已冻结的约定，本层不做防�
 
 **并发语义（须与限制同时阅读，勿读作保证）**：v1 不保证 concurrent `current()` 的调用顺序与 baseline 推进顺序一致。先被调用、但 World 后返回的那次，会成为后一次比较的 `previous`。单个 assessment 不受影响——每一次 `current()` 自身仍然完整、自洽、可引用；受影响的只是「哪两次读数被拿来配对」。理由：v1 的调用方只需要「拿两次读数做个比较」，在出现真实需求之前引入排队，是为想象中的调用方付协调成本。
 
-P3-04 尚未提交、尚未 push。
+P3-04 已完成、已提交、已 push（commit `ead4d7c594b38abaa621fbfc0604a2e73f3d4562`，message `feat: 完成 P3-04 桌面会话变化感知 v1`），CI **success**：176 tests / 171 pass / 5 skipped / 0 fail。
 
 ### 第一阶段
 
@@ -900,7 +903,13 @@ Docs / Contracts updated
 
 第三阶段 P3-02：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push。
 
-第三阶段 P3-03：**已满足**——Functional PASS + Architecture PASS + Docs updated，**等待提交**。
+第三阶段 P3-03：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push。
+
+第三阶段 P3-04：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `ead4d7c`，CI success：176 tests / 171 pass / 5 skipped / 0 fail）。
+
+第三阶段 P3-05：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `c07ad36`，CI success：184 tests / 178 pass / 6 skipped / 0 fail）。
+
+第三阶段：**已满足**——P3-01 / P3-02 / P3-03 / P3-04 / P3-05 五项全部达到该标准，**已正式收口**。
 
 ---
 
@@ -998,7 +1007,7 @@ P3-02 已完成、已提交、已 push，**没有未结项**：
 
 ```text
 9495f7c  feat: 完成 P3-02 Windows 输入活动感知
-origin/main = 9495f7c（当前 HEAD）
+origin/main = 9495f7c（P3-02 收口当时；此后已前进，见下）
 CI（.github/workflows/runtime-tests.yml）: success，run 35200893510
 ```
 
@@ -1006,31 +1015,50 @@ P3-03 已完成、已提交、已 push，**没有未结项**：
 
 ```text
 a4f5c94  feat: 完成 P3-03 桌面会话 World v1
-origin/main = a4f5c94（已比对确认与本地 HEAD 逐字符相同）
+origin/main = a4f5c94（P3-03 收口当时，已比对确认与本地 HEAD 逐字符相同；此后已前进，见下）
 CI（.github/workflows/runtime-tests.yml）: success，154 tests / 149 pass / 5 skipped / 0 fail
 ```
 
-P3-04 已完成本地验收、写好评审文档并通过收口评审，**尚未提交、尚未 push**：
+P3-04 已完成、已提交、已 push：
 
 ```text
-待提交：6 个新增文件
-  （4 个 src/desktop-session-awareness + 1 个 test + 1 个 docs）
-  另修改 docs/development/current-stage.md
-  以及 docs/development/phase-3-desktop-session-awareness.md（3 处最小事实修正）
-CI 尚未跑过本阶段的测试
+ead4d7c  feat: 完成 P3-04 桌面会话变化感知 v1
+origin/main = ead4d7c（P3-04 收口当时，已比对确认与本地 HEAD 逐字符相同；此后已前进，见下）
+CI（.github/workflows/runtime-tests.yml）: success，176 tests / 171 pass / 5 skipped / 0 fail
 ```
 
-**CI 与本机测试数会不同，这是预期而非异常**：CI 运行在 `ubuntu-latest`，五条 Windows 真实 smoke 测试会自我 skip（P3-01 的 2 条 + P3-02 的 3 条）。下面每一个数字都**已由 CI 或本机实际跑过并确认**，没有预期值：
+**CI 与本机测试数会不同，这是预期而非异常**：CI 运行在 `ubuntu-latest`，Windows 真实 smoke 测试会自我 skip。下面每一个数字都**已由 CI 或本机实际跑过并确认**，没有预期值：
 
 ```text
 CI（ubuntu-latest，P3-02，run 35200893510）:  137 tests / 132 pass / 5 skipped / 0 fail
 CI（ubuntu-latest，P3-03）:                  154 tests / 149 pass / 5 skipped / 0 fail
+CI（ubuntu-latest，P3-04）:                  176 tests / 171 pass / 5 skipped / 0 fail
+CI（ubuntu-latest，P3-05，run #14）:          184 tests / 178 pass / 6 skipped / 0 fail
 本机（Windows 11，P3-02）:                   137 pass / 0 skipped
 本机（Windows 11，P3-03）:                   154 pass / 0 skipped
 本机（Windows 11，P3-04）:                   176 pass / 0 skipped
+本机（Windows 11，P3-05）:                   184 pass / 0 skipped
 ```
 
-P3-04 在 CI 上的**预期**值为 **171 pass / 5 skipped / 0 fail**（总数 176，仍是同样 5 条 Windows smoke 自我 skip）。该数字是**预期值**——本轮未 push，尚未由 CI 实际跑过，不得当作已确认值引用。
+**6 条 skip 的来源**（全部是**平台门控，不是失败**）：
+
+```text
+P3-01 / P3-02 既有 Windows-only smoke： 5
+P3-05 真实生产纵向 smoke：              1
+总计：                                 6
+```
+
+**P3-05 比此前的预测多 1 条 skipped**：新增的真实 Windows vertical smoke 在 `ubuntu-latest` 上自我 skip。**因此 P3-05 的 CI 真实数字是 178 pass / 6 skipped / 0 fail，不是此前预测的 179 / 5。**
+
+P3-05 已完成、已提交、已 push：
+
+```text
+c07ad36  test: 完成 Phase 3 纵向链路验收
+origin/main = c07ad36（已比对确认与本地 HEAD 逐字符相同）
+CI（.github/workflows/runtime-tests.yml）: success，run #14
+  184 tests / 178 pass / 6 skipped / 0 fail
+```
+
 
 有一条**随第三阶段进入下一阶段**的实现限制：**PowerShell 异步子进程 v1 的单次观测成本为 370–674 ms**（P3-01 实测 370–455 ms，P3-02 实测 523 ms，P3-03 同轮单独实测 638 / 674 ms）。它决定了两条感知目前都只能被显式调用，**不能作为高频采样源**。任何高频感知需求都必须先解决这个成本，而优化本身属于新工作。
 
@@ -1108,15 +1136,101 @@ P3-03 给出了这条限制在组合层的第一个真实数据点：World 在**
 
 P3-01 / P3-02 / P3-03 / P3-04 各自只覆盖一条最小线——「此刻人正在看什么」、「系统记录的最后一次输入发生在哪个 tick」、「在这个 scope 内我现在掌握了哪些事实」、「这些事实之间有没有差别」——且始终**只交付 witness / composer / comparator，不交付 interpreter**：它们不判断什么重要、什么正常、什么值得记住。任何超出它们的扩展——语义解读、跨 source 推断、过滤、后台化、持久化、非 Windows 实现、通用 Perception 框架、`GlobalWorldState`、通用 Comparison 框架——都不属于当前已批准范围。
 
-**P3-05 尚未冻结**，本轮不对它做任何命名或规划。
+P3-05 不新增任何能力面：它是一条**验收线**，把上述四条最小线串成一条真实纵向链并在真实 Runtime 上验收其生命周期。它同样**不交付 interpreter**，也没有扩大上面列出的任何一项范围。其结论、上限声明与未证明清单见 §「第三阶段收口结论」。
 
 有一条由 P3-04 产生、应作为下一阶段输入的观察，此处只记录、不规划：
 
 > Awareness 是第一个消费 World 的模块。若将来出现**第二个 World 消费者**，或出现需要**跨快照历史**判断的需求（例如「A → B → A 算不算回到原状」），则「Awareness 是否该有历史窗口」必须作为一次**独立的设计决定**被提出，而不是搭在某个消费者身上顺手长出来。现在样本仍然只有一例，因此**不提前抽象**。
 
+---
+
+## 第三阶段收口结论
+
 第三阶段的优先目标与第二阶段一致：
 
 > 继续用真实 Hikari 需求检验这套基础，而不是从纯理论中扩展 Runtime、Perception、World 或 Awareness。
+
+### 一、Phase 3 最终结论（已证明的十二件事）
+
+第三阶段证明的是 **Perception → World → Awareness 的第一条真实纵向链路及其生命周期**：
+
+```text
+1.  Runtime 无需获得任何领域知识即可承载真实 Perception Plugin
+2.  两个 Perception（Foreground / InputActivity）可独立存在
+3.  World 可仅经 public Service contracts 组合二者
+4.  Awareness 可仅消费 World
+5.  Perception → World → Awareness 已形成真实纵向链
+6.  Windows 上四个 production Plugin 已实测端到端工作
+7.  非 Windows 上能力缺席沿 dependency graph 诚实收敛
+      （perception failed → world waiting → awareness waiting）
+8.  Awareness transient baseline 不跨 Runtime 泄漏
+9.  两个同时存活的 Runtime 不共享 Awareness baseline
+10. 整条链仍保持 pull-only
+11. shutdown 后该 capability 不再经 Runtime 可达
+12. Phase 3 完成过程中 Runtime 无需新增任何领域机制
+```
+
+**未证明**（以下全部**不在**第三阶段已证明范围内）：
+
+```text
+完整 Awareness
+salience / importance
+remember / ask / notify / act
+user presence
+idle / away
+application semantics
+background resident loop
+multi-runtime federation
+cross-device awareness
+Memory / Goal integration
+```
+
+**Phase 3 已完成 Perception → World → Awareness minimal slice 的第一条真实纵向链路及其生命周期验收。P3-04 / P3-05 只证明 Awareness 的最小 change-contextualization slice，不是完整 Awareness。**
+
+### 二、P2 / P3 生命周期性质对照（互补，不冲突）
+
+```text
+Phase 2: durable state should survive Runtime replacement.
+         该记住的东西还在。
+
+Phase 3: transient perception/world/awareness state should NOT
+         accidentally survive Runtime replacement.
+         本次运行时状态不会被误当成长期记忆带过去。
+```
+
+两条性质方向相反、彼此互补：P2 保证**持久的该活下来**，P3 保证**瞬时的该消失**。它们不是互相削弱，而是一起定义了 Runtime 替换时「什么该跨过去、什么不该跨过去」。
+
+### 三、测试最终事实
+
+```text
+本机（Windows 11）:      184 tests / 184 pass / 0 skipped / 0 fail
+CI（ubuntu-latest）:     184 tests / 178 pass /  6 skipped / 0 fail   run #14
+```
+
+**6 条 skip 的来源**：
+
+```text
+P3-01 / P3-02 既有 Windows-only smoke： 5
+P3-05 真实生产纵向 smoke：              1
+总计：                                 6
+```
+
+这些 skip 全部是**平台门控，不是失败**：它们要求真实 Windows host，在 `ubuntu-latest` 上按设计自我 skip，而不是被跳过以掩盖问题。同一个测试文件在 Windows 本机运行时为 **184 pass / 0 skipped**。
+
+### 四、Phase 3 最终架构边界（保持不变）
+
+```text
+Runtime   不知道 Foreground / InputActivity / World / Awareness / changed / stable / indeterminate
+Perception 只报告 source truth
+World      组合局部事实
+Awareness  领域定义仍是「这些事实意味着什么 / 什么值得在意」
+```
+
+P3-04 只实现了 Awareness 领域定义中**最小的 contextualization slice**。**Awareness 不是 change detector**——把 Awareness 重新定义成「发现变化」是把层定义收窄成阶段实现，属于对架构定义的篡改，明确禁止。
+
+### 五、不新增架构图
+
+`docs/architecture/phase-3-final-architecture-review.md` 未暴露「没有图就无法表达的新信息」，因此不新增图文件。现有文字描述 + GitNexus topology 已足够表达第三阶段的最终架构形态。
 
 ---
 
