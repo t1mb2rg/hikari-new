@@ -210,15 +210,17 @@ Capability view / graph 按上位原则描述。**MUST** 不得为此创造新�
 
 ### 5.1 关于 Event 平面的诚实说明
 
-**Event mechanism 当前状态：architecture-defined，runtime-tested，目前尚无 production domain consumer / producer。**
+**Event mechanism 当前状态：architecture-defined，runtime-tested，production-domain precedent 已存在。**
 
 - architecture-defined：`principles.md` 与 `core-architecture-v0.md` 已定义 Event 平面语义；
 - runtime-tested：Runtime 的 Event 机制已有运行时测试覆盖；
-- production-domain precedent：**尚无**。
+- production-domain precedent：`desktop-session-awareness-loop` → `desktop-session-awareness-loop.assessed@1`（首个 production-domain Event Producer）。状态明细见 §19.2。
 
-**这不得被读作 Event 平面合法性不足。** Event 是四种通信平面之一，其架构地位不因当前使用量而改变。记录此状态是为了让审查者知道：**Event 的具体使用形态尚未被真实领域需求检验过**，因此围绕 Event 的设计决定应当比已经被反复实践的平面承受更严格的审查。
+**这不得被读作 Event 平面合法性不足。** Event 是四种通信平面之一，其架构地位不因当前使用量而改变。记录此状态是为了让审查者知道：**Event 的具体使用形态目前只有单一 production precedent**，尚未经过反复实践，因此围绕 Event 的设计决定仍应当比已经被反复实践的平面承受更严格的审查。
 
 **REVIEW TRIGGER** 首个 production domain Event producer / consumer 出现时——审查 Event contract 的命名、载荷与语义边界，将本次实践记录为第一个 precedent。
+
+> 该触发条件已于 P4-01 首次满足并完成审查：Event contract 的命名、载荷与语义边界均已核对，本次实践已记录为第一个 precedent。结果见 `docs/development/phase-4-desktop-session-awareness-loop.md` 与 §19.2。此处只记录已发生的历史事实，不构成新规则，也不改变本触发条件本身。
 
 ---
 
@@ -257,7 +259,7 @@ provides: []
 
 这是 **architecture-supported 的合法形态**，而不是"SHOULD 才允许"的宽容条款。`requires` 与 `provides` 在类型层均为可选，纯 Consumer 是被正视设计的一部分。
 
-> 当前尚无 production domain precedent。这不影响其合法性——合法性来自运行时模型与类型定义，不来自使用量。见 §19。
+> **production-domain precedent 已存在**：首例为 `desktop-session-awareness-loop`（`requires: desktop-session-awareness.current@1`、`provides: []`、并通过 Event 发布 occurrence）。这不改变本条的效力——合法性来自运行时模型与类型定义，不来自使用量；存在 precedent 也不表示 pure consumer 需要 emit Event。状态明细见 §19.2。
 
 ---
 
@@ -642,12 +644,22 @@ Runtime 已明确强制的不变量
 ### 19.2 逐项状态
 
 **Event 平面**
-`architecture-defined` + `runtime test precedent`。**production-domain precedent 尚无。**
+`architecture-defined` + `runtime test precedent` + `production-domain precedent`。
+当前 production precedent：`desktop-session-awareness-loop` → `desktop-session-awareness-loop.assessed@1`，payload 为公开符号 `DesktopSessionAwarenessAssessment`，按引用透传。
+这是本仓**第一个** production-domain Event Producer。只记录 precedent，不产生 Event 规则：不得据此写成"Loop 应当 emit Event"，也不得写成"Event payload 必须直接复用 Service 结果"。
 → 见 §5.1。记录状态，不降低架构合法性。
 
 **Pure Consumer 形态（`provides: []`）**
-`Runtime model` 已允许（`requires` / `provides` 类型层均可选）+ `runtime test precedent` 已覆盖。**production-domain precedent 尚无。**
+`Runtime model` 已允许（`requires` / `provides` 类型层均可选）+ `runtime test precedent` 已覆盖 + `production-domain precedent` 已存在。
+当前 production precedent：`desktop-session-awareness-loop` —— `requires: desktop-session-awareness.current@1`、`provides: []`、并通过 Event 发布 occurrence。它把"Plugin 不需要为了有输出而 provide Service"从 architecture-supported + runtime-tested 推进为 production-proven。
+同样只记录 precedent，不产生规则：不得据此写成"所有 pure consumer 都应 emit Event"。
 → 见 §6.3。这是架构支持的合法形态。
+
+**Background Loop 形态**
+`Runtime model` 已允许（Loop 仍是普通 Plugin，不产生新 Runtime 类型）+ `production-domain precedent` 已存在。
+当前 production precedent：`desktop-session-awareness-loop` —— 普通 `PluginDefinition`、timer 归该 Plugin 的 lifecycle ownership、由上一轮完成驱动的调度、active background cycle；无 Runtime scheduler、无 LoopPlugin 子类型、无 Manager / Orchestrator。
+只记录 precedent，不产生规则：cadence 与首轮时序不由本规范冻结（§14.1），P4-01 的具体取值不得写成所有 Loop 的通用要求。
+→ 见 §14。
 
 **跨模块 import**
 符号层 **MUST**（§4.1）：现有生产代码**合规**——所有跨模块 import 引用的都是目标模块已公开的符号。
