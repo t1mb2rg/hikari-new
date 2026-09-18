@@ -55,13 +55,26 @@ ProviderPlugin  ConsumerPlugin   BackgroundPlugin   MemoryPlugin
 
 ### 2.1 public 的判据
 
-只有当**同时**满足以下三条时，该符号才进入 public surface：
+只有当**同时**满足以下四条时，该符号才进入 public surface：
 
-1. **另一个模块存在正当架构需求**，需要命名某个语义；
-2. 它需要**依赖**该语义（而非仅仅路过使用）；
-3. **该语义的所有者愿意对其承担稳定性承诺**。
+1. **Owner 确实拥有这个语义**——它属于该模块的领域职责，而不是它顺手持有的东西；
+2. **该语义确实跨越模块边界**，而不是内部实现细节；
+3. **它属于一个明确的 communication plane**（§5）——契约标识如此，由平面承载的领域数据亦然；
+4. **Owner 愿意对该语义承担 contract 稳定性承诺**。
 
-三条缺一不可。仅满足第 1 条（"有人会用到"）不足以进入 public surface。
+四条缺一不可。
+
+**判据 2 衡量的是语义边界，不是当前是否已经有人站在对面。** "确实跨越模块边界"指该语义**按设计**属于模块之间的交互面；它**不要求**此刻已经存在某个具体的 Consumer implementation。若把"必须已经有具体消费者"当作通用必要条件，会让某些平面陷入循环：没有契约 → Consumer 无法依赖 → 没有 Consumer → 不允许创建契约。
+
+**这处澄清放宽的是"是否已经有人站在对面"，没有放宽"语义是否真实"。** 以下理由**仍然不构成** public 的充分理由：
+
+```
+测试方便
+对称性
+"以后可能有人会用"
+```
+
+判据 1、3、4 与 §16 第 8 问不受影响。
 
 > 注意：**不得**使用"它失败会不会成为别人的失败"作为唯一的 public/private 判据。**错误语义属于 contract 的组成部分，不是 public/private 的根判据。** 一个完全内部的实现细节同样可能产生失败；一个公开契约数据同样可能永不失败。
 
@@ -85,7 +98,7 @@ Observation          WorldSnapshot        AwarenessAssessment
 DurableFact          Identity             （以及同类规范化领域数据）
 ```
 
-**这不是穷尽集合，也不是许可清单。** 具体符号是否进入 public surface，一律回到 §2.1 的三条判据。反过来，这份清单里的名字若在某个具体 Plugin 中不满足 §2.1，同样不得进入 public surface。
+**这不是穷尽集合，也不是许可清单。** 具体符号是否进入 public surface，一律回到 §2.1 的四条判据。反过来，这份清单里的名字若在某个具体 Plugin 中不满足 §2.1，同样不得进入 public surface。
 
 ### 2.4 平台知识的边界
 
@@ -273,7 +286,7 @@ internal factory        activation state       internal types
 
 **SHOULD** 不稳定的部分不应进入 public surface。"将来最可能变的东西"一旦导出，就把变化固化成了破坏性变更。
 
-**REVIEW TRIGGER** 每一次新增导出——回到 §2.1 的三条判据逐条确认。特别是：**这个符号被导出，是因为另一个模块需要命名并依赖它，还是因为测试、对称性或预判的未来需要？**
+**REVIEW TRIGGER** 每一次新增导出——回到 §2.1 的四条判据逐条确认。特别是：**这个符号被导出，是因为它确实跨越模块边界，还是因为测试、对称性或预判的未来需要？**
 
 ---
 
@@ -495,6 +508,10 @@ Service Consumer  +  Event Producer
 
 **消费者自己声明 Event interest。** 发布方不知道订阅方的存在——这与 §3 的 "Provider 不决定消费者" 是同一条原则在 Event 平面上的表达。
 
+**0 subscriber 是合法状态。** Event 的合法性来自 **Producer 拥有的、真实且稳定的 occurrence semantics**，而不是当前的 subscriber count。Producer 不检查订阅者数量，也不会因为"当前无人订阅"而停止发布。
+
+**这不是 speculative Event 的许可。** 反问始终是：**Producer 是否真的产生了一个对模块边界之外有意义的 occurrence？** 若一个 occurrence 只是该模块内部状态的镜面，则无论有多少订阅者，它都不该成为 Event。判据见 §16 的 Event 平面。
+
 ---
 
 ## 16. Contract Creation Gate
@@ -502,7 +519,7 @@ Service Consumer  +  Event Producer
 新建任何跨模块 contract 前，逐条回答以下**通用问题**。任一问题的答案指向"不成立"，则不创建。
 
 1. **谁拥有这个语义？**
-2. **是否存在真实跨模块 consumer？**
+2. **是否存在真实跨模块 interaction need？**
 3. **这是 Service / Event / Durable Fact / Action 中的哪一种？**
 4. **现有 contract 能否正确表达它？**（能否复用而非新建）
 5. **新 contract 是否泄露实现细节？**
@@ -511,6 +528,41 @@ Service Consumer  +  Event Producer
 8. **这个 contract 是真实需要，还是仅为了测试 / 对称 / 未来可能性？**
 
 **若主要理由是"以后可能有用"，默认不创建。**
+
+### 16.1 第 2 问的读法
+
+第 2 问衡量的是**真实的跨模块交互语义**，而不是**当前是否已经存在某个具体的 Consumer implementation**。
+
+> **必须存在真实、已发生的跨模块交互语义。**
+> **不要求已经存在具体的 Consumer implementation。**
+
+这与 §2.1 判据 2 是同一处澄清。放宽的只是"是否已经有人站在对面"；第 1 问、第 8 问，以及 §2.1 判据 1 / 3 / 4 全部不受影响。
+
+### 16.2 按 plane 的补充判据
+
+第 3 问确定平面之后，**用该平面自己的判据回答第 2 问**。**不得**把某个平面的判据套用到另一个平面上——Service 与 Event 对"真实交互语义"的要求并不相同。
+
+**Service**
+
+- 谁需要**主动调用**这个 capability？
+- **若不存在真实的 callable need，默认不创建 Service。**
+
+**Event**
+
+- Owner 是否真的产生了一个**对模块边界之外有意义的 occurrence**？
+- Event **可以**在 0 subscriber 时合法存在（§15）。
+- Producer **不需要**知道 subscriber 的身份或数量。
+- 但"以后可能有人感兴趣"**仍然不足以**创建 Event。
+
+**Durable Fact**
+
+- 是否真实需要**跨生命周期保存 / 证明**？
+
+**Action**
+
+- 是否真实存在**改变现实的 intent**？
+
+**本节不扩展 Capability Registry 的架构。**
 
 **REVIEW TRIGGER** 每次新增跨模块 contract。特别地，第 7 问若答案为"是"，这不是一次 contract 新增，而是一次架构变更，必须升级审查。
 
@@ -664,7 +716,7 @@ Ownership
   [ ] 模块作用域是否有不应存在的 mutable state？
 
 Contract
-  [ ] 新符号是否满足 public 三判据（需求 / 依赖 / 稳定性承诺）？
+  [ ] 新符号是否满足 public 四判据（拥有 / 跨越边界 / 平面归属 / 稳定性承诺）？
   [ ] 是否泄露实现细节或平台机制？
 
 requires / provides
@@ -683,6 +735,7 @@ Imports
 
 Communication plane
   [ ] 语义对应正确的平面？
+  [ ] 是否用该平面自己的判据回答过 §16 第 2 问？
   [ ] 无 Event 模拟请求 / 响应、Service 模拟 occurrence、
       Event 自动持久化、绕过 Action governance？
 
