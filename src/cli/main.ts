@@ -7,10 +7,10 @@ import {
   USAGE,
   UsageError,
   parseCommandLine,
-  type CliCommand,
-  type CliOptions,
   type CommandOutcome,
+  type ParsedCommandLine,
 } from './options.js';
+import { residentCommand } from './resident.js';
 import { startCommand } from './start.js';
 
 process.exitCode = await runCommandLine(process.argv.slice(2));
@@ -18,8 +18,7 @@ process.exitCode = await runCommandLine(process.argv.slice(2));
 async function runCommandLine(argv: readonly string[]): Promise<number> {
   let outcome: CommandOutcome;
   try {
-    const parsed = parseCommandLine(argv);
-    outcome = await execute(parsed.command, parsed.options);
+    outcome = await execute(parseCommandLine(argv));
   } catch (error) {
     outcome = failure(error);
   }
@@ -29,13 +28,15 @@ async function runCommandLine(argv: readonly string[]): Promise<number> {
   return outcome.exitCode;
 }
 
-function execute(
-  command: CliCommand,
-  options: CliOptions,
-): CommandOutcome | Promise<CommandOutcome> {
-  if (command === 'init') return initCommand(options);
-  if (command === 'chronicle-init') return chronicleInitCommand(options);
-  return startCommand(options);
+// The parse result is passed along whole rather than taken apart here. Only `resident` carries a
+// cadence, and handing this dispatcher the command and the options separately would erase that — it
+// would have to be told what the options are, which is exactly the knowledge the union exists to
+// keep in one place.
+function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOutcome> {
+  if (parsed.command === 'init') return initCommand(parsed.options);
+  if (parsed.command === 'chronicle-init') return chronicleInitCommand(parsed.options);
+  if (parsed.command === 'resident') return residentCommand(parsed.options);
+  return startCommand(parsed.options);
 }
 
 function failure(error: unknown): CommandOutcome {
