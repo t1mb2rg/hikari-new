@@ -1,8 +1,10 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 2 已完成最终验收并正式收口**（P2-01 ~ P2-04 全部通过 Functional / Architecture Review，已 push，CI 通过）；**Phase 3 已完成最终验收并正式收口**（P3-01 ~ P3-05 五项全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。`origin/main` = `c07ad3677b9db91f7bf554e4d9ea37d17589967e`（已比对确认与本地 HEAD 逐字符相同）。
+> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；**P4-03 尚未开始**。`origin/main` = `0db5516f86d8fba0c12b99a669cf067f7df03aac`（`feat: add resident process composition`，已比对确认与本地 HEAD 逐字符相同），CI（Runtime Tests #21）**success**。
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）。
+> **不得写作 `Phase 4 COMPLETE`。** P4-01 只交付「驱动 + 发生」，P4-02 只交付「进程组合 + 进程寿命」：`principles.md` §14 定义的 Awareness 链路中，**Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act 均未进入，且未被预埋**。
+>
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`（第四阶段目前**没有**架构评审文档）。
 
 ---
 
@@ -43,6 +45,26 @@ Phase 3 COMPLETE
 ```
 
 **Phase 3 已完成 Perception → World → Awareness minimal slice 的第一条真实纵向链路及其生命周期验收。** P3-04 / P3-05 只证明 Awareness 的最小 change-contextualization slice，**不是完整 Awareness**（见 §「第三阶段收口结论」）。
+
+第四阶段第一次让整条链**被周期驱动**——在此之前没有任何东西会自己调用它；三层各自的 provider **仍然是 pull-only**，P4-01 增加的只是一个周期性 caller。第四阶段同时第一次让整条链**作为一个常驻进程持续存活**。当前进度：
+
+```text
+P4-01    Desktop Session Awareness Loop v1       complete
+P4-01.1  Awareness Loop timer 上界正确性修正     complete
+P4-02    Resident Process Composition v1         complete
+P4-03    未开始                                  not started
+```
+
+**Phase 4 尚未完成，不得写作 `Phase 4 COMPLETE`。** P4-01 只是驱动与发生，P4-02 只是进程组合与进程寿命，二者都**没有**把链路推进到 Salience / Importance Judgement，也**没有**让链路产生任何一次 Remember / Ask / Notify / Act。
+
+两处口径必须先说清，避免被读成比实际更大的东西：
+
+```text
+P4-01.1 是一次【正确性修正】，不是新的架构层、不是新增 capability
+        它把 Loop 的 delayMs 接受域收窄到 Node timer 能忠实表达的范围
+P4-02   是【进程组合 + 进程寿命】，不是新的 Runtime 机制
+        它没有给 Runtime 增加任何 API，也没有新增任何 Plugin
+```
 
 **P2-01 已完成的部分**：
 
@@ -169,13 +191,13 @@ P3-04 **没有修改任何既有文件**：`src/runtime/`、`src/continuity/`、
 
 P3-04 已完成、已提交、已 push（commit `ead4d7c594b38abaa621fbfc0604a2e73f3d4562`，message `feat: 完成 P3-04 桌面会话变化感知 v1`），CI **success**：176 tests / 171 pass / 5 skipped / 0 fail。
 
-第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 ~ P3-05 也已全部 push，`origin/main` 现为 `c07ad36`（已比对确认与本地 HEAD 逐字符相同）。
+第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 ~ P3-05 也已全部 push，第三阶段收口当时 `origin/main` = `c07ad36`（已比对确认与本地 HEAD 逐字符相同；此后已随第四阶段前进，当前为 `0db5516`——见文首状态）。
 
 **第二阶段不新增架构地图（已决定，非未结项）**：第一阶段的图存在，是因为那一步要固定「Runtime 不带领域语义」这条边界本身；第二阶段的产物是接线与验收——P2-01 / P2-02 / P2-03 的因果与边界已由各自的实现文档与架构评审完整保存，P2-04 **没有新增任何生产结构**。此时硬画一张图只会复述已有文字，不增加信息，因此**不以架构图作为第二阶段收口条件**。后续若出现真实的结构变化，再按那时的需要决定是否建图。
 
 另有一条已记录的格式限制随第二阶段进入下一阶段：**Chronicle v1 没有完整性标记**，因此「fact 行被删光、header 完好」的 store 与全新 store 在结构上无法区分，会被报告成空历史。它不影响关闭判断，但是任何后续 Chronicle 完整性工作的明确输入（详见 P2-04 实现文档 §9 与架构评审 §11）。
 
-三个阶段都没有迁移旧 Hikari，也没有实现完整 Awareness、Memory、Goal 或多节点系统。
+三个阶段都没有迁移旧 Hikari，也没有实现完整 Awareness、Memory、Goal 或多节点系统。（第四阶段同样没有——见「第四阶段的收尾项 · 一、Awareness 范围」。）
 
 第三阶段第一次让 Runtime **感知现实**：Foreground 报告「谁在前台、什么时候看到的」，InputActivity 报告「系统记录的最后一次输入发生在哪个 tick」，**都不**判断这些意味着什么。P3-03 在此之上首次进入 **World** 层，回答「在这个 scope 内，我现在掌握了哪些事实」。
 
@@ -482,6 +504,167 @@ World **不是错误总线**：不聚合、不转发、不分类 error，不读 
 DesktopSessionWorld 是 Runtime **之上**的模块，从独立入口 `src/desktop-session-world/index.ts` 导入，`src/index.ts` 未修改。
 
 World **不**依赖 Continuity，**不**依赖 Chronicle，**不**写任何文件，**不**创建目录，**没有**新的 Manager，也**没有** `context.defer()`——它不拥有任何资源。与 P3-01 / P3-02 不同，World **没有内部 seam**：它的两个依赖就是两个 capability，二者都经 Runtime 的 service registry 取得，因此测试直接加载**生产 Plugin**，无需具名内部 import。
+
+### DesktopSessionAwarenessLoop（P4-01）
+
+回答一个此前没有模块回答的问题：
+
+> 什么时候再问一次？
+
+P4-01 之前三层链路是**纯 pull-only** 的：没有调用就没有任何观测发生。Loop 是第一个**周期性驱动**这条链的 Plugin。
+
+```text
+desktop-session-awareness-loop  Plugin（普通 PluginDefinition）
+requires: desktop-session-awareness.current@1
+provides: []
+↓
+每次 cycle 调用 awareness.current()
+↓
+desktop-session-awareness-loop.assessed@1
+payload: DesktopSessionAwarenessAssessment（按引用透传）
+```
+
+- 它是一个**普通 `PluginDefinition`**，没有为自己要求任何特殊待遇；
+- 事件名归 Loop 所有而不是归 awareness：它说的是「谁问的、什么时候问完的」，**不**改写 provider 仍是 pull-only 这一事实；
+- payload 就是 `DesktopSessionAwarenessAssessment` 本身，**按引用透传**：没有 Loop 专属副本、没有追加字段、没有第二个时间戳；
+- **0 个订阅者是合法状态**——Event 是通知，不是待办。
+
+**调度语义（本阶段冻结的核心）**：
+
+```text
+不是 setInterval              → 每个 cycle 由【上一个 cycle 完成】之后才排下一个
+每个 activation 至多一个 cycle in-flight
+采集慢于 delayMs 时不会重叠  → 不重叠是调度的形状，不是一条用来兜底的守卫
+```
+
+**cleanup 顺序**（`context.defer`，顺序本身承载语义）：
+
+```text
+stopped = true             → 先立旗标，让从 await 中恢复的 cycle 看得到
+clearTimeout(pendingTimer) → 再拆掉计时器，此后不可能再排新的 cycle
+await inFlight             → 最后等当前 cycle 结算，本 activation 完全落定后才交还 scope
+```
+
+**P4-01 的上限（必须与上面的记录同时阅读）**：
+
+```text
+P4-01 交付的是  drive（驱动）+ occurrence（发生）
+P4-01 没有交付  Salience / Importance / Remember / Notify / Act
+P4-01 没有交付  完整 Awareness
+```
+
+它让「相邻两次 World snapshot 有没有差别」这个判断**第一次可以反复发生**，但**没有**让它变得更重要、更值得记住或更值得通知。Loop 自身不持有 baseline、不持有 latest assessment、不统计失败次数——baseline 属于 awareness，它只拥有「什么时候再问一次」这一个问题。
+
+### Resident（P4-02）
+
+回答一个此前没有被回答的问题：
+
+> 已经能跑起来的东西，怎么**一直跑下去**？
+
+P4-02 新增 `hikari resident`，与 `hikari start` **严格区分**：
+
+```text
+hikari start     一次性启动验证
+                 创建 Runtime → 加载组合 → 检查状态 → shutdown → 退出
+                 语义完全未变，本轮零改动
+
+hikari resident  生产常驻组合
+                 创建 Runtime → 加载真实链路 → 保持存活
+                 → SIGINT / SIGTERM 请求终止 → runtime.shutdown() → 退出
+```
+
+**`start` 不是「旧版 resident」，resident 也不是「改版 start」**：前者回答「这套组合现在能不能起来」，后者回答「起得来之后，谁来一直持有这个进程」。
+
+**生产组合（正好七个 Plugin，按加载顺序）**：
+
+```text
+1  continuity
+2  chronicle
+3  foreground.windows
+4  input-activity.windows
+5  desktop-session-world
+6  desktop-session-awareness
+7  desktop-session-awareness-loop
+```
+
+顺序不是装饰：一个 Plugin 被加载时它的 `requires` 已经满足，因此不能运行的留在 `waiting` 而不是被挪来挪去，读回的状态就是操作者看到的状态。
+
+**Resident 是什么 / 不是什么（本阶段冻结）**：
+
+```text
+Resident 是    process composition root（进程组合根）
+Resident 是    process lifetime owner（进程寿命所有者）
+Resident 不是  Plugin
+Resident 不是  Runtime 机制
+Resident 不是  Scheduler
+Resident 不是  Super Orchestrator
+```
+
+职责三分，互不越界：
+
+```text
+Resident 决定  进程何时开始 / 何时结束、加载哪些 Plugin、什么算就绪、
+               何时请求整条 Runtime 停机、进程信号 / 退出码 / 面向操作者的状态
+Runtime  决定  Plugin 生命周期、依赖收敛、卸载顺序、清理顺序
+Plugin   决定  自己跑什么、自己拥有哪些资源
+```
+
+`src/cli/resident.ts` **不**自己卸载任何 Plugin、**不**读 Plugin 内部、**不**重排 Runtime 已经在编排的 teardown。它对 Hikari 的全部认知来自 Runtime 报告的状态与 Runtime 记录的错误。
+
+**进程寿命 lease（P4-02 最容易被做错的一处）**：
+
+Resident **不**依赖 Loop 的计时器、**不**依赖 PowerShell 子进程、**不**依赖任何领域 Plugin 恰好持有 handle 而存活。它自己持有一个 `MessageChannel` / `MessagePort` lease，一直持有到 `runtime.shutdown()` 结算完成，然后关闭。
+
+```text
+理由：一个 pending promise 不是 handle
+      没有自己的 lease 时，「进程还活着」就只是某个领域 Plugin 行为的
+      副产品，而不是 Resident 做出的决定
+选择 MessagePort：它是一个没有行为的 handle —— 不会触发、不会漂移、
+      不会被误当成一个 cadence，也不对 Hikari 的领域说任何话
+```
+
+代价是一条真实性质：**进程寿命因此与领域 Plugin 解耦**——Loop 的计时器停了、PowerShell 子进程没了，都不影响「这个进程是否还该活着」这个问题的归属。
+
+**`MessagePort` 不是 Runtime primitive**：它只是当前这套 CLI 组合的实现手段，没有进入 Runtime，也没有成为任何契约。lease 在一切可能失败之前取得、在其余一切之后释放——这正是这套安排的意义：整个停机期间进程寿命仍归 Resident 所有，disposal 不会被进程提前消失打断。
+
+**就绪语义（必须连同上限一起读）**：
+
+```text
+ready = 七个 Plugin 全部 active
+      = 组合成立 + Loop 已武装
+```
+
+**ready ≠ 第一次 assessment 成功**，**≠ 后台链路健康**，**≠ 后续每一次获取都会成功**。v1 **没有**任何公开表面能回答后三者，因此本文件不写、也不得被读成「Hikari 已确认持续正常感知桌面」。空组合判为未就绪：一个什么都没有的组合没有可「就绪」的东西。
+
+**Chronicle 边界**：
+
+```text
+Resident 要求 Chronicle active 作为就绪前提
+Resident 不 append、不读 Store 内部格式
+Resident 不把 assessed Event 自动写进 Chronicle
+```
+
+原因只有一句：**Event 不等于 Durable Fact**（`principles.md` §11）。「观察到一次 assessment」与「决定把这件事长期记住」是两件事，后者属于 Awareness 的判断，不属于进程组合根。
+
+**Event 边界**：
+
+`desktop-session-awareness-loop.assessed@1` 在生产组合中**仍然允许 0 个订阅者**，**现在也确实没有**。P4-02 **没有**新增任何订阅者，也**没有**把 Event 变成待办。
+
+准确说法是：这条 Event **第一次可以在一个真实的生产常驻组合里被持续发布**；但**仍然没有语义上的 Consumer**。不得因为 Resident 已落地，就把它描述成「Event 已有 production consumer」。
+
+**平台边界**：
+
+P4-02 v1 的生产范围是 **Windows 桌面常驻组合**，但 **Resident 自己不写 `process.platform`**。平台判断仍然只属于 `foreground.windows` / `input-activity.windows`。非 win32 宿主上的表现是：
+
+```text
+Provider 自身 setup 抛出   → Plugin failed
+↓ Runtime 依赖图
+下游 world / awareness / loop 保持 waiting
+↓
+Resident 报告【能力不可用】，退出 1
+```
+
+这是**感知 Provider 在自己的 ownership 内判断宿主不适用**之后沿依赖图诚实收敛的结果，**不是 Resident 在判断操作系统**。
 
 ---
 
@@ -911,6 +1094,14 @@ Docs / Contracts updated
 
 第三阶段：**已满足**——P3-01 / P3-02 / P3-03 / P3-04 / P3-05 五项全部达到该标准，**已正式收口**。
 
+第四阶段 P4-01：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `082fb97`，message `feat: add desktop session awareness loop`），CI 通过。
+
+第四阶段 P4-01.1：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `8ea725c`，message `fix: bound awareness loop timer delay`），CI 通过。它是一次**正确性修正**，不是新的架构层，也不是新增 capability。
+
+第四阶段 P4-02：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `0db5516`，message `feat: add resident process composition`），CI（Runtime Tests #21）**success**。
+
+第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 三项已达到该标准并已收口，但 **P4-03 尚未开始**；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
+
 ---
 
 ## 当前明确仍不做
@@ -925,7 +1116,9 @@ Docs / Contracts updated
 - Memory / Goal 的领域实现，以及 **World 层的完整实现**——P3-03 只落地了一个 scope 的最小局部视图（一个桌面会话、两个来源、逐条可用性），没有 `GlobalWorldState`、没有 scope 注册表、没有跨 scope / 跨 runtime / 跨 session 聚合；
 - Chronicle 的完整领域实现（P2-02 只落地了最小事实史，P2-04 只验收了它的跨 Runtime 生命周期）；
 - **Chronicle v1 存储格式的完整性标记**（事实计数 / 链式哈希 / 墓碑）——因此「fact 行被删光、header 完好」的 store 与全新 store 无法区分，会被报告成空历史。这是已记录的格式限制，不是实现缺陷；
-- Resident 常驻模式、守护进程、信号处理、后台服务；
+- **常驻进程之外的守护进程化**——OS daemon / Windows Service 安装、systemd service、pid 文件、日志文件子系统、后台服务安装器、开机自启、崩溃自动重启、watchdog / supervisor。
+  **口径修正（P4-02 收口后）**：下列四项**已经落地**，不得再列为未做——✅ `hikari resident` CLI 组合、✅ 进程寿命归属（Resident 自己的 lease）、✅ SIGINT / SIGTERM 处理、✅ 本地长期运行进程。
+  **常驻进程 ≠ 守护进程 / 服务**：`hikari resident` 由操作者在前台启动、由操作者的信号结束，不注册为系统服务、不脱离终端、不自动重启。把两者混为一谈会同时高估已落地的东西、低估还缺的东西；
 - 配置文件、环境 Profile、节点配置、用户配置中心——CLI 只有一个必填参数 `--data-dir`；
 - `hikari stop` / `hikari status` / `hikari log` 等运维命令；
 - 启动失败后的自动重试、自动修复、自动创建；
@@ -935,11 +1128,12 @@ Docs / Contracts updated
 - `getOrCreate` / `openOrCreate` 与任何全局身份中心；
 - 身份迁移、备份、修复、升级；
 - **感知的语义解读**——Salience / Importance / freshness 判断、基于标题的语义分类、模型调用、「什么值得记住」的判断。P3-01 / P3-02 只交付 witness，P3-03 只交付 composer，P3-04 只交付 comparator，**都不**交付 interpreter；
-- **Awareness 的完整实现**——`principles.md` §14 定义 Awareness 负责「这件事意味着什么？值不值得在意？是否需要记住、提醒或行动？」，其链路为 Contextualization → Salience / Importance Judgement → Ignore / Remember / Ask / Notify / Act。**P3-04 只落实了这条链路的第一个最小 contextualization slice**（相邻两个 World snapshot 的 payload 变化比较），链路其余部分——Salience / Importance 判断、Ignore / Remember / Ask / Notify / Act——**均未进入，且未被预埋**；
+- **Awareness 的完整实现**——`principles.md` §14 定义 Awareness 负责「这件事意味着什么？值不值得在意？是否需要记住、提醒或行动？」，其链路为 Contextualization → Salience / Importance Judgement → Ignore / Remember / Ask / Notify / Act。**P3-04 只落实了这条链路的第一个最小 contextualization slice**（相邻两个 World snapshot 的 payload 变化比较），链路其余部分——Salience / Importance 判断、Ignore / Remember / Ask / Notify / Act——**均未进入，且未被预埋**。P4-01 / P4-02 同样没有进入：它们交付的是**驱动**与**进程寿命**，不是判断；
 - **跨 source 的推断**——把「前台是 X」与「刚有输入」合起来推出「某人正在打字」这类结论。P3-03 把两条事实放进同一个信封，但**不**解释它们的关系；P3-04 只比较相邻两次信封的 payload 是否变化，同样**不**解释它们的关系；那是 Awareness 的句子，而 P3-04 只说出了其中最短的一句；
 - **Input Activity 的在场解读**——`lastInputAt` / `idleForMs` / `idleSeconds` / `isActive` / `isIdle` / `userPresent`，以及任何阈值比较。`lastInputTick` 是 source fact，不是结论；
 - **感知结果的过滤**——过滤 Explorer / 任务栏 / 自身进程，或任何「这不像正常用户程序」的启发式；
-- **感知的后台化**——watcher、`changed` Event、轮询、订阅、缓存、保活、队列、速率限制、去重；
+- **感知自身的后台化**——watcher、`changed` Event、感知层内的轮询、订阅、缓存、保活、队列、速率限制、去重。
+  **口径**：P4-01 的 Loop 是一个**周期性 caller**，它没有把任何感知变成后台推送者——两个感知 provider 仍然是 pull-only，加载 / 空闲 / 卸载期间仍然零观测；
 - **感知的持久化**——把观测写进 Chronicle 或任何文件；
 - **非 Windows 的感知实现**——macOS / Linux 宿主上 Plugin 直接 `failed`，这是设计意图；
 - **PowerShell 子进程成本的优化**（常驻子进程 / 预编译程序集 / 原生绑定）——两个感知都受此限制，任何高频感知需求都必须先解决它，但优化本身属于新工作；
@@ -986,7 +1180,7 @@ Chronicle v1 无完整性标记
 → 要分辨它必须改格式，属于新工作，不属于当前已批准范围
 ```
 
-P2-01 刻意只覆盖了「身份是谁」这一条最小生命线，P2-02 刻意只覆盖了「发生过什么」这一条最小事实史，P2-03 刻意只覆盖了「怎么把它们组合成一次真实启动」，P2-04 刻意只覆盖了「一次全新的 Runtime 生命周期能不能恢复出同一个主体与同一条事实」。任何超出它们的扩展——多主体、身份迁移、设备绑定、Memory、事实的修改与检索、Event 自动落库、常驻运行、多节点——都不属于当前已批准范围。
+P2-01 刻意只覆盖了「身份是谁」这一条最小生命线，P2-02 刻意只覆盖了「发生过什么」这一条最小事实史，P2-03 刻意只覆盖了「怎么把它们组合成一次真实启动」，P2-04 刻意只覆盖了「一次全新的 Runtime 生命周期能不能恢复出同一个主体与同一条事实」。任何超出它们的扩展——多主体、身份迁移、设备绑定、Memory、事实的修改与检索、Event 自动落库、常驻运行、多节点——都不属于**第二阶段**已批准范围（其中「常驻运行」此后由 P4-02 以 `hikari resident` 交付，见「已实现 · Resident（P4-02）」）。
 
 优先目标应该是：
 
@@ -1054,7 +1248,7 @@ P3-05 已完成、已提交、已 push：
 
 ```text
 c07ad36  test: 完成 Phase 3 纵向链路验收
-origin/main = c07ad36（已比对确认与本地 HEAD 逐字符相同）
+origin/main = c07ad36（P3-05 收口当时，已比对确认与本地 HEAD 逐字符相同；此后已前进，见「第四阶段的收尾项」）
 CI（.github/workflows/runtime-tests.yml）: success，run #14
   184 tests / 178 pass / 6 skipped / 0 fail
 ```
@@ -1179,7 +1373,7 @@ remember / ask / notify / act
 user presence
 idle / away
 application semantics
-background resident loop
+background resident loop   ← 第三阶段未证明；P4-02 之后已交付，见「已实现 · Resident（P4-02）」
 multi-runtime federation
 cross-device awareness
 Memory / Goal integration
@@ -1231,6 +1425,101 @@ P3-04 只实现了 Awareness 领域定义中**最小的 contextualization slice*
 ### 五、不新增架构图
 
 `docs/architecture/phase-3-final-architecture-review.md` 未暴露「没有图就无法表达的新信息」，因此不新增图文件。现有文字描述 + GitNexus topology 已足够表达第三阶段的最终架构形态。
+
+---
+
+## 第四阶段的收尾项
+
+P4-01 已完成、已提交、已 push，**没有未结项**：
+
+```text
+082fb97  feat: add desktop session awareness loop
+```
+
+P4-01.1 已完成、已提交、已 push，**没有未结项**：
+
+```text
+8ea725c  fix: bound awareness loop timer delay
+```
+
+P4-02 已完成、已提交、已 push，**没有未结项**：
+
+```text
+0db5516  feat: add resident process composition
+origin/main = 0db5516（已比对确认与本地 HEAD 逐字符相同）
+CI（.github/workflows/runtime-tests.yml）: success，Runtime Tests #21
+```
+
+**测试最终事实**：
+
+```text
+本机（Windows 11，P4-02 收口后）:      222 tests / 221 pass / 0 fail / 1 skipped
+CI（ubuntu-latest，Runtime Tests #21）: success
+```
+
+本机那 1 条 skip 是**平台门控**：真实 POSIX 信号测试要求非 win32 宿主，在 Windows 本机上按设计自我 skip。CI 的用例数与 skip 分布本轮未逐项核对，因此这里只记 success，不记数字。
+
+### 一、Awareness 范围（必须与 `principles.md` §14 一起读）
+
+`principles.md` §14 定义的完整链路（**继续冻结，未改写**）：
+
+```text
+世界变化 → Perception → Observation → 事实标准化 / Contextualization
+         → Salience / Importance Judgement → Ignore / Remember / Ask / Notify / Act
+```
+
+第四阶段实际达到的位置：
+
+```text
+Perception → World → change contextualization
+           → 被 Loop 周期驱动
+           → 每次 assessment 作为一次【发生】发布
+           → 由常驻进程保持整条链存活
+```
+
+**仍未达到**：
+
+```text
+Salience / Importance Judgement
+Ignore / Remember / Ask / Notify / Act
+```
+
+这条记录**上下界都写明**：P4-01 / P4-02 让链路第一次可以持续运转，但**没有**让链路产生任何一个「值得在意」的判断，也**没有**让链路因此记得、问、提醒或行动。把「持续运转」读成「已经 Awareness」是第四阶段最容易犯的错误。
+
+### 二、随第四阶段进入下一阶段的已知限制
+
+以下五条是**限制，不是 blocker**，也不是未结项：
+
+```text
+1. 后台 cycle 失败没有公开健康表面
+   Runtime 不会把 active Plugin 的后台 rejection 变成 failed，
+   Loop 吸收每一次 cycle 失败后继续排下一个 cycle。
+   → 后果：Resident 可以活着，但无法证明每一个 cycle 都成功。
+   → 这是 v1 的已知限制，不是可以顺手补的补丁：
+     补它等于为「当时那一瞬」新增一条随后必须一直维护的契约。
+
+2. 停机没有严格上界
+   shutdown 的耗时取决于各 Plugin 的 cleanup，v1 不设超时、不做 hard kill。
+   → 后果：没有「最多等 N 秒」的保证。
+   → 第二次 Ctrl+C 不再属于 Hikari（信号监听已在第一次终止请求后解除），
+     想要立刻离开的操作者由宿主默认处理接管。
+
+3. Windows 上无法用外部自动化完整复现真实控制台 Ctrl+C 的优雅信号路径
+   → 真实 POSIX 信号用例在 win32 上自我 skip；
+     这是「这台机器上测不了」，不是「已经测过」。
+
+4. Resident 没有运维面
+   没有 stop / status / log、没有 daemon 化、没有自动重启、没有 watchdog、
+   没有 pid 文件、没有日志文件子系统。
+
+5. assessed Event 的生产订阅者数仍为 0
+   → 见 §「已实现 · Resident（P4-02）」的 Event 边界：
+     它可以被持续发布了，但还没有语义上的 Consumer。
+```
+
+优先目标与第二、第三阶段一致：
+
+> 继续用真实 Hikari 需求检验这套基础，而不是从纯理论中扩展 Runtime、Loop 或 Resident。
 
 ---
 
