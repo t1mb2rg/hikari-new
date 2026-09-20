@@ -377,9 +377,11 @@ $ node --test test/resident-cli.test.mjs     （单跑，需先 build）
 | 环境 | 结果 | 来源 |
 | --- | --- | --- |
 | 本机 Windows 11 | **222 tests / 221 pass / 0 fail / 1 skipped** | **实际跑过** |
-| CI | 未运行 | 本轮**未 push** |
+| CI（ubuntu-latest，Runtime Tests #21） | success（用例数与 skip 分布未逐项核对，只记 success） | P4-02 收口时**已 push**——commit `0db5516 feat: add resident process composition` |
 
 222 = 203（P4-01.1 基线）+ 19（本轮）。唯一的 skip 是用例 10，原因是本机是 win32（§11 限制 3）。
+
+**口径修正（P4-02.1 收口后）**：上表 CI 那一行写的是 **P4-02 收口当时**的事实——`0db5516` 已 push，CI #21 success。本行**不再**声称「未运行 / 未 push」，那两句在本文件写成时是暂态，收口后即已失效。这不是当前 `origin/main`；当前 HEAD 见 `docs/development/current-stage.md` 文首状态。
 
 **不写耗时常量**：绝对数值跨轮次不稳定，按 P3-03 §13 纪律，只用同一轮同机相对关系下结论。
 
