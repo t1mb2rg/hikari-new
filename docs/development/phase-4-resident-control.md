@@ -1,7 +1,8 @@
 # P4-02.1 Resident Local Control v1
 
 > 轮次：**P4-02.1**（P4-02 的从属轮次，不是新的阶段）
-> 状态：**实现完成、Functional / Architecture Review 通过、已随本轮提交落地；未 push**
+> 状态：**实现完成、Functional / Architecture Review 通过、已提交、已 push**
+> 提交：`138cf9c feat: add resident local control channel`，CI（Runtime Tests #35516173973）**success**
 > 前置：P4-02 `hikari resident` 已收口（commit `0db5516`）
 > 本轮开工时的 `origin/main` = `f3d7673`（详见 `current-stage.md` 文首状态）
 
@@ -317,9 +318,9 @@ $ npm test
 | 环境 | 结果 | 来源 |
 | --- | --- | --- |
 | 本机 Windows 11 | **234 tests / 233 pass / 0 fail / 1 skipped** | **实际跑过** |
-| CI | 未运行 | 本轮**未 push** |
+| CI（ubuntu-latest，Runtime Tests #35516173973） | **234 tests / 217 pass / 17 skipped / 0 fail** | **实际跑过**（commit `138cf9c`） |
 
-234 = 222（P4-02 基线）+ 12（本轮）。本机唯一那条 skip 是 `test/resident-cli.test.mjs` 的真实 POSIX 信号用例（win32 无法投递，P4-02 §11 限制 3）。若 push，`ubuntu-latest` 上本轮这 9 条 win32 门控用例会按设计自我 skip，而那条 POSIX 信号用例会**转成 pass**——**这是设计推算，不是实测**，本轮未在 CI 上跑过。
+234 = 222（P4-02 基线）+ 12（本轮），两边的 234 是同一个总数。本机唯一那条 skip 是 `test/resident-cli.test.mjs` 的真实 POSIX 信号用例（win32 无法投递，P4-02 §11 限制 3），它在 CI 上**转成了 pass**；CI 的 17 条 skip 是平台门控的镜像——本轮 9 条 win32 用例自我 skip，其余 8 条是此前就存在的 Windows-only 用例。
 
 **不写耗时常量**：按 P3-03 §13 纪律，只用同一轮同机相对关系下结论。
 

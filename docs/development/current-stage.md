@@ -1,6 +1,6 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审，随本轮提交落地但尚未 push**；**P4-03 尚未开始**。`origin/main` = `f3d7673`（`test: fix input activity clock assumption`；此前两项为 `e23d382 docs: refresh current development stage` 与 `0db5516 feat: add resident process composition`）。已核对本地 remote-tracking ref 与本地 HEAD 相同（0 ahead / 0 behind），**未重新 fetch**，因此这是本地记录而非一次网络核对。P4-02.1 的改动**尚未进入 `origin/main`**。
+> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审、已提交、已 push**（commit `138cf9c`，CI success）；**P4-03 尚未开始**。`origin/main` = `138cf9c`（`feat: add resident local control channel`，即 P4-02.1 本身；push 输出确认 `f3d7673..138cf9c`，CI 在该提交上运行）。`0db5516` 仍是「P4-02 收口当时」的提交，此后 `origin/main` 又前进过 `e23d382`、`f3d7673` 两项。
 >
 > **不得写作 `Phase 4 COMPLETE`。** P4-01 只交付「驱动 + 发生」，P4-02 只交付「进程组合 + 进程寿命」，P4-02.1 只交付「本机可问、可停」：`principles.md` §14 定义的 Awareness 链路中，**Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act 均未进入，且未被预埋**。
 >
@@ -1142,9 +1142,9 @@ Docs / Contracts updated
 
 第四阶段 P4-02：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `0db5516`，message `feat: add resident process composition`），CI（Runtime Tests #21）**success**。
 
-第四阶段 P4-02.1：**已实现、已通过 Functional / Architecture Review、Docs 已更新**，随本轮提交落地，**尚未 push**。它是 P4-02 的**从属轮次**（一条已知限制的收口），不是新的架构层，也不是新增感知 capability。
+第四阶段 P4-02.1：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `138cf9c`，message `feat: add resident local control channel`），CI（Runtime Tests #35516173973）**success**。它是 P4-02 的**从属轮次**（一条已知限制的收口），不是新的架构层，也不是新增感知 capability。
 
-第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 三项已达到该标准并已收口，P4-02.1 已实现待提交，但 **P4-03 尚未开始**；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
+第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 / P4-02.1 四项已达到该标准并已收口，但 **P4-03 尚未开始**；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
 
 ---
 
@@ -1511,7 +1511,7 @@ P4-02.1 已实现、已通过评审、文档已更新，**随本文件所在的�
   docs/development/phase-4-resident-control.md（新增）
   docs/development/phase-4-resident.md、docs/development/current-stage.md（修改）
 
-push 状态：**提交时未 push**——`origin/main` 尚未包含本轮内容。
+push 状态：**已 push**——`origin/main` = `138cf9c`（push 输出确认 `f3d7673..138cf9c`）。
 ```
 
 **测试最终事实**：
@@ -1521,10 +1521,11 @@ push 状态：**提交时未 push**——`origin/main` 尚未包含本轮内容�
 CI（ubuntu-latest，Runtime Tests #21）: success
 
 本机（Windows 11，P4-02.1 实现后）:    234 tests / 233 pass / 0 fail / 1 skipped
-CI（P4-02.1）:                        未运行（本轮未 push）
+CI（ubuntu-latest，Runtime Tests #35516173973）:
+                                      success，234 tests / 217 pass / 17 skipped / 0 fail
 ```
 
-本机那 1 条 skip 是**平台门控**：真实 POSIX 信号测试要求非 win32 宿主，在 Windows 本机上按设计自我 skip（P4-02.1 的 12 条新用例中有 9 条反过来在非 win32 上自我 skip，本机全部执行）。CI 的用例数与 skip 分布未逐项核对，因此这里只记 success，不记数字。
+本机那 1 条 skip 是**平台门控**：真实 POSIX 信号测试要求非 win32 宿主，在 Windows 本机上按设计自我 skip（P4-02.1 的 12 条新用例中有 9 条反过来在非 win32 上自我 skip，本机全部执行）。CI 那 17 条 skip 同样全是平台门控：9 条来自 P4-02.1，其余 8 条是此前就已存在的 Windows-only 用例。两边 234 总数一致、`fail 0`。（上表 P4-02 那一行的 CI #21 用例数当时未逐项核对，仍只记 success，不记数字。）
 
 ### 一、Awareness 范围（必须与 `principles.md` §14 一起读）
 
