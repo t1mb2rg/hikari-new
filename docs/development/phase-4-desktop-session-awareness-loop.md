@@ -53,9 +53,9 @@ Input ┘                              ↑
 | 文件 | 大小 | 内容 |
 | --- | --- | --- |
 | `src/desktop-session-awareness-loop/contracts.ts` | 856 B | `desktopSessionAwarenessAssessedEvent` |
-| `src/desktop-session-awareness-loop/plugin.ts` | 5294 B | config 类型、`parseConfig`、Plugin Definition |
+| `src/desktop-session-awareness-loop/plugin.ts` | 6082 B | config 类型、`MAX_TIMER_DELAY_MS`、`parseConfig`、Plugin Definition |
 | `src/desktop-session-awareness-loop/index.ts` | 206 B | 三个导出 |
-| `test/desktop-session-awareness-loop.test.mjs` | 20604 B | 18 条用例 |
+| `test/desktop-session-awareness-loop.test.mjs` | 23015 B | 19 条用例 |
 
 ---
 
@@ -112,13 +112,19 @@ export interface DesktopSessionAwarenessLoopConfig {
 | --- | --- |
 | `undefined` / `null` / `'5'` | 拒绝（非 number） |
 | `{}` / `{ delayMs: undefined }` / `{ delayMs: null }` | 拒绝 |
-| `0` / `-1` | 拒绝（必须 > 0） |
+| `0` / `-1` | 拒绝（必须 ≥ 1） |
 | `1.5` | 拒绝（必须整数） |
 | `NaN` / `Infinity` / `-Infinity` | 拒绝 |
+| `2_147_483_648` / `Number.MAX_SAFE_INTEGER` | 拒绝（超出 timer 上限） |
 | `5` | 接受 |
 | `10_000` | 接受 |
+| `2_147_483_647` | 接受（上限本身） |
 
-`Number.isInteger` 本身就排除 `NaN` 与两个无穷，所以判定条件就是「是 number、是整数、且大于 0」三项。
+`Number.isInteger` 本身就排除 `NaN` 与两个无穷，所以判定条件就是「是 number、是整数、且在 `[1, 2_147_483_647]` 区间内」三项。
+
+**取值范围的上界是 `2_147_483_647` ms（`2^31 - 1`）。** 这个上界不是 cadence 策略，而是**本 Loop 实际使用的调度原语的边界**：Node 的 `setTimeout` 对大于 `2^31 - 1` 的延迟不做等待，而是**静默改写成 1 ms** 并发出 `TimeoutOverflowWarning`。也就是说，超过上界的值一旦被接受，Plugin 承诺的 cadence 与它真正执行的 cadence 就不再是同一个值 —— 配置语义与运行语义脱节。**这是 `config.parse` 的正确性边界，不是通用 Plugin Design Rule**：它只约束这一个 Loop 的 schedule 实现，其他 Plugin 是否受同类边界约束，取决于它们各自使用的原语。
+
+越界一律**拒绝**，不做 clamp、不做截断、不做静默修复。被悄悄改成另一个值的 cadence 已经不再是所配置的那个 cadence；一个 Plugin 无法忠实执行的 cadence，它就不该接受。
 
 **没有** cron、RRULE、jitter、backoff、scheduler DSL、优先级队列。就一个正整数，且没有任何可以长成 scheduler 的东西。
 
@@ -301,12 +307,12 @@ export { desktopSessionAwarenessAssessedEvent } from './contracts.js';
 
 ## 14. 当前测试
 
-`test/desktop-session-awareness-loop.test.mjs` — **18 条**：
+`test/desktop-session-awareness-loop.test.mjs` — **19 条**：
 
 | # | 测试名 | 承重断言 |
 | --- | --- | --- |
 | 1 | `the loop requires exactly the awareness capability and provides nothing` | 纯消费者形态 + 事件 id/version |
-| 2 | `the cadence must be given explicitly and must be a positive integer` | 13 种非法输入全部被拒 + 拒绝后无残留记录 |
+| 2 | `the cadence must be given explicitly and must be an integer within the timer range` | 15 种非法输入全部被拒 + 拒绝后无残留记录 + 上限 `2_147_483_647` 被接受 |
 | 3 | `setup acquires nothing and the first cycle does not wait for a cadence` | 零急切采集 + 首轮不等 cadence |
 | 4 | `the assessment is published by reference and unmodified` | 引用恒等（无复制/无包装） |
 | 5 | `a cycle with no subscribers is legal and the loop keeps running` | 0 subscriber 合法 |
@@ -323,11 +329,12 @@ export { desktopSessionAwarenessAssessedEvent } from './contracts.js';
 | 16 | `the loop module depends only on public entry points` | 无深路径 import |
 | 17 | `the loop module carries no policy, platform, or storage vocabulary` | 无越界词汇 |
 | 18 | `the loop added no file to any module it depends on` | 零修改既有模块 |
+| 19 | `the largest accepted cadence is scheduled as configured and taken down on deactivation` | 上限 cadence 真实排程 + 反激活时被撤下（不等待真实最大 timer） |
 
 ### 测试纪律
 
 - **不使用第三方 fake timers。** 等待用 `setImmediate` 的事件循环轮次边界、可控 `deferred()` 闸门、或带 deadline 的条件等待 helper `until()`。
-- **不依赖「睡 20 ms 然后希望时序成立」。** 少量真实等待（`elapsed()`）只用于**否定断言**，即证明在给定窗口内**没有**发生额外的 cycle / publication / scheduling（用例 7、11、12、14）；正向时序与并发性质主要由可控 Promise、事件循环轮次边界和带 deadline 的条件等待证明。之所以需要真实等待，是因为「没有发生」无法靠事件循环轮次来观察。
+- **不依赖「睡 20 ms 然后希望时序成立」。** 少量真实等待（`elapsed()`）只用于**否定断言**，即证明在给定窗口内**没有**发生额外的 cycle / publication / scheduling（用例 7、11、12、14、19）；正向时序与并发性质主要由可控 Promise、事件循环轮次边界和带 deadline 的条件等待证明。之所以需要真实等待，是因为「没有发生」无法靠事件循环轮次来观察。
 - **不引入任何新依赖。** 只用 Node 原生 `node --test`。
 - 用例 8/9/10 通过 `trapRejections(t)` 在进程级监听 `unhandledRejection`，在 `t.after` 移除。
 
@@ -339,7 +346,7 @@ export { desktopSessionAwarenessAssessedEvent } from './contracts.js';
 
 | 变异 | 改动 | 结果 |
 | --- | --- | --- |
-| 基线 | — | `tests 18 / pass 18 / fail 0` |
+| 基线 | — | `tests 18 / pass 18 / fail 0`（探针当时套件为 18 条；P4-01.1 之后为 19 条） |
 | **A** | 移除 `await` 之后的 `stopped` 检查 | **`pass 17 fail 1` — CAUGHT**（用例 12） |
 | **B** | `catch` 内改为重新抛出（不再吸收 rejection） | **`pass 15 fail 3` — CAUGHT**（用例 8/9/10） |
 | **C** | `scheduleCycle` 每次额外再排一个 cycle | **`pass 12 fail 6` — CAUGHT**（用例 3/7/11/12/13/14） |
@@ -358,49 +365,50 @@ export { desktopSessionAwarenessAssessedEvent } from './contracts.js';
 
 ## 16. 真实运行结果
 
-本轮**实际运行**（非预期）：
+近期**实际运行**（非预期）。下面这一段是 **P4-01.1（timer 上界修正）之后**的运行记录；P4-01 当时的记录是 202 条用例、本文件的 18 条，差异来自 §5 上界修正新增的第 19 条与第 2 条的扩充。
 
 ```
 $ npm test
-ℹ tests 202
-ℹ pass 202
+ℹ tests 203
+ℹ pass 203
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 4307.3937
+ℹ duration_ms 4165.3328
 
-$ node --test test/desktop-session-awareness-loop.test.mjs     （单跑）
-✔ the loop requires exactly the awareness capability and provides nothing (1.5253ms)
-✔ the cadence must be given explicitly and must be a positive integer (0.5992ms)
-✔ setup acquires nothing and the first cycle does not wait for a cadence (2.7658ms)
-✔ the assessment is published by reference and unmodified (3.052ms)
-✔ a cycle with no subscribers is legal and the loop keeps running (4.8916ms)
-✔ cycles keep running at the configured cadence (7.5162ms)
-✔ an acquisition slower than the cadence never overlaps the next one (94.18ms)
-✔ an acquisition rejection neither stops the loop nor escapes it (9.1913ms)
-✔ a failing subscriber does not stop the loop (4.9949ms)
-✔ a subscriber that throws synchronously does not stop the loop (4.9683ms)
-✔ an unload with a cycle pending cancels it (164.8698ms)
-✔ an unload during an in-flight cycle waits for it and publishes nothing (46.2827ms)
-✔ an in-flight cycle that rejects during unload still lets the unload finish (0.6518ms)
-✔ the loop waits when awareness disappears and restarts fresh when it returns (45.825ms)
-✔ consumers fan out through the event without calling the awareness service (5.4582ms)
-✔ the loop module depends only on public entry points (1.1444ms)
-✔ the loop module carries no policy, platform, or storage vocabulary (0.5384ms)
-✔ the loop added no file to any module it depends on (0.3568ms)
-ℹ tests 18  pass 18  fail 0  skipped 0
-ℹ duration_ms 488.7296
+$ node --test test/desktop-session-awareness-loop.test.mjs     （单跑，需先 build）
+✔ the loop requires exactly the awareness capability and provides nothing (1.2557ms)
+✔ the cadence must be given explicitly and must be an integer within the timer range (0.6332ms)
+✔ setup acquires nothing and the first cycle does not wait for a cadence (2.3928ms)
+✔ the assessment is published by reference and unmodified (3.2932ms)
+✔ a cycle with no subscribers is legal and the loop keeps running (4.9304ms)
+✔ cycles keep running at the configured cadence (6.9805ms)
+✔ an acquisition slower than the cadence never overlaps the next one (96.3314ms)
+✔ an acquisition rejection neither stops the loop nor escapes it (9.5994ms)
+✔ a failing subscriber does not stop the loop (4.9749ms)
+✔ a subscriber that throws synchronously does not stop the loop (4.87ms)
+✔ an unload with a cycle pending cancels it (168.9712ms)
+✔ an unload during an in-flight cycle waits for it and publishes nothing (45.5295ms)
+✔ an in-flight cycle that rejects during unload still lets the unload finish (1.4864ms)
+✔ the loop waits when awareness disappears and restarts fresh when it returns (45.8981ms)
+✔ consumers fan out through the event without calling the awareness service (5.1652ms)
+✔ the loop module depends only on public entry points (0.9034ms)
+✔ the loop module carries no policy, platform, or storage vocabulary (0.437ms)
+✔ the loop added no file to any module it depends on (0.3639ms)
+✔ the largest accepted cadence is scheduled as configured and taken down on deactivation (53.8425ms)
+ℹ tests 19  pass 19  fail 0  skipped 0
+ℹ duration_ms 538.1394
 ```
 
 ### 计数口径
 
 | 环境 | 结果 | 来源 |
 | --- | --- | --- |
-| 本机 Windows 11 | **202 tests / 202 pass / 0 fail / 0 skipped** | **实际跑过** |
+| 本机 Windows 11 | **203 tests / 203 pass / 0 fail / 0 skipped** | **实际跑过** |
 | CI | 未运行 | 本轮**未 push** |
 
-202 = 184（P3-05 基线）+ 18（本轮）。
+203 = 184（P3-05 基线）+ 19（P4-01 的 18 条 + P4-01.1 新增 1 条）。
 
 **不写耗时常量**：绝对数值跨轮次不稳定，按 P3-03 §13 纪律，只用同一轮同机相对关系下结论。
 

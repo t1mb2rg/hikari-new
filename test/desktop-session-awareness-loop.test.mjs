@@ -141,7 +141,7 @@ test('the loop requires exactly the awareness capability and provides nothing', 
   assert.equal(await runtime.loadPlugin(desktopSessionAwarenessLoopPlugin, { delayMs: 5 }), 'waiting');
 });
 
-test('the cadence must be given explicitly and must be a positive integer', async (t) => {
+test('the cadence must be given explicitly and must be an integer within the timer range', async (t) => {
   const rejected = [
     undefined,
     null,
@@ -156,6 +156,11 @@ test('the cadence must be given explicitly and must be a positive integer', asyn
     { delayMs: Number.POSITIVE_INFINITY },
     { delayMs: Number.NEGATIVE_INFINITY },
     { delayMs: '5' },
+    // Past 2^31 - 1, `setTimeout` does not wait longer — it silently rewrites the wait to 1 ms, so a
+    // cadence accepted here could not be the cadence executed. Rejected rather than clamped: a
+    // cadence quietly changed to a different cadence is no longer the one that was configured.
+    { delayMs: 2_147_483_648 },
+    { delayMs: Number.MAX_SAFE_INTEGER },
   ];
 
   for (const input of rejected) {
@@ -172,6 +177,14 @@ test('the cadence must be given explicitly and must be a positive integer', asyn
   t.after(() => runtime.shutdown());
   await runtime.loadPlugin(desktopSessionAwarenessLoopPlugin, { delayMs: 1 });
   assert.equal(runtime.getPluginState(LOOP), 'waiting');
+
+  // The other end of the range, asserted without waiting for it. No provider is loaded here, so the
+  // requirement is unmet, the plugin never leaves `waiting`, and setup — the only thing that arms a
+  // timer — never runs. That absence is what makes the largest accepted cadence free to assert.
+  const bounded = new Runtime();
+  t.after(() => bounded.shutdown());
+  await bounded.loadPlugin(desktopSessionAwarenessLoopPlugin, { delayMs: 2_147_483_647 });
+  assert.equal(bounded.getPluginState(LOOP), 'waiting');
 });
 
 test('setup acquires nothing and the first cycle does not wait for a cadence', async (t) => {
@@ -532,4 +545,31 @@ test('the loop added no file to any module it depends on', () => {
       `${module} gained or lost a file`,
     );
   }
+});
+
+// Placed last so that the cases above keep the numbers the development record gives them. It is the
+// boundary the config tests state as a contract, taken one step further: not only accepted, but
+// scheduled for real and taken back down.
+test('the largest accepted cadence is scheduled as configured and taken down on deactivation', async (t) => {
+  const provider = awareness();
+  const runtime = new Runtime();
+  t.after(() => runtime.shutdown());
+  await runtime.loadPlugin(provider.definition);
+  await runtime.loadPlugin(desktopSessionAwarenessLoopPlugin, { delayMs: 2_147_483_647 });
+  assert.equal(runtime.getPluginState(LOOP), 'active');
+
+  // The first cycle is still armed at 0, so the loop is live immediately; it is the *second* one that
+  // carries the configured cadence. Waiting for that one would take twenty-four days, so what this
+  // test does instead is take the loop down while it is armed.
+  await until(() => provider.counts.calls === 1, 'the first cycle never ran', 1000);
+
+  await runtime.unloadPlugin(LOOP);
+  assert.equal(runtime.getPluginState(LOOP), undefined);
+
+  // Were the cadence timer left armed, this assertion would still hold — the proof that the timer went
+  // with the deactivation is that this file terminates at all rather than holding the process open for
+  // the length of the cadence.
+  const settled = provider.counts.calls;
+  await elapsed(40);
+  assert.equal(provider.counts.calls, settled, 'a cleared timer ran a cycle after deactivation');
 });

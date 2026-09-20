@@ -6,6 +6,13 @@ export interface DesktopSessionAwarenessLoopConfig {
   readonly delayMs: number;
 }
 
+// The largest delay a Node timer can express faithfully. `setTimeout` silently rewrites anything
+// above 2^31 - 1 into 1 ms, so a cadence past this bound would be accepted here and then actually
+// executed as the shortest cadence there is — a value the loop cannot deliver is a value the loop
+// must not accept. Local to this file on purpose: it is the edge of this plugin's own scheduling,
+// not a contract of the Runtime and not a rule for plugins in general.
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+
 // Explicit by design. A default cadence would be this plugin deciding how often Hikari looks at the
 // desktop, and that is a mandate rather than an implementation detail. There is no cron, no RRULE,
 // no jitter, no backoff: one positive integer, and nothing that could grow into a scheduler.
@@ -16,10 +23,17 @@ function parseConfig(input: unknown): DesktopSessionAwarenessLoopConfig {
       : undefined;
 
   // `Number.isInteger` rejects NaN and both infinities on its own, so the checks below are the whole
-  // accepted set: a number, whole, and greater than zero.
-  if (typeof candidate !== 'number' || !Number.isInteger(candidate) || candidate <= 0) {
+  // accepted set: a number, whole, and inside the one range this loop can actually schedule. Out-of-
+  // range is rejected rather than clamped, because a cadence quietly changed to a different cadence
+  // is no longer the cadence that was configured.
+  if (
+    typeof candidate !== 'number' ||
+    !Number.isInteger(candidate) ||
+    candidate < 1 ||
+    candidate > MAX_TIMER_DELAY_MS
+  ) {
     throw new Error(
-      `desktop-session-awareness-loop requires a positive integer delayMs, received ${String(candidate)}.`,
+      `desktop-session-awareness-loop requires an integer delayMs between 1 and ${MAX_TIMER_DELAY_MS}, received ${String(candidate)}.`,
     );
   }
 
