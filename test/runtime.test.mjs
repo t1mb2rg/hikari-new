@@ -201,3 +201,193 @@ test('plugin config is validated before startup and parsed value is passed to se
   await assert.rejects(() => invalidRuntime.loadPlugin(plugin, {}), /invalid config/);
   assert.equal(invalidRuntime.getPluginState('config.consumer'), undefined);
 });
+
+// A setup that has not returned yet is an activation in flight, and an unload arriving
+// during one used to delete the record underneath it: setup went on opening resources, the
+// deferred cleanup could no longer be registered because the scope was already disposed,
+// and the promise `loadPlugin` handed back resolved with a state for a plugin the Runtime
+// had already forgotten. The setup is parked on a gate in both of these so the race is
+// forced rather than hoped for.
+test('an unload that races an in-flight setup does not leave the activation running', async () => {
+  const runtime = new Runtime();
+  const opened = [];
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+
+  const plugin = {
+    id: 'test.in-flight-setup',
+    version: '1.0.0',
+    async setup(ctx) {
+      await gate;
+      // Opened only after the unload has already been asked for.
+      const resource = { open: true };
+      opened.push(resource);
+      ctx.defer(() => {
+        resource.open = false;
+      });
+    },
+  };
+
+  const loading = runtime.loadPlugin(plugin);
+  assert.equal(runtime.getPluginState(plugin.id), 'starting');
+
+  const unloading = runtime.unloadPlugin(plugin.id);
+  release();
+
+  // The load reports the state the record reached. `active` would mean this call had
+  // reported an activation the unload had already taken away.
+  assert.equal(await loading, 'waiting');
+
+  await unloading;
+
+  // Nothing this activation opened outlived the unload it raced...
+  assert.deepEqual(
+    opened.map((resource) => resource.open),
+    [false],
+  );
+  // ...and no record is left behind for a plugin the Runtime has unloaded.
+  assert.equal(runtime.getPluginState(plugin.id), undefined);
+  assert.equal(runtime.getPluginError(plugin.id), undefined);
+});
+
+test('an unload that races an in-flight setup also runs the cleanup setup returns', async () => {
+  const runtime = new Runtime();
+  let released = false;
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+
+  const plugin = {
+    id: 'test.in-flight-returned-cleanup',
+    version: '1.0.0',
+    async setup() {
+      await gate;
+      return () => {
+        released = true;
+      };
+    },
+  };
+
+  const loading = runtime.loadPlugin(plugin);
+  const unloading = runtime.unloadPlugin(plugin.id);
+  release();
+
+  assert.equal(await loading, 'waiting');
+  await unloading;
+
+  assert.equal(released, true);
+  assert.equal(runtime.getPluginState(plugin.id), undefined);
+});
+
+test('an unload does not report completion before a setup it raced has released its resources', async () => {
+  const runtime = new Runtime();
+  let open = false;
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+
+  const plugin = {
+    id: 'test.unload-waits-for-setup',
+    version: '1.0.0',
+    async setup(ctx) {
+      await gate;
+      open = true;
+      ctx.defer(() => {
+        open = false;
+      });
+    },
+  };
+
+  const loading = runtime.loadPlugin(plugin);
+  const unloading = runtime.unloadPlugin(plugin.id);
+  release();
+  await unloading;
+
+  assert.equal(open, false);
+  assert.equal(runtime.getPluginState(plugin.id), undefined);
+
+  await loading;
+});
+
+test('an unload that races a setup which then rejects releases what it opened and leaves no record', async () => {
+  const runtime = new Runtime();
+  let open = false;
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+
+  const plugin = {
+    id: 'test.in-flight-setup-rejects',
+    version: '1.0.0',
+    async setup(ctx) {
+      await gate;
+      open = true;
+      ctx.defer(() => {
+        open = false;
+      });
+      throw new Error('setup exploded');
+    },
+  };
+
+  const loading = runtime.loadPlugin(plugin);
+  assert.equal(runtime.getPluginState(plugin.id), 'starting');
+
+  const unloading = runtime.unloadPlugin(plugin.id);
+  release();
+
+  // The setup threw, and that is the activation's own outcome: the record having been claimed by
+  // an unload does not launder a failure away from the caller who asked for the plugin. What the
+  // unload does take away is the record itself, so the error is no longer readable afterwards —
+  // which is why the failure has to be reported here, at the moment it is known.
+  assert.equal(await loading, 'failed');
+
+  await unloading;
+
+  // The deferred cleanup ran even though the record was already claimed: the scope is disposed on
+  // the failure path, not left to the unload that could not touch it while setup was running.
+  assert.equal(open, false);
+  // ...and the unload took the record, so neither state nor error survives it.
+  assert.equal(runtime.getPluginState(plugin.id), undefined);
+  assert.equal(runtime.getPluginError(plugin.id), undefined);
+});
+
+test('a plugin unloaded while its setup was in flight starts from scratch when loaded again', async () => {
+  const runtime = new Runtime();
+  let started = 0;
+  let first = true;
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+
+  const plugin = {
+    id: 'test.reload-after-race',
+    version: '1.0.0',
+    async setup() {
+      started += 1;
+      if (first) {
+        first = false;
+        await gate;
+      }
+    },
+  };
+
+  const loading = runtime.loadPlugin(plugin);
+  const unloading = runtime.unloadPlugin(plugin.id);
+  release();
+
+  await loading;
+  await unloading;
+  assert.equal(runtime.getPluginState(plugin.id), undefined);
+
+  // Nothing from the unloaded activation survives into the next one: a record claimed by an
+  // unload must not be left in a state that quietly refuses to start it ever again.
+  await runtime.loadPlugin(plugin);
+  assert.equal(runtime.getPluginState(plugin.id), 'active');
+  assert.equal(started, 2);
+});
