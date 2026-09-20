@@ -14,18 +14,25 @@ export interface CommandOutcome {
   readonly stderr: string;
 }
 
-export type CliCommand = 'init' | 'chronicle-init' | 'start' | 'resident';
+export type CliCommand = 'init' | 'chronicle-init' | 'start' | 'resident' | 'status' | 'stop';
 
 // Only `resident` carries a parsed number, and the union is what keeps that obligation in the type
-// rather than in a comment: the other three commands cannot be handed a cadence at all.
+// rather than in a comment: the other commands cannot be handed a cadence at all. `status` and `stop`
+// belong to the first arm for the same reason — what they need from argv is exactly a data directory,
+// which is the whole of the first arm's obligation, so their arrival cannot widen any argument
+// surface. In particular they do not take the cadence: reaching a running resident is not the same
+// act as deciding how often it looks at the desktop, and a control command that could set a cadence
+// would be a second way to configure the loop.
 export type ParsedCommandLine =
-  | { readonly command: 'init' | 'chronicle-init' | 'start'; readonly options: CliOptions }
+  | { readonly command: 'init' | 'chronicle-init' | 'start' | 'status' | 'stop'; readonly options: CliOptions }
   | { readonly command: 'resident'; readonly options: ResidentOptions };
 
 export class UsageError extends Error {}
 
 export const INIT_HINT = '请先运行：hikari init --data-dir <path>';
 export const CHRONICLE_INIT_HINT = '请运行：hikari chronicle init --data-dir <path>';
+export const RESIDENT_HINT =
+  '请先运行：hikari resident --data-dir <path> --desktop-awareness-delay-ms <integer>';
 
 export const USAGE = [
   '用法：',
@@ -33,6 +40,8 @@ export const USAGE = [
   '  hikari chronicle init --data-dir <path>',
   '  hikari start --data-dir <path>',
   '  hikari resident --data-dir <path> --desktop-awareness-delay-ms <integer>',
+  '  hikari status --data-dir <path>',
+  '  hikari stop --data-dir <path>',
   '',
   '选项：',
   '  --data-dir <path>                        数据根目录，必填，没有默认值',
@@ -68,6 +77,8 @@ function readCommand(head: string | undefined, rest: readonly string[]): Command
   if (head === 'init') return { command: 'init', tokens: rest };
   if (head === 'start') return { command: 'start', tokens: rest };
   if (head === 'resident') return { command: 'resident', tokens: rest };
+  if (head === 'status') return { command: 'status', tokens: rest };
+  if (head === 'stop') return { command: 'stop', tokens: rest };
   if (head === 'chronicle') return readChronicleCommand(rest);
   throw new UsageError(head === undefined ? '缺少命令。' : `未知命令：${head}`);
 }

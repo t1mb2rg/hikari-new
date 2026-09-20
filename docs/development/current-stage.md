@@ -1,10 +1,10 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；**P4-03 尚未开始**。`origin/main` = `0db5516f86d8fba0c12b99a669cf067f7df03aac`（`feat: add resident process composition`，已比对确认与本地 HEAD 逐字符相同），CI（Runtime Tests #21）**success**。
+> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审，随本轮提交落地但尚未 push**；**P4-03 尚未开始**。`origin/main` = `f3d7673`（`test: fix input activity clock assumption`；此前两项为 `e23d382 docs: refresh current development stage` 与 `0db5516 feat: add resident process composition`）。已核对本地 remote-tracking ref 与本地 HEAD 相同（0 ahead / 0 behind），**未重新 fetch**，因此这是本地记录而非一次网络核对。P4-02.1 的改动**尚未进入 `origin/main`**。
 >
-> **不得写作 `Phase 4 COMPLETE`。** P4-01 只交付「驱动 + 发生」，P4-02 只交付「进程组合 + 进程寿命」：`principles.md` §14 定义的 Awareness 链路中，**Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act 均未进入，且未被预埋**。
+> **不得写作 `Phase 4 COMPLETE`。** P4-01 只交付「驱动 + 发生」，P4-02 只交付「进程组合 + 进程寿命」，P4-02.1 只交付「本机可问、可停」：`principles.md` §14 定义的 Awareness 链路中，**Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act 均未进入，且未被预埋**。
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`（第四阶段目前**没有**架构评审文档）。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`，P4-02.1 的实现与复盘见 `docs/development/phase-4-resident-control.md`（第四阶段目前**没有**架构评审文档）。
 
 ---
 
@@ -191,7 +191,7 @@ P3-04 **没有修改任何既有文件**：`src/runtime/`、`src/continuity/`、
 
 P3-04 已完成、已提交、已 push（commit `ead4d7c594b38abaa621fbfc0604a2e73f3d4562`，message `feat: 完成 P3-04 桌面会话变化感知 v1`），CI **success**：176 tests / 171 pass / 5 skipped / 0 fail。
 
-第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 ~ P3-05 也已全部 push，第三阶段收口当时 `origin/main` = `c07ad36`（已比对确认与本地 HEAD 逐字符相同；此后已随第四阶段前进，当前为 `0db5516`——见文首状态）。
+第二阶段**已全部 push**：P2-01 ~ P2-04 共 4 个提交（`194987c` / `e430358` / `86aa3fc` / `58bb596`）全部在远端，CI 已对这批测试跑过并通过。第二阶段没有未结项。P3-01 ~ P3-05 也已全部 push，第三阶段收口当时 `origin/main` = `c07ad36`（已比对确认与本地 HEAD 逐字符相同；此后已随第四阶段前进，当前为 `f3d7673`——见文首状态）。
 
 **第二阶段不新增架构地图（已决定，非未结项）**：第一阶段的图存在，是因为那一步要固定「Runtime 不带领域语义」这条边界本身；第二阶段的产物是接线与验收——P2-01 / P2-02 / P2-03 的因果与边界已由各自的实现文档与架构评审完整保存，P2-04 **没有新增任何生产结构**。此时硬画一张图只会复述已有文字，不增加信息，因此**不以架构图作为第二阶段收口条件**。后续若出现真实的结构变化，再按那时的需要决定是否建图。
 
@@ -666,6 +666,48 @@ Resident 报告【能力不可用】，退出 1
 
 这是**感知 Provider 在自己的 ownership 内判断宿主不适用**之后沿依赖图诚实收敛的结果，**不是 Resident 在判断操作系统**。
 
+**口径修正（P4-02.1 收口后）**：上面的「Resident 自己不写 `process.platform`」**只对 `src/cli/resident.ts` 成立，并且仍然成立**。P4-02.1 新增的 `src/cli/control.ts` 里出现了一处 `process.platform !== 'win32'`，但那不是**感知**的平台判断，而是**控制通道**的机制判断：Named Pipe 是 Windows 的内核对象，非 win32 宿主上没有它。两者不冲突，也不构成「Resident 开始判断操作系统」——合成根至今没有按平台挑过任何 Plugin 或任何行为。
+
+### Resident 本地控制（P4-02.1）
+
+回答 P4-02 自己记下的一条限制：
+
+> 在 Windows 上，操作者**没有**任何办法让一个从别的终端启动的常驻优雅地停下来。
+
+```text
+hikari status --data-dir <path>   问一个正在跑的常驻：你现在是什么状态
+hikari stop   --data-dir <path>   请求一个正在跑的常驻：按你自己的顺序停下来
+```
+
+**这不是运维子系统，是 P4-02 §11 限制 3 的收口。** 实现范围被严格限定为：两条命令、一个 Windows 本地 Named Pipe、一个只有两个词的封闭协议。
+
+**端点发现：派生，不是发布。**
+
+```text
+canonical dataDir  →  sha256  →  前 16 个 hex  →  \\.\pipe\hikari-resident-<16 hex>
+```
+
+两端调用**同一个函数**，因此不是「约定一致」而是**构造上一致**。**没有写 address file**：一个落盘的地址文件用「记得的事实」回答「有没有常驻在跑」，而派生名由操作系统自己回答——连得上就是活着，连不上就是 `ENOENT`，而 `ENOENT` 不是缓存的意见，是此刻的真话。
+
+**协议：一个版本、两个词，封闭。**
+
+```text
+{"protocol":1,"request":"status"}          {"protocol":1,"outcome":"ok","lines":[...]}
+{"protocol":1,"request":"stop"}            {"protocol":1,"outcome":"failed","lines":[...]}
+```
+
+**没有 payload、没有 plugin id、没有 routing、没有第三个词。** 这不是靠自律维持的：`readEnvelope` 要求「键的数量恰好相等、每个键都在」，因此多一个 `payload`、多一个 `pluginId` 今天就会被**拒绝**。一个对未知字段宽容的信封**本身就已经是一个可扩展 schema**——那样一来，「不预留字段」就从对本 build 的描述变成了对下一个 build 的承诺。
+
+**`status` 只报告 Runtime 已经知道的事**：状态取自 `getPluginState`，错误取自 `getPluginError`，一个字都不探测、不问桌面、不推导。它是**转述，不是健康检查**。
+
+**`stop` 不是一条新的停机路径**：它调用的是与第一个 `SIGINT` / `SIGTERM` 触发的**同一个** `signals.request()`——同一个 promise、同一批要摘掉的监听器、同一个「有人要求这个进程停下」的可观测点。
+
+**寿命归属未被改写**：监听器与每个已接受的 socket 都 `unref()`，因此一个开着的端点**永远不是**进程活着的理由；常驻仍然只由自己的 lease 决定自己活多久。端点承诺的是**反面**：它必须在进程消失**之前**消失，而 shutdown 里的 `await control.close()` 就是这句话。
+
+**端点比 Runtime 活得久，是有意的。** 顺序是「先 `runtime.shutdown()`，再 `control.close()`」：停机没有固定时长，先关掉的端点会在整段仍在进行的 teardown 期间报告「不存在」——那会让客户端拿到一句关于**时机**的真话，却读成一句关于**世界**的真话。换来的承诺是「端点保证在进程之前消失」。停机中 endpoint 仍然可达，并且会如实多打一行「Hikari 常驻正在停止。」。
+
+**一个数据目录只有一个端点**，由操作系统自己执行（第二个监听器得到 `EADDRINUSE`）。这**不是**要绕开的端口冲突，它**就是**「这里是不是已经有一个常驻在跑」的答案。第二个常驻因此**拒绝启动**，而不是共用一个端点——否则会有两个进程加载同一套组合、写同一个 store，而一次 `status` 描述一个进程、一次 `stop` 结束另一个。
+
 ---
 
 ## 验收状态
@@ -1100,7 +1142,9 @@ Docs / Contracts updated
 
 第四阶段 P4-02：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `0db5516`，message `feat: add resident process composition`），CI（Runtime Tests #21）**success**。
 
-第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 三项已达到该标准并已收口，但 **P4-03 尚未开始**；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
+第四阶段 P4-02.1：**已实现、已通过 Functional / Architecture Review、Docs 已更新**，随本轮提交落地，**尚未 push**。它是 P4-02 的**从属轮次**（一条已知限制的收口），不是新的架构层，也不是新增感知 capability。
+
+第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 三项已达到该标准并已收口，P4-02.1 已实现待提交，但 **P4-03 尚未开始**；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
 
 ---
 
@@ -1118,9 +1162,13 @@ Docs / Contracts updated
 - **Chronicle v1 存储格式的完整性标记**（事实计数 / 链式哈希 / 墓碑）——因此「fact 行被删光、header 完好」的 store 与全新 store 无法区分，会被报告成空历史。这是已记录的格式限制，不是实现缺陷；
 - **常驻进程之外的守护进程化**——OS daemon / Windows Service 安装、systemd service、pid 文件、日志文件子系统、后台服务安装器、开机自启、崩溃自动重启、watchdog / supervisor。
   **口径修正（P4-02 收口后）**：下列四项**已经落地**，不得再列为未做——✅ `hikari resident` CLI 组合、✅ 进程寿命归属（Resident 自己的 lease）、✅ SIGINT / SIGTERM 处理、✅ 本地长期运行进程。
-  **常驻进程 ≠ 守护进程 / 服务**：`hikari resident` 由操作者在前台启动、由操作者的信号结束，不注册为系统服务、不脱离终端、不自动重启。把两者混为一谈会同时高估已落地的东西、低估还缺的东西；
+  **常驻进程 ≠ 守护进程 / 服务**：`hikari resident` 由操作者在前台启动、由操作者的信号**或在 Windows 上的 `hikari stop`** 结束，不注册为系统服务、不脱离终端、不自动重启。把两者混为一谈会同时高估已落地的东西、低估还缺的东西；
+  **口径修正（P4-02.1 收口后）**：第五项**也已经落地**——✅ 本地控制入口（`hikari status` / `hikari stop` + Windows Named Pipe，见 §「已实现 · Resident 本地控制（P4-02.1）」）。这不是 daemon 化：它没有让常驻脱离终端、没有引入 pid 文件、没有引入日志子系统、没有引入认证，也没有做自动重启 / watchdog / supervisor。**它只是让「从另一个进程请求优雅停机」这件事在 Windows 上第一次成为可能**；
 - 配置文件、环境 Profile、节点配置、用户配置中心——CLI 只有一个必填参数 `--data-dir`；
-- `hikari stop` / `hikari status` / `hikari log` 等运维命令；
+- ~~`hikari stop` / `hikari status` / `hikari log` 等运维命令~~；
+  **口径修正（P4-02.1 收口后）**：`hikari status` 与 `hikari stop` **已经落地**（本地 Named Pipe，见 §「已实现 · Resident 本地控制（P4-02.1）」）。
+  **仍然不做**：`hikari log`——没有日志文件子系统，也没有任何远程 / 跨机控制面；
+  且这两条命令**只有读与停机两种语义**，不是运维面：没有配置重载、没有重启、没有健康检查、没有身份认证。把「能问能停」读成「可运维」是高估。
 - 启动失败后的自动重试、自动修复、自动创建；
 - Event 自动转 Durable Fact，以及任何「什么值得长期记录」的自动判断；
 - 事实的 `update` / `delete` / 查询 DSL / 全文搜索 / 向量搜索；
@@ -1446,8 +1494,24 @@ P4-02 已完成、已提交、已 push，**没有未结项**：
 
 ```text
 0db5516  feat: add resident process composition
-origin/main = 0db5516（已比对确认与本地 HEAD 逐字符相同）
+origin/main = 0db5516（P4-02 收口当时，已比对确认与本地 HEAD 逐字符相同）
 CI（.github/workflows/runtime-tests.yml）: success，Runtime Tests #21
+```
+
+（`origin/main` 此后又前进两项：`e23d382 docs: refresh current development stage`、
+`f3d7673 test: fix input activity clock assumption`——本轮开工时已核对与本地 HEAD 相同。**注意：这两项不是 P4-02.1**，它们是本轮之前落地的独立工作。）
+
+P4-02.1 已实现、已通过评审、文档已更新，**随本文件所在的这次提交一起落地**：
+
+```text
+本次提交（feat: add resident local control channel）
+  src/cli/control.ts / control-endpoint.ts / control-command.ts（新增）
+  src/cli/resident.ts / options.ts / main.ts（修改）
+  test/resident-control.test.mjs（新增）/ test/resident-cli.test.mjs（修改）
+  docs/development/phase-4-resident-control.md（新增）
+  docs/development/phase-4-resident.md、docs/development/current-stage.md（修改）
+
+push 状态：**提交时未 push**——`origin/main` 尚未包含本轮内容。
 ```
 
 **测试最终事实**：
@@ -1455,9 +1519,12 @@ CI（.github/workflows/runtime-tests.yml）: success，Runtime Tests #21
 ```text
 本机（Windows 11，P4-02 收口后）:      222 tests / 221 pass / 0 fail / 1 skipped
 CI（ubuntu-latest，Runtime Tests #21）: success
+
+本机（Windows 11，P4-02.1 实现后）:    234 tests / 233 pass / 0 fail / 1 skipped
+CI（P4-02.1）:                        未运行（本轮未 push）
 ```
 
-本机那 1 条 skip 是**平台门控**：真实 POSIX 信号测试要求非 win32 宿主，在 Windows 本机上按设计自我 skip。CI 的用例数与 skip 分布本轮未逐项核对，因此这里只记 success，不记数字。
+本机那 1 条 skip 是**平台门控**：真实 POSIX 信号测试要求非 win32 宿主，在 Windows 本机上按设计自我 skip（P4-02.1 的 12 条新用例中有 9 条反过来在非 win32 上自我 skip，本机全部执行）。CI 的用例数与 skip 分布未逐项核对，因此这里只记 success，不记数字。
 
 ### 一、Awareness 范围（必须与 `principles.md` §14 一起读）
 
@@ -1508,9 +1575,14 @@ Ignore / Remember / Ask / Notify / Act
    → 真实 POSIX 信号用例在 win32 上自我 skip；
      这是「这台机器上测不了」，不是「已经测过」。
 
-4. Resident 没有运维面
-   没有 stop / status / log、没有 daemon 化、没有自动重启、没有 watchdog、
-   没有 pid 文件、没有日志文件子系统。
+4. Resident 没有运维面（P4-02.1 后**部分收窄，性质未变**）
+   P4-02.1 补上了本机控制入口：hikari status / hikari stop + Windows Named Pipe，
+   走的是同一条优雅停机路径，status 只转述 Runtime 已经记录的状态与错误。
+   → 因此「没有 stop / status」不再成立，**上一句已作废**。
+   → 仍然没有：log、daemon 化、自动重启、watchdog、pid 文件、
+     日志文件子系统、配置重载、健康检查、任何身份认证、任何远程 / 跨机控制面。
+   → 关键区分：**能问、能停 ≠ 可运维**。这条控制通道只有读与停机两种语义，
+     且只在本机、只在 Windows、且没有任何权限边界。
 
 5. assessed Event 的生产订阅者数仍为 0
    → 见 §「已实现 · Resident（P4-02）」的 Event 边界：

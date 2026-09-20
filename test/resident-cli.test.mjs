@@ -83,6 +83,15 @@ function fakeRuntime({ errors = {}, shutdown } = {}) {
   };
 }
 
+// Every test below is about the resident's own logic, so the control channel is stubbed here: the
+// endpoint path is still derived and the host is still built, but nothing is listened on. That keeps
+// these tests free of OS handles, of ordering between concurrently running test files, and of the
+// one-resident-per-data-directory rule — none of which they are trying to say anything about. The
+// real listener has its own file, and the production wiring test below runs without this stub.
+const noControl = {
+  listenControl: async (_host, path) => ({ path, close: async () => {} }),
+};
+
 const options = () => ({ dataDir: 'resident-test-root', desktopAwarenessDelayMs: 1000 });
 
 // The command's startup is a chain of microtasks — nothing in a fake composition yields to the event
@@ -117,7 +126,14 @@ function collect(stream) {
   return { get text() { return chunks.join(''); } };
 }
 
+// Each probe needs a data directory of its own, and not for tidiness: the data directory *is* the
+// control endpoint — the pipe name is derived from it — so two probes sharing one path would derive
+// one name, and the second would refuse to start rather than run unaddressable. Distinctness here is
+// what keeps these probes measuring the lease and nothing else.
+let probeSequence = 0;
+
 function spawnResidentProbe({ lease = true, signalAfterMs = null } = {}) {
+  probeSequence += 1;
   const leaseOverride = lease
     ? ''
     : 'createLease: () => ({ isHolding: () => false, release() {} }),';
@@ -132,7 +148,7 @@ const ids = ${JSON.stringify(MEMBER_IDS)};
 ${schedule}
 
 const outcome = await residentCommand(
-  { dataDir: 'lease-probe', desktopAwarenessDelayMs: 1000 },
+  { dataDir: ${JSON.stringify(`lease-probe-${probeSequence}`)}, desktopAwarenessDelayMs: 1000 },
   {
     composition: ids.map((id) => ({ id, load: async () => 'active' })),
     runtime: { getPluginError: () => undefined, shutdown: async () => {} },
@@ -176,6 +192,7 @@ test('resident 加载组合、报告就绪，并一直等到终止请求', async
     composition: compositionOf(ALL_ACTIVE),
     io,
     runtime,
+    ...noControl,
     createLease: () => lease,
   });
 
@@ -204,6 +221,7 @@ test('就绪不是对后台链路健康的断言：一个只能报告状态的�
     }),
     io,
     runtime,
+    ...noControl,
     createLease: () => createLifetimeLease(),
   });
 
@@ -228,6 +246,7 @@ test('组合未全部 active 时拒绝启动，并逐条报告状态与原因', 
     composition: compositionOf(states),
     io,
     runtime,
+    ...noControl,
     createLease: () => lease,
   });
 
@@ -252,6 +271,7 @@ test('未初始化时的失败仍然给出下一步该做什么', async () => {
     composition: compositionOf(['failed', 'waiting', 'waiting', 'waiting', 'waiting', 'waiting', 'waiting']),
     io,
     runtime,
+    ...noControl,
     createLease: () => createLifetimeLease(),
   });
 
@@ -279,6 +299,7 @@ test('组合加载期间抛错时报告失败，并且仍然完成清理', async
     ],
     io,
     runtime,
+    ...noControl,
     createLease: () => lease,
   });
 
@@ -307,6 +328,7 @@ test('终止请求发生在启动期间时，这一次启动不再宣布已就�
     ),
     io,
     runtime,
+    ...noControl,
     createLease: () => createLifetimeLease(),
   });
 
@@ -341,6 +363,7 @@ test('第一个终止请求之后，resident 就退出信号通道，shutdown �
     composition: compositionOf(ALL_ACTIVE),
     io,
     runtime,
+    ...noControl,
     createLease: () => lease,
   });
 
@@ -372,6 +395,7 @@ test('shutdown 失败时报告失败，但 lease 仍然被释放', async () => {
         throw new Error('感知链路的清理没有完成');
       },
     }),
+    ...noControl,
     createLease: () => lease,
   });
 

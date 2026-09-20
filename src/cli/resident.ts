@@ -5,6 +5,7 @@
 //   what "ready" means               — every plugin in the composition reported `active`
 //   when the process lifetime ends   — a lease it holds itself, released only after shutdown
 //   what an operator is told         — readiness, capability, and the exit code
+//   the control channel's meaning    — what `status` answers and what `stop` asks for
 //
 // What this file deliberately does not own:
 //   plugin lifecycle, dependency reconciliation, unload and cleanup ordering — the Runtime owns all
@@ -14,6 +15,12 @@
 // Resident is a composition role, not a subsystem: no plugin is added for it, no service or event is
 // defined for it, and it holds no domain state. Everything it knows about Hikari it learns from the
 // states the Runtime reports and from the errors the Runtime recorded.
+//
+// The control channel is the same claim made to a second audience. It listens on a local endpoint so
+// that a human who cannot send this process a signal can still ask it to stop, and it answers with
+// the states and errors the Runtime already holds — the identical material `renderNotReady` prints.
+// It is not a second input surface: it cannot start anything, cannot load a plugin, and cannot say
+// anything the Runtime has not already recorded.
 
 import { MessageChannel } from 'node:worker_threads';
 
@@ -26,6 +33,8 @@ import { foregroundPlugin } from '../foreground/index.js';
 import { inputActivityPlugin } from '../input-activity/index.js';
 import { Runtime } from '../index.js';
 import type { PluginState } from '../index.js';
+import { controlEndpointPath } from './control.js';
+import { listenControlEndpoint, type ControlEndpoint, type ControlHost } from './control-endpoint.js';
 import {
   CHRONICLE_INIT_HINT,
   INIT_HINT,
@@ -152,6 +161,8 @@ export interface ResidentOverrides {
   readonly io?: ResidentIo;
   readonly runtime?: Runtime;
   readonly createLease?: () => LifetimeLease;
+  /** Replaced in tests; production always uses the real named-pipe listener. */
+  readonly listenControl?: (host: ControlHost, path: string) => Promise<ControlEndpoint>;
 }
 
 export async function residentCommand(
@@ -166,11 +177,44 @@ export async function residentCommand(
   // alive because this file says so for the entire span in which it is doing anything at all.
   const lease = (overrides.createLease ?? createLifetimeLease)();
   const signals = armTerminationSignals();
+  const controlPath = controlEndpointPath(options.dataDir);
 
+  let control: ControlEndpoint | undefined;
   let exitCode = 0;
   let failure = '';
 
   try {
+    // Armed before the composition is loaded, not after it. Coming up is the window in which an
+    // operator most needs to be able to ask what is happening, and on Windows it is the only window
+    // in which the alternative is nothing at all: the host cannot deliver a graceful termination to
+    // another process, so until this listener exists the only way to end a resident that will not
+    // become ready is to kill it.
+    if (controlPath !== undefined) {
+      try {
+        control = await (overrides.listenControl ?? listenControlEndpoint)(
+          residentControlHost(runtime, composition, signals),
+          controlPath,
+        );
+      } catch (error) {
+        // A data directory owns exactly one endpoint and the operating system enforces that itself:
+        // a second listener on the same pipe name fails with EADDRINUSE. So this is not a port
+        // collision to work around, it is the answer to "is a resident already running here?" — and
+        // the answer is yes.
+        //
+        // Refusing to start is the only honest response. A resident that carried on without an
+        // endpoint would leave two processes loading the same composition and writing the same
+        // store, while the control channel went on addressing whichever of them arrived first: a
+        // `status` would describe one process and a `stop` would end the other.
+        if (isAddressInUse(error)) {
+          throw new Error(
+            `数据目录已被另一个 Hikari 常驻占用：${options.dataDir}。` +
+              '请先运行 hikari stop --data-dir <path> 停止它。',
+          );
+        }
+        throw error;
+      }
+    }
+
     const loaded = await loadComposition(runtime, composition);
 
     if (!isReady(loaded)) {
@@ -189,18 +233,34 @@ export async function residentCommand(
     exitCode = 1;
     failure = `${describeError(error)}\n`;
   } finally {
-    // One ordering, on every path. The Runtime is taken down first, then the signal listeners go,
-    // then the lease. Releasing the lease last is the point of the whole arrangement: the resident
-    // owns the process lifetime for the whole of its own shutdown, so disposal is never cut short by
-    // the process vanishing out from under it.
+    // One ordering, on every path. The Runtime is taken down first, then the endpoint, then the
+    // signal listeners, then the lease. Releasing the lease last is the point of the whole
+    // arrangement: the resident owns the process lifetime for the whole of its own shutdown, so
+    // disposal is never cut short by the process vanishing out from under it.
     try {
       await runtime.shutdown();
     } catch (error) {
       exitCode = 1;
       failure += `${describeError(error)}\n`;
     } finally {
-      signals.disarm();
-      lease.release();
+      // The endpoint outlives the Runtime on purpose, and it stays reachable for exactly as long as
+      // this process is a resident. That is what keeps ENOENT meaning "there is no resident" rather
+      // than "not right now": a client that finds nothing is told something true about the world
+      // instead of something true about timing. Shutdown has no fixed duration, so an endpoint
+      // closed first would report absence for the whole of a teardown that is still happening.
+      //
+      // What is promised instead is that the endpoint is gone before the process is, and the await
+      // here is that promise — the listener and every accepted connection are closed before the
+      // lease is released and the event loop is allowed to run out.
+      try {
+        if (control !== undefined) await control.close();
+      } catch (error) {
+        exitCode = 1;
+        failure += `${describeError(error)}\n`;
+      } finally {
+        signals.disarm();
+        lease.release();
+      }
     }
   }
 
@@ -233,22 +293,74 @@ function isReady(loaded: readonly LoadedMember[]): boolean {
   return loaded.length > 0 && loaded.every((member) => member.state === 'active');
 }
 
+// The control channel, as this file understands it: two questions, both already answerable from what
+// the Runtime holds. `status` reads it, `stop` asks for the same thing a signal asks for. Neither
+// one reaches a plugin, and there is nothing here for a plugin to register with.
+function residentControlHost(
+  runtime: Runtime,
+  composition: Composition,
+  signals: TerminationSignals,
+): ControlHost {
+  return {
+    status: () => renderStatus(runtime, composition, signals.isRequested()),
+    stop: () => signals.request(),
+  };
+}
+
+// What `status` may say, and the whole of it: the states the Runtime reports and the errors it
+// recorded, for the plugins this resident loaded. Nothing is probed, nothing is asked of the desktop
+// and nothing is derived — a status line is a report of what is already known, not a health check,
+// and this function has no way to learn anything the Runtime does not already have.
+//
+// The two line shapes differ on purpose. "This plugin is not loaded" and "the Runtime has no record
+// of this plugin" are different answers, and only one of them is ever true; printing `undefined`, or
+// borrowing the not-ready wording, would fold the second into the first.
+function renderStatus(
+  runtime: Runtime,
+  composition: Composition,
+  stopping: boolean,
+): readonly string[] {
+  const lines: string[] = ['Hikari 常驻状态：'];
+
+  // Termination is a state a resident is really in, and one an operator most needs to see: during
+  // shutdown this endpoint is still reachable by design and the plugins still read `active`, so
+  // without this line a status taken mid-teardown would describe a healthy resident that is already
+  // on its way out.
+  if (stopping) lines.push('Hikari 常驻正在停止。');
+
+  for (const member of composition) {
+    const state = runtime.getPluginState(member.id);
+    if (state === undefined) {
+      lines.push(`${member.id}：Runtime 中没有这个插件的记录`);
+      continue;
+    }
+
+    lines.push(`${member.id} 状态：${state}`);
+    appendFailure(lines, member.id, runtime.getPluginError(member.id));
+  }
+
+  return lines;
+}
+
+// The states say what happened; only the Runtime's recorded error says why. Both are reported,
+// because `failed` and `waiting` call for different actions from whoever is reading this, and a host
+// without the platform capability is not the same situation as a Hikari that was never initialized.
+//
+// One helper for both renderers so that the same error is described the same way whether it is read
+// off a resident that never started or off one that is running. A second copy of this would be a
+// second answer to the same question, and the two would drift.
+function appendFailure(lines: string[], id: string, error: unknown): void {
+  if (error === undefined) return;
+
+  lines.push(`${id}：${describeError(error)}`);
+  if (error instanceof NotInitializedError) lines.push(INIT_HINT);
+  if (error instanceof ChronicleNotInitializedError) lines.push(CHRONICLE_INIT_HINT);
+}
+
 function renderNotReady(runtime: Runtime, loaded: readonly LoadedMember[]): string {
   const lines = ['Hikari 常驻未启动：感知组合未全部就绪。'];
   for (const member of loaded) lines.push(`${member.id} 状态：${member.state}`);
-
-  // The states say what happened; only the Runtime's recorded error says why. Both are reported,
-  // because `failed` and `waiting` call for different actions from whoever is reading this, and a
-  // host without the platform capability is not the same situation as a Hikari that was never
-  // initialized.
-  for (const member of loaded) {
-    const error = runtime.getPluginError(member.id);
-    if (error === undefined) continue;
-
-    lines.push(`${member.id}：${describeError(error)}`);
-    if (error instanceof NotInitializedError) lines.push(INIT_HINT);
-    if (error instanceof ChronicleNotInitializedError) lines.push(CHRONICLE_INIT_HINT);
-  }
+  for (const member of loaded) appendFailure(lines, member.id, runtime.getPluginError(member.id));
 
   return `${lines.join('\n')}\n`;
 }
@@ -256,6 +368,11 @@ function renderNotReady(runtime: Runtime, loaded: readonly LoadedMember[]): stri
 interface TerminationSignals {
   readonly requested: Promise<void>;
   isRequested(): boolean;
+  /**
+   * Asks for the same thing a signal asks for. Idempotent: a request that was already made is not
+   * made again, which is what lets it be reachable from more than one place without counting.
+   */
+  request(): void;
   /** Removes the listeners. Idempotent, and synchronous by contract. */
   disarm(): void;
 }
@@ -268,6 +385,12 @@ interface TerminationSignals {
 // Nothing here calls `process.exit`, and nothing here races the shutdown it just asked for: a hard
 // kill is a policy this file does not have, and inventing one would be inventing a way for the
 // Runtime's cleanup ordering to be abandoned half-done.
+//
+// The control channel asks through `request()` rather than getting a path of its own. There is one
+// termination in this file — one promise to settle, one set of listeners to take off, one place
+// where "someone asked this process to stop" becomes observable — so a request that arrived over a
+// pipe and a request that arrived as a signal are not two behaviours that have to be kept in step,
+// they are the same one.
 function armTerminationSignals(): TerminationSignals {
   let requested = false;
   let settle: () => void = () => {};
@@ -276,22 +399,27 @@ function armTerminationSignals(): TerminationSignals {
   });
 
   function disarm(): void {
-    process.off(SIGINT, onSignal);
-    process.off(SIGTERM, onSignal);
+    process.off(SIGINT, request);
+    process.off(SIGTERM, request);
   }
 
-  function onSignal(): void {
+  function request(): void {
+    if (requested) return;
     disarm();
     requested = true;
     settle();
   }
 
-  process.on(SIGINT, onSignal);
-  process.on(SIGTERM, onSignal);
+  process.on(SIGINT, request);
+  process.on(SIGTERM, request);
 
-  return { requested: promise, isRequested: () => requested, disarm };
+  return { requested: promise, isRequested: () => requested, request, disarm };
 }
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isAddressInUse(error: unknown): boolean {
+  return error instanceof Error && (error as NodeJS.ErrnoException).code === 'EADDRINUSE';
 }

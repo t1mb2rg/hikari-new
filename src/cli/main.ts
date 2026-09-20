@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { NotInitializedError } from '../continuity/index.js';
 import { chronicleInitCommand } from './chronicle-init.js';
+import { statusCommand, stopCommand } from './control-command.js';
 import { initCommand } from './init.js';
 import {
   INIT_HINT,
@@ -36,6 +37,8 @@ function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOut
   if (parsed.command === 'init') return initCommand(parsed.options);
   if (parsed.command === 'chronicle-init') return chronicleInitCommand(parsed.options);
   if (parsed.command === 'resident') return residentCommand(parsed.options);
+  if (parsed.command === 'status') return statusCommand(parsed.options);
+  if (parsed.command === 'stop') return stopCommand(parsed.options);
   return startCommand(parsed.options);
 }
 

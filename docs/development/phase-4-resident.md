@@ -255,6 +255,12 @@ Resident **不订阅任何 Event**。`desktop-session-awareness-loop.assessed` �
    
    **如实记录证据等级**：Windows 上「真实跨进程信号」这一格，本轮**没有**直接证据。
 
+   **口径修正（P4-02.1 收口后）**：本条要分成两件不同的事，不能一起读。
+   - **信号那一半原样成立**：宿主至今不向另一个进程投递优雅终止，`child.kill()` 仍然是终止进程。真实 `SIGTERM` 用例在 win32 上仍然自我 skip。
+   - **停机入口那一半已被补上**：`hikari stop --data-dir <path>` 让另一个进程**能够**请求优雅停机，且走的是与信号**完全相同**的一条路径（`signals.request()`）。跨进程的优雅停机因此**已经有了直接证据**——只是证据来自一条命名管道，不是来自信号。
+
+   见 `docs/development/phase-4-resident-control.md` §8 与 §13。
+
 4. **就绪不是健康证明。** 见 §4。
 
 5. **一次 `current()` 会拉起 2 个 PowerShell 子进程**（P4-01 §18 限制 5，本轮未改变）。Resident 让这件事**持续**发生，但本轮没有做任何采集成本优化。
@@ -265,7 +271,8 @@ Resident **不订阅任何 Event**。`desktop-session-awareness-loop.assessed` �
 
 - ❌ daemon 化 / Windows Service 安装 / systemd unit
 - ❌ 自动重启 / 崩溃恢复 / 看门狗
-- ❌ `hikari status` / `hikari stop` / 任何控制通道
+- ❌ ~~`hikari status` / `hikari stop` / 任何控制通道~~
+  **口径修正（P4-02.1 收口后）**：`hikari status` / `hikari stop` 与它们的本地 Named Pipe 端点**已经落地**，见 `docs/development/phase-4-resident-control.md`。本行**保留**为 P4-02 当时的事实记录，不得再当作现状引用。
 - ❌ 日志文件 / 日志轮转 / 结构化日志
 - ❌ 退出码策略表（除 0 / 1 / 2 外）
 - ❌ 配置文件 / 环境变量配置
@@ -291,11 +298,13 @@ Resident **不订阅任何 Event**。`desktop-session-awareness-loop.assessed` �
 
 **未创建 `src/resident/`。** Resident 是一个 CLI 命令的组合根，不是一个子系统。
 
+**口径修正（P4-02.1 收口后）**：上表是 P4-02 **当时**的文件事实。P4-02.1 在同样的位置上新增了 `src/cli/control.ts` / `control-endpoint.ts` / `control-command.ts`，并修改了 `src/cli/resident.ts` / `options.ts` / `main.ts` 与 `test/resident-cli.test.mjs`；`src/runtime/**` 至今**仍然零改动**。完整的当前文件表见 `docs/development/phase-4-resident-control.md` §11。
+
 ---
 
 ## 14. 当前测试
 
-`test/resident-cli.test.mjs` — **19 条**：
+`test/resident-cli.test.mjs` — **19 条**（P4-02 当时的清单；P4-02.1 修改了这个文件的两处**测试装置**，用例数与用例语义**未变**——探针数据目录改为互异、in-process 逻辑用例 stub 掉控制端点。原因见 `docs/development/phase-4-resident-control.md` §12「测试纪律」）：
 
 | # | 测试名 | 承重断言 |
 | --- | --- | --- |
