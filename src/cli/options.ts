@@ -4,10 +4,33 @@ export interface CliOptions {
   readonly dataDir: string;
 }
 
-// `resident` takes one option the one-shot commands do not, and that option has no default: a
-// resident that chose its own cadence would be deciding how often Hikari looks at the desktop.
+// `resident` takes options the one-shot commands do not, and none of them has a default: a resident
+// that chose its own cadence would be deciding how often Hikari looks at the desktop, and one that
+// chose its own repository scope would be deciding what Hikari looks at.
 export interface ResidentOptions extends CliOptions {
   readonly desktopAwarenessDelayMs: number;
+  /**
+   * The Repository CI capability's configuration, or absent because it was not configured.
+   *
+   * Absent is a complete and ordinary answer — the default resident has no repository scope and does
+   * not need one — so there is no third state and nothing to default to. The two values are one act
+   * of configuration: a scope needs both ends, and only the operator knows which repository they
+   * mean, so half of this is refused rather than completed by a guess.
+   */
+  readonly repositoryCi?: RepositoryCiOptions;
+}
+
+/**
+ * One explicit Repository CI scope.
+ *
+ * `rootDir` is a path on this machine and `repository` is GitHub's own `owner/name` spelling. They
+ * are not validated against each other and must not be: whether they describe the same repository is
+ * a correspondence between two sources, and inferring it is exactly the judgement neither source is
+ * allowed to make.
+ */
+export interface RepositoryCiOptions {
+  readonly rootDir: string;
+  readonly repository: string;
 }
 
 // `focus` is the one command that takes operands, and they are exactly what a human typed. Nothing
@@ -24,17 +47,33 @@ export interface CommandOutcome {
   readonly stderr: string;
 }
 
-export type CliCommand = 'init' | 'chronicle-init' | 'start' | 'resident' | 'status' | 'stop' | 'focus';
+export type CliCommand =
+  | 'init'
+  | 'chronicle-init'
+  | 'start'
+  | 'resident'
+  | 'status'
+  | 'stop'
+  | 'focus'
+  | 'relevance';
 
-// Only `resident` carries a parsed number, and the union is what keeps that obligation in the type
-// rather than in a comment: the other commands cannot be handed a cadence at all. `status` and `stop`
-// belong to the first arm for the same reason — what they need from argv is exactly a data directory,
-// which is the whole of the first arm's obligation, so their arrival cannot widen any argument
-// surface. In particular they do not take the cadence: reaching a running resident is not the same
-// act as deciding how often it looks at the desktop, and a control command that could set a cadence
-// would be a second way to configure the loop.
+// Only `resident` carries a parsed configuration, and the union is what keeps that obligation in the
+// type rather than in a comment: the other commands cannot be handed a cadence or a repository scope
+// at all. `status`, `stop` and `relevance` belong to the first arm for the same reason — what they
+// need from argv is exactly a data directory, which is the whole of the first arm's obligation, so
+// their arrival cannot widen any argument surface. In particular they do not take the cadence:
+// reaching a running resident is not the same act as deciding how often it looks at the desktop, and
+// a control command that could set a cadence would be a second way to configure the loop.
+//
+// That `relevance` is in this arm is the honest statement of what it is: a question put to whatever
+// resident is already running, carrying no configuration of its own. What it must *not* have is a way
+// to configure the capability it asks about — an operator who could enable Repository CI by asking
+// about it would have a second composition root, and this is a client.
 export type ParsedCommandLine =
-  | { readonly command: 'init' | 'chronicle-init' | 'start' | 'status' | 'stop'; readonly options: CliOptions }
+  | {
+      readonly command: 'init' | 'chronicle-init' | 'start' | 'status' | 'stop' | 'relevance';
+      readonly options: CliOptions;
+    }
   | { readonly command: 'resident'; readonly options: ResidentOptions }
   | { readonly command: 'focus'; readonly options: FocusOptions };
 
@@ -51,16 +90,20 @@ export const USAGE = [
   '  hikari chronicle init --data-dir <path>',
   '  hikari start --data-dir <path>',
   '  hikari resident --data-dir <path> --desktop-awareness-delay-ms <integer>',
+  '                  [--repository-root <path> --repository <owner/name>]',
   '  hikari status --data-dir <path>',
   '  hikari stop --data-dir <path>',
   '  hikari focus declare --data-dir <path> <designation>',
   '  hikari focus replace --data-dir <path> <designation> [<designation> ...]',
   '  hikari focus clear --data-dir <path>',
   '  hikari focus status --data-dir <path>',
+  '  hikari relevance repository-ci status --data-dir <path>',
   '',
   '选项：',
   '  --data-dir <path>                        数据根目录，必填，没有默认值',
   '  --desktop-awareness-delay-ms <integer>   resident 的采集节奏，必填，没有默认值',
+  '  --repository-root <path>                 Repository CI 的仓库根目录，与 --repository 成对出现',
+  '  --repository <owner/name>                Repository CI 的 GitHub 仓库，与 --repository-root 成对出现',
   '',
 ].join('\n');
 
@@ -86,17 +129,23 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   // which tokens were which.
   if (head === 'focus') return readFocusCommand(rest);
 
+  // `relevance` resolves here for the same reason `focus` does, and for one more. It has operands —
+  // a domain and a question — so a token list could not carry them; and reading them here rather than
+  // in `readCommand` keeps the grammar of "which domain, which question" in one place, above the
+  // point where a command's options are finished off.
+  if (head === 'relevance') return readRelevanceCommand(rest);
+
   const { command, tokens } = readCommand(head, rest);
   if (command === 'resident') return { command, options: readResidentOptions(tokens) };
   return { command, options: readOptions(tokens) };
 }
 
-// `focus` is excluded because this reader never produces it: its grammar needs operands, so it
-// resolves to a whole `ParsedCommandLine` in `parseCommandLine` before this reader is reached. Saying
-// so in the type is what keeps the token list below from being handed a command that has no token
-// list to give.
+// The commands with operands are excluded because this reader never produces them: their grammar
+// needs more than options, so they resolve to a whole `ParsedCommandLine` in `parseCommandLine`
+// before this reader is reached. Saying so in the type is what keeps the token list below from being
+// handed a command that has no token list to give.
 interface CommandTokens {
-  readonly command: Exclude<CliCommand, 'focus'>;
+  readonly command: Exclude<CliCommand, 'focus' | 'relevance'>;
   readonly tokens: readonly string[];
 }
 
@@ -132,20 +181,56 @@ function readFocusCommand(rest: readonly string[]): ParsedCommandLine {
     throw new UsageError(`focus 只支持 ${supported}，收到：${word ?? '(缺失)'}`);
   }
 
-  const { dataDir, operands } = readFocusTokens(tokens);
+  const { dataDir, operands } = readOperandTokens(tokens);
   readFocusArity(word, operands);
   return { command: 'focus', options: { dataDir, word, designations: operands } };
 }
 
-interface FocusTokens {
+interface OperandTokens {
   readonly dataDir: string;
   readonly operands: readonly string[];
 }
 
+// One domain and one question, so the grammar is two literals and two literal comparisons.
+//
+// `focus` derives its word list from the plugin's own union because that plugin owns a vocabulary of
+// four and the CLI must not have an opinion about what they mean. There is no equivalent worth
+// building here: a table typed by a union of one would be a framework for the second domain that does
+// not exist, and the messages below are better for naming the domain and the question separately —
+// an operator who typed the right domain and the wrong question should be told which half was wrong.
+//
+// What is deliberately *not* here is any check on the values themselves. This reader knows the two
+// words `repository-ci` and `status` because they are the address of a question, not because it has
+// an opinion about repositories or about statuses; whether the resident can answer is the resident's
+// business, and this file never learns the difference.
+function readRelevanceCommand(rest: readonly string[]): ParsedCommandLine {
+  const [domain, word, ...tokens] = rest;
+
+  if (domain !== 'repository-ci') {
+    throw new UsageError(`relevance 目前只支持 repository-ci，收到：${domain ?? '(缺失)'}`);
+  }
+  if (word !== 'status') {
+    throw new UsageError(`relevance repository-ci 目前只支持 status，收到：${word ?? '(缺失)'}`);
+  }
+
+  const { dataDir, operands } = readOperandTokens(tokens);
+  if (operands.length > 0) {
+    throw new UsageError('relevance repository-ci status 不接受额外参数。');
+  }
+
+  return { command: 'relevance', options: { dataDir } };
+}
+
 // Close to `readOptionTokens` and deliberately not folded into it. That reader's contract is that
 // every token is either a known option or an error, which is exactly right for commands that take no
-// operands and exactly wrong here — a designation is a token nobody can enumerate in advance.
-function readFocusTokens(tokens: readonly string[]): FocusTokens {
+// operands and exactly wrong here — a designation, a domain and a question are all tokens nobody can
+// enumerate in advance as *values*, however closed the vocabulary they are drawn from.
+//
+// The one option it does know is a data directory, and it is the same option `readOptionTokens` reads
+// with the same three rules for it. What is shared is a shape rather than a code path: this reader
+// has nowhere to put a cadence or a repository scope, so a command that gained an operand grammar
+// could not accidentally gain one of those with it.
+function readOperandTokens(tokens: readonly string[]): OperandTokens {
   let dataDir: string | undefined;
   const operands: string[] = [];
 
@@ -202,31 +287,67 @@ function readChronicleCommand(rest: readonly string[]): CommandTokens {
   return { command: 'chronicle-init', tokens };
 }
 
-// One reader for both grammars, because the difference between them is exactly one token: a command
-// either accepts `--desktop-awareness-delay-ms` or it does not know the argument. Widening the
-// reader for `resident` therefore cannot widen `start`, which is what keeps the one-shot commands'
-// argument surface — and every test written against it — intact.
+// One reader for both grammars, because the difference between them is a set of flags: a command
+// either accepts one or it does not know the argument. Which set it is, is the parameter, so widening
+// the reader for `resident` still cannot widen `start` — the one-shot commands' argument surface, and
+// every test written against it, is intact by construction rather than by review.
+type OptionGrammar = 'data-dir-only' | 'resident';
+
 function readOptions(tokens: readonly string[]): CliOptions {
-  const { dataDir } = readOptionTokens(tokens, false);
+  const { dataDir } = readOptionTokens(tokens, 'data-dir-only');
   return { dataDir };
 }
 
 function readResidentOptions(tokens: readonly string[]): ResidentOptions {
-  const { dataDir, delayToken } = readOptionTokens(tokens, true);
+  const { dataDir, delayToken, repositoryRoot, repository } = readOptionTokens(tokens, 'resident');
   if (delayToken === undefined) {
     throw new UsageError('缺少必填参数：--desktop-awareness-delay-ms');
   }
-  return { dataDir, desktopAwarenessDelayMs: Number(delayToken) };
+
+  const delay = { dataDir, desktopAwarenessDelayMs: Number(delayToken) };
+  const repositoryCi = readRepositoryCiPairing(repositoryRoot, repository);
+  return repositoryCi === undefined ? delay : { ...delay, repositoryCi };
+}
+
+// The two flags are one configuration or neither, and that is decided here rather than by the
+// composition that consumes them. A resident started with only half of it would have to supply the
+// other half, and every way of doing that is a way this design has already refused: a repository root
+// inferred from the process's working directory, a GitHub repository inferred from a git remote. So
+// the reader refuses instead, and names the half that is missing — an operator who typed one of the
+// two has shown they know which repository they mean and can type the other.
+//
+// Neither value is checked beyond being non-empty. Whether a repository is at that path, and whether
+// the name is a shape GitHub uses, are the two plugins' own questions, asked where they are asked
+// today; a second copy of either rule here would be a second answer to a question that already has
+// one, and the two would eventually disagree about some name or some path.
+function readRepositoryCiPairing(
+  rootDir: string | undefined,
+  repository: string | undefined,
+): RepositoryCiOptions | undefined {
+  if (rootDir === undefined && repository === undefined) return undefined;
+
+  if (rootDir === undefined) {
+    throw new UsageError('--repository 需要与 --repository-root 成对出现；缺少：--repository-root');
+  }
+  if (repository === undefined) {
+    throw new UsageError('--repository-root 需要与 --repository 成对出现；缺少：--repository');
+  }
+
+  return Object.freeze({ rootDir, repository });
 }
 
 interface OptionTokens {
   readonly dataDir: string;
   readonly delayToken: string | undefined;
+  readonly repositoryRoot: string | undefined;
+  readonly repository: string | undefined;
 }
 
-function readOptionTokens(tokens: readonly string[], acceptDelay: boolean): OptionTokens {
+function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): OptionTokens {
   let dataDir: string | undefined;
   let delayToken: string | undefined;
+  let repositoryRoot: string | undefined;
+  let repository: string | undefined;
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
@@ -243,7 +364,7 @@ function readOptionTokens(tokens: readonly string[], acceptDelay: boolean): Opti
       continue;
     }
 
-    if (token === '--desktop-awareness-delay-ms' && acceptDelay) {
+    if (token === '--desktop-awareness-delay-ms' && grammar === 'resident') {
       if (delayToken !== undefined) {
         throw new UsageError('--desktop-awareness-delay-ms 只能指定一次。');
       }
@@ -261,9 +382,36 @@ function readOptionTokens(tokens: readonly string[], acceptDelay: boolean): Opti
       continue;
     }
 
+    // The pairing of these two is checked after the loop, once both have had their chance to appear
+    // in either order. Checking it here would make `--repository` before `--repository-root` an error
+    // and the reverse not one, which is a rule about argument order rather than about configuration.
+    if (token === '--repository-root' && grammar === 'resident') {
+      if (repositoryRoot !== undefined) throw new UsageError('--repository-root 只能指定一次。');
+
+      const value = tokens[index + 1];
+      if (value === undefined) throw new UsageError('--repository-root 需要一个路径。');
+      if (!value.trim()) throw new UsageError('--repository-root 不能是空路径。');
+
+      repositoryRoot = value;
+      index += 1;
+      continue;
+    }
+
+    if (token === '--repository' && grammar === 'resident') {
+      if (repository !== undefined) throw new UsageError('--repository 只能指定一次。');
+
+      const value = tokens[index + 1];
+      if (value === undefined) throw new UsageError('--repository 需要一个 owner/name。');
+      if (!value.trim()) throw new UsageError('--repository 不能是空值。');
+
+      repository = value;
+      index += 1;
+      continue;
+    }
+
     throw new UsageError(`未知参数：${String(token)}`);
   }
 
   if (dataDir === undefined) throw new UsageError('缺少必填参数：--data-dir');
-  return { dataDir, delayToken };
+  return { dataDir, delayToken, repositoryRoot, repository };
 }

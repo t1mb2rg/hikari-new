@@ -7,9 +7,11 @@
 // What is *not* exported is as deliberate as what is. The state transitions, the endpoint listener
 // and the renderer stay inside: a consumer that could import `applyWorkFocusRequest` would be a
 // second thing that knows how the set moves, and the day those two disagree about a duplicate, the
-// set a human reads back would depend on which one they went through. There is no Service contract
-// here either — see `plugin.ts` for why the absence is the design rather than a gap.
+// set a human reads back would depend on which one they went through. A consumer reads the set the
+// same way everybody else does — through `workFocusCurrentService`, which is exported below.
 
+export { workFocusCurrentService } from './contracts.js';
+export type { WorkFocusCurrentService } from './contracts.js';
 export { workFocusPlugin } from './plugin.js';
 export type { WorkFocusPluginConfig } from './plugin.js';
 export { workFocusEndpointPath } from './endpoint-path.js';

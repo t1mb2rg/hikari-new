@@ -18,6 +18,7 @@ import {
   decodeWorkFocusRequest,
   encodeWorkFocusReply,
   encodeWorkFocusRequest,
+  workFocusCurrentService,
   workFocusEndpointPath,
   workFocusPlugin,
 } from '../dist/work-focus/index.js';
@@ -31,10 +32,14 @@ const NO_PIPES = process.platform === 'win32' ? false : '命名管道只在 Wind
 const HEADER = '当前工作焦点：';
 const NONE = '（当前没有任何工作焦点。）';
 
-// The two contracts this plugin is forbidden to publish, named here so their absence can be
-// asserted. A test that claimed "no Service was registered" without naming the Service it means
-// would be asserting nothing at all.
-const FORBIDDEN_SERVICE = defineService('work-focus.current', 1);
+// The contract this plugin is forbidden to publish, named here so its absence can be asserted. A
+// test that claimed "no Event was emitted" without naming the Event it means would be asserting
+// nothing at all.
+//
+// It used to have a companion: `work-focus.current@1` was in the same list, and there was a test
+// here asserting that a plugin requiring it stayed `waiting`. That is no longer the answer, and the
+// test that replaced it says why — the Contract Creation Gate turns on whether a real callable need
+// exists, and one now does.
 const FORBIDDEN_EVENT = defineEvent('work-focus.changed', 1);
 
 function createRoot(t) {
@@ -461,21 +466,59 @@ test('读者能接受的最大请求仍然拿得到应答', { skip: NO_PIPES }, 
 // What this plugin does not do.
 // ---------------------------------------------------------------------------------------------
 
-test('没有 Service 被登记：一个 requires 它的插件永远等不到', { skip: NO_PIPES }, async (t) => {
+// The Contract Creation Gate, re-decided once a consumer existed. This test is the inverse of the one
+// it replaced, and the inversion is the point: the gate asks whether a real cross-module interaction
+// already occurs, and `repository-ci-relevance` requires exactly this contract — so it is published,
+// and the production definition says so structurally rather than a probe saying it about one fixture.
+//
+// Nothing about the *Event* changed. The two contracts were never one decision; a service answers a
+// question a caller has now, and an event announces something to subscribers who may not exist. Only
+// the first found a caller.
+test('work-focus.current@1 被登记，因为它有了真实的消费者', { skip: NO_PIPES }, async (t) => {
   await withPlugin(t, async ({ runtime }) => {
+    assert.deepEqual(workFocusPlugin.provides, [workFocusCurrentService]);
+    assert.deepEqual(workFocusPlugin.requires, []);
+
     const probe = {
       id: 'test.work-focus-service-probe',
       version: '1.0.0',
-      requires: [FORBIDDEN_SERVICE],
+      requires: [workFocusCurrentService],
       provides: [],
       setup() {},
     };
 
-    assert.equal(await runtime.loadPlugin(probe), 'waiting');
-    // And the production definition says the same thing structurally, so this is not a fact about
-    // one probe: `provides: []` is the plugin's own claim that it publishes nothing.
-    assert.deepEqual(workFocusPlugin.provides, []);
-    assert.deepEqual(workFocusPlugin.requires, []);
+    // `active` rather than `waiting`: the contract resolved, which is the only thing the gate was
+    // ever asking about. A plugin left waiting here would mean the production composition had a
+    // member that silently never runs.
+    assert.equal(await runtime.loadPlugin(probe), 'active');
+  });
+});
+
+test('work-focus.current@1 只暴露集合，而且是此刻的集合', { skip: NO_PIPES }, async (t) => {
+  await withPlugin(t, async ({ root, runtime }) => {
+    let focus;
+    await runtime.loadPlugin({
+      id: 'test.work-focus-service-reader',
+      version: '1.0.0',
+      requires: [workFocusCurrentService],
+      provides: [],
+      setup(context) {
+        focus = context.services.get(workFocusCurrentService);
+      },
+    });
+
+    assert.deepEqual(await focus.current(), []);
+
+    // Declared through the endpoint, read through the contract. The two are one truth: the closure
+    // reads the plugin's state when it is called rather than when it was provided, so a consumer
+    // cannot be handed a snapshot taken before the human said anything.
+    await declare(root, 'p4-03');
+    assert.deepEqual(await focus.current(), ['p4-03']);
+
+    // The set is the whole surface. `revision`, `changedAt` or `subscribe` are the fields a consumer
+    // would reach for if it wanted a history, and this plugin keeps none — the Contract Gate admitted
+    // a question about what is declared now, not a stream of how it got there.
+    assert.deepEqual(Object.keys(focus), ['current']);
   });
 });
 

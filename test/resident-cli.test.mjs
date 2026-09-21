@@ -72,29 +72,62 @@ function compositionOf(states) {
 }
 
 // The counterpart to `compositionOf`: a fake, and the real thing, asserted separately. Exported only
-// for this test, which is the only place in the suite that reads the production roster.
-test('生产组合恰好是这八个成员，按加载顺序', () => {
+// for these tests, which are the only place in the suite that reads the production roster.
+//
+// There are two production compositions and they are pinned one per test rather than merged into a
+// count. The count is not the invariant — what a running Hikari is, is — and a merge would have made
+// the default roster something you read off a diff between two lists instead of off the list.
+const BASE_MEMBER_IDS = [
+  'continuity',
+  'chronicle',
+  'foreground.windows',
+  'input-activity.windows',
+  'desktop-session-world',
+  'desktop-session-awareness',
+  'desktop-session-awareness-loop',
+  'work-focus',
+];
+
+const REPOSITORY_CI_MEMBER_IDS = [
+  'git-repository',
+  'github-ci',
+  'repository-ci-world',
+  'repository-ci-awareness',
+  'repository-ci-relevance',
+];
+
+const ROSTER_DATA_DIR = join(tmpdir(), 'hikari-resident-roster');
+
+// Verified before this test existed: deleting `work-focus` from `productionComposition` left the
+// entire suite green on both platforms. The tests that would have noticed end to end are the ones
+// that need a named pipe, and CI runs on a host that has none — so the member that only exists to
+// be an ingress could have disappeared from production with nothing going red.
+test('默认生产组合恰好是这八个成员，按加载顺序', () => {
   const composition = productionComposition({
-    dataDir: join(tmpdir(), 'hikari-resident-roster'),
+    dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
   });
 
-  // Verified before this test existed: deleting `work-focus` from `productionComposition` left the
-  // entire suite green on both platforms. The tests that would have noticed end to end are the ones
-  // that need a named pipe, and CI runs on a host that has none — so the member that only exists to
-  // be an ingress could have disappeared from production with nothing going red.
   assert.deepEqual(
     composition.map((member) => member.id),
-    [
-      'continuity',
-      'chronicle',
-      'foreground.windows',
-      'input-activity.windows',
-      'desktop-session-world',
-      'desktop-session-awareness',
-      'desktop-session-awareness-loop',
-      'work-focus',
-    ],
+    BASE_MEMBER_IDS,
+  );
+});
+
+test('显式配置 Repository CI 后，生产组合是这八个加上那五个', () => {
+  const composition = productionComposition({
+    dataDir: ROSTER_DATA_DIR,
+    desktopAwarenessDelayMs: 1000,
+    repositoryCi: { rootDir: 'C:\\work\\hikari-new', repository: 't1mb2rg/hikari-new' },
+  });
+
+  // Appended rather than interleaved: the default roster is a prefix of this one, which is what
+  // makes "the default composition plus a capability" a fact about the lists rather than a claim
+  // about them. It is also what satisfies the chain's one inbound dependency — `work-focus` is the
+  // last member of the base and `repository-ci-relevance`, last here, requires its contract.
+  assert.deepEqual(
+    composition.map((member) => member.id),
+    [...BASE_MEMBER_IDS, ...REPOSITORY_CI_MEMBER_IDS],
   );
 });
 
@@ -505,8 +538,10 @@ test('resident 以真实生产组合在这台机器上就绪，并优雅停机',
   assert.equal(runCli('chronicle', 'init', '--data-dir', root).code, 0);
 
   const io = recordingIo();
-  // No composition, no runtime, no lease override: this is the production wiring, and the point of
-  // the test is that the seven real plugins reach `active` on this host.
+  // No composition, no runtime, no lease override: this is the production wiring with no Repository
+  // CI configuration, and the point of the test is that every member of the default composition
+  // reaches `active` on this host — including the one that would have been missing entirely if the
+  // capability had been made a prerequisite of starting.
   const pending = residentCommand({ dataDir: root, desktopAwarenessDelayMs: 500 }, { io });
 
   await until(() => io.outLines.length > 0, 30_000, `生产组合未在限期内就绪：\n${io.errText}`);
@@ -540,6 +575,108 @@ test('hikari resident 从 argv 走到生产组合，并在真实调用下保持�
   assert.equal(out.text.split('Hikari 常驻已启动。').length - 1, 1, '就绪只应被宣布一次');
   assert.doesNotMatch(out.text, /Hikari 常驻已停止。/);
   assert.equal(err.text, '');
+});
+
+// The three ways asking for a Repository CI relevance can go, told apart end to end through the real
+// CLI against real residents rather than through the client's own unit surface. They are one group
+// because the value of each is that it is not the others, and a test that pinned only one of them
+// could pass while the discrimination collapsed.
+const NO_WIN32_RESIDENT = { skip: process.platform !== 'win32' ? '生产组合需要 win32 感知能力' : false };
+
+test('没有常驻时，relevance 回答 absent', NO_WIN32_RESIDENT, (t) => {
+  const root = createRoot(t);
+
+  const answer = runCli('relevance', 'repository-ci', 'status', '--data-dir', root);
+
+  assert.equal(answer.code, 1);
+  assert.match(answer.stderr, /没有正在运行的 Hikari 常驻。/);
+  // Not the wording for a resident that exists without the capability. Nothing is running, so what
+  // some resident was started with is not a fact about the world at this moment, and a message that
+  // offered the `--repository-root` remedy would be inviting an operator to reconfigure a resident
+  // that is already gone.
+  assert.doesNotMatch(answer.stderr, /未配置 Repository CI capability/);
+});
+
+test('未配置 Repository CI 的常驻，明确回答 unconfigured 而不是 unknown', NO_WIN32_RESIDENT, async (t) => {
+  const root = createRoot(t);
+  assert.equal(runCli('init', '--data-dir', root).code, 0);
+  assert.equal(runCli('chronicle', 'init', '--data-dir', root).code, 0);
+
+  const child = spawn(
+    process.execPath,
+    [CLI, 'resident', '--data-dir', root, '--desktop-awareness-delay-ms', '1000'],
+    { stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+  t.after(() => child.kill());
+  const out = collect(child.stdout);
+
+  await until(() => out.text.includes('Hikari 常驻已启动。'), 30_000, '常驻没有报告就绪');
+
+  const answer = runCli('relevance', 'repository-ci', 'status', '--data-dir', root);
+
+  assert.equal(answer.code, 1);
+  assert.match(answer.stderr, /未配置 Repository CI capability/);
+
+  // The distinction is the whole reason this test exists. `unknown` says a judgement ran and found no
+  // equality; this says there is no judgement in this composition to run. A reader who was handed the
+  // first would believe their declared focus had been compared against a CI observation.
+  //
+  // Pinned on the verdict line rather than on the word: the message says the word too, on purpose and
+  // in a sentence that denies it, and a scan for the bare string would have made that sentence
+  // impossible to write.
+  assert.equal(answer.stdout, '');
+  assert.doesNotMatch(answer.stderr, /Repository CI relevance：/);
+
+  assert.equal(runCli('stop', '--data-dir', root).code, 0);
+});
+
+test('显式配置 Repository CI 的常驻，relevance 给出判定而不是 unconfigured', NO_WIN32_RESIDENT, async (t) => {
+  const root = createRoot(t);
+  assert.equal(runCli('init', '--data-dir', root).code, 0);
+  assert.equal(runCli('chronicle', 'init', '--data-dir', root).code, 0);
+
+  const child = spawn(
+    process.execPath,
+    [
+      CLI,
+      'resident',
+      '--data-dir',
+      root,
+      '--desktop-awareness-delay-ms',
+      '1000',
+      '--repository-root',
+      root,
+      '--repository',
+      'test-owner-does-not-exist/test-name-does-not-exist',
+    ],
+    { stdio: ['ignore', 'pipe', 'pipe'] },
+  );
+  t.after(() => child.kill());
+  const out = collect(child.stdout);
+  const err = collect(child.stderr);
+
+  await until(() => out.text.includes('Hikari 常驻已启动。'), 30_000, `配置了 Repository CI 的常驻没有就绪：${err.text}`);
+
+  // The capability really is in this composition, on a real host, with nothing stubbed — asked of a
+  // running resident over its own control channel rather than inferred from the fact that it started.
+  const status = runCli('status', '--data-dir', root);
+  assert.equal(status.code, 0);
+  for (const id of [...BASE_MEMBER_IDS, ...REPOSITORY_CI_MEMBER_IDS]) {
+    assert.ok(status.stdout.includes(`${id} 状态：active`), `${id} 应是 active：\n${status.stdout}`);
+  }
+
+  const answer = runCli('relevance', 'repository-ci', 'status', '--data-dir', root);
+
+  // The verdict is `unknown` and that is the correct one, not a degenerate pass. A fresh data
+  // directory declares no work focus, and the repository above is one GitHub does not have — so the
+  // judgement completes, finds nothing to be equal to, and says so. What it must not be is the
+  // answer for a composition without the capability, which is the sentence this command would print
+  // if the branch had not run.
+  assert.equal(answer.code, 0, `应给出判定而不是失败：${answer.stderr}`);
+  assert.match(answer.stdout, /Repository CI relevance：unknown/);
+  assert.equal(answer.stderr, '');
+
+  assert.equal(runCli('stop', '--data-dir', root).code, 0);
 });
 
 test('CLI 原样传递 cadence，从不 clamp、四舍五入或自行判定合法性', () => {
@@ -600,6 +737,180 @@ test('hikari start 的参数面没有被 resident 拓宽', () => {
 
   assert.equal(result.code, 2);
   assert.match(result.stderr, /未知参数：--desktop-awareness-delay-ms/);
+});
+
+test('Repository CI 的两个参数是一个配置或没有：两个都不给就是不配置', () => {
+  const parsed = parseCommandLine(['resident', '--data-dir', 'root', '--desktop-awareness-delay-ms', '1000']);
+
+  // Absent is the ordinary case and it is not a placeholder for a default: there is nothing for a
+  // resident to fall back to, and a fallback would be this product deciding whose repository it is.
+  assert.equal(Object.hasOwn(parsed.options, 'repositoryCi'), false);
+});
+
+test('Repository CI 的两个参数是一个配置或没有：两个都给才是启用', () => {
+  const parsed = parseCommandLine([
+    'resident',
+    '--data-dir',
+    'root',
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository-root',
+    'C:\\work\\hikari-new',
+    '--repository',
+    't1mb2rg/hikari-new',
+  ]);
+
+  assert.deepEqual(parsed.options.repositoryCi, {
+    rootDir: 'C:\\work\\hikari-new',
+    repository: 't1mb2rg/hikari-new',
+  });
+  assert.equal(parsed.options.desktopAwarenessDelayMs, 1000);
+
+  // Order is not part of the configuration: the two flags pair up whichever way round they are
+  // typed, and the reader checks for the pair once both have had their chance to appear.
+  const reversed = parseCommandLine([
+    'resident',
+    '--data-dir',
+    'root',
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository',
+    't1mb2rg/hikari-new',
+    '--repository-root',
+    'C:\\work\\hikari-new',
+  ]);
+  assert.deepEqual(reversed.options.repositoryCi, parsed.options.repositoryCi);
+});
+
+test('Repository CI 的两个参数只给一个是用法错误，并指出缺的是哪一个', (t) => {
+  const root = createRoot(t);
+
+  const onlyRoot = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository-root',
+    'C:\\work\\hikari-new',
+  );
+  assert.equal(onlyRoot.code, 2);
+  assert.match(onlyRoot.stderr, /缺少：--repository/);
+  assert.match(onlyRoot.stderr, /用法：/);
+
+  const onlyRepository = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository',
+    't1mb2rg/hikari-new',
+  );
+  assert.equal(onlyRepository.code, 2);
+  assert.match(onlyRepository.stderr, /缺少：--repository-root/);
+
+  // Refused rather than completed by a guess. Every way of supplying the missing half is a way this
+  // design has already ruled out — the working directory as a repository root, a git remote as a
+  // GitHub repository — so there is no default to fall back to and nothing was created to try.
+  assert.deepEqual(readdirSync(root), []);
+});
+
+test('Repository CI 的两个参数只属于 resident，没有拓宽别的命令', (t) => {
+  const root = createRoot(t);
+
+  for (const argv of [
+    ['start', '--data-dir', root, '--repository-root', 'C:\\work\\hikari-new', '--repository', 'o/n'],
+    ['focus', 'status', '--data-dir', root, '--repository', 'o/n'],
+    ['relevance', 'repository-ci', 'status', '--data-dir', root, '--repository-root', 'C:\\work'],
+  ]) {
+    const result = runCli(...argv);
+    assert.equal(result.code, 2, `${argv[0]} 不应接受 Repository CI 的配置`);
+    assert.match(result.stderr, /未知参数/);
+  }
+});
+
+test('relevance 的语法是 repository-ci status，别的都在用法层被拒绝', (t) => {
+  const root = createRoot(t);
+
+  for (const [argv, expected] of [
+    [['relevance'], /只支持 repository-ci，收到：\(缺失\)/],
+    [['relevance', 'desktop'], /只支持 repository-ci，收到：desktop/],
+    [['relevance', 'repository-ci'], /只支持 status，收到：\(缺失\)/],
+    [['relevance', 'repository-ci', 'stop'], /只支持 status，收到：stop/],
+    [['relevance', 'repository-ci', 'status', '--data-dir', root, 'extra'], /不接受额外参数/],
+  ]) {
+    const result = runCli(...argv);
+    assert.equal(result.code, 2, `${argv.join(' ')} 应是用法错误`);
+    assert.match(result.stderr, expected);
+  }
+});
+
+test('relevance 是客户端，不能配置它要问的能力', (t) => {
+  const root = createRoot(t);
+
+  // A command that could enable the capability by asking about it would be a second composition
+  // root. It can only put the question to a resident that is already configured.
+  const result = runCli(
+    'relevance',
+    'repository-ci',
+    'status',
+    '--data-dir',
+    root,
+    '--repository-root',
+    'C:\\work',
+    '--repository',
+    'o/n',
+  );
+
+  assert.equal(result.code, 2);
+  assert.match(result.stderr, /未知参数/);
+  assert.deepEqual(readdirSync(root), []);
+});
+
+test('CLI 不复制 Repository CI 的领域规则：非法取值由各自的插件拒绝', { skip: process.platform !== 'win32' ? '生产组合需要 win32 感知能力' : false }, (t) => {
+  const root = createRoot(t);
+  assert.equal(runCli('init', '--data-dir', root).code, 0);
+  assert.equal(runCli('chronicle', 'init', '--data-dir', root).code, 0);
+
+  // A path that is not a repository and a name that is not an owner/name both pass this CLI, which
+  // checks only that the values are non-empty and non-blank. Exit 2 would mean the CLI had an opinion
+  // about either; what happens instead is that the values reach the components that own the rules.
+  const result = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository-root',
+    join(root, 'not-a-repository'),
+    '--repository',
+    'not a github name',
+  );
+
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /requires a repository written as "owner\/name"/);
+
+  // And the refusal is about the name, which is the one that has a shape to check. The path is
+  // accepted as given: whether it is a repository is a question for an observation, and the plugin
+  // that would answer it is not the one that refused.
+  assert.doesNotMatch(result.stderr, /git-repository/);
+
+  // Refused rather than running half-configured. A composition that loaded the four members after
+  // `github-ci` would be a resident serving a capability whose source was never acquired, and the
+  // readiness line is the one sentence that must not appear in that case.
+  assert.doesNotMatch(result.stdout, /Hikari 常驻已启动/);
+});
+
+test('条件组合没有变成一个通用的 capability / profile 机制', () => {
+  // The words are the mechanism. `ServiceRegistry` is an existing Runtime identifier and must not be
+  // caught by this, which is why the pattern names the things that would have to be introduced
+  // rather than the noun they would share.
+  const forbidden =
+    /\b(?:ProfileRegistry|CompositionProfile|CapabilityRegistry|CapabilitySystem|OptionalPlugin|PluginLoader|DynamicComposition|ConditionalComposition|FeatureFlag|RepositoryScope|RepositoryIdentity)\b/;
+  const offenders = sourceFiles(SRC).filter((file) => forbidden.test(readFileSync(file, 'utf8')));
+
+  assert.deepEqual(offenders.map((file) => relative(SRC, file).replaceAll('\\', '/')), []);
 });
 
 test('resident 不承担 Runtime 的职责，也不触碰领域事件', () => {

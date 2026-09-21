@@ -30,9 +30,14 @@ import { desktopSessionAwarenessPlugin } from '../desktop-session-awareness/inde
 import { desktopSessionAwarenessLoopPlugin } from '../desktop-session-awareness-loop/index.js';
 import { desktopSessionWorldPlugin } from '../desktop-session-world/index.js';
 import { foregroundPlugin } from '../foreground/index.js';
+import { gitHubCiPlugin } from '../github-ci/index.js';
+import { gitRepositoryPlugin } from '../git-repository/index.js';
 import { inputActivityPlugin } from '../input-activity/index.js';
 import { Runtime } from '../index.js';
 import type { PluginState } from '../index.js';
+import { repositoryCiAwarenessPlugin } from '../repository-ci-awareness/index.js';
+import { repositoryCiRelevancePlugin } from '../repository-ci-relevance/index.js';
+import { repositoryCiWorldPlugin } from '../repository-ci-world/index.js';
 import { workFocusPlugin } from '../work-focus/index.js';
 import { controlEndpointPath } from './control.js';
 import { listenControlEndpoint, type ControlEndpoint, type ControlHost } from './control-endpoint.js';
@@ -104,16 +109,32 @@ interface LoadedMember {
 // are already satisfied by the time it is loaded, so what cannot run is left `waiting` rather than
 // shuffled around, and the states read back here are the states an operator is shown.
 //
-// Exactly eight plugins, and nothing else. In particular the resident adds no subscriber of its own:
-// `desktop-session-awareness-loop.assessed` has zero subscribers in production, and that is a
-// property of the design rather than a gap for this file to fill.
+// There are two legal compositions, and the difference between them is the one branch at the bottom
+// of this function:
 //
-// `work-focus` is the eighth and the only one that exists for a human rather than for the chain: it
-// is loaded last so that the load order reads as the perception chain and then the door. It declares
-// no requires and no provides, so its position costs nothing — but it is placed deliberately rather
-// than appended, because the day it grows a dependency the order will already be the right one.
-// Being in this composition is what gives it the lifetime its endpoint needs: activated by the
-// Runtime, torn down by the Runtime, gone when the process is.
+//   default          — the eight members below, and nothing else
+//   Repository CI    — those same eight, plus the five-member Repository CI chain
+//
+// The Repository CI chain is loaded if and only if `--repository-root` and `--repository` were both
+// given. Neither given is the ordinary case: that resident has no repository scope, needs no Git and
+// no GitHub, and starts normally. One given never reaches here at all, because `options.ts` refuses
+// it as a configuration error rather than letting this function guess the other half.
+//
+// This is deliberately not a Profile system, a capability registry, an optional-plugin mechanism or
+// a conditional-composition framework, and it should not become one. It is the local implementation
+// of one product need — a human who has explicitly named a repository scope can ask whether a CI
+// observation concerns the work focus they declared — and a general facility built ahead of a second
+// such need would be an architecture layer invented for a need that has not arrived.
+//
+// The enabled composition is the base *plus* the chain rather than an interleaved list, and that is
+// what makes the default roster literally a prefix of it. It is also what satisfies the chain's one
+// inbound dependency: `repository-ci-relevance` requires `work-focus.current`, and `work-focus` is
+// the last member of the base. Nothing in the chain is required by anything in the base, so the
+// default composition loses nothing by omitting it.
+//
+// In particular the resident adds no subscriber of its own: `desktop-session-awareness-loop.assessed`
+// has zero subscribers in production, and that is a property of the design rather than a gap for this
+// file to fill.
 //
 // Chronicle is loaded because a resident without a durable fact history is not a Hikari that can
 // remember anything, and its `active` state is a precondition for readiness. That is the whole of
@@ -121,12 +142,20 @@ interface LoadedMember {
 // observed assessment into a fact. An Event is not a durable fact, and this is not the place where
 // that equivalence gets invented.
 //
-// Exported for one reason: the roster above is a claim about what a running Hikari is, and nothing
-// else checked it. Every test of the roster used to run against a composition the test supplied
-// itself, so dropping a member from this list left the suite green — on CI, entirely so, because
-// every test that would have noticed needs a named pipe. A test now reads this function directly.
+// What this file may know about the Repository CI capability is exactly one thing: whether the
+// configuration it asks for was provided. It does not know what a repository is, what CI is, whether
+// two commit strings match, or what relevance means. Each chain member declares its own requires and
+// provides and the Runtime reconciles them; hand-writing a call sequence here, or reading a value out
+// of one member to decide what to load next, would be this file acquiring an opinion about the domain
+// it composes — which is the one thing a composition role is not allowed to have.
+//
+// Exported for one reason: the rosters above are a claim about what a running Hikari is, and nothing
+// else checked it. Every test of a roster used to run against a composition the test supplied itself,
+// so dropping a member from this list left the suite green — on CI, entirely so, because every test
+// that would have noticed needs a named pipe. Tests now read this function directly, one per legal
+// composition.
 export function productionComposition(options: ResidentOptions): Composition {
-  return [
+  const base: Composition = [
     {
       id: continuityPlugin.id,
       load: (runtime) => runtime.loadPlugin(continuityPlugin, { rootDir: options.dataDir }),
@@ -152,9 +181,52 @@ export function productionComposition(options: ResidentOptions): Composition {
           delayMs: options.desktopAwarenessDelayMs,
         }),
     },
+    // The last member of the base, and the only one that exists for a human rather than for the
+    // perception chain: it is where a person declares what they are working on. It requires nothing,
+    // so its position costs nothing — but it is placed deliberately rather than appended, because the
+    // day it grows a dependency the order will already be the right one, and because the Repository
+    // CI chain, when it is loaded at all, is loaded after it and requires exactly the contract it
+    // provides. Being in this composition is what gives it the lifetime its endpoint needs: activated
+    // by the Runtime, torn down by the Runtime, gone when the process is.
     {
       id: workFocusPlugin.id,
       load: (runtime) => runtime.loadPlugin(workFocusPlugin, { rootDir: options.dataDir }),
+    },
+  ];
+
+  const repositoryCi = options.repositoryCi;
+  if (repositoryCi === undefined) return base;
+
+  // The one branch. The two source plugins are configured with the two values that were given
+  // together — a path and an `owner/name` — and nothing here checks that they describe the same
+  // repository, because nothing here is entitled to: that correspondence is a judgement about two
+  // sources, and the value that would establish it is a value no one has.
+  //
+  // The relevance plugin is configured with the *data directory* rather than the repository root,
+  // because what it needs a path for is its own endpoint — which belongs to this resident, not to the
+  // repository — and a client asking a question has the data directory and nothing else.
+  return [
+    ...base,
+    {
+      id: gitRepositoryPlugin.id,
+      load: (runtime) =>
+        runtime.loadPlugin(gitRepositoryPlugin, { repositoryRoot: repositoryCi.rootDir }),
+    },
+    {
+      id: gitHubCiPlugin.id,
+      load: (runtime) => runtime.loadPlugin(gitHubCiPlugin, { repository: repositoryCi.repository }),
+    },
+    {
+      id: repositoryCiWorldPlugin.id,
+      load: (runtime) => runtime.loadPlugin(repositoryCiWorldPlugin),
+    },
+    {
+      id: repositoryCiAwarenessPlugin.id,
+      load: (runtime) => runtime.loadPlugin(repositoryCiAwarenessPlugin),
+    },
+    {
+      id: repositoryCiRelevancePlugin.id,
+      load: (runtime) => runtime.loadPlugin(repositoryCiRelevancePlugin, { rootDir: options.dataDir }),
     },
   ];
 }

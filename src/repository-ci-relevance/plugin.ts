@@ -1,0 +1,93 @@
+// The Repository CI relevance judgement, as a plugin, and the answer a human asks for.
+//
+// This is the layer's consumer, and it is the first reader `work-focus.current@1` has. That reader is
+// the human — they query over this plugin's own endpoint, exactly as they declare a focus over the
+// work focus's — and the reason a contract exists for them at all rather than a second pipe read is
+// that this judgement needs the focus *inside* the composition, where the Awareness layer also is.
+//
+// What it does not have is a Service. By the Contract Creation Gate this plugin has no callable need
+// to satisfy: nothing in the composition asks it for a verdict, and the one thing that does is a
+// client arriving through a pipe. Publishing a Service for that would be publishing one for nobody,
+// which is the same reasoning that kept `work-focus.current@1` from existing until this file did.
+//
+// Both dependencies are pulled on every request and nothing is held between them. There is no
+// watcher, no loop, no cache, no Event and nothing written down: two calls a second apart are two
+// independent judgements of two independent snapshots, which is the only shape in which "relevance"
+// is a question about now rather than a memory of a previous answer.
+
+import type { PluginDefinition } from '../runtime/plugin.js';
+import { repositoryCiAwarenessService } from '../repository-ci-awareness/index.js';
+import { workFocusCurrentService } from '../work-focus/index.js';
+import { listenRelevanceEndpoint } from './endpoint.js';
+import { relevanceEndpointPath } from './endpoint-path.js';
+import { RepositoryCiRelevanceError } from './errors.js';
+import { judgeRelevance, renderJudgement } from './judgement.js';
+import type { RepositoryCiRelevanceVerdict } from './types.js';
+
+export interface RepositoryCiRelevancePluginConfig {
+  readonly rootDir: string;
+}
+
+export const repositoryCiRelevancePlugin: PluginDefinition<RepositoryCiRelevancePluginConfig> = {
+  id: 'repository-ci-relevance',
+  version: '1.0.0',
+  // The work focus is a dependency rather than a peer to be reached around. It is required by
+  // contract, so a composition that loaded this plugin without one fails to activate instead of
+  // failing later, on the first question a human happens to ask.
+  requires: [workFocusCurrentService, repositoryCiAwarenessService],
+  provides: [],
+  config: {
+    parse(input: unknown): RepositoryCiRelevancePluginConfig {
+      return Object.freeze({ rootDir: readRootDir(input) });
+    },
+  },
+  async setup(context, config) {
+    const path = relevanceEndpointPath(config.rootDir);
+    if (path === undefined) {
+      // The same platform question the work focus asks, asked by the plugin that owns this capability
+      // rather than by every caller of it.
+      throw new RepositoryCiRelevanceError('Repository CI relevance 入口依赖 Windows 命名管道，本机没有。');
+    }
+
+    const focus = context.services.get(workFocusCurrentService);
+    const awareness = context.services.get(repositoryCiAwarenessService);
+
+    const endpoint = await listenRelevanceEndpoint(
+      {
+        // No try/catch, and no second guess about what a dependency's failure means. If either
+        // acquisition rejects, this rejects, and the endpoint answers `failed` — the judgement did
+        // not run. Resolving it into `unknown` here would be this layer claiming a comparison it did
+        // not get to make.
+        async handle() {
+          const [designations, assessment] = await Promise.all([
+            focus.current(),
+            awareness.current(),
+          ]);
+
+          // Only the snapshot goes into the judgement. The assessment also carries a verdict about
+          // commits, and it is dropped on this line rather than merely ignored inside `judgeRelevance`
+          // — whether two commit strings match has no bearing on whether a human's declaration names
+          // the repository a CI observation is about.
+          const judgement = judgeRelevance(designations, assessment.snapshot);
+          const verdict: RepositoryCiRelevanceVerdict = judgement.verdict;
+
+          return { outcome: 'ok', verdict, lines: renderJudgement(judgement) };
+        },
+      },
+      path,
+    );
+
+    context.defer(() => endpoint.close());
+  },
+};
+
+function readRootDir(input: unknown): string {
+  if (typeof input !== 'object' || input === null) {
+    throw new RepositoryCiRelevanceError('Repository CI relevance 插件需要一个配置对象。');
+  }
+  const { rootDir } = input as { rootDir?: unknown };
+  if (typeof rootDir !== 'string' || !rootDir.trim()) {
+    throw new RepositoryCiRelevanceError('Repository CI relevance 插件需要一个非空的 rootDir。');
+  }
+  return rootDir;
+}

@@ -1,17 +1,17 @@
 // The current explicit work focus, as a plugin.
 //
-// This plugin declares nothing to the Runtime. It has no `provides`, no `requires`, registers no
-// Service and emits no Event — not because a consumer has not arrived yet, but because the thing it
-// answers is not a question another module asks. It is a place a human writes something down and
-// reads it back, and the only thing that may read it back is the human who asked. Putting the set on
-// a Service contract would publish it to every plugin in the composition in order to serve a client
-// that reaches it over a pipe.
+// The human who declares a focus reaches this plugin over its own endpoint; that is a client, and it
+// is not a reason to register anything. What *is* a reason arrived later and separately: the
+// Repository CI relevance judgement compares this set against a perception, which makes it a real
+// reader inside the composition. So this plugin now provides `work-focus.current`, and provides it
+// for that one caller — see `contracts.ts` for why the contract is the set and nothing else.
 //
-// So the whole public surface of this plugin is its endpoint, and the endpoint exists for exactly as
-// long as this plugin is activated — no longer. That is what makes the resource story simple: the
-// Runtime already knows when a plugin starts and stops, so an endpoint created in `setup` and closed
-// by a `context.defer` cleanup is owned by the mechanism that exists for owning it, rather than by a
-// second lifetime invented here.
+// It still declares no Event. It requires nothing.
+//
+// The endpoint still exists for exactly as long as this plugin is activated — no longer — and that is
+// what makes the resource story simple: the Runtime already knows when a plugin starts and stops, so
+// an endpoint created in `setup` and closed by a `context.defer` cleanup is owned by the mechanism
+// that exists for owning it, rather than by a second lifetime invented here.
 //
 // One consequence is worth stating because it differs from the Resident's control endpoint, which
 // deliberately outlives its Runtime: this endpoint cannot outlive its plugin, so "nothing is
@@ -20,6 +20,7 @@
 // pick which one a human is told.
 
 import type { PluginDefinition } from '../runtime/plugin.js';
+import { workFocusCurrentService } from './contracts.js';
 import { listenWorkFocusEndpoint } from './endpoint.js';
 import { workFocusEndpointPath } from './endpoint-path.js';
 import { WorkFocusError } from './errors.js';
@@ -33,10 +34,10 @@ export interface WorkFocusPluginConfig {
 export const workFocusPlugin: PluginDefinition<WorkFocusPluginConfig> = {
   id: 'work-focus',
   version: '1.0.0',
-  // Both empty on purpose: this plugin adds nothing to the Runtime's contract graph, and the two
-  // empty lists are the claim rather than an omission.
+  // Nothing is required: this plugin reads no other module and is a leaf. What it provides it
+  // provides for exactly one caller, and `contracts.ts` says what that caller is.
   requires: [],
-  provides: [],
+  provides: [workFocusCurrentService],
   config: {
     parse(input: unknown): WorkFocusPluginConfig {
       return Object.freeze({ rootDir: readRootDir(input) });
@@ -57,6 +58,20 @@ export const workFocusPlugin: PluginDefinition<WorkFocusPluginConfig> = {
     // restart" a structural property rather than a rule someone has to remember to enforce. There is
     // no file, no store and no Chronicle entry behind it, so there is nothing that could survive.
     let state: WorkFocusState = emptyWorkFocus();
+
+    // Provided before the endpoint exists, so that the scope's LIFO teardown closes the ingress
+    // first and withdraws the contract second: a request already being served keeps the state it is
+    // reading until it is done, and nothing new can arrive to find the contract already gone.
+    //
+    // The closure reads `state` at call time rather than capturing it, which is the whole of how a
+    // consumer sees a `declare` that happened after it was handed this. A captured snapshot would
+    // answer every later question with the set as it stood at activation.
+    context.services.provide(
+      workFocusCurrentService,
+      Object.freeze({
+        current: async (): Promise<readonly string[]> => state.designations,
+      }),
+    );
 
     const endpoint = await listenWorkFocusEndpoint(
       {
