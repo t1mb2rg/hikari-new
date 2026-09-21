@@ -65,6 +65,15 @@ Repository CI    — those same eight, plus the five-member Repository CI chain
 
 **「八个」是【默认组合】这一条可执行事实，不是架构不变量。** 显式同时给出 `--repository-root` 与 `--repository` 时为**十三个**成员。计数纪律不变：以当下源码为准。本节只作事实修正，不改动本文其余任何结论，也不改变本文 verdict（**NARROW**）——该 verdict 的历史性质见 `docs/architecture/phase-4-p4-03-entry-review.md`。
 
+**该锚点的第三次位移（Desktop Observation Surface v1 收口后补记，最小事实修正）：** 上面引用的「the eight members below」**在当前源码中已不存在**。`desktop-session-observe` 作为默认组合的第八个成员加入，`src/cli/resident.ts` 现在是：
+
+```text
+default          — the nine members below, and nothing else
+Repository CI    — those same nine, plus the five-member Repository CI chain
+```
+
+即：**默认组合九个成员，显式组合十四个**。上面两段里的「八个」/「十三个」是**当时**的计数，作为位移记录保留，不再代表当下源码；计数纪律不变。
+
 **当前工作区事实（写完本文前实测）：** `git log --oneline -3` = `87605c6 / 18bca09 / 6d537e0`；`origin/main` = `87605c68a332437aa0122b34ab337ba14b0387b8`；`origin/main..HEAD` = 0；`git status --short` 为空。`src/` 中 `relevance` 零命中，`workFocus` / `work-focus` 零命中。
 
 ---

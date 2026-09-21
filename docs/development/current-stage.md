@@ -18,7 +18,7 @@
 >
 > **它是 Awareness 链路上又一句最短的话，不是「Awareness 已完整实现」，也不是「P4-03 已完成」。**（本句写于该轮；P4-03 此后已由六个 supporting slice 收口——但**这句判断对「Awareness 已完整实现」仍然成立**，收口不改变它。）Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **仍然均未进入，且未被预埋**。
 >
-> **边界说明（口径更新，Repository CI Relevance v1 收口后）：`repository-ci-awareness.current@1` 在默认组合中没有 production consumer，但在显式启用 Repository CI 的组合中【有】。** 该组合下 `repository-ci-relevance` 就是它的 production consumer：`src/repository-ci-relevance/plugin.ts` 的 `requires` 逐字包含 `repositoryCiAwarenessService`。**两种组合必须分开读**——默认组合（八个成员）里确实没有任何 module 读它，显式组合（十三个成员）里有。此前本节笼统写作「当前没有 production consumer」，在第二个组合下已不成立，故更正。
+> **边界说明（口径更新，Repository CI Relevance v1 收口后）：`repository-ci-awareness.current@1` 在默认组合中没有 production consumer，但在显式启用 Repository CI 的组合中【有】。** 该组合下 `repository-ci-relevance` 就是它的 production consumer：`src/repository-ci-relevance/plugin.ts` 的 `requires` 逐字包含 `repositoryCiAwarenessService`。**两种组合必须分开读**——默认组合（九个成员）里确实没有任何 module 读它，显式组合（十四个成员）里有。此前本节笼统写作「当前没有 production consumer」，在第二个组合下已不成立，故更正。
 >
 > 它作为 public Service 成立的依据有两条，都来自 `plugin-design-spec.md` §16：§16.1 只要求**真实、已发生的跨模块交互语义**，不要求已经存在具体的 Consumer implementation；§16.2 的 Service 判据要求**真实的 callable need**，本轮的 callable need 由 P4-03 的人工裁决（选项 A）直接定义。**不是**「以后可能有人会用」——§16 正文写明：若主要理由是「以后可能有用」，默认不创建。这**不构成**无 consumer Service 的一般许可。
 >
@@ -28,7 +28,7 @@
 >
 > 它是 **Hikari 第一次拥有一处人类主动写入的入口**：`declare` / `replace` / `clear` / `status` 四个词经由本地端点，把一个 designation 集合写在 Plugin 自己的闭包里。**这是 ingress，不是 Judgement**——它记录人说了什么，**不解释**这句话意味着什么，**不**判断任何 repository 是否相关，**不**产生 importance / salience，**不**触发 Remember / Ask / Notify / Act。
 >
-> **它加入了 Resident composition（第八个成员），这是与前面四个 supporting slice 的一处实质差别**：前四者都只提供 provider、不进入生产组合，而入口必须有一个真实存在的常驻进程托管才有意义。Plugin 声明 `requires: []` / `provides: []`，**没有**登记 Service、**没有**发出 Event、**没有**写入 Chronicle、**没有**任何持久化（插件运行前后数据目录逐字节不变，有测试钉住），**没有**引入模型，也**没有**引入 id / 时间戳 / 来源 / 优先级 / 版本号等任何 designation 之外的字段。state 存在 activation 自己的闭包里，因此「重启后为空」是结构性质而不是一条需要记得执行的规则。
+> **它加入了 Resident composition（加入时是第八个成员，Desktop Observation Surface v1 之后是第九个），这是与前面四个 supporting slice 的一处实质差别**：前四者都只提供 provider、不进入生产组合，而入口必须有一个真实存在的常驻进程托管才有意义。Plugin 声明 `requires: []` / `provides: []`，**没有**登记 Service、**没有**发出 Event、**没有**写入 Chronicle、**没有**任何持久化（插件运行前后数据目录逐字节不变，有测试钉住），**没有**引入模型，也**没有**引入 id / 时间戳 / 来源 / 优先级 / 版本号等任何 designation 之外的字段。state 存在 activation 自己的闭包里，因此「重启后为空」是结构性质而不是一条需要记得执行的规则。
 >
 > **一处必须收紧的措辞：** 产品 mandate 使 runtime human declaration 成为真实需求，且 ingress 现已实现并**确实真实接收过** `declare` / `replace` / `clear`（由端到端测试经真实命名管道产生）。但「**某个人真的声明过自己的工作焦点**」这件事**尚无证据**——测试发出的请求不是人的声明。因此本轮**不写成**「Hikari 已经真实接收到 human declaration occurrence」，只写成：**入口已就位、可以接收**。不要把「机制已成立」写成「人的声明已经发生」。
 >
@@ -630,7 +630,7 @@ hikari resident  生产常驻组合
 
 **`start` 不是「旧版 resident」，resident 也不是「改版 start」**：前者回答「这套组合现在能不能起来」，后者回答「起得来之后，谁来一直持有这个进程」。
 
-**生产组合有两个，都是合法的，各自被测试单独钉住。** 默认组合（正好八个 Plugin，按加载顺序）：
+**生产组合有两个，都是合法的，各自被测试单独钉住。** 默认组合（正好九个 Plugin，按加载顺序）：
 
 ```text
 1  continuity
@@ -640,22 +640,25 @@ hikari resident  生产常驻组合
 5  desktop-session-world
 6  desktop-session-awareness
 7  desktop-session-awareness-loop
-8  work-focus
+8  desktop-session-observe
+9  work-focus
 ```
 
-显式给出 `--repository-root` 与 `--repository` 之后，在上面八个之后**追加**五个（因此默认组合是启用组合的字面前缀）：
+显式给出 `--repository-root` 与 `--repository` 之后，在上面九个之后**追加**五个（因此默认组合是启用组合的字面前缀）：
 
 ```text
-9   git-repository
-10  github-ci
-11  repository-ci-world
-12  repository-ci-awareness
-13  repository-ci-relevance
+10  git-repository
+11  github-ci
+12  repository-ci-world
+13  repository-ci-awareness
+14  repository-ci-relevance
 ```
 
-**「八个」不再是一个架构不变量，而是默认组合这一条可执行事实。** 本轮之前它读作不变量，本轮之后它读作「默认组合恰好是这八个」。因此测试钉的是**两条合法组合各自**，而不是把八改成十三：把成员数当成不变量，会在下一次合法组合出现时逼出一次无意义的改数。
+**「九个」不再是一个架构不变量，而是默认组合这一条可执行事实。** 它最初读作不变量，之后读作「默认组合恰好是这八个」，现在读作「恰好是这九个」。因此测试钉的是**两条合法组合各自**，而不是把九改成十四：把成员数当成不变量，会在下一次合法组合出现时逼出一次无意义的改数。
 
-`work-focus` 是 P4-03 Explicit Work Focus Local Ingress v1 加入的第八个成员，也是唯一一个**为人而不是为感知链路**存在的 Plugin。**它现在提供 `work-focus.current@1`**（不变的是：不发 Event、不写 Chronicle、无持久化、公开面仍然只有它自己的本地端点）。这条 contract 的成立依据是 Repository CI Relevance v1 带来的真实 consumer，见文首 Contract Gate 重新裁决一段。放在最后是有意的而非追加的，理由见 `src/cli/resident.ts` 的 `productionComposition`。
+`work-focus` 是 P4-03 Explicit Work Focus Local Ingress v1 加入的成员，也是唯一一个**供人写入、而不是供人读出**的 Plugin。**它现在提供 `work-focus.current@1`**（不变的是：不发 Event、不写 Chronicle、无持久化、公开面仍然只有它自己的本地端点）。这条 contract 的成立依据是 Repository CI Relevance v1 带来的真实 consumer，见文首 Contract Gate 重新裁决一段。放在最后是有意的而非追加的，理由见 `src/cli/resident.ts` 的 `productionComposition`。
+
+`desktop-session-observe` 是 Desktop Observation Surface v1 加入的第八个成员，也是**第一个供人读出**的感知出口：它把 `desktop-session-awareness.current@1` 交回来的 assessment **原样转述**成人可读的行。它 `requires` 只有 Awareness 契约、`provides` 为空（reader 是 CLI），**不**读取 World、**不**直接读取任何来源、**不**新增任何判词、**不**持久化。它被排在 Awareness Loop 之后，是因为它读的是那条环链的产物。
 
 Repository CI 那一链**只有当配置存在时才被组合**，且 Resident 对此**只**知道一件事：那两个配置值有没有一起给。它不知道 repository 是什么、CI 是什么、两个 commit 串是否相等、relevance 是什么意思——这些全部由各成员自己的 `requires` / `provides` 与 Runtime lifecycle 决定。
 
@@ -702,7 +705,7 @@ Resident **不**依赖 Loop 的计时器、**不**依赖 PowerShell 子进程、
 **就绪语义（必须连同上限一起读）**：
 
 ```text
-ready = 八个 Plugin 全部 active
+ready = 九个 Plugin 全部 active
       = 组合成立 + Loop 已武装
 ```
 
