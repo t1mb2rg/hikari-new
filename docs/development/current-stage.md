@@ -1,12 +1,18 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审、已提交、已 push**（commit `138cf9c`，CI success）；此后 `origin/main` 又前进过 `507579f`（P4-02.1 状态记录）、`3cf7d2f`（P4-02 证据更正）、`8a9b744`（Runtime 竞态修正，`src/runtime/runtime.ts`）。**P4-03 尚未开始。**
+> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审、已提交、已 push**（commit `138cf9c`，CI success）；此后 `origin/main` 又前进过 `507579f`（P4-02.1 状态记录）、`3cf7d2f`（P4-02 证据更正）、`8a9b744`（Runtime 竞态修正，`src/runtime/runtime.ts`）、`ca2db7a`（Git Repository Perception v1）、`4b6fe31`（其状态记录）、`65dd556`（GitHub CI Perception v1）、`f4234ef`（Repository CI World v1）。**P4-03 本身尚未开始**（它已交付三个 supporting slice，见下）。
 >
 > **P4-03 supporting slice（Git Repository Perception v1）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `ca2db7a`，CI Runtime Tests #35567512137 **success**：270 tests / 253 pass / 17 skipped / 0 fail），详见 `docs/development/phase-4-git-repository-perception.md`。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用任何阶段编号**，P4-03 仍然**尚未开始**。它交付的是「一个具名本地对象（明确指定的本地 Git repository）的一次观测」，**没有**交付 relevance、**没有**交付 repository identity、**没有**进入任何 Judgement，并且**没有**加入 Resident composition。
 >
+> **P4-03 supporting slice（GitHub CI Perception v1）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `65dd556`，CI Runtime Tests #35569202089 **success**：296 tests / 279 pass / 17 skipped / 0 fail）。它是**第二个**具名对象源，同样**不是** P4-03 本身。**它没有独立的阶段文档**——事实由本状态行与 `docs/development/phase-4-repository-ci-world.md` 的前置行记录，这是刻意的**最小必要文档**取舍，不是遗漏被掩盖。
+>
+> **P4-03 supporting slice（Repository CI World v1）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `f4234ef`，CI Runtime Tests #35574151359 **success**：314 tests / 297 pass / 17 skipped / 0 fail），详见 `docs/development/phase-4-repository-ci-world.md`。它把上述两个源装进**同一个显式 repository scope**，交付「同一时刻两份 observation + 逐条可用性」，**没有**交付 repository identity、**没有**比较 SHA、**没有**进入任何 Judgement，并且**没有**加入 Resident composition。
+>
+> **P4-03 第一个 judgement 的人工裁决已作出（选项 A）**：定义为 **commit 级**——「本地 Git HEAD 与当前观察到的 GitHub CI run 是否指向同一个 Git commit」。这**不是** repository identity judgement，**不是** repository-level relevance，**不是**用户相关性判断；只比较两个 source **已经直接报告**的 commit SHA，且**不允许**从 `same` 推导「这是同一个 repository」、**不允许**从 `different` 推导「不是同一个 repository」。实现尚未开始。
+>
 > **不得写作 `Phase 4 COMPLETE`。** P4-01 只交付「驱动 + 发生」，P4-02 只交付「进程组合 + 进程寿命」，P4-02.1 只交付「本机可问、可停」：`principles.md` §14 定义的 Awareness 链路中，**Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act 均未进入，且未被预埋**。
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`，P4-02.1 的实现与复盘见 `docs/development/phase-4-resident-control.md`；P4-03 supporting slice（Git Repository Perception v1）的实现与立项依据见 `docs/development/phase-4-git-repository-perception.md`（第四阶段目前**没有**架构评审文档）。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`，P4-02.1 的实现与复盘见 `docs/development/phase-4-resident-control.md`；P4-03 supporting slice（Git Repository Perception v1）的实现与立项依据见 `docs/development/phase-4-git-repository-perception.md`，Repository CI World v1 的实现与立项依据见 `docs/development/phase-4-repository-ci-world.md`（第四阶段目前**没有**架构评审文档）。
 
 ---
 
@@ -1202,7 +1208,11 @@ Docs / Contracts updated
 
 P4-03 supporting slice（Git Repository Perception v1）：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `ca2db7a`，message `feat: add git repository perception`），CI（Runtime Tests #35567512137）**success**。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用阶段编号**，因此**不计入上面任何一条进度**，也不改变「P4-03 尚未开始」这个事实。
 
-第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 / P4-02.1 四项已达到该标准并已收口，但 **P4-03 尚未开始**（本轮只交付了它的一个 supporting slice）；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
+P4-03 supporting slice（GitHub CI Perception v1）：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `65dd556`，message `feat: add github ci perception`），CI（Runtime Tests #35569202089）**success**。同样是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用阶段编号**。它是第二个具名对象源；**没有独立阶段文档**（见头部状态行的说明）。
+
+P4-03 supporting slice（Repository CI World v1）：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `f4234ef`，message `feat: add repository ci world`），CI（Runtime Tests #35574151359）**success**，实现与立项依据见 `docs/development/phase-4-repository-ci-world.md`。它把 git-repository 与 github-ci 两份 observation 装进同一个显式 repository scope，**没有**比较 SHA、**没有**进入任何 Judgement。同样是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用阶段编号**。
+
+第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 / P4-02.1 四项已达到该标准并已收口，但 **P4-03 尚未开始**（本轮只交付了它的三个 supporting slice）；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
 
 ---
 
@@ -1211,6 +1221,7 @@ P4-03 supporting slice（Git Repository Perception v1）：**已满足**——Fu
 - 跨 Runtime 通信；
 - 节点网络协议；
 - 远程 Provider；
+  **口径澄清（Repository CI World v1 收口后）**：此处「远程 Provider」指的是**运行在其他 Hikari Runtime / 节点上的 Provider**——即跨 Runtime / 跨节点的 Provider 发现与调用，与上面的「跨 Runtime 通信」「节点网络协议」是同一族。**它不等于「本地 Plugin 读取远程外部服务」**。`github-ci` 是后者：它是一个**本机进程内的普通 Plugin**，只是恰好通过 HTTPS 读 GitHub 的公开 API。把两者混为一谈会同时**高估**已落地的东西（误以为跨节点能力已经有了）和**低估**还缺的东西（误以为本地读取外部服务的 pattern 还没建立）。判断依据是**Provider 跑在哪里**，不是**它读什么**；
 - Capability 第二注册表；
 - Provider 智能选择；
 - 全局状态中心；
@@ -1250,7 +1261,9 @@ P4-03 supporting slice（Git Repository Perception v1）：**已满足**——Fu
 - **World 的持久化**——把 snapshot 写进 Chronicle 或任何文件；
 - **World 的平台实现**——`desktop-session-world` 内零 `process.platform`。它是**结构上**平台中立的；「运行在 Windows 上」是它当前两个 provider 的事实，不是它的事实；
 - **第二个 scope 的 World**——第二个 scope 应当是一个**新 Plugin**，而不是给 `desktop-session-world` 加一个 scope 参数或一张 scope 注册表；
-- **facet 抽象**——两个 facet 类型的 `available | unavailable` 外壳重复是**刻意接受**的。用泛型 `Facet<T>` 消除它需要先说明两个 observation 之间的关系，而它们在本层**没有**关系；
+  **口径修正（Repository CI World v1 收口后）**：这条**已经被遵守，不是仍待做**——`src/repository-ci-world/` 就是第二个 scope 的 World，它是一个**独立的新 Plugin**（`repository-ci-world`），`desktop-session-world` **一个字节都没动**，也**没有**任何 scope 参数或 scope 注册表。仍然**不做**的是：给 World 加 scope 参数、建 scope 注册表、跨 scope 聚合；
+- **facet 抽象**——facet 类型的 `available | unavailable` 外壳重复是**刻意接受**的。用泛型 `Facet<T>` 消除它需要先说明两个 observation 之间的关系，而它们在本层**没有**关系；
+  **口径更新（Repository CI World v1 收口后）**：重复现已存在于**四个** facet 类型（`desktop-session-world` 两个、`repository-ci-world` 两个），仍**不抽**公共抽象——理由不变：这四处的关系是「同型」而非「同义」，抽掉外壳不会消除任何一处真实的重复判断；
 - 完整 Skill / Tool 体系；
 - 音视频流式资源框架；
 - 旧 Hikari 大规模迁移。
