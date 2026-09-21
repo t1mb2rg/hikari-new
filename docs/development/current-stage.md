@@ -1,6 +1,6 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审、已提交、已 push**（commit `138cf9c`，CI success）；此后 `origin/main` 又前进过 `507579f`（P4-02.1 状态记录）、`3cf7d2f`（P4-02 证据更正）、`8a9b744`（Runtime 竞态修正，`src/runtime/runtime.ts`）、`ca2db7a`（Git Repository Perception v1）、`4b6fe31`（其状态记录）、`65dd556`（GitHub CI Perception v1）、`f4234ef`（Repository CI World v1）、`6d537e0`（Repository CI Awareness v1）、`b0ecde2`（Explicit Work Focus Local Ingress v1）。**P4-03 本身尚未开始**（它已交付五个 supporting slice，见下）。
+> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审、已提交、已 push**（commit `138cf9c`，CI success）；此后 `origin/main` 又前进过 `507579f`（P4-02.1 状态记录）、`3cf7d2f`（P4-02 证据更正）、`8a9b744`（Runtime 竞态修正，`src/runtime/runtime.ts`）、`ca2db7a`（Git Repository Perception v1）、`4b6fe31`（其状态记录）、`65dd556`（GitHub CI Perception v1）、`f4234ef`（Repository CI World v1）、`6d537e0`（Repository CI Awareness v1）、`b0ecde2`（Explicit Work Focus Local Ingress v1）、`e0403ec`（其状态记录）、`b78ae57`（Repository CI Relevance v1）。**P4-03 本身尚未开始**（它已交付六个 supporting slice，见下）。
 >
 > **P4-03 supporting slice（Git Repository Perception v1）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `ca2db7a`，CI Runtime Tests #35567512137 **success**：270 tests / 253 pass / 17 skipped / 0 fail），详见 `docs/development/phase-4-git-repository-perception.md`。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用任何阶段编号**，P4-03 仍然**尚未开始**。它交付的是「一个具名本地对象（明确指定的本地 Git repository）的一次观测」，**没有**交付 relevance、**没有**交付 repository identity、**没有**进入任何 Judgement，并且**没有**加入 Resident composition。
 >
@@ -10,7 +10,9 @@
 >
 > **P4-03 第一个 judgement 的人工裁决已作出（选项 A）**：定义为 **commit 级**——「本地 Git HEAD 与当前观察到的 GitHub CI run 是否指向同一个 Git commit」。这**不是** repository identity judgement，**不是** repository-level relevance，**不是**用户相关性判断；只比较两个 source **已经直接报告**的 commit SHA，且**不允许**从 `same` 推导「这是同一个 repository」、**不允许**从 `different` 推导「不是同一个 repository」。
 >
-> **P4-03 supporting slice（Repository CI Awareness v1）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `6d537e0`，CI Runtime Tests #35574857716 **success**：335 tests / 318 pass / 17 skipped / 0 fail）。它是**上述裁决的落地**，也是 **Hikari 第一个真实的 cross-source Awareness / Judgement**。此前的 `desktop-session-awareness` 比较的是**同一个 facet 的现在与过去**（跨时间，且必须有 baseline 才有话可说）；这一层比较的是**同一次 snapshot 内两个 source 各自报告的 fact**（跨 source），并且**没有任何历史状态**——两次 `current()` 是两个彼此独立的判断。当前唯一落地的 cross-source judgement 是：**比较 local Git HEAD commit 与 GitHub CI latest run head SHA 是否相同**，输出语义**仅为** `same` / `different` / `indeterminate`。它**仍然是 comparison**，**不是** repository identity、**不是** repository-level relevance、**不是** importance、**不是** salience、**不是** action；**不得**把 SHA 相同推导为「同一个 repository」，**不得**把 SHA 不同推导为「不是同一个 repository」。**repository-level identity / relevance 仍未进入。**
+> **P4-03 supporting slice（Repository CI Awareness v1）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `6d537e0`，CI Runtime Tests #35574857716 **success**：335 tests / 318 pass / 17 skipped / 0 fail）。它是**上述裁决的落地**，也是 **Hikari 第一个真实的 cross-source Awareness / Judgement**。此前的 `desktop-session-awareness` 比较的是**同一个 facet 的现在与过去**（跨时间，且必须有 baseline 才有话可说）；这一层比较的是**同一次 snapshot 内两个 source 各自报告的 fact**（跨 source），并且**没有任何历史状态**——两次 `current()` 是两个彼此独立的判断。当前唯一落地的 cross-source judgement 是：**比较 local Git HEAD commit 与 GitHub CI latest run head SHA 是否相同**，输出语义**仅为** `same` / `different` / `indeterminate`。它**仍然是 comparison**，**不是** repository identity、**不是** repository-level relevance、**不是** importance、**不是** salience、**不是** action；**不得**把 SHA 相同推导为「同一个 repository」，**不得**把 SHA 不同推导为「不是同一个 repository」。**repository identity 仍未进入。**
+>
+> **口径更新（Repository CI Relevance v1 收口后）**：**repository identity 仍未进入**；**repository-level relevance 已经进入，但只有一条已冻结的极窄 v1 规则**——human designation 与 `snapshot.githubCi.observation.repository` **逐字相等**即 `relevant`，否则 `unknown`（**没有** `unrelated`）。它与上一条 Awareness 的 `same` / `different` / `indeterminate` **正交**：本地 HEAD 是否指向那个 SHA，与这个 repository 名字是否被人类显式写入过工作焦点，是两个各自成立的判断，**互不取消**；**不得**由逐字相等推导「这是同一个 repository」，**不得**由不相等推导「不是同一个 repository」。
 >
 > **它是 Awareness 链路上又一句最短的话，不是「Awareness 已完整实现」，也不是「P4-03 已完成」。** Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **仍然均未进入，且未被预埋**。
 >
@@ -25,6 +27,20 @@
 > **它加入了 Resident composition（第八个成员），这是与前面四个 supporting slice 的一处实质差别**：前四者都只提供 provider、不进入生产组合，而入口必须有一个真实存在的常驻进程托管才有意义。Plugin 声明 `requires: []` / `provides: []`，**没有**登记 Service、**没有**发出 Event、**没有**写入 Chronicle、**没有**任何持久化（插件运行前后数据目录逐字节不变，有测试钉住），**没有**引入模型，也**没有**引入 id / 时间戳 / 来源 / 优先级 / 版本号等任何 designation 之外的字段。state 存在 activation 自己的闭包里，因此「重启后为空」是结构性质而不是一条需要记得执行的规则。
 >
 > **一处必须收紧的措辞：** 产品 mandate 使 runtime human declaration 成为真实需求，且 ingress 现已实现并**确实真实接收过** `declare` / `replace` / `clear`（由端到端测试经真实命名管道产生）。但「**某个人真的声明过自己的工作焦点**」这件事**尚无证据**——测试发出的请求不是人的声明。因此本轮**不写成**「Hikari 已经真实接收到 human declaration occurrence」，只写成：**入口已就位、可以接收**。不要把「机制已成立」写成「人的声明已经发生」。
+>
+> **P4-03 supporting slice（Repository CI Relevance v1）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `b78ae57`，CI Runtime Tests #35621174568 **success**：401 tests / 347 pass / 54 skipped / 0 fail），详见下文各条口径更新。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用阶段编号**。它**没有**独立阶段文档（理由与 GitHub CI Perception v1 相同，最小必要文档取舍），事实由本状态行与本文件的口径更新记录。
+>
+> **它交付了 Hikari 的第一个 relevance judgement，也是第一个真实的、通过产品入口读到 human declaration 的 reader。** 判词规则在 v1 **冻结且刻意极窄**：**逐字相等**——某个 designation 与被观察到的 `snapshot.githubCi.observation.repository` **字符串完全相同**，且 `githubCi` facet 为 `available`、且存在至少一个 designation。**严格不做**：trim、大小写折叠、basename、owner/name 拆分、路径解析、remote URL 推断、repository identity 推断、fork 判定、模糊匹配、别名、模型匹配、embedding、语义相似度。输出**仅为** `relevant` / `unknown`（**没有 `unrelated`**）：`unknown` 表示判定**完成**但没有建立相等关系，不是失败。判定函数取的是 **snapshot 而不是 assessment**，因此 `commitComparison`（`same` / `different` / `indeterminate`）**在结构上无法影响** relevance 结论——Awareness 的判词与 relevance 的判词**正交**，`same` 不使任何东西变相关，`different` 也不使任何东西变不相关。
+>
+> **一处 Contract Gate 的重新裁决，而不是豁免：** `work-focus.current@1` **现在被提供**。此前 `work-focus` 的 `provides` 为空，并有测试要求「requires 它的插件永远 `waiting`」；该测试的依据是「不存在真实的 callable need」。**真实的 callable need 已经到达**——`repository-ci-relevance` 就是那个 consumer——因此该测试被**反转**（钉住「它确实被登记、且依赖它的插件 `active`」）而**不是被删除**。`repository-ci-relevance` **自己仍然不提供任何 Service**：它真实的 reader 是 CLI，经本地端点提问，为它发布 contract 等于为零个人发布。**没有创建任何新的通用 contract。**
+>
+> **一处 production composition 的条件化，且只有一条分支：** Repository CI capability 是**显式启用的领域能力**。默认常驻保持原有组合，**不需要 repository root、不需要 GitHub repository、不因缺少 Git / GitHub 配置而拒绝启动**。配置规则是**原子**的：`--repository-root <path>` 与 `--repository <owner/name>` **要么都给、要么都不给**；只给一个是**配置错误**，明确拒绝启动并指出缺的是哪一个。**没有默认值、没有 cwd → repository-root 推断、没有 git remote → GitHub repository 推断、没有自动发现。** v1 **只允许 0 或 1 个**显式 repository scope，**不设计多 repository 框架**。这个分支是**当前产品需求的一份局部实现**，**不是** Profile system / Capability registry / Dynamic plugin loader / OptionalPlugin framework / RepositoryScope registry —— 有源码扫描测试钉住这一点。
+>
+> **三种情形被明确区分，这是本轮的主要工作量：** `unknown` = 判定完成但未建立相等关系；`unconfigured` = **有一个常驻在跑，但这个组合里根本没有 Repository CI capability**（通过**常驻控制通道**判定——它是本产品唯一刻意比自己的 Runtime 活得更久的端点）；`absent` = **没有常驻**。**capability 未启用时 relevance CLI 报 `unconfigured`，绝不报 `unknown`**——后者会让人以为自己声明的焦点被比较过，而实际上这个组合里根本不存在这个判定。依赖拒绝时回答 `failed`，**同样不是 `unknown`**。
+>
+> **Resident 的边界没有被扩大：** 它仍然只负责组合。它**可以**知道「Repository CI capability 需要的启动配置有没有给」，但**不知道** Git 语义、GitHub 语义、relevance 语义或 commit 比较。各成员的依赖仍由 Plugin 自己的 `requires` / `provides` 与 Runtime lifecycle 处理；Resident 里**没有**手写的业务调用链。
+>
+> **仍然全部未进入，且未被预埋：** repository identity、importance、salience、notification、action、Event、持久化、后台 relevance 循环、多 repository 抽象、自动发现、模型匹配。Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **仍然均未进入**。
 >
 > 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`，P4-02.1 的实现与复盘见 `docs/development/phase-4-resident-control.md`；P4-03 supporting slice（Git Repository Perception v1）的实现与立项依据见 `docs/development/phase-4-git-repository-perception.md`，Repository CI World v1 的实现与立项依据见 `docs/development/phase-4-repository-ci-world.md`；第四阶段的架构评审文档见 `docs/architecture/phase-4-explicit-human-reference-review.md`（P4-03 Explicit Human Reference Frame Boundary Review，verdict **BLOCKED**，commit `87605c6`）与 `docs/architecture/phase-4-explicit-work-focus-review.md`（P4-03 Explicit Work Focus Vertical Slice Boundary Review，verdict **NARROW**）。
 
@@ -79,9 +95,10 @@ P4-03    未开始                                  not started
 
 （补记：`P4-02.1` 此前漏列于本块，与文首状态不一致，本轮一并补上。）
 
-（P4-03 supporting slice 不属于本进度表——截至本轮共五个：Git Repository
+（P4-03 supporting slice 不属于本进度表——截至本轮共六个：Git Repository
   Perception v1、GitHub CI Perception v1、Repository CI World v1、
-  Repository CI Awareness v1、Explicit Work Focus Local Ingress v1。
+  Repository CI Awareness v1、Explicit Work Focus Local Ingress v1、
+  Repository CI Relevance v1。
   它们是 supporting slice，不是 P4-03 本身，工作标签，不占用编号。）
 ```
 
@@ -605,7 +622,7 @@ hikari resident  生产常驻组合
 
 **`start` 不是「旧版 resident」，resident 也不是「改版 start」**：前者回答「这套组合现在能不能起来」，后者回答「起得来之后，谁来一直持有这个进程」。
 
-**生产组合（正好八个 Plugin，按加载顺序）**：
+**生产组合有两个，都是合法的，各自被测试单独钉住。** 默认组合（正好八个 Plugin，按加载顺序）：
 
 ```text
 1  continuity
@@ -618,7 +635,21 @@ hikari resident  生产常驻组合
 8  work-focus
 ```
 
-`work-focus` 是 P4-03 Explicit Work Focus Local Ingress v1 加入的第八个成员，也是唯一一个**为人而不是为感知链路**存在的 Plugin：它不声明 `requires` / `provides`，不登记 Service、不发 Event，公开面只有它自己的本地端点。放在最后是有意的而非追加的，理由见 `src/cli/resident.ts` 的 `productionComposition`。
+显式给出 `--repository-root` 与 `--repository` 之后，在上面八个之后**追加**五个（因此默认组合是启用组合的字面前缀）：
+
+```text
+9   git-repository
+10  github-ci
+11  repository-ci-world
+12  repository-ci-awareness
+13  repository-ci-relevance
+```
+
+**「八个」不再是一个架构不变量，而是默认组合这一条可执行事实。** 本轮之前它读作不变量，本轮之后它读作「默认组合恰好是这八个」。因此测试钉的是**两条合法组合各自**，而不是把八改成十三：把成员数当成不变量，会在下一次合法组合出现时逼出一次无意义的改数。
+
+`work-focus` 是 P4-03 Explicit Work Focus Local Ingress v1 加入的第八个成员，也是唯一一个**为人而不是为感知链路**存在的 Plugin。**它现在提供 `work-focus.current@1`**（不变的是：不发 Event、不写 Chronicle、无持久化、公开面仍然只有它自己的本地端点）。这条 contract 的成立依据是 Repository CI Relevance v1 带来的真实 consumer，见文首 Contract Gate 重新裁决一段。放在最后是有意的而非追加的，理由见 `src/cli/resident.ts` 的 `productionComposition`。
+
+Repository CI 那一链**只有当配置存在时才被组合**，且 Resident 对此**只**知道一件事：那两个配置值有没有一起给。它不知道 repository 是什么、CI 是什么、两个 commit 串是否相等、relevance 是什么意思——这些全部由各成员自己的 `requires` / `provides` 与 Runtime lifecycle 决定。
 
 顺序不是装饰：一个 Plugin 被加载时它的 `requires` 已经满足，因此不能运行的留在 `waiting` 而不是被挪来挪去，读回的状态就是操作者看到的状态。
 
@@ -1235,7 +1266,11 @@ P4-03 supporting slice（Repository CI World v1）：**已满足**——Function
 
 P4-03 supporting slice（Repository CI Awareness v1）：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `6d537e0`，message `feat: add repository ci awareness`），CI（Runtime Tests #35574857716）**success**。它是 **Hikari 第一个真实的 cross-source Awareness / Judgement**（判词细节、边界与 no-consumer 说明见头部状态行）。同样是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用阶段编号**；**没有独立阶段文档**，理由与 GitHub CI Perception v1 相同。
 
-第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 / P4-02.1 四项已达到该标准并已收口，但 **P4-03 尚未开始**（本轮只交付了它的四个 supporting slice）；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
+P4-03 supporting slice（Explicit Work Focus Local Ingress v1）：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `b0ecde2`，message `feat: add explicit work focus ingress`），CI（Runtime Tests #35582154818）**success**；其状态记录为 `e0403ec`（CI Runtime Tests #35582297057 **success**）。立项依据与边界冻结见 `docs/architecture/phase-4-explicit-work-focus-review.md`（verdict **NARROW**）。它交付的是**人类主动写入的入口**，**没有**交付任何 Judgement。同样是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用阶段编号**。（此前本表漏列此行，本轮一并补上。）
+
+P4-03 supporting slice（Repository CI Relevance v1）：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `b78ae57`，message `feat: add repository ci relevance`），CI Runtime Tests #35621174568 **success**（401 tests / 347 pass / 54 skipped / 0 fail；跳过的是依赖命名管道的用例）。它是 **Hikari 第一个 relevance judgement**，也是第一个经产品入口读到 human declaration 的 reader，并由此使 `work-focus.current@1` 的 Contract Gate 由「不创建」翻转为「创建」（判词规则、三种情形的区分与 composition 条件化见文首状态行）。同样是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用阶段编号**；**没有独立阶段文档**，理由与 GitHub CI Perception v1 相同。
+
+第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 / P4-02.1 四项已达到该标准并已收口，但 **P4-03 尚未开始**（本轮只交付了它的六个 supporting slice）；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
 
 ---
 
@@ -1270,7 +1305,8 @@ P4-03 supporting slice（Repository CI Awareness v1）：**已满足**——Func
 - **感知的语义解读**——Salience / Importance / freshness 判断、基于标题的语义分类、模型调用、「什么值得记住」的判断。P3-01 / P3-02 只交付 witness，P3-03 只交付 composer，P3-04 只交付 comparator，**都不**交付 interpreter；
 - **Awareness 的完整实现**——`principles.md` §14 定义 Awareness 负责「这件事意味着什么？值不值得在意？是否需要记住、提醒或行动？」，其链路为 Contextualization → Salience / Importance Judgement → Ignore / Remember / Ask / Notify / Act。**P3-04 落实了这条链路的第一个最小 contextualization slice**（相邻两个 World snapshot 的 payload 变化比较），**P4-03 supporting slice（Repository CI Awareness v1）落实了第二个、且是第一个 cross-source 的 comparison slice**（同一次 snapshot 内两个 source 各自报告的 commit SHA 是否相同）。二者都**只**做比较，链路其余部分——Salience / Importance 判断、Ignore / Remember / Ask / Notify / Act——**均未进入，且未被预埋**。P4-01 / P4-02 同样没有进入：它们交付的是**驱动**与**进程寿命**，不是判断；
 - **跨 source 的推断**——把「前台是 X」与「刚有输入」合起来推出「某人正在打字」这类结论。P3-03 把两条事实放进同一个信封，但**不**解释它们的关系。
-  **口径更新（Repository CI Awareness v1 收口后）**：P3-04 仍然**只**做同一 facet 的跨时间比较（相邻两个 World snapshot 的 payload 变化）；**P4-03 supporting slice 第一次实现了 cross-source Awareness**。但它的判词**仍然是比较，不是推断**——当前唯一落地的 cross-source judgement 是「local Git HEAD commit 与 GitHub CI latest run head SHA 是否相同」，输出**仅为** `same` / `different` / `indeterminate`，**不**把两条事实合起来推出任何新结论。它**不是** repository identity、**不是** repository-level relevance、**不是** importance、**不是** salience、**不是** action；**不得**从 `same` 推导「同一个 repository」，**不得**从 `different` 推导「不是同一个 repository」。**repository-level identity / relevance 仍未进入**；
+  **口径更新（Repository CI Awareness v1 收口后）**：P3-04 仍然**只**做同一 facet 的跨时间比较（相邻两个 World snapshot 的 payload 变化）；**P4-03 supporting slice 第一次实现了 cross-source Awareness**。但它的判词**仍然是比较，不是推断**——当前唯一落地的 cross-source judgement 是「local Git HEAD commit 与 GitHub CI latest run head SHA 是否相同」，输出**仅为** `same` / `different` / `indeterminate`，**不**把两条事实合起来推出任何新结论。它**不是** repository identity、**不是** importance、**不是** salience、**不是** action；**不得**从 `same` 推导「同一个 repository」，**不得**从 `different` 推导「不是同一个 repository」。
+  **口径更新（Repository CI Relevance v1 收口后）**：**repository identity 仍未进入**；**repository-level relevance 已经进入**，但只有一条已冻结的极窄 v1 规则——human designation 与 `snapshot.githubCi.observation.repository` **逐字相等**即 `relevant`，否则 `unknown`，**没有** `unrelated`；**禁止** trim / 大小写折叠 / basename / owner 拆分 / 路径解析 / remote URL 推断 / repository identity 推断 / fork 检测 / 模糊匹配 / alias / 模型匹配 / embedding / 语义相似度。它与 Awareness 的 `same` / `different` / `indeterminate` **正交**，**不是** importance / salience / action，也**不产生**任何 significance 或 action 语义；
 - **Input Activity 的在场解读**——`lastInputAt` / `idleForMs` / `idleSeconds` / `isActive` / `isIdle` / `userPresent`，以及任何阈值比较。`lastInputTick` 是 source fact，不是结论；
 - **感知结果的过滤**——过滤 Explorer / 任务栏 / 自身进程，或任何「这不像正常用户程序」的启发式；
 - **感知自身的后台化**——watcher、`changed` Event、感知层内的轮询、订阅、缓存、保活、队列、速率限制、去重。
