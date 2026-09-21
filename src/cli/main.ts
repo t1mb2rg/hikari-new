@@ -4,6 +4,7 @@ import { chronicleInitCommand } from './chronicle-init.js';
 import { statusCommand, stopCommand } from './control-command.js';
 import { focusCommand } from './focus-command.js';
 import { initCommand } from './init.js';
+import { observeCommand } from './observe-command.js';
 import { relevanceCommand } from './relevance-command.js';
 import {
   INIT_HINT,
@@ -43,6 +44,7 @@ function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOut
   if (parsed.command === 'stop') return stopCommand(parsed.options);
   if (parsed.command === 'focus') return focusCommand(parsed.options);
   if (parsed.command === 'relevance') return relevanceCommand(parsed.options);
+  if (parsed.command === 'observe') return observeCommand(parsed.options);
   return startCommand(parsed.options);
 }
 

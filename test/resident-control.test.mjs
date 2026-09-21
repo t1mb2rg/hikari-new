@@ -25,8 +25,10 @@ import { createLifetimeLease, residentCommand } from '../dist/cli/resident.js';
 const CLI = join(import.meta.dirname, '..', 'dist', 'cli', 'main.js');
 const RESIDENT_URL = pathToFileURL(join(import.meta.dirname, '..', 'dist', 'cli', 'resident.js')).href;
 
-// The same eight ids the resident loads. Repeated rather than shared so that this file states what it
-// expects to find on a pipe instead of agreeing with whatever the other file happens to hold.
+// A roster shaped like the resident's default one, and deliberately its own copy: this file states
+// what it expects to find on a pipe instead of agreeing with whatever the other file happens to hold.
+// It is the fake these tests hand in, not the production list — the production rosters are pinned in
+// `resident-cli.test.mjs`, and this one is free to stay shorter than they are.
 const MEMBER_IDS = [
   'continuity',
   'chronicle',

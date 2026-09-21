@@ -55,7 +55,8 @@ export type CliCommand =
   | 'status'
   | 'stop'
   | 'focus'
-  | 'relevance';
+  | 'relevance'
+  | 'observe';
 
 // Only `resident` carries a parsed configuration, and the union is what keeps that obligation in the
 // type rather than in a comment: the other commands cannot be handed a cadence or a repository scope
@@ -69,9 +70,13 @@ export type CliCommand =
 // resident is already running, carrying no configuration of its own. What it must *not* have is a way
 // to configure the capability it asks about — an operator who could enable Repository CI by asking
 // about it would have a second composition root, and this is a client.
+//
+// `observe` is in this arm for the same reason and with one fewer way to be wrong: it asks about a
+// capability that is always present in a running resident, so there is not even a half-configured
+// state for it to name.
 export type ParsedCommandLine =
   | {
-      readonly command: 'init' | 'chronicle-init' | 'start' | 'status' | 'stop' | 'relevance';
+      readonly command: 'init' | 'chronicle-init' | 'start' | 'status' | 'stop' | 'relevance' | 'observe';
       readonly options: CliOptions;
     }
   | { readonly command: 'resident'; readonly options: ResidentOptions }
@@ -98,6 +103,7 @@ export const USAGE = [
   '  hikari focus clear --data-dir <path>',
   '  hikari focus status --data-dir <path>',
   '  hikari relevance repository-ci status --data-dir <path>',
+  '  hikari observe desktop-session status --data-dir <path>',
   '',
   '选项：',
   '  --data-dir <path>                        数据根目录，必填，没有默认值',
@@ -135,6 +141,10 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   // point where a command's options are finished off.
   if (head === 'relevance') return readRelevanceCommand(rest);
 
+  // `observe` resolves here for the same reason as the two above: a domain and a question are
+  // operands, and an operand is not an option.
+  if (head === 'observe') return readObserveCommand(rest);
+
   const { command, tokens } = readCommand(head, rest);
   if (command === 'resident') return { command, options: readResidentOptions(tokens) };
   return { command, options: readOptions(tokens) };
@@ -145,7 +155,7 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
 // before this reader is reached. Saying so in the type is what keeps the token list below from being
 // handed a command that has no token list to give.
 interface CommandTokens {
-  readonly command: Exclude<CliCommand, 'focus' | 'relevance'>;
+  readonly command: Exclude<CliCommand, 'focus' | 'relevance' | 'observe'>;
   readonly tokens: readonly string[];
 }
 
@@ -219,6 +229,38 @@ function readRelevanceCommand(rest: readonly string[]): ParsedCommandLine {
   }
 
   return { command: 'relevance', options: { dataDir } };
+}
+
+// One domain and one question, and the same shape as `readRelevanceCommand` on purpose.
+//
+// The two readers are adjacent and near-identical, and folding them together is the thing not to do.
+// A merged reader would need the set of domains and, for each, the set of questions — which is a
+// table, and a table is a claim that these addresses are one grammar with two rows. They are not:
+// `relevance` asks a judgement about work the human declared, `observe` reads a perception chain
+// back, and they only look alike because a person addresses both of them. A shared table would make
+// the next domain's arrival a row rather than a decision, which is exactly the framework neither
+// command's vocabulary is allowed to become.
+//
+// What is *not* here is any check on the values. This reader knows the two words `desktop-session`
+// and `status` because they are the address of a question, not because it has an opinion about
+// desktop sessions or about statuses; whether the resident can answer is the resident's business, and
+// this file never learns the difference.
+function readObserveCommand(rest: readonly string[]): ParsedCommandLine {
+  const [domain, word, ...tokens] = rest;
+
+  if (domain !== 'desktop-session') {
+    throw new UsageError(`observe 目前只支持 desktop-session，收到：${domain ?? '(缺失)'}`);
+  }
+  if (word !== 'status') {
+    throw new UsageError(`observe desktop-session 目前只支持 status，收到：${word ?? '(缺失)'}`);
+  }
+
+  const { dataDir, operands } = readOperandTokens(tokens);
+  if (operands.length > 0) {
+    throw new UsageError('observe desktop-session status 不接受额外参数。');
+  }
+
+  return { command: 'observe', options: { dataDir } };
 }
 
 // Close to `readOptionTokens` and deliberately not folded into it. That reader's contract is that

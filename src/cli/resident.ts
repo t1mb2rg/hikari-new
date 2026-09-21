@@ -28,6 +28,7 @@ import { ChronicleNotInitializedError, chroniclePlugin } from '../chronicle/inde
 import { NotInitializedError, continuityPlugin } from '../continuity/index.js';
 import { desktopSessionAwarenessPlugin } from '../desktop-session-awareness/index.js';
 import { desktopSessionAwarenessLoopPlugin } from '../desktop-session-awareness-loop/index.js';
+import { desktopSessionObservePlugin } from '../desktop-session-observe/index.js';
 import { desktopSessionWorldPlugin } from '../desktop-session-world/index.js';
 import { foregroundPlugin } from '../foreground/index.js';
 import { gitHubCiPlugin } from '../github-ci/index.js';
@@ -112,8 +113,8 @@ interface LoadedMember {
 // There are two legal compositions, and the difference between them is the one branch at the bottom
 // of this function:
 //
-//   default          — the eight members below, and nothing else
-//   Repository CI    — those same eight, plus the five-member Repository CI chain
+//   default          — the nine members below, and nothing else
+//   Repository CI    — those same nine, plus the five-member Repository CI chain
 //
 // The Repository CI chain is loaded if and only if `--repository-root` and `--repository` were both
 // given. Neither given is the ordinary case: that resident has no repository scope, needs no Git and
@@ -181,13 +182,28 @@ export function productionComposition(options: ResidentOptions): Composition {
           delayMs: options.desktopAwarenessDelayMs,
         }),
     },
-    // The last member of the base, and the only one that exists for a human rather than for the
-    // perception chain: it is where a person declares what they are working on. It requires nothing,
-    // so its position costs nothing — but it is placed deliberately rather than appended, because the
-    // day it grows a dependency the order will already be the right one, and because the Repository
-    // CI chain, when it is loaded at all, is loaded after it and requires exactly the contract it
-    // provides. Being in this composition is what gives it the lifetime its endpoint needs: activated
-    // by the Runtime, torn down by the Runtime, gone when the process is.
+    // The exit of the perception chain, and the only place where anything above it can be read from
+    // outside. Everything before it in this list perceives, composes or compares, and none of that
+    // was ever visible; this member is what makes the chain answerable to a person, over an endpoint
+    // it owns, without adding a fact or holding a state of its own.
+    //
+    // It sits here rather than after `work-focus` so that the order in this list is the order the
+    // data moves: perceive, compose, compare, and then be readable. It requires the Awareness
+    // contract and nothing else — in particular not a World or a source, because the assessment it
+    // reads already carries the whole snapshot, and a second acquisition of the same instant would
+    // let its facts and its verdict describe two different moments.
+    {
+      id: desktopSessionObservePlugin.id,
+      load: (runtime) => runtime.loadPlugin(desktopSessionObservePlugin, { rootDir: options.dataDir }),
+    },
+    // The last member of the base, and the one a person writes through rather than reads from: it is
+    // where a person declares what they are working on, and the member above is where a person reads
+    // what Hikari sees. It requires nothing, so its position costs nothing — but it is placed
+    // deliberately rather than appended, because the day it grows a dependency the order will already
+    // be the right one, and because the Repository CI chain, when it is loaded at all, is loaded
+    // after it and requires exactly the contract it provides. Being in this composition is what gives
+    // it the lifetime its endpoint needs: activated by the Runtime, torn down by the Runtime, gone
+    // when the process is.
     {
       id: workFocusPlugin.id,
       load: (runtime) => runtime.loadPlugin(workFocusPlugin, { rootDir: options.dataDir }),

@@ -85,6 +85,7 @@ const BASE_MEMBER_IDS = [
   'desktop-session-world',
   'desktop-session-awareness',
   'desktop-session-awareness-loop',
+  'desktop-session-observe',
   'work-focus',
 ];
 
@@ -102,7 +103,7 @@ const ROSTER_DATA_DIR = join(tmpdir(), 'hikari-resident-roster');
 // entire suite green on both platforms. The tests that would have noticed end to end are the ones
 // that need a named pipe, and CI runs on a host that has none — so the member that only exists to
 // be an ingress could have disappeared from production with nothing going red.
-test('默认生产组合恰好是这八个成员，按加载顺序', () => {
+test('默认生产组合恰好是这九个成员，按加载顺序', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
@@ -114,7 +115,7 @@ test('默认生产组合恰好是这八个成员，按加载顺序', () => {
   );
 });
 
-test('显式配置 Repository CI 后，生产组合是这八个加上那五个', () => {
+test('显式配置 Repository CI 后，生产组合是这九个加上那五个', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
