@@ -33,6 +33,7 @@ import { foregroundPlugin } from '../foreground/index.js';
 import { inputActivityPlugin } from '../input-activity/index.js';
 import { Runtime } from '../index.js';
 import type { PluginState } from '../index.js';
+import { workFocusPlugin } from '../work-focus/index.js';
 import { controlEndpointPath } from './control.js';
 import { listenControlEndpoint, type ControlEndpoint, type ControlHost } from './control-endpoint.js';
 import {
@@ -103,16 +104,28 @@ interface LoadedMember {
 // are already satisfied by the time it is loaded, so what cannot run is left `waiting` rather than
 // shuffled around, and the states read back here are the states an operator is shown.
 //
-// Exactly seven plugins, and nothing else. In particular the resident adds no subscriber of its own:
+// Exactly eight plugins, and nothing else. In particular the resident adds no subscriber of its own:
 // `desktop-session-awareness-loop.assessed` has zero subscribers in production, and that is a
 // property of the design rather than a gap for this file to fill.
+//
+// `work-focus` is the eighth and the only one that exists for a human rather than for the chain: it
+// is loaded last so that the load order reads as the perception chain and then the door. It declares
+// no requires and no provides, so its position costs nothing — but it is placed deliberately rather
+// than appended, because the day it grows a dependency the order will already be the right one.
+// Being in this composition is what gives it the lifetime its endpoint needs: activated by the
+// Runtime, torn down by the Runtime, gone when the process is.
 //
 // Chronicle is loaded because a resident without a durable fact history is not a Hikari that can
 // remember anything, and its `active` state is a precondition for readiness. That is the whole of
 // the relationship: this file never appends to it, never reads its store, and never turns an
 // observed assessment into a fact. An Event is not a durable fact, and this is not the place where
 // that equivalence gets invented.
-function productionComposition(options: ResidentOptions): Composition {
+//
+// Exported for one reason: the roster above is a claim about what a running Hikari is, and nothing
+// else checked it. Every test of the roster used to run against a composition the test supplied
+// itself, so dropping a member from this list left the suite green — on CI, entirely so, because
+// every test that would have noticed needs a named pipe. A test now reads this function directly.
+export function productionComposition(options: ResidentOptions): Composition {
   return [
     {
       id: continuityPlugin.id,
@@ -138,6 +151,10 @@ function productionComposition(options: ResidentOptions): Composition {
         runtime.loadPlugin(desktopSessionAwarenessLoopPlugin, {
           delayMs: options.desktopAwarenessDelayMs,
         }),
+    },
+    {
+      id: workFocusPlugin.id,
+      load: (runtime) => runtime.loadPlugin(workFocusPlugin, { rootDir: options.dataDir }),
     },
   ];
 }

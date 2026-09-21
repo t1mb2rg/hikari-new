@@ -8,7 +8,7 @@ import test from 'node:test';
 import { pathToFileURL } from 'node:url';
 
 import { parseCommandLine } from '../dist/cli/options.js';
-import { createLifetimeLease, residentCommand } from '../dist/cli/resident.js';
+import { createLifetimeLease, productionComposition, residentCommand } from '../dist/cli/resident.js';
 import { NotInitializedError } from '../dist/continuity/index.js';
 
 const CLI = join(import.meta.dirname, '..', 'dist', 'cli', 'main.js');
@@ -70,6 +70,33 @@ function compositionOf(states) {
     load: async () => states[index] ?? 'active',
   }));
 }
+
+// The counterpart to `compositionOf`: a fake, and the real thing, asserted separately. Exported only
+// for this test, which is the only place in the suite that reads the production roster.
+test('生产组合恰好是这八个成员，按加载顺序', () => {
+  const composition = productionComposition({
+    dataDir: join(tmpdir(), 'hikari-resident-roster'),
+    desktopAwarenessDelayMs: 1000,
+  });
+
+  // Verified before this test existed: deleting `work-focus` from `productionComposition` left the
+  // entire suite green on both platforms. The tests that would have noticed end to end are the ones
+  // that need a named pipe, and CI runs on a host that has none — so the member that only exists to
+  // be an ingress could have disappeared from production with nothing going red.
+  assert.deepEqual(
+    composition.map((member) => member.id),
+    [
+      'continuity',
+      'chronicle',
+      'foreground.windows',
+      'input-activity.windows',
+      'desktop-session-world',
+      'desktop-session-awareness',
+      'desktop-session-awareness-loop',
+      'work-focus',
+    ],
+  );
+});
 
 function fakeRuntime({ errors = {}, shutdown } = {}) {
   const calls = { shutdown: 0 };
@@ -229,8 +256,11 @@ test('就绪不是对后台链路健康的断言：一个只能报告状态的�
   process.emit('SIGTERM');
   const outcome = await pending;
 
-  // Exactly the seven declared plugins, in order, and not one member more: the resident has no
-  // capability of its own to load, and adds no subscriber to observe the loop's output.
+  // The composition supplied above is walked in order and nothing is appended to it: the resident has
+  // no capability of its own to load, and adds no subscriber to observe the loop's output. What this
+  // says nothing about is the production composition — `MEMBER_IDS` is the roster of the fake this
+  // file hands in, which is deliberately shorter than what a resident actually loads. The production
+  // roster is pinned by its own test below.
   assert.deepEqual(members, MEMBER_IDS);
   assert.equal(outcome.exitCode, 0);
   assert.deepEqual(io.outLines, ['Hikari 常驻已启动。', 'Hikari 常驻已停止。']);

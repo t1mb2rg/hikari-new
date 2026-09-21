@@ -2,6 +2,7 @@
 import { NotInitializedError } from '../continuity/index.js';
 import { chronicleInitCommand } from './chronicle-init.js';
 import { statusCommand, stopCommand } from './control-command.js';
+import { focusCommand } from './focus-command.js';
 import { initCommand } from './init.js';
 import {
   INIT_HINT,
@@ -29,16 +30,17 @@ async function runCommandLine(argv: readonly string[]): Promise<number> {
   return outcome.exitCode;
 }
 
-// The parse result is passed along whole rather than taken apart here. Only `resident` carries a
-// cadence, and handing this dispatcher the command and the options separately would erase that — it
-// would have to be told what the options are, which is exactly the knowledge the union exists to
-// keep in one place.
+// The parse result is passed along whole rather than taken apart here. `resident` carries a cadence
+// and `focus` carries operands, and handing this dispatcher the command and the options separately
+// would erase both — it would have to be told what the options are, which is exactly the knowledge
+// the union exists to keep in one place.
 function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOutcome> {
   if (parsed.command === 'init') return initCommand(parsed.options);
   if (parsed.command === 'chronicle-init') return chronicleInitCommand(parsed.options);
   if (parsed.command === 'resident') return residentCommand(parsed.options);
   if (parsed.command === 'status') return statusCommand(parsed.options);
   if (parsed.command === 'stop') return stopCommand(parsed.options);
+  if (parsed.command === 'focus') return focusCommand(parsed.options);
   return startCommand(parsed.options);
 }
 

@@ -25,7 +25,7 @@ import { createLifetimeLease, residentCommand } from '../dist/cli/resident.js';
 const CLI = join(import.meta.dirname, '..', 'dist', 'cli', 'main.js');
 const RESIDENT_URL = pathToFileURL(join(import.meta.dirname, '..', 'dist', 'cli', 'resident.js')).href;
 
-// The same seven ids the resident loads. Repeated rather than shared so that this file states what it
+// The same eight ids the resident loads. Repeated rather than shared so that this file states what it
 // expects to find on a pipe instead of agreeing with whatever the other file happens to hold.
 const MEMBER_IDS = [
   'continuity',
@@ -35,6 +35,7 @@ const MEMBER_IDS = [
   'desktop-session-world',
   'desktop-session-awareness',
   'desktop-session-awareness-loop',
+  'work-focus',
 ];
 
 const ALL_ACTIVE = MEMBER_IDS.map(() => 'active');

@@ -1,3 +1,5 @@
+import type { WorkFocusWord } from '../work-focus/index.js';
+
 export interface CliOptions {
   readonly dataDir: string;
 }
@@ -8,13 +10,21 @@ export interface ResidentOptions extends CliOptions {
   readonly desktopAwarenessDelayMs: number;
 }
 
+// `focus` is the one command that takes operands, and they are exactly what a human typed. Nothing
+// here trims them, folds them, splits them or asks what they name: the CLI's whole job with a
+// designation is to carry it, which is also why there is no default and no enumeration.
+export interface FocusOptions extends CliOptions {
+  readonly word: WorkFocusWord;
+  readonly designations: readonly string[];
+}
+
 export interface CommandOutcome {
   readonly exitCode: number;
   readonly stdout: string;
   readonly stderr: string;
 }
 
-export type CliCommand = 'init' | 'chronicle-init' | 'start' | 'resident' | 'status' | 'stop';
+export type CliCommand = 'init' | 'chronicle-init' | 'start' | 'resident' | 'status' | 'stop' | 'focus';
 
 // Only `resident` carries a parsed number, and the union is what keeps that obligation in the type
 // rather than in a comment: the other commands cannot be handed a cadence at all. `status` and `stop`
@@ -25,7 +35,8 @@ export type CliCommand = 'init' | 'chronicle-init' | 'start' | 'resident' | 'sta
 // would be a second way to configure the loop.
 export type ParsedCommandLine =
   | { readonly command: 'init' | 'chronicle-init' | 'start' | 'status' | 'stop'; readonly options: CliOptions }
-  | { readonly command: 'resident'; readonly options: ResidentOptions };
+  | { readonly command: 'resident'; readonly options: ResidentOptions }
+  | { readonly command: 'focus'; readonly options: FocusOptions };
 
 export class UsageError extends Error {}
 
@@ -42,6 +53,10 @@ export const USAGE = [
   '  hikari resident --data-dir <path> --desktop-awareness-delay-ms <integer>',
   '  hikari status --data-dir <path>',
   '  hikari stop --data-dir <path>',
+  '  hikari focus declare --data-dir <path> <designation>',
+  '  hikari focus replace --data-dir <path> <designation> [<designation> ...]',
+  '  hikari focus clear --data-dir <path>',
+  '  hikari focus status --data-dir <path>',
   '',
   '选项：',
   '  --data-dir <path>                        数据根目录，必填，没有默认值',
@@ -63,13 +78,25 @@ const NUMBER_LITERAL = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 
 export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   const [head, ...rest] = argv;
+
+  // `focus` resolves here rather than inside `readCommand`, and the reason is the one structural
+  // difference it has: every other command's grammar is options alone, so the reader can hand back a
+  // token list for the option reader to finish. `focus` has operands, and an operand is not an
+  // option — handing a token list back would mean a second reader downstream that could not tell
+  // which tokens were which.
+  if (head === 'focus') return readFocusCommand(rest);
+
   const { command, tokens } = readCommand(head, rest);
   if (command === 'resident') return { command, options: readResidentOptions(tokens) };
   return { command, options: readOptions(tokens) };
 }
 
+// `focus` is excluded because this reader never produces it: its grammar needs operands, so it
+// resolves to a whole `ParsedCommandLine` in `parseCommandLine` before this reader is reached. Saying
+// so in the type is what keeps the token list below from being handed a command that has no token
+// list to give.
 interface CommandTokens {
-  readonly command: CliCommand;
+  readonly command: Exclude<CliCommand, 'focus'>;
   readonly tokens: readonly string[];
 }
 
@@ -81,6 +108,90 @@ function readCommand(head: string | undefined, rest: readonly string[]): Command
   if (head === 'stop') return { command: 'stop', tokens: rest };
   if (head === 'chronicle') return readChronicleCommand(rest);
   throw new UsageError(head === undefined ? '缺少命令。' : `未知命令：${head}`);
+}
+
+// The words are the work focus plugin's vocabulary, and this table is typed by the owner's union: a
+// word added there does not compile until it is added here too, and the message below is derived
+// from the table rather than written out a third time. What this file must never acquire is an
+// opinion about what a word *means* — the plugin is where the words actually do something.
+const FOCUS_WORDS: Readonly<Record<WorkFocusWord, true>> = {
+  declare: true,
+  replace: true,
+  clear: true,
+  status: true,
+};
+
+function isWorkFocusWord(value: string): value is WorkFocusWord {
+  return Object.hasOwn(FOCUS_WORDS, value);
+}
+
+function readFocusCommand(rest: readonly string[]): ParsedCommandLine {
+  const [word, ...tokens] = rest;
+  if (word === undefined || !isWorkFocusWord(word)) {
+    const supported = Object.keys(FOCUS_WORDS).join(' / ');
+    throw new UsageError(`focus 只支持 ${supported}，收到：${word ?? '(缺失)'}`);
+  }
+
+  const { dataDir, operands } = readFocusTokens(tokens);
+  readFocusArity(word, operands);
+  return { command: 'focus', options: { dataDir, word, designations: operands } };
+}
+
+interface FocusTokens {
+  readonly dataDir: string;
+  readonly operands: readonly string[];
+}
+
+// Close to `readOptionTokens` and deliberately not folded into it. That reader's contract is that
+// every token is either a known option or an error, which is exactly right for commands that take no
+// operands and exactly wrong here — a designation is a token nobody can enumerate in advance.
+function readFocusTokens(tokens: readonly string[]): FocusTokens {
+  let dataDir: string | undefined;
+  const operands: string[] = [];
+
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token === undefined) continue;
+
+    if (token === '--data-dir') {
+      if (dataDir !== undefined) throw new UsageError('--data-dir 只能指定一次。');
+
+      const value = tokens[index + 1];
+      if (value === undefined) throw new UsageError('--data-dir 需要一个路径。');
+      if (!value.trim()) throw new UsageError('--data-dir 不能是空路径。');
+
+      dataDir = value;
+      index += 1;
+      continue;
+    }
+
+    // A leading dash is how this CLI spells an option everywhere else, so a token that has one is
+    // read as an option that does not exist rather than as text. The alternative — treating it as a
+    // designation — would let a mistyped flag quietly become a work focus.
+    if (token.startsWith('-')) throw new UsageError(`未知参数：${token}`);
+
+    operands.push(token);
+  }
+
+  if (dataDir === undefined) throw new UsageError('缺少必填参数：--data-dir');
+  return { dataDir, operands };
+}
+
+// How many operands a word takes. This is grammar, not domain: it says `replace` is not spelled
+// `clear`, and it does not say whether any particular designation is acceptable. The empty-set rule
+// is enforced a second time on the other side of the pipe, because the CLI is not the only thing
+// that can speak this protocol — a rule kept only here would be a rule about this client rather than
+// about the focus.
+function readFocusArity(word: WorkFocusWord, operands: readonly string[]): void {
+  if (word === 'declare' && operands.length !== 1) {
+    throw new UsageError(`focus declare 需要恰好一个工作焦点，收到 ${operands.length} 个。`);
+  }
+  if (word === 'replace' && operands.length === 0) {
+    throw new UsageError('focus replace 至少需要一个工作焦点；要清空请用 hikari focus clear。');
+  }
+  if ((word === 'clear' || word === 'status') && operands.length !== 0) {
+    throw new UsageError(`focus ${word} 不接受工作焦点参数。`);
+  }
 }
 
 function readChronicleCommand(rest: readonly string[]): CommandTokens {
