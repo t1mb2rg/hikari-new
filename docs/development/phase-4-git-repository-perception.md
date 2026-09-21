@@ -35,6 +35,8 @@ plugin-design-spec §16.1 明确写了「不要求已经存在具体的 Consumer
 因此这不构成阻断。
 ```
 
+> **traceability 补齐（后补）**：此处援引的「P4-03 的 Explicit Declaration / Reference Frame 研究」此前没有仓库内 artifact。现已固化为 `docs/architecture/phase-4-explicit-human-reference-review.md`。该 artifact **不改变**本段的立项依据，只补齐可引用来源。
+
 **Consumer 今天不存在，这一点已经核实，并且是本轮如实记录的限制之一**（见 §13 限制 8）：`impact gitRepositoryPlugin` 返回 `impactedCount: 0 / risk: UNKNOWN`，文本检索确认全仓只有定义处、barrel 再导出、以及两个测试文件引用它。**零生产调用方是预期状态，不是遗漏。**
 
 ### 本轮成立之后到达的那句话

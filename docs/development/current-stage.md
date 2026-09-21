@@ -736,6 +736,8 @@ canonical dataDir  →  sha256  →  前 16 个 hex  →  \\.\pipe\hikari-reside
 
 它是 **P4-03 的一个 supporting slice**（**工作标签，不占用阶段编号**；P4-03 仍未开始）。立项理由不是未来可能性，而是一件**已经发生的事**：P4-03 的 Explicit Declaration / Reference Frame 研究已经实际推进，并确认当前缺少稳定的 named-object source，导致 repository-level relevance 无法继续建立。本轮交付的是那个已经发生的 blocker 的 supporting capability。**Consumer implementation 尚未存在**，plugin-design-spec §16.1 明确允许这一点。
 
+> **traceability 补齐（P4-03 Explicit Human Reference Frame Boundary Review 后）**：上述「Explicit Declaration / Reference Frame 研究」此前只存在于对话历史，仓库内没有对应 artifact。现已固化为 `docs/architecture/phase-4-explicit-human-reference-review.md`。该轮 verdict 为 **BLOCKED**，唯一 blocker 是「尚未出现真实 human designation 与真实 reader 所形成的已发生跨模块语义」——**这只是对下一 slice 是否就绪的判定，不改变本段关于 Git Repository Perception v1 立项依据的结论**。
+
 ```text
 git-repository  Plugin（自治，requires: []）
 ↓
