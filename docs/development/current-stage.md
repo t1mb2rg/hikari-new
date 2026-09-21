@@ -18,6 +18,14 @@
 >
 > **它是 Awareness 链路上又一句最短的话，不是「Awareness 已完整实现」，也不是「P4-03 已完成」。**（本句写于该轮；P4-03 此后已由六个 supporting slice 收口——但**这句判断对「Awareness 已完整实现」仍然成立**，收口不改变它。）Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **仍然均未进入，且未被预埋**。
 >
+> **Desktop Observation Surface v1 已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `60f6507` + 状态记录 `6907e29`，CI Runtime Tests #35666146854 **success**：442 tests / 375 pass / 67 skipped / 0 fail）。它是**工作标签，不占用任何阶段编号**，**不是** P4-04，也**不是** P4-03 的一部分。**它没有独立的阶段文档**——事实由本状态行与源码记录，这是沿用 GitHub CI Perception v1 的刻意**最小必要文档**取舍，不是遗漏被掩盖。
+>
+> **它是 Hikari 第一个用户可读的桌面感知出口**：`hikari observe desktop-session status` 在终端里逐字转述 `desktop-session-awareness.current@1` 交回来的 assessment。**它是出口，不是新认知层**——感知链（foreground / input-activity / World / Awareness / Loop）在本 slice 之前就已经存在并且一直在运行，此前只是**没有任何东西能把它读出来**。可观察性不是本 slice 新增的能力，**可读性**才是。
+>
+> **它没有新增任何判词**：`available` / `unavailable`、`present` / `absent`、`changed` / `unchanged` / `indeterminate`、`stable` / `baseline` 全部是既有 contract 的词汇，逐字转述，不翻译、不概括、不解释。它 `requires` 只有 Awareness 契约、`provides` 为空（reader 是 CLI），**不**读取 World、**不**直接读取任何来源、**不**持久化、**不**写 Chronicle、**没有** history、**没有**查询 DSL、**没有**通用 Observation / Query abstraction、**没有** Resident router。默认组合因此由八个成员变为**九个**，显式组合变为**十四个**。
+>
+> **一处必须与「出口」这个说法一起读的代价**：`desktop-session-awareness.current@1` 是**消耗性读取**，它会推进自己用来比对的 baseline。人工查询因此与 Awareness Loop 的周期在同一字段上交错——loop 的下一次判词覆盖的是更短的窗口。该性质记在 `src/desktop-session-awareness/contracts.ts` 的契约注释里（它是该 provider 自己的性质），交错、未送达查询仍推进 baseline、并发查询无上限这三条后果记在 `src/desktop-session-observe/plugin.ts`。**三者都是记录而非修复**，因为治法属于 Awareness 的 baseline 归属，在本 slice 内发明一个会变成「出口层去改动它本来只被要求转述的判词」。
+>
 > **边界说明（口径更新，Repository CI Relevance v1 收口后）：`repository-ci-awareness.current@1` 在默认组合中没有 production consumer，但在显式启用 Repository CI 的组合中【有】。** 该组合下 `repository-ci-relevance` 就是它的 production consumer：`src/repository-ci-relevance/plugin.ts` 的 `requires` 逐字包含 `repositoryCiAwarenessService`。**两种组合必须分开读**——默认组合（九个成员）里确实没有任何 module 读它，显式组合（十四个成员）里有。此前本节笼统写作「当前没有 production consumer」，在第二个组合下已不成立，故更正。
 >
 > 它作为 public Service 成立的依据有两条，都来自 `plugin-design-spec.md` §16：§16.1 只要求**真实、已发生的跨模块交互语义**，不要求已经存在具体的 Consumer implementation；§16.2 的 Service 判据要求**真实的 callable need**，本轮的 callable need 由 P4-03 的人工裁决（选项 A）直接定义。**不是**「以后可能有人会用」——§16 正文写明：若主要理由是「以后可能有用」，默认不创建。这**不构成**无 consumer Service 的一般许可。
