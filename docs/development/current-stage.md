@@ -1,10 +1,12 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审、已提交、已 push**（commit `138cf9c`，CI success）；**P4-03 尚未开始**。`origin/main` = `138cf9c`（`feat: add resident local control channel`，即 P4-02.1 本身；push 输出确认 `f3d7673..138cf9c`，CI 在该提交上运行）。`0db5516` 仍是「P4-02 收口当时」的提交，此后 `origin/main` 又前进过 `e23d382`、`f3d7673` 两项。
+> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审、已提交、已 push**（commit `138cf9c`，CI success）；此后 `origin/main` 又前进过 `507579f`（P4-02.1 状态记录）、`3cf7d2f`（P4-02 证据更正）、`8a9b744`（Runtime 竞态修正，`src/runtime/runtime.ts`）。**P4-03 尚未开始。**
+>
+> **P4-03 supporting slice（Git Repository Perception v1）已实现、已通过 Functional / Architecture Review**，详见 `docs/development/phase-4-git-repository-perception.md`。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用任何阶段编号**，P4-03 仍然**尚未开始**。它交付的是「一个具名本地对象（明确指定的本地 Git repository）的一次观测」，**没有**交付 relevance、**没有**交付 repository identity、**没有**进入任何 Judgement，并且**没有**加入 Resident composition。
 >
 > **不得写作 `Phase 4 COMPLETE`。** P4-01 只交付「驱动 + 发生」，P4-02 只交付「进程组合 + 进程寿命」，P4-02.1 只交付「本机可问、可停」：`principles.md` §14 定义的 Awareness 链路中，**Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act 均未进入，且未被预埋**。
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`，P4-02.1 的实现与复盘见 `docs/development/phase-4-resident-control.md`（第四阶段目前**没有**架构评审文档）。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`，P4-02.1 的实现与复盘见 `docs/development/phase-4-resident-control.md`；P4-03 supporting slice（Git Repository Perception v1）的实现与立项依据见 `docs/development/phase-4-git-repository-perception.md`（第四阶段目前**没有**架构评审文档）。
 
 ---
 
@@ -52,7 +54,13 @@ Phase 3 COMPLETE
 P4-01    Desktop Session Awareness Loop v1       complete
 P4-01.1  Awareness Loop timer 上界正确性修正     complete
 P4-02    Resident Process Composition v1         complete
+P4-02.1  Resident Local Control v1               complete
 P4-03    未开始                                  not started
+
+（补记：`P4-02.1` 此前漏列于本块，与文首状态不一致，本轮一并补上。）
+
+（P4-03 supporting slice —— Git Repository Perception v1 —— 不属于本进度表：
+  它是 supporting slice，不是 P4-03 本身，工作标签，不占用编号。）
 ```
 
 **Phase 4 尚未完成，不得写作 `Phase 4 COMPLETE`。** P4-01 只是驱动与发生，P4-02 只是进程组合与进程寿命，二者都**没有**把链路推进到 Salience / Importance Judgement，也**没有**让链路产生任何一次 Remember / Ask / Notify / Act。
@@ -708,6 +716,54 @@ canonical dataDir  →  sha256  →  前 16 个 hex  →  \\.\pipe\hikari-reside
 
 **一个数据目录只有一个端点**，由操作系统自己执行（第二个监听器得到 `EADDRINUSE`）。这**不是**要绕开的端口冲突，它**就是**「这里是不是已经有一个常驻在跑」的答案。第二个常驻因此**拒绝启动**，而不是共用一个端点——否则会有两个进程加载同一套组合、写同一个 store，而一次 `status` 描述一个进程、一次 `stop` 结束另一个。
 
+### Git Repository Perception v1（P4-03 supporting slice）
+
+回答一个此前没有任何模块能回答的问题：
+
+> 这个**明确指定的本地 Git repository** 现在处于什么状态？
+
+它是 **P4-03 的一个 supporting slice**（**工作标签，不占用阶段编号**；P4-03 仍未开始）。立项理由不是未来可能性，而是一件**已经发生的事**：P4-03 的 Explicit Declaration / Reference Frame 研究已经实际推进，并确认当前缺少稳定的 named-object source，导致 repository-level relevance 无法继续建立。本轮交付的是那个已经发生的 blocker 的 supporting capability。**Consumer implementation 尚未存在**，plugin-design-spec §16.1 明确允许这一点。
+
+```text
+git-repository  Plugin（自治，requires: []）
+↓
+git-repository.current@1
+↓
+current(): Promise<GitRepositoryObservation>
+```
+
+**Observation 语义**：
+
+```ts
+{
+  observedAt: string,                    // 组装完成的时刻，不承诺原子 snapshot
+  source: 'git-repository',
+  workTreeRoot: string,                  // git 报告的顶层根，可以是配置路径的祖先
+  head: { kind: 'branch', name, commit }
+      | { kind: 'detached', commit }
+      | { kind: 'unborn' },
+  workTree: { kind: 'unchanged' } | { kind: 'changed' },
+  remotes: readonly string[]             // 只有名字，不碰网络
+}
+```
+
+四条语义是本轮冻结的核心：
+
+```text
+Unborn is an observation.            → 刚 init 的仓库是状态，不是读取失败
+A missing remote is a legal state.   → rc=0 + 空输出 → []，不是失败
+Exit codes are reported, not translated. → 没有 code→meaning 映射表
+Git is Plugin-private.               → git.ts 不在 barrel 里，全仓零外部引用
+```
+
+**本轮在实机上发现并修掉了一处会静默报错的真实缺陷**：`# branch.head` 对「真正 detached」与「分支名恰好叫 `(detached)`」写出**逐字节相同**的输出。判据是 `git branch --show-current`（答案是输出，不是退出码），因此 `resolveHead` 是一个**条件第四命令**——只有这一种有歧义的情形才多付一个进程。
+
+**Git 边界全部来自真实运行**（`git version 2.53.0.windows.3`）：untracked 必须用 `-unormal` 显式要求（否则随 `status.showUntrackedFiles` 配置变化）；非仓库路径 rc=128；`rev-parse --show-toplevel` 可以是配置路径的祖先；`GitRepositoryError` 是配置拒绝、`GitRepositoryObservationError` 是观测失败，两者不混。
+
+**本轮没有修改任何既有文件**：`src/runtime/`、`src/continuity/`、`src/chronicle/`、`src/foreground/`、`src/input-activity/`、`src/desktop-session-world/`、`src/desktop-session-awareness/`、`src/desktop-session-awareness-loop/`、`src/cli/`、`src/index.ts`、`package.json`、`tsconfig.json` 全部零改动，全部产物是新增文件。**Resident 的生产组合仍然是七个 Plugin**，本轮**没有**加入 composition。`dependencies` 仍为 `null`。
+
+**上限声明**：本轮交付「一个具名本地对象的一次观测」，**没有**交付 relevance、**没有**交付 repository identity、**没有**进入任何 Judgement、**没有**创建通用 Perception framework。
+
 ---
 
 ## 验收状态
@@ -1144,7 +1200,9 @@ Docs / Contracts updated
 
 第四阶段 P4-02.1：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `138cf9c`，message `feat: add resident local control channel`），CI（Runtime Tests #35516173973）**success**。它是 P4-02 的**从属轮次**（一条已知限制的收口），不是新的架构层，也不是新增感知 capability。
 
-第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 / P4-02.1 四项已达到该标准并已收口，但 **P4-03 尚未开始**；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
+P4-03 supporting slice（Git Repository Perception v1）：**已满足**——Functional PASS + Architecture PASS + Docs updated。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用阶段编号**，因此**不计入上面任何一条进度**，也不改变「P4-03 尚未开始」这个事实。
+
+第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 / P4-02.1 四项已达到该标准并已收口，但 **P4-03 尚未开始**（本轮只交付了它的一个 supporting slice）；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
 
 ---
 
