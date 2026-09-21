@@ -54,6 +54,8 @@ relevant | unknown
 
 **关于证据强度的一处自我限制：** 本轮曾尝试用 subagent 统计「生产组合中全部 plugin definition 的数量」，其报告自述为 12，而同报告自身表格只列 11。该数字**不可采信**，本文因此**不引用任何 plugin 计数**。需要计数时，锚点是 `src/cli/resident.ts:106`（「Exactly seven plugins」）这一行**当下源码**。
 
+**关于该锚点的一处后续位移（本轮 NARROW 前半段落地之后补记）：** P4-03 Explicit Work Focus Local Ingress v1 把 `work-focus` 作为**第八个** Plugin 加入了生产组合，因此上面引用的那一行**现在**是 `src/cli/resident.ts` 的「Exactly eight plugins, and nothing else.」。**本文写就时它确实是 seven**，本句只记录锚点位移，不改动本文其余任何结论；「需要计数时以当下源码为准」这条纪律不变，落点改为 `src/cli/resident.ts` 的 `productionComposition`。
+
 **当前工作区事实（写完本文前实测）：** `git log --oneline -3` = `87605c6 / 18bca09 / 6d537e0`；`origin/main` = `87605c68a332437aa0122b34ab337ba14b0387b8`；`origin/main..HEAD` = 0；`git status --short` 为空。`src/` 中 `relevance` 零命中，`workFocus` / `work-focus` 零命中。
 
 ---

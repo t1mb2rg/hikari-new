@@ -1,6 +1,6 @@
 # Hikari 当前阶段开发说明
 
-> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审、已提交、已 push**（commit `138cf9c`，CI success）；此后 `origin/main` 又前进过 `507579f`（P4-02.1 状态记录）、`3cf7d2f`（P4-02 证据更正）、`8a9b744`（Runtime 竞态修正，`src/runtime/runtime.ts`）、`ca2db7a`（Git Repository Perception v1）、`4b6fe31`（其状态记录）、`65dd556`（GitHub CI Perception v1）、`f4234ef`（Repository CI World v1）、`6d537e0`（Repository CI Awareness v1）。**P4-03 本身尚未开始**（它已交付四个 supporting slice，见下）。
+> 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审、已提交、已 push**（commit `138cf9c`，CI success）；此后 `origin/main` 又前进过 `507579f`（P4-02.1 状态记录）、`3cf7d2f`（P4-02 证据更正）、`8a9b744`（Runtime 竞态修正，`src/runtime/runtime.ts`）、`ca2db7a`（Git Repository Perception v1）、`4b6fe31`（其状态记录）、`65dd556`（GitHub CI Perception v1）、`f4234ef`（Repository CI World v1）、`6d537e0`（Repository CI Awareness v1）、`b0ecde2`（Explicit Work Focus Local Ingress v1）。**P4-03 本身尚未开始**（它已交付五个 supporting slice，见下）。
 >
 > **P4-03 supporting slice（Git Repository Perception v1）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `ca2db7a`，CI Runtime Tests #35567512137 **success**：270 tests / 253 pass / 17 skipped / 0 fail），详见 `docs/development/phase-4-git-repository-perception.md`。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用任何阶段编号**，P4-03 仍然**尚未开始**。它交付的是「一个具名本地对象（明确指定的本地 Git repository）的一次观测」，**没有**交付 relevance、**没有**交付 repository identity、**没有**进入任何 Judgement，并且**没有**加入 Resident composition。
 >
@@ -17,6 +17,14 @@
 > **边界说明：`repository-ci-awareness.current@1` 当前没有 production consumer。** 它作为 public Service 成立的依据有两条，都来自 `plugin-design-spec.md` §16：§16.1 只要求**真实、已发生的跨模块交互语义**，不要求已经存在具体的 Consumer implementation；§16.2 的 Service 判据要求**真实的 callable need**，本轮的 callable need 由 P4-03 的人工裁决（选项 A）直接定义。**不是**「以后可能有人会用」——§16 正文写明：若主要理由是「以后可能有用」，默认不创建。这**不构成**无 consumer Service 的一般许可。
 >
 > **不得写作 `Phase 4 COMPLETE`。** P4-01 只交付「驱动 + 发生」，P4-02 只交付「进程组合 + 进程寿命」，P4-02.1 只交付「本机可问、可停」：`principles.md` §14 定义的 Awareness 链路中，**Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act 均未进入，且未被预埋**。
+>
+> **P4-03 supporting slice（Explicit Work Focus Local Ingress v1）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `b0ecde2`，CI Runtime Tests #35582154818 **success**：367 tests / 325 pass / 42 skipped / 0 fail；本机 367 / 366 pass / 1 skipped / 0 fail——CI 上被跳过的全部是依赖命名管道的用例）。立项依据与边界冻结见 `docs/architecture/phase-4-explicit-work-focus-review.md`（verdict **NARROW**）。它**不是** P4-03 本身，**不属于 Repository CI 那条链**，也**没有**交付任何 Judgement。
+>
+> 它是 **Hikari 第一次拥有一处人类主动写入的入口**：`declare` / `replace` / `clear` / `status` 四个词经由本地端点，把一个 designation 集合写在 Plugin 自己的闭包里。**这是 ingress，不是 Judgement**——它记录人说了什么，**不解释**这句话意味着什么，**不**判断任何 repository 是否相关，**不**产生 importance / salience，**不**触发 Remember / Ask / Notify / Act。
+>
+> **它加入了 Resident composition（第八个成员），这是与前面四个 supporting slice 的一处实质差别**：前四者都只提供 provider、不进入生产组合，而入口必须有一个真实存在的常驻进程托管才有意义。Plugin 声明 `requires: []` / `provides: []`，**没有**登记 Service、**没有**发出 Event、**没有**写入 Chronicle、**没有**任何持久化（插件运行前后数据目录逐字节不变，有测试钉住），**没有**引入模型，也**没有**引入 id / 时间戳 / 来源 / 优先级 / 版本号等任何 designation 之外的字段。state 存在 activation 自己的闭包里，因此「重启后为空」是结构性质而不是一条需要记得执行的规则。
+>
+> **一处必须收紧的措辞：** 产品 mandate 使 runtime human declaration 成为真实需求，且 ingress 现已实现并**确实真实接收过** `declare` / `replace` / `clear`（由端到端测试经真实命名管道产生）。但「**某个人真的声明过自己的工作焦点**」这件事**尚无证据**——测试发出的请求不是人的声明。因此本轮**不写成**「Hikari 已经真实接收到 human declaration occurrence」，只写成：**入口已就位、可以接收**。不要把「机制已成立」写成「人的声明已经发生」。
 >
 > 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`，P4-02.1 的实现与复盘见 `docs/development/phase-4-resident-control.md`；P4-03 supporting slice（Git Repository Perception v1）的实现与立项依据见 `docs/development/phase-4-git-repository-perception.md`，Repository CI World v1 的实现与立项依据见 `docs/development/phase-4-repository-ci-world.md`；第四阶段的架构评审文档见 `docs/architecture/phase-4-explicit-human-reference-review.md`（P4-03 Explicit Human Reference Frame Boundary Review，verdict **BLOCKED**，commit `87605c6`）与 `docs/architecture/phase-4-explicit-work-focus-review.md`（P4-03 Explicit Work Focus Vertical Slice Boundary Review，verdict **NARROW**）。
 
@@ -71,8 +79,10 @@ P4-03    未开始                                  not started
 
 （补记：`P4-02.1` 此前漏列于本块，与文首状态不一致，本轮一并补上。）
 
-（P4-03 supporting slice —— Git Repository Perception v1 —— 不属于本进度表：
-  它是 supporting slice，不是 P4-03 本身，工作标签，不占用编号。）
+（P4-03 supporting slice 不属于本进度表——截至本轮共五个：Git Repository
+  Perception v1、GitHub CI Perception v1、Repository CI World v1、
+  Repository CI Awareness v1、Explicit Work Focus Local Ingress v1。
+  它们是 supporting slice，不是 P4-03 本身，工作标签，不占用编号。）
 ```
 
 **Phase 4 尚未完成，不得写作 `Phase 4 COMPLETE`。** P4-01 只是驱动与发生，P4-02 只是进程组合与进程寿命，二者都**没有**把链路推进到 Salience / Importance Judgement，也**没有**让链路产生任何一次 Remember / Ask / Notify / Act。
@@ -595,7 +605,7 @@ hikari resident  生产常驻组合
 
 **`start` 不是「旧版 resident」，resident 也不是「改版 start」**：前者回答「这套组合现在能不能起来」，后者回答「起得来之后，谁来一直持有这个进程」。
 
-**生产组合（正好七个 Plugin，按加载顺序）**：
+**生产组合（正好八个 Plugin，按加载顺序）**：
 
 ```text
 1  continuity
@@ -605,7 +615,10 @@ hikari resident  生产常驻组合
 5  desktop-session-world
 6  desktop-session-awareness
 7  desktop-session-awareness-loop
+8  work-focus
 ```
+
+`work-focus` 是 P4-03 Explicit Work Focus Local Ingress v1 加入的第八个成员，也是唯一一个**为人而不是为感知链路**存在的 Plugin：它不声明 `requires` / `provides`，不登记 Service、不发 Event，公开面只有它自己的本地端点。放在最后是有意的而非追加的，理由见 `src/cli/resident.ts` 的 `productionComposition`。
 
 顺序不是装饰：一个 Plugin 被加载时它的 `requires` 已经满足，因此不能运行的留在 `waiting` 而不是被挪来挪去，读回的状态就是操作者看到的状态。
 
@@ -650,7 +663,7 @@ Resident **不**依赖 Loop 的计时器、**不**依赖 PowerShell 子进程、
 **就绪语义（必须连同上限一起读）**：
 
 ```text
-ready = 七个 Plugin 全部 active
+ready = 八个 Plugin 全部 active
       = 组合成立 + Loop 已武装
 ```
 
