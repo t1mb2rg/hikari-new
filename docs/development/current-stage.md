@@ -2,7 +2,7 @@
 
 > 状态：**Phase 1 / Phase 2 / Phase 3 均已完成最终验收并正式收口**（P2-01 ~ P2-04 与 P3-01 ~ P3-05 全部通过 Functional / Architecture Review，已提交、已 push、CI 通过）。**Phase 4 已开始，但尚未完成**：P4-01（Desktop Session Awareness Loop v1）、P4-01.1（Awareness Loop timer 上界正确性修正）、P4-02（Resident Process Composition v1）三项已完成、已提交、已 push、CI 通过；P4-02.1（Resident Local Control v1）**已实现、已通过评审、已提交、已 push**（commit `138cf9c`，CI success）；此后 `origin/main` 又前进过 `507579f`（P4-02.1 状态记录）、`3cf7d2f`（P4-02 证据更正）、`8a9b744`（Runtime 竞态修正，`src/runtime/runtime.ts`）。**P4-03 尚未开始。**
 >
-> **P4-03 supporting slice（Git Repository Perception v1）已实现、已通过 Functional / Architecture Review**，详见 `docs/development/phase-4-git-repository-perception.md`。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用任何阶段编号**，P4-03 仍然**尚未开始**。它交付的是「一个具名本地对象（明确指定的本地 Git repository）的一次观测」，**没有**交付 relevance、**没有**交付 repository identity、**没有**进入任何 Judgement，并且**没有**加入 Resident composition。
+> **P4-03 supporting slice（Git Repository Perception v1）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `ca2db7a`，CI Runtime Tests #35567512137 **success**：270 tests / 253 pass / 17 skipped / 0 fail），详见 `docs/development/phase-4-git-repository-perception.md`。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用任何阶段编号**，P4-03 仍然**尚未开始**。它交付的是「一个具名本地对象（明确指定的本地 Git repository）的一次观测」，**没有**交付 relevance、**没有**交付 repository identity、**没有**进入任何 Judgement，并且**没有**加入 Resident composition。
 >
 > **不得写作 `Phase 4 COMPLETE`。** P4-01 只交付「驱动 + 发生」，P4-02 只交付「进程组合 + 进程寿命」，P4-02.1 只交付「本机可问、可停」：`principles.md` §14 定义的 Awareness 链路中，**Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act 均未进入，且未被预埋**。
 >
@@ -1200,7 +1200,7 @@ Docs / Contracts updated
 
 第四阶段 P4-02.1：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `138cf9c`，message `feat: add resident local control channel`），CI（Runtime Tests #35516173973）**success**。它是 P4-02 的**从属轮次**（一条已知限制的收口），不是新的架构层，也不是新增感知 capability。
 
-P4-03 supporting slice（Git Repository Perception v1）：**已满足**——Functional PASS + Architecture PASS + Docs updated。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用阶段编号**，因此**不计入上面任何一条进度**，也不改变「P4-03 尚未开始」这个事实。
+P4-03 supporting slice（Git Repository Perception v1）：**已满足**——Functional PASS + Architecture PASS + Docs updated，已提交、已 push（commit `ca2db7a`，message `feat: add git repository perception`），CI（Runtime Tests #35567512137）**success**。它是 **P4-03 的一个 supporting slice，不是 P4-03 本身**——**工作标签，不占用阶段编号**，因此**不计入上面任何一条进度**，也不改变「P4-03 尚未开始」这个事实。
 
 第四阶段：**尚未完成**——P4-01 / P4-01.1 / P4-02 / P4-02.1 四项已达到该标准并已收口，但 **P4-03 尚未开始**（本轮只交付了它的一个 supporting slice）；且在 Awareness 链路上，Salience / Importance Judgement 与 Ignore / Remember / Ask / Notify / Act **均未进入**。**不得写作 `Phase 4 COMPLETE`。**
 

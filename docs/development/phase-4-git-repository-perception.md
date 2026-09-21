@@ -1,7 +1,8 @@
 # Git Repository Perception v1（P4-03 Supporting Slice）
 
 > 轮次：**P4-03 supporting slice**（**工作标签，不是阶段编号**——本轮不占用 P4-03 编号，也不是 P4-03.1；P4-03 本身仍未开始）
-> 状态：**实现完成、Functional / Architecture Review 通过**
+> 状态：**实现完成、Functional / Architecture Review 通过、已提交、已 push**
+> 提交：`ca2db7a feat: add git repository perception`，CI（Runtime Tests #35567512137）**success**
 > 前置：P4-02.1 已收口（commit `138cf9c`）；本轮开工时 `origin/main` = `8a9b744`
 
 ---
