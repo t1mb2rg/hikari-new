@@ -12,6 +12,7 @@ import {
 import {
   desktopSessionAwarenessPlugin,
   desktopSessionAwarenessService,
+  desktopSessionAwarenessPeekService,
 } from '../dist/desktop-session-awareness/index.js';
 
 const OBSERVED_AT = '2026-02-01T08:30:00.000Z';
@@ -83,9 +84,10 @@ function observerDefinition(observed) {
   return {
     id: OBSERVER,
     version: '1.0.0',
-    requires: [desktopSessionAwarenessService],
+    requires: [desktopSessionAwarenessService, desktopSessionAwarenessPeekService],
     setup(context) {
       observed.service = context.services.get(desktopSessionAwarenessService);
+      observed.peek = context.services.get(desktopSessionAwarenessPeekService);
     },
   };
 }
@@ -136,11 +138,18 @@ async function verdicts(observed, count, facet = 'foreground') {
 
 test('the awareness plugin requires exactly the world capability and provides its own', async (t) => {
   assert.deepEqual(desktopSessionAwarenessPlugin.requires, [desktopSessionWorldService]);
-  assert.deepEqual(desktopSessionAwarenessPlugin.provides, [desktopSessionAwarenessService]);
+  // Two contracts, one owner. `current` and `peek` are separate capabilities rather than one method
+  // with a flag, so the list is the assertion that this plugin is the single owner of both.
+  assert.deepEqual(desktopSessionAwarenessPlugin.provides, [
+    desktopSessionAwarenessService,
+    desktopSessionAwarenessPeekService,
+  ]);
   assert.equal(desktopSessionAwarenessPlugin.id, 'desktop-session-awareness');
   assert.equal(desktopSessionAwarenessPlugin.version, '1.0.0');
   assert.equal(desktopSessionAwarenessService.id, 'desktop-session-awareness.current');
   assert.equal(desktopSessionAwarenessService.version, 1);
+  assert.equal(desktopSessionAwarenessPeekService.id, 'desktop-session-awareness.peek');
+  assert.equal(desktopSessionAwarenessPeekService.version, 1);
 
   const runtime = new Runtime();
   t.after(() => runtime.shutdown());
@@ -642,4 +651,204 @@ test('the production world and awareness plugins compose under the real runtime'
   assert.equal(assessment.inputActivity, 'changed');
   assert.equal(assessment.change, 'changed');
   assert.equal(assessment.current.foreground.observation.foreground.title, 'report.md - Visual Studio Code');
+});
+
+// ---------------------------------------------------------------------------------------------
+// peek: the same judgement, without the consumption.
+//
+// The subject of every test below is one sentence — a reader's question must not become the
+// driver's next comparison partner — and each one states a different half of what that costs if it
+// stops being true. They are written against the real plugin and a real sequence of world readings,
+// because the property under test is a property of the instance's baseline and a fake with no
+// baseline could not have it.
+// ---------------------------------------------------------------------------------------------
+
+// A snapshot a test can tell apart from its neighbours by name *and* by time. Both have to move
+// together: "the baseline is still the first one" is only a meaningful assertion if the first one is
+// identifiable in the value that is compared and in the timestamp a reader would be shown.
+function taggedSnapshot(second, title) {
+  return worldSnapshot({
+    snapshotAt: `2026-02-01T08:30:0${second}.000Z`,
+    foreground: available(foregroundObservation(presentTarget({ title }))),
+    inputActivity: available(inputActivityObservation(second)),
+  });
+}
+
+test('peek 不推进 baseline：两次 peek 之后 current 仍从它自己上一次的快照开始比较', async (t) => {
+  const [first, second, third, fourth] = [
+    taggedSnapshot(1, 'one'),
+    taggedSnapshot(2, 'two'),
+    taggedSnapshot(3, 'three'),
+    taggedSnapshot(4, 'four'),
+  ];
+  const { observed } = await runningAwareness(t, sequenceWorld([first, second, third, fourth]));
+
+  const cycle = await observed.service.current();
+  assert.equal(cycle.kind, 'baseline');
+  assert.equal(cycle.current.snapshotAt, first.snapshotAt);
+
+  const firstPeek = await observed.peek.peek();
+  const secondPeek = await observed.peek.peek();
+  assert.equal(firstPeek.kind, 'comparison');
+  assert.equal(secondPeek.kind, 'comparison');
+
+  // The whole test is this pair of lines. The next judgement the timeline makes must start from the
+  // snapshot the timeline itself last took, not from whichever of the two readings a human happened
+  // to ask for — which is exactly what the third entry of the world sequence is here to catch.
+  const nextCycle = await observed.service.current();
+  assert.equal(nextCycle.previous.snapshotAt, first.snapshotAt);
+  assert.notEqual(nextCycle.previous.snapshotAt, third.snapshotAt);
+});
+
+test('peek 报告过的变化，仍然留给时间线的下一次比较', async (t) => {
+  // The concrete harm, and the reason this contract exists. The desktop goes notepad -> firefox ->
+  // firefox: the change happens, a human looks, and nothing changes on the desktop again.
+  //
+  // Under a consuming read the human's question takes the change with it, and the loop's next
+  // judgement reports `unchanged` about a window it never saw the start of — the change was real, the
+  // human saw it, and the timeline never did. Under peek the same three calls end with the timeline
+  // reporting the change it is owed.
+  const notepad = worldSnapshot({
+    foreground: available(foregroundObservation(presentTarget({ title: 'Untitled - Notepad' }))),
+    inputActivity: available(inputActivityObservation(5000)),
+  });
+  const firefox = worldSnapshot({
+    foreground: available(
+      foregroundObservation(presentTarget({ title: 'Mozilla Firefox', processName: 'firefox' })),
+    ),
+    inputActivity: available(inputActivityObservation(5000)),
+  });
+  const { observed } = await runningAwareness(t, sequenceWorld([notepad, firefox, firefox]));
+
+  assert.equal((await observed.service.current()).kind, 'baseline');
+
+  const looked = await observed.peek.peek();
+  assert.equal(looked.kind, 'comparison');
+  assert.equal(looked.foreground, 'changed');
+
+  const nextCycle = await observed.service.current();
+  assert.equal(nextCycle.kind, 'comparison');
+  assert.equal(nextCycle.foreground, 'changed');
+  assert.equal(nextCycle.change, 'changed');
+});
+
+test('重复 peek 都对齐同一个 baseline，并且两者看到的是各自那一刻的桌面', async (t) => {
+  const [first, second, third] = [
+    taggedSnapshot(1, 'one'),
+    taggedSnapshot(2, 'two'),
+    taggedSnapshot(3, 'three'),
+  ];
+  const { observed } = await runningAwareness(t, sequenceWorld([first, second, third]));
+
+  await observed.service.current();
+
+  const firstPeek = await observed.peek.peek();
+  const secondPeek = await observed.peek.peek();
+
+  // Read-only in the sense that matters: the two peeks are two readings of two different moments,
+  // and they are comparable *because* they were both measured from the same partner.
+  assert.equal(firstPeek.previous.snapshotAt, first.snapshotAt);
+  assert.equal(secondPeek.previous.snapshotAt, first.snapshotAt);
+  assert.notEqual(firstPeek.current.snapshotAt, secondPeek.current.snapshotAt);
+});
+
+test('只有 current 推进 baseline，peek 随后比较的对象随之移动', async (t) => {
+  const [first, second, third] = [
+    taggedSnapshot(1, 'one'),
+    taggedSnapshot(2, 'two'),
+    taggedSnapshot(3, 'three'),
+  ];
+  const { observed } = await runningAwareness(t, sequenceWorld([first, second, third]));
+
+  await observed.service.current();
+
+  // A new timeline judgement moves the baseline, and the next peek follows it rather than staying
+  // pinned to the activation's first snapshot. Peek is not "the baseline as of activation".
+  const cycle = await observed.service.current();
+  assert.equal(cycle.previous.snapshotAt, first.snapshotAt);
+
+  const peeked = await observed.peek.peek();
+  assert.equal(peeked.previous.snapshotAt, second.snapshotAt);
+});
+
+test('peek 自己不会建立 baseline：第一次 peek 就是 baseline', async (t) => {
+  const only = taggedSnapshot(1, 'one');
+  const { observed } = await runningAwareness(t, steadyWorld(only));
+
+  // Nothing has been consumed, so there is nothing to compare against — and a peek must not be able
+  // to manufacture one. A surface that could establish the baseline by being read would be writing
+  // the timeline it was built to let a human read.
+  const first = await observed.peek.peek();
+  assert.equal(first.kind, 'baseline');
+
+  const afterPeek = await observed.service.current();
+  assert.equal(afterPeek.kind, 'baseline');
+
+  const afterCycle = await observed.peek.peek();
+  assert.equal(afterCycle.kind, 'comparison');
+  assert.equal(afterCycle.previous.snapshotAt, only.snapshotAt);
+});
+
+test('重新激活清空 baseline，peek 与 current 一样从头开始', async (t) => {
+  const only = taggedSnapshot(1, 'one');
+
+  const first = new Runtime();
+  await first.loadPlugin(steadyWorld(only).definition);
+  await first.loadPlugin(desktopSessionAwarenessPlugin);
+  const firstObserved = {};
+  await first.loadPlugin(observerDefinition(firstObserved));
+  assert.equal((await firstObserved.service.current()).kind, 'baseline');
+  assert.equal((await firstObserved.peek.peek()).kind, 'comparison');
+  await first.shutdown();
+
+  // Activation-local by construction, and it has to hold for peek too: a second instance that
+  // inherited the first instance's baseline would be claiming to compare two snapshots taken in two
+  // different activations as though they were consecutive.
+  const second = new Runtime();
+  t.after(() => second.shutdown());
+  await second.loadPlugin(steadyWorld(only).definition);
+  await second.loadPlugin(desktopSessionAwarenessPlugin);
+  const secondObserved = {};
+  await second.loadPlugin(observerDefinition(secondObserved));
+  assert.equal((await secondObserved.peek.peek()).kind, 'baseline');
+});
+
+test('持有 current 的插件只有一个，推进时间线的能力因此是可数的', () => {
+  // The safety of the observation surface rests on a fact about the composition rather than on a call
+  // site: exactly one plugin in this repository is handed the capability that moves the baseline. A
+  // second holder is not forbidden — it would be a decision, and a legitimate one for a future
+  // driver — but it has to *be* a decision, and this is the test that makes the day it happens visible
+  // instead of silent.
+  const walk = (dir) =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const path = new URL(entry.name, dir);
+      if (entry.isDirectory()) return walk(new URL(`${entry.name}/`, dir));
+      return entry.name.endsWith('.ts') ? [path] : [];
+    });
+
+  // Comments are stripped before the match, and the reason is the prose this round added rather than a
+  // hypothetical: the plugin headers in this repository discuss their own `requires` at length, and a
+  // sentence that happens to spell out `requires: [desktopSessionAwarenessService]` would otherwise be
+  // reported as a second holder of the baseline. Measured, not assumed — that exact string in a `//`
+  // line does satisfy the pattern below. The failure direction is the safe one (a false alarm rather
+  // than a miss), but a guard that names a specific file has to be worth believing, and a false alarm
+  // is paid for on the day somebody is editing comments rather than code.
+  //
+  // Stripping can only ever *remove* a match, so it cannot manufacture a holder that is not there. The
+  // one thing it could hide is a real `requires` written inside a comment — which is not a `requires`.
+  const withoutComments = (source) =>
+    source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+
+  const holders = walk(new URL('../src/', import.meta.url))
+    .filter((path) =>
+      // Word-bounded, so the peek contract — which every reader may hold — cannot satisfy this
+      // pattern, in a single-line array or a multi-line one.
+      /\brequires:\s*\[[^\]]*\bdesktopSessionAwarenessService\b/.test(
+        withoutComments(readFileSync(path, 'utf8')),
+      ),
+    )
+    .map((path) => path.pathname.split('/src/')[1])
+    .sort();
+
+  assert.deepEqual(holders, ['desktop-session-awareness-loop/plugin.ts']);
 });

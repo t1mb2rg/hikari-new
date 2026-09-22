@@ -1,5 +1,11 @@
-export { desktopSessionAwarenessService } from './contracts.js';
-export type { DesktopSessionAwarenessService } from './contracts.js';
+export {
+  desktopSessionAwarenessService,
+  desktopSessionAwarenessPeekService,
+} from './contracts.js';
+export type {
+  DesktopSessionAwarenessService,
+  DesktopSessionAwarenessPeekService,
+} from './contracts.js';
 export { desktopSessionAwarenessPlugin } from './plugin.js';
 export type {
   DesktopSessionAwarenessAssessment,

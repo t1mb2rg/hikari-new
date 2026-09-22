@@ -212,18 +212,26 @@ function renderVerdict(assessment: DesktopSessionAwarenessAssessment): readonly 
     ];
   }
 
-  // `previous` is carried by the assessment and is deliberately not rendered — not even its
-  // `snapshotAt`. The verdict is a statement about the comparison partner, and how long ago that
-  // partner was taken is genuinely something a reader cannot see here: because `current()` is
-  // consumptive (see the contract), a `stable` from a human's query covers however long it has been
-  // since whoever asked last, which may be 300ms or the loop's whole cadence.
+  // The comparison partner is named, because a verdict that does not name it is not readable.
   //
-  // Rendering the timestamp would make that window visible and would still not make it correct, and it
-  // would do it by putting a second point in time on a surface whose mandate is the present one. It is
-  // a real gap and it is left open on purpose, to be closed where it actually lives — in who advances
-  // the baseline — rather than papered over here.
+  // `stable` is a statement about a pair of snapshots. The header line above gives the second of the
+  // two — this assessment is about the snapshot taken at that time — and without the first, a reader
+  // has a judgement and no window: `stable` over the last 300ms and `stable` over the last four
+  // minutes are the same six characters, and only one of them is worth believing.
+  //
+  // This is transcription, not an addition. `previous` is carried by the assessment and always has
+  // been; `snapshotAt` is a field of the snapshot it carries; nothing here computes, formats or
+  // infers anything.
+  //
+  // It was deliberately withheld once, and the reason it was withheld is the reason it can be shown
+  // now. Under a consuming read the partner was an artifact of the reader's own last question — a
+  // `stable` from a human's query covered however long it had been since whoever asked last, so the
+  // timestamp would have made a wrong window legible without making it right. The surface now reads
+  // `peek()`, which does not advance the baseline, so the partner is the one the judgement timeline
+  // is standing on and the window is the timeline's own.
   return [
     `判词：${assessment.change}`,
+    `  上一次快照：${assessment.previous.snapshotAt}`,
     `  前台相比上一次快照：${assessment.foreground}`,
     `  输入活动相比上一次快照：${assessment.inputActivity}`,
   ];

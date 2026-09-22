@@ -189,9 +189,11 @@ export function productionComposition(options: ResidentOptions): Composition {
     //
     // It sits here rather than after `work-focus` so that the order in this list is the order the
     // data moves: perceive, compose, compare, and then be readable. It requires the Awareness
-    // contract and nothing else — in particular not a World or a source, because the assessment it
-    // reads already carries the whole snapshot, and a second acquisition of the same instant would
-    // let its facts and its verdict describe two different moments.
+    // read-without-consuming contract and nothing else — in particular not a World or a source,
+    // because the assessment it reads already carries the whole snapshot, and a second acquisition
+    // of the same instant would let its facts and its verdict describe two different moments. Not
+    // `...current` either, and that half is what keeps a person's question from becoming the loop's
+    // next comparison partner: a human looking must not move the timeline they are looking at.
     {
       id: desktopSessionObservePlugin.id,
       load: (runtime) => runtime.loadPlugin(desktopSessionObservePlugin, { rootDir: options.dataDir }),

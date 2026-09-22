@@ -1,7 +1,10 @@
 import type { PluginDefinition } from '../runtime/plugin.js';
 import { desktopSessionWorldService } from '../desktop-session-world/index.js';
 import type { DesktopSessionWorldSnapshot } from '../desktop-session-world/index.js';
-import { desktopSessionAwarenessService } from './contracts.js';
+import {
+  desktopSessionAwarenessService,
+  desktopSessionAwarenessPeekService,
+} from './contracts.js';
 import type {
   DesktopSessionAwarenessAssessment,
   DesktopSessionFacetChange,
@@ -62,38 +65,65 @@ export const desktopSessionAwarenessPlugin: PluginDefinition<undefined> = {
   id: 'desktop-session-awareness',
   version: '1.0.0',
   requires: [desktopSessionWorldService],
-  provides: [desktopSessionAwarenessService],
+  provides: [desktopSessionAwarenessService, desktopSessionAwarenessPeekService],
   setup(context) {
     const world = context.services.get(desktopSessionWorldService);
 
     // Activation-local by construction: `setup` runs once per activation, so a deactivation and a
     // later reactivation get a fresh binding and their first assessment is a baseline again.
+    //
+    // Both contracts below read this one binding, and that is what makes them two questions about one
+    // timeline rather than two timelines. A peek compares against whatever the driver last consumed,
+    // which is why the answer a reader gets is the answer the driver's next cycle would arrive at.
     let previous: DesktopSessionWorldSnapshot | undefined;
+
+    // The assessment, from whatever baseline the caller's policy supplies. Pure by design: it takes
+    // the two snapshots and returns the verdict, so the one thing that tells the two contracts apart
+    // is deliberately nowhere near this function.
+    function assess(
+      baseline: DesktopSessionWorldSnapshot | undefined,
+      current: DesktopSessionWorldSnapshot,
+    ): DesktopSessionAwarenessAssessment {
+      if (baseline === undefined) return Object.freeze({ kind: 'baseline', current });
+
+      const foreground = compareForeground(baseline.foreground, current.foreground);
+      const inputActivity = compareInputActivity(baseline.inputActivity, current.inputActivity);
+
+      return Object.freeze({
+        kind: 'comparison',
+        previous: baseline,
+        current,
+        foreground,
+        inputActivity,
+        change: overallChange(foreground, inputActivity),
+      });
+    }
 
     context.services.provide(
       desktopSessionAwarenessService,
       Object.freeze({
-        current: async (): Promise<DesktopSessionAwarenessAssessment> => {
+        async current(): Promise<DesktopSessionAwarenessAssessment> {
           // No try/catch: a world that could not be observed is not this layer's to reinterpret.
           // The assignment below is unreachable when this rejects, so a failed acquisition leaves
           // the baseline where it was and the next assessment still compares against it.
           const current = await world.current();
           const baseline = previous;
           previous = current;
+          return assess(baseline, current);
+        },
+      }),
+    );
 
-          if (baseline === undefined) return Object.freeze({ kind: 'baseline', current });
-
-          const foreground = compareForeground(baseline.foreground, current.foreground);
-          const inputActivity = compareInputActivity(baseline.inputActivity, current.inputActivity);
-
-          return Object.freeze({
-            kind: 'comparison',
-            previous: baseline,
-            current,
-            foreground,
-            inputActivity,
-            change: overallChange(foreground, inputActivity),
-          });
+    context.services.provide(
+      desktopSessionAwarenessPeekService,
+      Object.freeze({
+        async peek(): Promise<DesktopSessionAwarenessAssessment> {
+          // The same world read and the same comparison as `current()`, and deliberately not the same
+          // assignment. That this method cannot advance the baseline is a property of the code rather
+          // than a promise about the caller: the write appears exactly once in this file, above, and
+          // it is not here.
+          const current = await world.current();
+          return assess(previous, current);
         },
       }),
     );

@@ -8,7 +8,7 @@ import test from 'node:test';
 
 import { requestControl } from '../dist/cli/control.js';
 import { observeFailureLines, requestDesktopSessionObserve } from '../dist/cli/observe.js';
-import { desktopSessionAwarenessService } from '../dist/desktop-session-awareness/index.js';
+import { desktopSessionAwarenessPeekService } from '../dist/desktop-session-awareness/index.js';
 import {
   decodeObserveReply,
   decodeObserveRequest,
@@ -39,6 +39,10 @@ const SRC = join(import.meta.dirname, '..', 'src');
 
 const OBSERVED_AT = '2026-02-01T08:30:00.000Z';
 const SNAPSHOT_AT = '2026-02-01T08:30:01.000Z';
+// A different time from SNAPSHOT_AT on purpose. Every comparison fixture therefore has two distinct
+// timestamps in it, so a renderer that printed `current.snapshotAt` where the baseline belongs would
+// pass no test in this file rather than passing all of them.
+const PREVIOUS_AT = '2026-02-01T08:29:59.000Z';
 
 function createRoot(t) {
   const root = mkdtempSync(join(tmpdir(), 'hikari-observe-'));
@@ -91,7 +95,7 @@ function baseline(current = snapshot()) {
 }
 
 function comparison({
-  previous = snapshot(),
+  previous = { ...snapshot(), snapshotAt: PREVIOUS_AT },
   current = snapshot(),
   foreground = 'changed',
   inputActivity = 'changed',
@@ -162,8 +166,13 @@ const inputUnavailable = [
 
 const HEADER_LINE = `桌面会话观察：${SNAPSHOT_AT}`;
 
-const verdict = (change, foreground, inputActivity) => [
+// The baseline line is part of every comparison block, and it is written with the fixture's own
+// PREVIOUS_AT rather than with the header's SNAPSHOT_AT — the two are different strings here, so the
+// pair of them together is what says the renderer named the comparison partner rather than repeating
+// the moment the assessment is about.
+const verdict = (change, foreground, inputActivity, previousAt = PREVIOUS_AT) => [
   `判词：${change}`,
+  `  上一次快照：${previousAt}`,
   `  前台相比上一次快照：${foreground}`,
   `  输入活动相比上一次快照：${inputActivity}`,
 ];
@@ -248,7 +257,7 @@ test('输入活动不可用时，与前台用同一句说明，不各自发明�
 });
 
 test('changed / stable / indeterminate 三个判词都逐字出现，不被翻译或改写', () => {
-  const tail = (assessment) => renderAssessment(assessment).slice(-3);
+  const tail = (assessment) => renderAssessment(assessment).slice(-4);
 
   assert.deepEqual(
     tail(comparison({ foreground: 'changed', inputActivity: 'unchanged' })),
@@ -415,9 +424,37 @@ test('渲染只读取 assessment.current，两种形态都渲染完整的当前�
   const asComparison = renderAssessment(comparison({ current }));
 
   // The same snapshot produces the same fact lines in both shapes; only the verdict section differs.
-  const facts = (lines) => lines.filter((line) => !line.startsWith('判词：') && !line.startsWith('  前台相比') && !line.startsWith('  输入活动相比') && !line.startsWith('  这是该感知链实例'));
+  const facts = (lines) => lines.filter((line) => !line.startsWith('判词：') && !line.startsWith('  上一次快照：') && !line.startsWith('  前台相比') && !line.startsWith('  输入活动相比') && !line.startsWith('  这是该感知链实例'));
   assert.deepEqual(facts(asBaseline), facts(asComparison));
   assert.ok(facts(asBaseline).includes('  最后输入 tick：4242'));
+});
+
+test('判词写出它比较的是哪一次快照，而不是只给一个 stable', () => {
+  // The friction this line exists for, stated as a test: `stable` on its own names no window. The
+  // two times below are the fixture's two different snapshots, and the pair of lines is what makes
+  // the verdict readable — one says when the assessment was taken, the other says what it was
+  // measured against.
+  const lines = renderAssessment(comparison({ foreground: 'unchanged', inputActivity: 'unchanged' }));
+
+  assert.deepEqual(lines, [
+    HEADER_LINE,
+    ...foregroundPresent('hikari-new — 记事本', 'notepad'),
+    ...inputAvailable(12345),
+    ...verdict('stable', 'unchanged', 'unchanged'),
+  ]);
+  assert.ok(lines.includes(`  上一次快照：${PREVIOUS_AT}`));
+  assert.ok(lines.includes(HEADER_LINE));
+  assert.notEqual(PREVIOUS_AT, SNAPSHOT_AT);
+});
+
+test('baseline 没有比较对象，因此不写「上一次快照」这一行', () => {
+  // A baseline is the absence of a comparison. A line naming its partner would have to invent one,
+  // and the block below is what stops that from creeping in as a blank or a placeholder.
+  const lines = renderAssessment(baseline());
+  assert.equal(
+    lines.filter((line) => line.startsWith('  上一次快照：')).length,
+    0,
+  );
 });
 
 test('渲染不修改交给它的 assessment', () => {
@@ -561,7 +598,11 @@ async function compose(t, assessment) {
   const states = [];
   states.push(
     await runtime.loadPlugin(
-      provider('test.awareness-provider', desktopSessionAwarenessService, Object.freeze({ current: assessment })),
+      provider(
+        'test.awareness-provider',
+        desktopSessionAwarenessPeekService,
+        Object.freeze({ peek: assessment }),
+      ),
     ),
   );
   states.push(await runtime.loadPlugin(desktopSessionObservePlugin, { rootDir: root }));
@@ -573,7 +614,11 @@ async function compose(t, assessment) {
 test('插件发布声明就是它的全部输入面', () => {
   assert.equal(desktopSessionObservePlugin.id, 'desktop-session-observe');
   assert.equal(desktopSessionObservePlugin.version, '1.0.0');
-  assert.deepEqual(desktopSessionObservePlugin.requires, [desktopSessionAwarenessService]);
+  // The peek contract specifically. This single assertion is what makes "inspection does not
+  // participate in the judgement timeline" a structural fact rather than a reviewed one: the plugin
+  // is never handed the capability that could advance the baseline, so there is nothing here to
+  // test the absence of.
+  assert.deepEqual(desktopSessionObservePlugin.requires, [desktopSessionAwarenessPeekService]);
   // No Service, because nothing in the composition asks this plugin for anything.
   assert.deepEqual(desktopSessionObservePlugin.provides, []);
 });
@@ -997,5 +1042,15 @@ test('客户端不触达常驻控制通道，也不从它借一个结论', () =>
     const source = readFileSync(join(SRC, 'cli', client), 'utf8');
     assert.doesNotMatch(source, /from '[^']*\/control\.js'/, `${client} 不应 import 控制通道`);
     assert.doesNotMatch(source, /\brequestControl\b/, `${client} 不应调用 requestControl`);
+
+    // Nor does it know the judgement timeline exists. A client that could reach an assessment could
+    // compare two of them, and a comparison made on the client is a judgement the client made — the
+    // one thing this surface exists not to be. It sends a word and prints lines; the lines it prints
+    // are the ones the plugin handed it.
+    assert.doesNotMatch(
+      source,
+      /\bdesktopSessionAwareness\w*Service\b/,
+      `${client} 不应知道 Awareness 契约，比较不在客户端发生`,
+    );
   }
 });
