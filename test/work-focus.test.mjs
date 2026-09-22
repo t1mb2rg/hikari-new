@@ -21,6 +21,7 @@ import {
   workFocusCurrentService,
   workFocusEndpointPath,
   workFocusPlugin,
+  workFocusReadExposure,
 } from '../dist/work-focus/index.js';
 
 const CLI = join(import.meta.dirname, '..', 'dist', 'cli', 'main.js');
@@ -611,6 +612,45 @@ test('写这条事实不碰任何持久化介质，包括 Chronicle 的', { skip
   // A focus that reached a durable fact history would show up here as a new file, a longer file, or
   // a changed one. None of the three happens.
   assert.deepEqual(snapshot(root), before);
+});
+
+// ---------------------------------------------------------------------------------------------
+// The agent-facing exposure: a view of the contract above, and not a second one.
+//
+// No pipe and no skip gate, because there is nothing here to reach over one — the exposure is three
+// values and a reference, and the claims about it are claims about those.
+// ---------------------------------------------------------------------------------------------
+
+test('工作焦点的 exposure 由本插件导出，指向的仍是 work-focus.current@1', () => {
+  // The name is the vocabulary of the layer that will offer it, so it is deliberately not the contract
+  // id: `work-focus.current` names the Service, `work_focus.read` names the offer. What ties them
+  // together is the field below rather than a convention, which is why it is asserted by identity.
+  assert.equal(workFocusReadExposure.name, 'work_focus.read');
+  assert.equal(workFocusReadExposure.service, workFocusCurrentService);
+  assert.equal(workFocusReadExposure.service.id, 'work-focus.current');
+  assert.equal(workFocusReadExposure.service.version, 1);
+
+  // A capability is a view of a public Service (`core-architecture-v0.md` §5.3), so there is nothing
+  // else to point at: a second contract carrying the same designations would be the duplicate truth
+  // source that section refuses. The work focus provides exactly one Service, and this is it.
+  assert.deepEqual(workFocusPlugin.provides, [workFocusCurrentService]);
+  assert.ok(Object.isFrozen(workFocusReadExposure), 'exposure 应当是冻结的');
+});
+
+test('exposure 的描述既说能做什么，也说不做什么', () => {
+  // Both halves are load-bearing and only one of them erodes. The offer half restates itself — a
+  // capability that forgot what it was for is obvious — while the limit half is the part a later
+  // reader is tempted to drop as a caveat, and dropping it is what turns "what the human declared"
+  // back into "what the human is doing".
+  assert.ok(workFocusReadExposure.description.length > 0);
+  assert.ok(
+    workFocusReadExposure.description.includes('不解释'),
+    '描述必须写明不解释 designation 的含义',
+  );
+  assert.ok(
+    workFocusReadExposure.description.includes('不推断'),
+    '描述必须写明不推断优先级、重要性或用户正在做什么',
+  );
 });
 
 // ---------------------------------------------------------------------------------------------

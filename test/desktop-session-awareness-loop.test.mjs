@@ -532,7 +532,13 @@ test('the loop added no file to any module it depends on', () => {
       ['acquisition.ts', 'contracts.ts', 'errors.ts', 'index.ts', 'plugin.ts', 'types.ts', 'windows.ts'],
     ],
     ['desktop-session-world', ['contracts.ts', 'index.ts', 'plugin.ts', 'types.ts']],
-    ['desktop-session-awareness', ['contracts.ts', 'index.ts', 'plugin.ts', 'types.ts']],
+    // `exposure.ts` arrived with the agent-facing exposure slice, not with the loop: the roster is
+    // exact so that any file appearing in a module the loop depends on has to be looked at, and this
+    // one was — it is data, it is the module's own, and it added nothing to the loop's dependency.
+    [
+      'desktop-session-awareness',
+      ['contracts.ts', 'exposure.ts', 'index.ts', 'plugin.ts', 'types.ts'],
+    ],
   ]);
 
   for (const [module, files] of expected) {

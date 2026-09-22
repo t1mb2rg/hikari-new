@@ -1,8 +1,10 @@
 // The public entry point of the work focus plugin.
 //
-// Two audiences, and nothing for a third. The composition imports the plugin and its config type; a
+// Three audiences, and nothing for a fourth. The composition imports the plugin and its config type; a
 // client imports the endpoint derivation and the wire vocabulary, so that both ends of the pipe are
-// the owner's own statement of what the pipe means rather than two copies of it.
+// the owner's own statement of what the pipe means rather than two copies of it; and a layer that talks
+// to a model imports the agent-facing exposure, for the same reason and against the same failure — the
+// words that describe this domain's capability are this domain's to write.
 //
 // What is *not* exported is as deliberate as what is. The state transitions, the endpoint listener
 // and the renderer stay inside: a consumer that could import `applyWorkFocusRequest` would be a
@@ -12,6 +14,8 @@
 
 export { workFocusCurrentService } from './contracts.js';
 export type { WorkFocusCurrentService } from './contracts.js';
+export { workFocusReadExposure } from './exposure.js';
+export type { WorkFocusReadExposure } from './exposure.js';
 export { workFocusPlugin } from './plugin.js';
 export type { WorkFocusPluginConfig } from './plugin.js';
 export { workFocusEndpointPath } from './endpoint-path.js';

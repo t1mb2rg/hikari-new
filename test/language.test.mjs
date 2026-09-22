@@ -6,7 +6,11 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import { askFailureLines, requestLanguageAsk } from '../dist/cli/ask.js';
-import { desktopSessionAwarenessPeekService } from '../dist/desktop-session-awareness/index.js';
+import {
+  desktopContextReadExposure,
+  desktopSessionAwarenessPeekService,
+  desktopSessionAwarenessService,
+} from '../dist/desktop-session-awareness/index.js';
 import { renderAssessment } from '../dist/desktop-session-observe/index.js';
 import { Runtime } from '../dist/index.js';
 import {
@@ -21,7 +25,12 @@ import {
   MAX_LANGUAGE_TEXT_LENGTH,
   TOPIC_GLOSS,
 } from '../dist/language/index.js';
-import { workFocusCurrentService } from '../dist/work-focus/index.js';
+// Imported by path rather than through the barrel, and that is the honest shape of it: this list has no
+// cross-module reader today, so exporting it would be a public symbol justified by "a test needs it" —
+// the one reason `plugin-design-spec.md` §7 names as insufficient. The barrel can export it the day a
+// module other than this one reads it.
+import { LANGUAGE_EXPOSURES } from '../dist/language/exposure.js';
+import { workFocusCurrentService, workFocusReadExposure } from '../dist/work-focus/index.js';
 
 // Two halves in one file, and the split between them is the point of the whole design.
 //
@@ -517,6 +526,61 @@ test('Language 不依赖 Repository CI，因此 CI 缺席时它不会失败', ()
   // either. This single assertion is what makes "asking does not participate in judgement" a property
   // of what the plugin was given rather than a rule it follows.
   assert.ok(!keys.includes('desktop-session-awareness.current@1'));
+});
+
+// ---------------------------------------------------------------------------------------------
+// What this plugin is willing to offer, and why the list is short and written down.
+//
+// Nothing below reaches a model in this slice. The list is built so the slice that brings the
+// selection loop has something to select from, and it is checked here because every claim it makes is
+// a claim about the owners' objects and about `requires` — neither of which needs a pipe.
+// ---------------------------------------------------------------------------------------------
+
+test('Language 允许的 exposure 就是两个 owner 自己的导出，不是复制来的字符串', () => {
+  // Identity rather than equality, and the difference is the whole test. A copy that matches today
+  // matches by coincidence tomorrow; the claim is that these words have exactly one author, and the
+  // only way to check that is against the author's own object.
+  assert.equal(LANGUAGE_EXPOSURES.length, 2);
+  assert.equal(LANGUAGE_EXPOSURES[0], workFocusReadExposure);
+  assert.equal(LANGUAGE_EXPOSURES[1], desktopContextReadExposure);
+  assert.deepEqual(
+    LANGUAGE_EXPOSURES.map((exposure) => exposure.name),
+    ['work_focus.read', 'desktop_context.read'],
+  );
+});
+
+test('每个 exposure 都指向 Language 已经持有契约的既有 Service', () => {
+  // The mapping between an offer and the thing that would execute it, and the whole of it: an exposure
+  // names a contract, and that contract has to be in this plugin's `requires`, which is the only list
+  // that decides what the Runtime will hand it. There is no second table and no lookup by name, so the
+  // two cannot drift — the exposure carries the contract object itself rather than its id.
+  const required = languagePlugin.requires ?? [];
+  for (const exposure of LANGUAGE_EXPOSURES) {
+    assert.ok(
+      required.includes(exposure.service),
+      `${exposure.name} 指向的 ${exposure.service.id} 必须在 Language 的 requires 里`,
+    );
+  }
+
+  assert.equal(LANGUAGE_EXPOSURES[0].service, workFocusCurrentService);
+  assert.equal(LANGUAGE_EXPOSURES[1].service, desktopSessionAwarenessPeekService);
+
+  // The discriminating half. Language provides and requires the *peek* contract, so an offer pointing
+  // at `current()` would be the one bug this whole shape is arranged to make impossible: a model whose
+  // question moved the judgement timeline it was asking about. This slice added no dependency either —
+  // the `requires` test above pins the list exactly, and both entries here were already on it.
+  assert.ok(!required.includes(desktopSessionAwarenessService));
+  assert.notEqual(LANGUAGE_EXPOSURES[1].service, desktopSessionAwarenessService);
+});
+
+test('current-context 仍然留在 v1 的主题闭集里，没有被搬进 capability 词汇', () => {
+  // The ruling this pins: "what were we just talking about" is Language's own dialogue concern and not
+  // an external capability. It reads no provider's facts — it reads the turn this plugin kept — so
+  // there is no owner who could write a description of it, and asking a model to call a tool to
+  // remember its own last question would be the vocabulary being made tidy at the expense of the only
+  // thing it was describing. `LANGUAGE_TOPICS` is untouched by this slice and stays where it is.
+  assert.ok(LANGUAGE_TOPICS.includes('current-context'));
+  assert.ok(!LANGUAGE_EXPOSURES.some((exposure) => exposure.name === 'current-context'));
 });
 
 // ---------------------------------------------------------------------------------------------

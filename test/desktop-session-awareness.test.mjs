@@ -10,6 +10,7 @@ import {
   desktopSessionWorldService,
 } from '../dist/desktop-session-world/index.js';
 import {
+  desktopContextReadExposure,
   desktopSessionAwarenessPlugin,
   desktopSessionAwarenessService,
   desktopSessionAwarenessPeekService,
@@ -557,7 +558,10 @@ test('the awareness module depends only on the public world contract', () => {
   const files = readdirSync(dir)
     .filter((name) => name.endsWith('.ts'))
     .sort();
-  assert.deepEqual(files, ['contracts.ts', 'index.ts', 'plugin.ts', 'types.ts']);
+  // `exposure.ts` is the agent-facing offer rather than a third contract: it adds no file to the
+  // Runtime and holds no state, and the import allowlist below still applies to it — it reaches
+  // `runtime/contracts.js` for the type of the contract it points at, and nothing else.
+  assert.deepEqual(files, ['contracts.ts', 'exposure.ts', 'index.ts', 'plugin.ts', 'types.ts']);
 
   // The two perception entry points are deliberately absent: this layer composes the World snapshot
   // and must not reach past it into the sources the World already composed.
@@ -851,4 +855,119 @@ test('持有 current 的插件只有一个，推进时间线的能力因此是�
     .sort();
 
   assert.deepEqual(holders, ['desktop-session-awareness-loop/plugin.ts']);
+});
+
+// ---------------------------------------------------------------------------------------------
+// The agent-facing exposure: the peek contract under a name a model can be offered.
+//
+// The claim is not that a second capability exists — it does not. It is that the offer points at the
+// contract above, that the pointer is the owner's, and that the non-consumption survives being reached
+// through the offer rather than through the constant.
+// ---------------------------------------------------------------------------------------------
+
+test('桌面的 exposure 由本插件导出，且指向 peek 而不是 current', () => {
+  // `work-focus.current` names the Service and `desktop_context.read` names the offer, so the two are
+  // tied by the field below and not by a naming convention — which is why it is asserted by identity
+  // rather than by comparing ids that would match again if both were renamed together.
+  assert.equal(desktopContextReadExposure.name, 'desktop_context.read');
+  assert.equal(desktopContextReadExposure.service, desktopSessionAwarenessPeekService);
+  assert.equal(desktopContextReadExposure.service.id, 'desktop-session-awareness.peek');
+  assert.equal(desktopContextReadExposure.service.version, 1);
+
+  // The discriminating assertion. This plugin provides both contracts, so "points at one of ours"
+  // would be satisfied by either; what has to hold is that the offer is the *reader's* question. An
+  // exposure holding `current()` would be handing a model the ability to move the timeline it is
+  // asking about, which is the whole reason the two contracts are two.
+  assert.notEqual(desktopContextReadExposure.service, desktopSessionAwarenessService);
+  assert.ok(Object.isFrozen(desktopContextReadExposure), 'exposure 应当是冻结的');
+});
+
+test('exposure 的描述写明它不推进时间线，也写明它不含哪些引申', () => {
+  // The second half is the one that erodes. "Reads the desktop assessment" survives any rewrite
+  // because it is the reason the field exists; the sentence that refuses the four inferences —
+  // foreground is not activity, stable is not silence, changed is not importance, input is not
+  // attention — reads like a caveat, and a caveat is the first thing a later editor deletes.
+  assert.ok(
+    desktopContextReadExposure.description.includes('不会推进'),
+    '描述必须写明这次读取不推进 desktop awareness 的时间线',
+  );
+  // All four inferences, each with its own assertion. One assertion covering "the caveat is present"
+  // would let any three of them be deleted while the test still passed, and the fourth is not implied
+  // by the other three — they are four separate things the domain refuses to conclude.
+  assert.ok(
+    desktopContextReadExposure.description.includes('不等于用户正在做与之相关的事'),
+    '描述必须写明前台是某个应用不等于用户正在做与之相关的事',
+  );
+  assert.ok(
+    desktopContextReadExposure.description.includes('stable 不等于'),
+    '描述必须写明 stable 不等于什么都没发生',
+  );
+  assert.ok(
+    desktopContextReadExposure.description.includes('changed 不等于'),
+    '描述必须写明 changed 不等于重要',
+  );
+  assert.ok(
+    desktopContextReadExposure.description.includes('输入活动不等于'),
+    '描述必须写明输入活动不等于专注程度',
+  );
+});
+
+// Reads through whatever contract the exposure names, resolved by the Runtime rather than by the test
+// being handed the peek service. That is the claim: an exposure is usable in a `requires` as the
+// contract itself, so it is a pointer at the existing Service rather than a parallel description of
+// one that happens to look the same.
+function exposureReaderDefinition(observed) {
+  return {
+    id: 'test.desktop-exposure-reader',
+    version: '1.0.0',
+    requires: [desktopSessionAwarenessService, desktopContextReadExposure.service],
+    setup(context) {
+      observed.exposed = context.services.get(desktopContextReadExposure.service);
+      observed.advance = () => context.services.get(desktopSessionAwarenessService).current();
+    },
+  };
+}
+
+test('通过 exposure 指向的契约读桌面，读到的变化仍然留给时间线', async (t) => {
+  // The same notepad -> firefox -> firefox sequence the peek tests use, for the same reason: the change
+  // happens once, a reader looks, and the desktop then does nothing. Under a consuming read the look
+  // takes the change with it and the timeline's next judgement reports `stable` about a window it never
+  // saw the start of. Read through the exposure, the timeline still gets the change it is owed.
+  const notepad = worldSnapshot({
+    foreground: available(foregroundObservation(presentTarget({ title: 'Untitled - Notepad' }))),
+    inputActivity: available(inputActivityObservation(5000)),
+  });
+  const firefox = worldSnapshot({
+    foreground: available(
+      foregroundObservation(presentTarget({ title: 'Mozilla Firefox', processName: 'firefox' })),
+    ),
+    inputActivity: available(inputActivityObservation(5000)),
+  });
+
+  const runtime = new Runtime();
+  t.after(() => runtime.shutdown());
+  const observed = {};
+  await runtime.loadPlugin(sequenceWorld([notepad, firefox, firefox]).definition);
+  await runtime.loadPlugin(desktopSessionAwarenessPlugin);
+  assert.equal(
+    await runtime.loadPlugin(exposureReaderDefinition(observed)),
+    'active',
+    'exposure 指的契约应当可被 requires 并且真的解析得到',
+  );
+
+  assert.equal((await observed.advance()).kind, 'baseline');
+
+  // What stops this test from passing on a mis-pointed exposure is above, not here: had the exposure
+  // named `current`, `requires` would read `[current, current]`, and the Runtime rejects a duplicate
+  // requires contract while validating the definition — so `loadPlugin` would have thrown on the line
+  // that asserts `'active'`, before any of these reads. The reads below then pin what the offer is
+  // *for*: a `peek` that really is non-consuming leaves the timeline the change it is owed.
+  const looked = await observed.exposed.peek();
+  assert.equal(looked.kind, 'comparison');
+  assert.equal(looked.foreground, 'changed');
+
+  const nextCycle = await observed.advance();
+  assert.equal(nextCycle.kind, 'comparison');
+  assert.equal(nextCycle.foreground, 'changed');
+  assert.equal(nextCycle.change, 'changed');
 });
