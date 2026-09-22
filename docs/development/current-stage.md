@@ -22,9 +22,19 @@
 >
 > **它是 Hikari 第一个用户可读的桌面感知出口**：`hikari observe desktop-session status` 在终端里逐字转述 `desktop-session-awareness.current@1` 交回来的 assessment。**它是出口，不是新认知层**——感知链（foreground / input-activity / World / Awareness / Loop）在本 slice 之前就已经存在并且一直在运行，此前只是**没有任何东西能把它读出来**。可观察性不是本 slice 新增的能力，**可读性**才是。
 >
-> **它没有新增任何判词**：`available` / `unavailable`、`present` / `absent`、`changed` / `unchanged` / `indeterminate`、`stable` / `baseline` 全部是既有 contract 的词汇，逐字转述，不翻译、不概括、不解释。它 `requires` 只有 Awareness 契约、`provides` 为空（reader 是 CLI），**不**读取 World、**不**直接读取任何来源、**不**持久化、**不**写 Chronicle、**没有** history、**没有**查询 DSL、**没有**通用 Observation / Query abstraction、**没有** Resident router。默认组合因此由八个成员变为**九个**，显式组合变为**十四个**。
+> **它没有新增任何判词**：`available` / `unavailable`、`present` / `absent`、`changed` / `unchanged` / `indeterminate`、`stable` / `baseline` 全部是既有 contract 的词汇，逐字转述，不翻译、不概括、不解释。它 `requires` 只有 Awareness 契约（收口当时是 `desktop-session-awareness.current@1`，见下条）、`provides` 为空（reader 是 CLI），**不**读取 World、**不**直接读取任何来源、**不**持久化、**不**写 Chronicle、**没有** history、**没有**查询 DSL、**没有**通用 Observation / Query abstraction、**没有** Resident router。默认组合因此由八个成员变为**九个**，显式组合变为**十四个**。
 >
-> **一处必须与「出口」这个说法一起读的代价**：`desktop-session-awareness.current@1` 是**消耗性读取**，它会推进自己用来比对的 baseline。人工查询因此与 Awareness Loop 的周期在同一字段上交错——loop 的下一次判词覆盖的是更短的窗口。该性质记在 `src/desktop-session-awareness/contracts.ts` 的契约注释里（它是该 provider 自己的性质），交错、未送达查询仍推进 baseline、并发查询无上限这三条后果记在 `src/desktop-session-observe/plugin.ts`。**三者都是记录而非修复**，因为治法属于 Awareness 的 baseline 归属，在本 slice 内发明一个会变成「出口层去改动它本来只被要求转述的判词」。
+> **一处必须与「出口」这个说法一起读的代价（该轮记录，现已修复，见下条）**：`desktop-session-awareness.current@1` 是**消耗性读取**，它会推进自己用来比对的 baseline。人工查询因此与 Awareness Loop 的周期在同一字段上交错——loop 的下一次判词覆盖的是更短的窗口。该性质记在 `src/desktop-session-awareness/contracts.ts` 的契约注释里（它是该 provider 自己的性质），交错、未送达查询仍推进 baseline、并发查询无上限这三条后果记在 `src/desktop-session-observe/plugin.ts`。**该轮三者都是记录而非修复**，因为治法属于 Awareness 的 baseline 归属，在那一个 slice 内发明一个会变成「出口层去改动它本来只被要求转述的判词」。
+>
+> **Desktop Inspection Semantics v1 已实现、已通过 Functional / Architecture Review、已提交**（commit `ee73e17`）。它是**工作标签，不占用任何阶段编号**——**不是** P4-04，**不是** P4-03 的一部分，也**不是**一个新的 capability；它**没有**独立阶段文档（沿用上一条的最小必要文档取舍），事实由本状态行与源码记录。它修的是上一条记录下来的那条真实摩擦，**并且只修这一条**。
+>
+> **它交付的是一处语义修复，不是新能力**：`desktop-session-awareness` 现在**提供两个契约**，同一个 owner、同一份 baseline、同一个比较，差别只有一行赋值——`current()` 读出快照**并把它作为下一次比较的 baseline**（不变，逐字未改），`peek()` 用同一份 baseline 算出**同样**的 assessment，**不推进它**。`desktop-session-observe` 的 `requires` 因此从 `...current@1` 改为 `...peek@1`。**「inspection 不参与 judgement timeline」因此是它持有的能力的性质，而不是它遵守的一条规则**——它拿不到推进 baseline 的能力，所以不需要有测试去证明它不去推进，未来的改动也不可能在这里开始。组合里**只有** `desktop-session-awareness-loop` 持有 `current()`，并有一条遍历 `src/` 的测试钉住「持有者可数」。
+>
+> **这正是上一条说「那一个 slice 内不做」的那个决定**：baseline 仍然属于**产生 assessment 的 domain owner**（`desktop-session-awareness` 插件实例自己的 activation-local 闭包），**没有**新增 Service、**没有** Resident 缓存、**没有** Global Observation Store、**没有** latest-state store、**没有** history、**没有** Event、**没有** 新增 subscriber，**没有** 让 CLI 或出口层重新实现比较。新增的 `peek@1` 是**已存在的 owner 的第二个既有操作的显式化**，不是新 owner。
+>
+> **一处用户可见的后果**：判词现在写出它比较的是哪一次快照（`  上一次快照：<snapshotAt>`）。这是**转述**——`previous` 与 `snapshotAt` 一直是 assessment 的既有字段，本轮**没有**新增任何字段。它在收口当时被**刻意扣下**，因为消耗性读取下这个比较对象是「上一个人上一次提问」的产物，写出时间戳只会让一个错的窗口变得可读、不会让它变对；换成 `peek` 之后比较对象是 judgement timeline 自己站着的那一个，窗口才是 timeline 自己的窗口。
+>
+> **本机实测（真实常驻、真实命名管道，`--desktop-awareness-delay-ms 20000`）**：连续三次 `hikari observe desktop-session status` 的 acquisition 时刻各不相同（`02:36:04.206` / `02:36:04.792` / `02:36:05.477`），而三次写出的 `上一次快照` **完全相同**（`2026-09-22T02:35:55.115Z`）；loop 周期走过之后，两次连续查询又同时落到**新的**同一个 `2026-09-22T02:36:36.169Z`（该轮还恰好读到一条真实 `changed`）。**重复 inspection 不移动 baseline，timeline 自己会移动它。**
 >
 > **边界说明（口径更新，Repository CI Relevance v1 收口后）：`repository-ci-awareness.current@1` 在默认组合中没有 production consumer，但在显式启用 Repository CI 的组合中【有】。** 该组合下 `repository-ci-relevance` 就是它的 production consumer：`src/repository-ci-relevance/plugin.ts` 的 `requires` 逐字包含 `repositoryCiAwarenessService`。**两种组合必须分开读**——默认组合（九个成员）里确实没有任何 module 读它，显式组合（十四个成员）里有。此前本节笼统写作「当前没有 production consumer」，在第二个组合下已不成立，故更正。
 >
@@ -666,7 +676,7 @@ hikari resident  生产常驻组合
 
 `work-focus` 是 P4-03 Explicit Work Focus Local Ingress v1 加入的成员，也是唯一一个**供人写入、而不是供人读出**的 Plugin。**它现在提供 `work-focus.current@1`**（不变的是：不发 Event、不写 Chronicle、无持久化、公开面仍然只有它自己的本地端点）。这条 contract 的成立依据是 Repository CI Relevance v1 带来的真实 consumer，见文首 Contract Gate 重新裁决一段。放在最后是有意的而非追加的，理由见 `src/cli/resident.ts` 的 `productionComposition`。
 
-`desktop-session-observe` 是 Desktop Observation Surface v1 加入的第八个成员，也是**第一个供人读出**的感知出口：它把 `desktop-session-awareness.current@1` 交回来的 assessment **原样转述**成人可读的行。它 `requires` 只有 Awareness 契约、`provides` 为空（reader 是 CLI），**不**读取 World、**不**直接读取任何来源、**不**新增任何判词、**不**持久化。它被排在 Awareness Loop 之后，是因为它读的是那条环链的产物。
+`desktop-session-observe` 是 Desktop Observation Surface v1 加入的第八个成员，也是**第一个供人读出**的感知出口：它把 Awareness 交回来的 assessment **原样转述**成人可读的行。它 `requires` 只有 Awareness 契约——Desktop Inspection Semantics v1 之后是 `desktop-session-awareness.peek@1`，**不是** `...current@1`，而这个区别就是它与 judgement timeline 的全部关系（见文首该条）——、`provides` 为空（reader 是 CLI），**不**读取 World、**不**直接读取任何来源、**不**新增任何判词、**不**持久化。它被排在 Awareness Loop 之后，是因为它读的是那条环链的产物。
 
 Repository CI 那一链**只有当配置存在时才被组合**，且 Resident 对此**只**知道一件事：那两个配置值有没有一起给。它不知道 repository 是什么、CI 是什么、两个 commit 串是否相等、relevance 是什么意思——这些全部由各成员自己的 `requires` / `provides` 与 Runtime lifecycle 决定。
 
@@ -1189,6 +1199,8 @@ P3-04 Functional Review：**PASS**。P3-04 Architecture Review：**PASS**。
 **判定代数是刻意不对称的**：`changed` 优先于 `indeterminate`，`stable` 仅在两个 facet 都 `unchanged` 时成立。理由是 `changed` 是**存在性**断言（「至少有一处不同」），可以由局部证据支撑；`stable` 是**全称**断言（「没有任何一处不同」），必须覆盖所有可比项。
 
 **baseline 的 reset 是派生性质，不是新增机制**：`previous` 声明在 `setup` 作用域内，于是 World 消失 → `#deactivateTree` → 再激活时 `setup` 重跑 → 第一次 `current()` 自然回到 `baseline`。**本阶段为此没有写一行代码**。
+
+**最小事实补记（Desktop Inspection Semantics v1 收口后）**：本模块此后**多提供**一个契约 `desktop-session-awareness.peek@1`，与 `current@1` 同一个 owner、同一份 `previous` baseline、同一个 `compare`，差别只有一处赋值——`current()` 读完之后写回 `previous`，`peek()` 不写。`current()` 本身**逐字未改**，上面这条 reset 性质对两者同样成立（`peek` 的第一次调用同样是 `baseline`，有测试钉住）。本模块**没有**因此多出任何 state、持久化、Event 或 Service。
 
 **`title` 的三态保持是刻意的**：`exactOptionalPropertyTypes: true` 下 `title?: string | null` 在生产环境有三个可观察状态（omitted / `undefined`、`null`、`string`），三者都真的会发生，比较用 `===` 使它们两两可分。折叠（`?? null`）会把「读不到标题」与「读到了，是空标题」这两种不同事实判为 `unchanged`。
 

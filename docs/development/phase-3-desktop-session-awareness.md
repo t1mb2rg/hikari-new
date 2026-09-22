@@ -314,6 +314,8 @@ v1 不保证 concurrent current() 的 invocation-order baseline。
 
 三个比较函数**不在其中**。`src/index.ts` 只导出 Runtime 核心，不因本阶段改变。
 
+**补记（Desktop Inspection Semantics v1 收口后，最小事实修正）：** 上面这张表是 P3-04 收口时的事实，现已**多两个符号**——`desktopSessionAwarenessPeekService` 与 `DesktopSessionAwarenessPeekService`，即 §14 之外的第二个契约 `desktop-session-awareness.peek@1`。**「比较逻辑不在公开面」这条判断不变**：`peek()` 复用同一个模块私有比较，未新增第三个比较函数，也未新增任何类型。
+
 ## 15. 当前测试
 
 | 文件 | 内容 | 结果 |

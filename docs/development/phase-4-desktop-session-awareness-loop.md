@@ -264,6 +264,13 @@ let previous: DesktopSessionWorldSnapshot | undefined;   // desktop-session-awar
 
 **本轮不修改 Awareness**，不加 mutex、不加 caller lock、不加 lease、不加 ownership enforcement。只记录前提。把假设写下来，与把它变成运行时强制，是两件事：后者会在没有任何真实第二个调用方之前，先给唯一合法的调用方套上成本。
 
+**补记（Desktop Inspection Semantics v1 收口后，最小事实修正）：** 上面第 3 条所说的「第二个调用方」随后**真的出现了**，而且**不是**周期性的——`desktop-session-observe`（Desktop Observation Surface v1）在**人问的时候**直接调用。那次跨轮复审的结论写在本节假设的关键词上：
+
+- 污染是**实测**出来的，不是推理出来的。组合真实 awareness 与真实 loop、World 走 `notepad -> firefox -> firefox`：loop 第一轮 `baseline`、人工查询 `changed`、loop 第二轮 `stable`——那次变化**真实发生过、人看到了、timeline 从未看到**，而 loop 的 `stable` 覆盖的是一个「从人敲下命令那一刻开始」的窗口。
+- 治法**没有**给 `current()` 加 mutex / lock / lease / ownership enforcement（本节上一段为此给出的理由没有被推翻），**也**没有把 baseline 搬到别处。它把「不推进 baseline 的读取」显式化成一个**同 owner 的第二个契约** `desktop-session-awareness.peek@1`：同一份 `previous`、同一个比较，只少一处赋值。`current()` 逐字未改。
+- 因此第 4 条预言的「baseline 归属需要在那一轮重新设计」**没有兑现**，而这是好事：归属问题被绕开而不是被重开——baseline 仍然只属于产生 assessment 的那个 domain owner，只是现在有一个**拿不到写权限**的读者。
+- 本节的单驱动者假设**仍然成立且仍然只被记录**：`current()` 依旧可以被两个并发调用方互相污染，本轮**没有**为此新增任何强制。真正被结构性排掉的只有「出口层成为第二个 writer」这一种。
+
 ---
 
 ## 12. 公开面
