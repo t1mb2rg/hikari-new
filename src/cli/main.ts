@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { NotInitializedError } from '../continuity/index.js';
+import { askCommand } from './ask-command.js';
 import { chronicleInitCommand } from './chronicle-init.js';
 import { statusCommand, stopCommand } from './control-command.js';
 import { focusCommand } from './focus-command.js';
@@ -45,6 +46,7 @@ function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOut
   if (parsed.command === 'focus') return focusCommand(parsed.options);
   if (parsed.command === 'relevance') return relevanceCommand(parsed.options);
   if (parsed.command === 'observe') return observeCommand(parsed.options);
+  if (parsed.command === 'ask') return askCommand(parsed.options);
   return startCommand(parsed.options);
 }
 

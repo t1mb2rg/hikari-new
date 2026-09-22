@@ -18,6 +18,35 @@ export interface ResidentOptions extends CliOptions {
    * mean, so half of this is refused rather than completed by a guess.
    */
   readonly repositoryCi?: RepositoryCiOptions;
+  /**
+   * The language plugin's model, or absent because none was configured.
+   *
+   * Absent is the default resident, and it is a complete answer: a Hikari that was not told which model
+   * to ask does not ask one, and does not fall back to a public endpoint or to a credential found in the
+   * environment. That is the whole of the reason this is optional rather than required — a default model
+   * would be this file choosing to send a human's words somewhere nobody named.
+   */
+  readonly model?: ModelOptions;
+}
+
+/**
+ * One explicit model, as an endpoint and a name.
+ *
+ * A pair, refused in halves, for the reason the Repository CI pair is: each value alone names something
+ * the other one is needed to reach, and every way of completing the pair here would be a guess — an
+ * endpoint inferred from a model name, a model inferred from an endpoint. Endpoint and model are the
+ * two halves of one act of configuration, so they are one type rather than two optional fields.
+ *
+ * `credentialEnv` is a variable *name*, never a value. That is deliberate and it is the whole reason
+ * this shape can be printed, logged or shown in a status line: the secret stays in the environment
+ * where the operator put it, and the only thing that travels is the name of where to look. Which
+ * variable holds a credential is the operator's decision; whether that variable exists at all is
+ * checked at activation, by the plugin that needs it.
+ */
+export interface ModelOptions {
+  readonly endpoint: string;
+  readonly model: string;
+  readonly credentialEnv: string | undefined;
 }
 
 /**
@@ -41,6 +70,15 @@ export interface FocusOptions extends CliOptions {
   readonly designations: readonly string[];
 }
 
+// The one operand is the human's sentence, carried exactly as they typed it. Nothing here trims it,
+// folds it, lowercases it or inspects it for intent: what a sentence means is the language plugin's
+// question, asked with a model, and a CLI that formed its own idea of what was being asked would be
+// answering a different question than the one the plugin was given. The only thing this file decides
+// about it is how many operands there may be, which is grammar.
+export interface AskOptions extends CliOptions {
+  readonly text: string;
+}
+
 export interface CommandOutcome {
   readonly exitCode: number;
   readonly stdout: string;
@@ -56,7 +94,8 @@ export type CliCommand =
   | 'stop'
   | 'focus'
   | 'relevance'
-  | 'observe';
+  | 'observe'
+  | 'ask';
 
 // Only `resident` carries a parsed configuration, and the union is what keeps that obligation in the
 // type rather than in a comment: the other commands cannot be handed a cadence or a repository scope
@@ -74,13 +113,21 @@ export type CliCommand =
 // `observe` is in this arm for the same reason and with one fewer way to be wrong: it asks about a
 // capability that is always present in a running resident, so there is not even a half-configured
 // state for it to name.
+//
+// `ask` has an arm of its own because it has an operand, and the operand is why it must: a sentence is
+// not an option, so the first arm — whose whole obligation is a data directory — could not carry one
+// without becoming an argument surface for text. What it does *not* carry is any model configuration.
+// The model is the resident's, decided when the resident started; a client that could name an endpoint
+// would be a second way to send a human's words somewhere, and the configuration belongs to the thing
+// that holds the connection.
 export type ParsedCommandLine =
   | {
       readonly command: 'init' | 'chronicle-init' | 'start' | 'status' | 'stop' | 'relevance' | 'observe';
       readonly options: CliOptions;
     }
   | { readonly command: 'resident'; readonly options: ResidentOptions }
-  | { readonly command: 'focus'; readonly options: FocusOptions };
+  | { readonly command: 'focus'; readonly options: FocusOptions }
+  | { readonly command: 'ask'; readonly options: AskOptions };
 
 export class UsageError extends Error {}
 
@@ -96,6 +143,8 @@ export const USAGE = [
   '  hikari start --data-dir <path>',
   '  hikari resident --data-dir <path> --desktop-awareness-delay-ms <integer>',
   '                  [--repository-root <path> --repository <owner/name>]',
+  '                  [--model-endpoint <url> --model <name>',
+  '                   [--model-credential-env <ENV_NAME>]]',
   '  hikari status --data-dir <path>',
   '  hikari stop --data-dir <path>',
   '  hikari focus declare --data-dir <path> <designation>',
@@ -104,12 +153,23 @@ export const USAGE = [
   '  hikari focus status --data-dir <path>',
   '  hikari relevance repository-ci status --data-dir <path>',
   '  hikari observe desktop-session status --data-dir <path>',
+  '  hikari ask --data-dir <path> "<text>"',
   '',
   '选项：',
   '  --data-dir <path>                        数据根目录，必填，没有默认值',
   '  --desktop-awareness-delay-ms <integer>   resident 的采集节奏，必填，没有默认值',
   '  --repository-root <path>                 Repository CI 的仓库根目录，与 --repository 成对出现',
   '  --repository <owner/name>                Repository CI 的 GitHub 仓库，与 --repository-root 成对出现',
+  '  --model-endpoint <url>                   语言插件的模型端点，与 --model 成对出现，没有默认值',
+  '  --model <name>                           语言插件请求的模型名，与 --model-endpoint 成对出现，没有默认值',
+  '  --model-credential-env <ENV_NAME>        从该环境变量读取模型凭据；省略表示不带凭据',
+  '',
+  '说明：',
+  '  hikari resident 同时给出 --model-endpoint 与 --model 时才会加载语言插件；',
+  '  没有给出时语言插件不加载，hikari ask 会说明没有语言入口。',
+  '  hikari ask 会把你说的话原文发送到 --model-endpoint 指定的模型端点，用于理解你在问什么；',
+  '  模型只负责把问题归类到内部主题，答案由 Hikari 根据自己已有的事实生成。',
+  '  --model-credential-env 给的是环境变量的名字，不是凭据本身。',
   '',
 ].join('\n');
 
@@ -145,6 +205,11 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   // operands, and an operand is not an option.
   if (head === 'observe') return readObserveCommand(rest);
 
+  // `ask` resolves here for the same reason, and its operand is the one this CLI carries on a human's
+  // behalf rather than choosing between a closed set. That is exactly why the resolution cannot wait
+  // for `readCommand`: a sentence is not a token any table can enumerate.
+  if (head === 'ask') return readAskCommand(rest);
+
   const { command, tokens } = readCommand(head, rest);
   if (command === 'resident') return { command, options: readResidentOptions(tokens) };
   return { command, options: readOptions(tokens) };
@@ -155,7 +220,7 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
 // before this reader is reached. Saying so in the type is what keeps the token list below from being
 // handed a command that has no token list to give.
 interface CommandTokens {
-  readonly command: Exclude<CliCommand, 'focus' | 'relevance' | 'observe'>;
+  readonly command: Exclude<CliCommand, 'focus' | 'relevance' | 'observe' | 'ask'>;
   readonly tokens: readonly string[];
 }
 
@@ -263,6 +328,33 @@ function readObserveCommand(rest: readonly string[]): ParsedCommandLine {
   return { command: 'observe', options: { dataDir } };
 }
 
+// One operand, and the arity is the whole of what this reader decides.
+//
+// It is not a third copy of `readRelevanceCommand`/`readObserveCommand`: those two address a question
+// from a closed vocabulary and their readers know the words because the words are the address. There is
+// no vocabulary here — a human's sentence is exactly the thing this CLI is not allowed to have an
+// opinion about — so the reader has nothing to compare against and only one rule to state, which is how
+// many sentences may be given at once.
+//
+// The message for too many operands tells the human what to do about it rather than just what went
+// wrong, because the mistake is nearly always the same one: an unquoted sentence arrives as a dozen
+// tokens, and the human who typed it knows exactly what they meant. Nothing is reassembled from those
+// tokens. Joining them back together would be this file guessing where the sentence boundaries were,
+// and a guess that silently repairs the argument list is worse than a refusal that names the fix.
+function readAskCommand(rest: readonly string[]): ParsedCommandLine {
+  const { dataDir, operands } = readOperandTokens(rest);
+  const [text, ...extra] = operands;
+
+  if (text === undefined) {
+    throw new UsageError('ask 需要一个问题；请把整句话用引号括起来。');
+  }
+  if (extra.length > 0) {
+    throw new UsageError(`ask 只接受一个问题，收到 ${operands.length} 个；请把整句话用引号括起来。`);
+  }
+
+  return { command: 'ask', options: { dataDir, text } };
+}
+
 // Close to `readOptionTokens` and deliberately not folded into it. That reader's contract is that
 // every token is either a known option or an error, which is exactly right for commands that take no
 // operands and exactly wrong here — a designation, a domain and a question are all tokens nobody can
@@ -341,14 +433,59 @@ function readOptions(tokens: readonly string[]): CliOptions {
 }
 
 function readResidentOptions(tokens: readonly string[]): ResidentOptions {
-  const { dataDir, delayToken, repositoryRoot, repository } = readOptionTokens(tokens, 'resident');
+  const { dataDir, delayToken, repositoryRoot, repository, modelEndpoint, model, modelCredentialEnv } =
+    readOptionTokens(tokens, 'resident');
   if (delayToken === undefined) {
     throw new UsageError('缺少必填参数：--desktop-awareness-delay-ms');
   }
 
   const delay = { dataDir, desktopAwarenessDelayMs: Number(delayToken) };
   const repositoryCi = readRepositoryCiPairing(repositoryRoot, repository);
-  return repositoryCi === undefined ? delay : { ...delay, repositoryCi };
+  const withRepository = repositoryCi === undefined ? delay : { ...delay, repositoryCi };
+
+  const language = readModelPairing(modelEndpoint, model, modelCredentialEnv);
+  return language === undefined ? withRepository : { ...withRepository, model: language };
+}
+
+// The endpoint and the model are one configuration or neither, decided here rather than by the plugin
+// that consumes them, for the reason the Repository CI pair is decided here: a resident started with
+// only half of it would have to supply the other half, and every way of doing that is a way this design
+// has already refused. An endpoint with no model name means picking a model on the operator's behalf,
+// and a model name with no endpoint means picking an endpoint — which, for a language model, is
+// choosing whose servers a human's words are sent to. Neither is a default this file may invent.
+//
+// The credential is the one member of the set that may be absent, and the difference is real rather
+// than a convenience: a model served on this machine needs no credential, so requiring one would make
+// the local case impossible to configure. What is *not* allowed is a credential for a model that was
+// never configured — that names a variable nothing will read, and an operator who typed it believes
+// something is being authenticated that is not.
+//
+// No value is checked beyond being non-empty. Whether an endpoint is reachable, whether the name is a
+// model the endpoint serves, and whether the named variable holds anything are the plugin's own
+// questions, asked at activation where the answers can be acted on. A second copy of any of them here
+// would be a second answer to a question that already has one, and the two would eventually disagree.
+function readModelPairing(
+  endpoint: string | undefined,
+  model: string | undefined,
+  credentialEnv: string | undefined,
+): ModelOptions | undefined {
+  if (endpoint === undefined && model === undefined) {
+    if (credentialEnv !== undefined) {
+      throw new UsageError(
+        '--model-credential-env 需要与 --model-endpoint 和 --model 一起出现；缺少：--model-endpoint、--model',
+      );
+    }
+    return undefined;
+  }
+
+  if (endpoint === undefined) {
+    throw new UsageError('--model 需要与 --model-endpoint 成对出现；缺少：--model-endpoint');
+  }
+  if (model === undefined) {
+    throw new UsageError('--model-endpoint 需要与 --model 成对出现；缺少：--model');
+  }
+
+  return Object.freeze({ endpoint, model, credentialEnv });
 }
 
 // The two flags are one configuration or neither, and that is decided here rather than by the
@@ -383,6 +520,9 @@ interface OptionTokens {
   readonly delayToken: string | undefined;
   readonly repositoryRoot: string | undefined;
   readonly repository: string | undefined;
+  readonly modelEndpoint: string | undefined;
+  readonly model: string | undefined;
+  readonly modelCredentialEnv: string | undefined;
 }
 
 function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): OptionTokens {
@@ -390,6 +530,9 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
   let delayToken: string | undefined;
   let repositoryRoot: string | undefined;
   let repository: string | undefined;
+  let modelEndpoint: string | undefined;
+  let model: string | undefined;
+  let modelCredentialEnv: string | undefined;
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
@@ -451,9 +594,50 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
       continue;
     }
 
+    if (token === '--model-endpoint' && grammar === 'resident') {
+      if (modelEndpoint !== undefined) throw new UsageError('--model-endpoint 只能指定一次。');
+
+      const value = tokens[index + 1];
+      if (value === undefined) throw new UsageError('--model-endpoint 需要一个 URL。');
+      if (!value.trim()) throw new UsageError('--model-endpoint 不能是空值。');
+
+      modelEndpoint = value;
+      index += 1;
+      continue;
+    }
+
+    if (token === '--model' && grammar === 'resident') {
+      if (model !== undefined) throw new UsageError('--model 只能指定一次。');
+
+      const value = tokens[index + 1];
+      if (value === undefined) throw new UsageError('--model 需要一个模型名。');
+      if (!value.trim()) throw new UsageError('--model 不能是空值。');
+
+      model = value;
+      index += 1;
+      continue;
+    }
+
+    // The value here is the *name* of an environment variable, and that is the whole reason it is safe
+    // for it to be an argument at all. The credential itself is never a token: an argument list is
+    // visible to every process on the machine and is kept in shell history, so a secret passed here
+    // would be disclosed by the act of configuring it. This CLI has no flag that accepts a credential
+    // value, and that absence is deliberate rather than unimplemented.
+    if (token === '--model-credential-env' && grammar === 'resident') {
+      if (modelCredentialEnv !== undefined) throw new UsageError('--model-credential-env 只能指定一次。');
+
+      const value = tokens[index + 1];
+      if (value === undefined) throw new UsageError('--model-credential-env 需要一个环境变量名。');
+      if (!value.trim()) throw new UsageError('--model-credential-env 不能是空值。');
+
+      modelCredentialEnv = value;
+      index += 1;
+      continue;
+    }
+
     throw new UsageError(`未知参数：${String(token)}`);
   }
 
   if (dataDir === undefined) throw new UsageError('缺少必填参数：--data-dir');
-  return { dataDir, delayToken, repositoryRoot, repository };
+  return { dataDir, delayToken, repositoryRoot, repository, modelEndpoint, model, modelCredentialEnv };
 }

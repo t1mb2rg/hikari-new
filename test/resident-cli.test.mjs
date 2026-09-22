@@ -132,6 +132,66 @@ test('显式配置 Repository CI 后，生产组合是这九个加上那五个',
   );
 });
 
+// The language member, and the one composition decision this slice made that a reader could get wrong
+// without any test going red: *where* in the list it goes. It is appended directly after the base and
+// before the Repository CI chain, which is what keeps "the default composition plus a capability" true
+// of both optional capabilities at once — `base`, `base + language`, `base + repositoryCi` and
+// `base + language + repositoryCi` are four rosters, and the first is a prefix of the second which is a
+// prefix of the last.
+test('给了模型端点与模型之后，生产组合是这九个加上 language', () => {
+  const composition = productionComposition({
+    dataDir: ROSTER_DATA_DIR,
+    desktopAwarenessDelayMs: 1000,
+    model: {
+      endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
+      model: 'local-model',
+      credentialEnv: undefined,
+    },
+  });
+
+  // Given as a literal rather than as `[...BASE_MEMBER_IDS, 'language']`, for the reason the two tests
+  // above are: an expectation assembled from the same constants the production code assembles would
+  // agree with it about a member that had been dropped from both.
+  assert.deepEqual(
+    composition.map((member) => member.id),
+    [
+      'continuity',
+      'chronicle',
+      'foreground.windows',
+      'input-activity.windows',
+      'desktop-session-world',
+      'desktop-session-awareness',
+      'desktop-session-awareness-loop',
+      'desktop-session-observe',
+      'work-focus',
+      'language',
+    ],
+  );
+});
+
+test('Repository CI 与语言入口可以同时在场，且语言在前', () => {
+  const composition = productionComposition({
+    dataDir: ROSTER_DATA_DIR,
+    desktopAwarenessDelayMs: 1000,
+    repositoryCi: { rootDir: 'C:\\work\\hikari-new', repository: 't1mb2rg/hikari-new' },
+    model: {
+      endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
+      model: 'local-model',
+      credentialEnv: 'HIKARI_TEST_MODEL_CREDENTIAL',
+    },
+  });
+
+  const ids = composition.map((member) => member.id);
+  assert.deepEqual(ids, [...BASE_MEMBER_IDS, 'language', ...REPOSITORY_CI_MEMBER_IDS]);
+
+  // Neither capability gates the other, and the shape that would hide a mistake is the opposite one:
+  // the language member placed after the CI chain would make `base + language` no longer a prefix of
+  // this roster, so the default composition would stop being describable as "the base plus what was
+  // configured".
+  assert.deepEqual(ids.slice(0, BASE_MEMBER_IDS.length), BASE_MEMBER_IDS);
+  assert.equal(ids[BASE_MEMBER_IDS.length], 'language');
+});
+
 function fakeRuntime({ errors = {}, shutdown } = {}) {
   const calls = { shutdown: 0 };
   return {
@@ -815,6 +875,69 @@ test('Repository CI 的两个参数只给一个是用法错误，并指出缺的
   // design has already ruled out — the working directory as a repository root, a git remote as a
   // GitHub repository — so there is no default to fall back to and nothing was created to try.
   assert.deepEqual(readdirSync(root), []);
+});
+
+// The model pair is the same rule as the Repository CI pair above, and it is tested for the same
+// reason: without this, nothing went red if the pairing check was deleted, because the only surface
+// that shows it is a resident that refuses to start — and the resident is where CI cannot look.
+//
+// A half-configured model is refused rather than completed, and there is no default it could be
+// completed with: an endpoint this file invented would send a human's words to a host they did not
+// choose, and a model name it invented would be a guess about what that host serves.
+test('模型端点与模型只给一个是用法错误，并指出缺的是哪一个', (t) => {
+  const root = createRoot(t);
+
+  const onlyEndpoint = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--model-endpoint',
+    'http://127.0.0.1:11434/v1/chat/completions',
+  );
+  assert.equal(onlyEndpoint.code, 2);
+  assert.match(onlyEndpoint.stderr, /缺少：--model$/m);
+  assert.match(onlyEndpoint.stderr, /用法：/);
+
+  const onlyModel = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--model',
+    'local-model',
+  );
+  assert.equal(onlyModel.code, 2);
+  assert.match(onlyModel.stderr, /缺少：--model-endpoint/);
+
+  // The credential is the one member of the set that may be absent, and the one combination that is
+  // therefore not a half-configuration: a credential names a variable for a model that was never
+  // configured, which authenticates nothing and is refused rather than ignored.
+  const onlyCredential = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--model-credential-env',
+    'HIKARI_TEST_MODEL_CREDENTIAL',
+  );
+  assert.equal(onlyCredential.code, 2);
+  assert.match(onlyCredential.stderr, /缺少：--model-endpoint、--model/);
+
+  assert.deepEqual(readdirSync(root), []);
+});
+
+test('模型参数只属于 resident，没有拓宽别的命令', (t) => {
+  const root = createRoot(t);
+
+  for (const argv of [['ask', '--data-dir', root, '--model', 'local-model', '你好']]) {
+    const result = runCli(...argv);
+    assert.equal(result.code, 2, `${argv[0]} 不应接受模型配置`);
+    assert.match(result.stderr, /未知参数/);
+  }
 });
 
 test('Repository CI 的两个参数只属于 resident，没有拓宽别的命令', (t) => {

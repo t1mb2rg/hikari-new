@@ -34,11 +34,13 @@ import { foregroundPlugin } from '../foreground/index.js';
 import { gitHubCiPlugin } from '../github-ci/index.js';
 import { gitRepositoryPlugin } from '../git-repository/index.js';
 import { inputActivityPlugin } from '../input-activity/index.js';
+import { languagePlugin } from '../language/index.js';
 import { Runtime } from '../index.js';
 import type { PluginState } from '../index.js';
 import { repositoryCiAwarenessPlugin } from '../repository-ci-awareness/index.js';
 import { repositoryCiRelevancePlugin } from '../repository-ci-relevance/index.js';
 import { repositoryCiWorldPlugin } from '../repository-ci-world/index.js';
+import { oneLine } from '../terminal-text/index.js';
 import { workFocusPlugin } from '../work-focus/index.js';
 import { controlEndpointPath } from './control.js';
 import { listenControlEndpoint, type ControlEndpoint, type ControlHost } from './control-endpoint.js';
@@ -46,6 +48,7 @@ import {
   CHRONICLE_INIT_HINT,
   INIT_HINT,
   type CommandOutcome,
+  type ModelOptions,
   type ResidentOptions,
 } from './options.js';
 
@@ -110,16 +113,28 @@ interface LoadedMember {
 // are already satisfied by the time it is loaded, so what cannot run is left `waiting` rather than
 // shuffled around, and the states read back here are the states an operator is shown.
 //
-// There are two legal compositions, and the difference between them is the one branch at the bottom
-// of this function:
+// There are four legal compositions, and they are two independent branches:
 //
-//   default          — the nine members below, and nothing else
-//   Repository CI    — those same nine, plus the five-member Repository CI chain
+//   base                     the nine members below
+//   + language               when --model-endpoint and --model were both given
+//   + Repository CI chain    when --repository-root and --repository were both given
 //
-// The Repository CI chain is loaded if and only if `--repository-root` and `--repository` were both
-// given. Neither given is the ordinary case: that resident has no repository scope, needs no Git and
-// no GitHub, and starts normally. One given never reaches here at all, because `options.ts` refuses
-// it as a configuration error rather than letting this function guess the other half.
+// Each is loaded if and only if its own pair was given, and neither given is the ordinary case: a
+// resident with neither has no repository scope, needs no Git, no GitHub and no model, and starts
+// normally. A half-given pair never reaches here at all, because `options.ts` refuses it as a
+// configuration error rather than letting this function guess the other half.
+//
+// Language is added before the chain rather than after it, and the ordering is what keeps this file's
+// one structural claim intact: the default roster stays a prefix of every larger one, so a member that
+// is present in a bigger composition is present in the same position, and no member's arrival can
+// reorder another's. Nothing depends on that yet, which is exactly why it is worth keeping — the day
+// something does, nobody will have to work out which of the four orders was the real one.
+//
+// Crucially, language does not *replace* anything and does not gate anything: a resident with a model
+// and no repository scope answers questions about the work focus and the desktop, and a resident with a
+// repository scope and no model answers `relevance` and `observe` and refuses `ask` by saying there is
+// no language entry point. Neither capability is a condition of the other, and neither is a condition
+// of readiness for the rest.
 //
 // This is deliberately not a Profile system, a capability registry, an optional-plugin mechanism or
 // a conditional-composition framework, and it should not become one. It is the local implementation
@@ -212,10 +227,28 @@ export function productionComposition(options: ResidentOptions): Composition {
     },
   ];
 
-  const repositoryCi = options.repositoryCi;
-  if (repositoryCi === undefined) return base;
+  const model = options.model;
+  const withLanguage: Composition =
+    model === undefined
+      ? base
+      : [
+          ...base,
+          {
+            id: languagePlugin.id,
+            load: (runtime) =>
+              runtime.loadPlugin(languagePlugin, {
+                rootDir: options.dataDir,
+                endpoint: model.endpoint,
+                model: model.model,
+                credentialEnv: model.credentialEnv,
+              }),
+          },
+        ];
 
-  // The one branch. The two source plugins are configured with the two values that were given
+  const repositoryCi = options.repositoryCi;
+  if (repositoryCi === undefined) return withLanguage;
+
+  // The other branch. The two source plugins are configured with the two values that were given
   // together — a path and an `owner/name` — and nothing here checks that they describe the same
   // repository, because nothing here is entitled to: that correspondence is a judgement about two
   // sources, and the value that would establish it is a value no one has.
@@ -224,7 +257,7 @@ export function productionComposition(options: ResidentOptions): Composition {
   // because what it needs a path for is its own endpoint — which belongs to this resident, not to the
   // repository — and a client asking a question has the data directory and nothing else.
   return [
-    ...base,
+    ...withLanguage,
     {
       id: gitRepositoryPlugin.id,
       load: (runtime) =>
@@ -299,7 +332,7 @@ export async function residentCommand(
     if (controlPath !== undefined) {
       try {
         control = await (overrides.listenControl ?? listenControlEndpoint)(
-          residentControlHost(runtime, composition, signals),
+          residentControlHost(runtime, composition, signals, options.model),
           controlPath,
         );
       } catch (error) {
@@ -407,9 +440,10 @@ function residentControlHost(
   runtime: Runtime,
   composition: Composition,
   signals: TerminationSignals,
+  model: ModelOptions | undefined,
 ): ControlHost {
   return {
-    status: () => renderStatus(runtime, composition, signals.isRequested()),
+    status: () => renderStatus(runtime, composition, signals.isRequested(), model),
     stop: () => signals.request(),
   };
 }
@@ -426,8 +460,37 @@ function renderStatus(
   runtime: Runtime,
   composition: Composition,
   stopping: boolean,
+  model: ModelOptions | undefined,
 ): readonly string[] {
   const lines: string[] = ['Hikari 常驻状态：'];
+
+  // Why the language plugin is or is not in the roster, said in this resident's own configuration
+  // terms. Without this, "there is no `language` line below" is the only thing an operator sees, and
+  // the two very different reasons for it — the plugin was never configured, or it was configured and
+  // did not load — would read the same. The member line still says the second one when it happens;
+  // this says the first, which nothing else could.
+  //
+  // The credential is reported as a variable *name* and never as a value, and that is not a display
+  // choice: the secret is read by the plugin at activation and this file has never held it, so there
+  // is nothing here that could print it even by mistake. What is said is which variable the operator
+  // pointed at, which is what an operator checking their own configuration actually needs.
+  // These three lines are the only place in this file that prints a string the operator typed, and
+  // they are escaped for the reason every other user-visible line in this slice is: a value is one
+  // line, and a value carrying a line break or an escape sequence must not be able to add a line of
+  // its own to a report an operator reads to find out what their resident is doing. It is their own
+  // argument, so the cost of not escaping is theirs — but a status line that can be made to say
+  // something this resident did not say is the one thing a status line may not be.
+  if (model === undefined) {
+    lines.push('语言插件未加载：本常驻启动时没有同时给出 --model-endpoint 与 --model。');
+  } else {
+    lines.push(`语言插件模型端点：${oneLine(model.endpoint)}`);
+    lines.push(`语言插件模型：${oneLine(model.model)}`);
+    lines.push(
+      model.credentialEnv === undefined
+        ? '语言插件凭据：无（请求不带凭据）'
+        : `语言插件凭据：来自环境变量 ${oneLine(model.credentialEnv)}`,
+    );
+  }
 
   // Termination is a state a resident is really in, and one an operator most needs to see: during
   // shutdown this endpoint is still reachable by design and the plugins still read `active`, so
