@@ -26,7 +26,7 @@
 >
 > **一处必须与「出口」这个说法一起读的代价（该轮记录，现已修复，见下条）**：`desktop-session-awareness.current@1` 是**消耗性读取**，它会推进自己用来比对的 baseline。人工查询因此与 Awareness Loop 的周期在同一字段上交错——loop 的下一次判词覆盖的是更短的窗口。该性质记在 `src/desktop-session-awareness/contracts.ts` 的契约注释里（它是该 provider 自己的性质），交错、未送达查询仍推进 baseline、并发查询无上限这三条后果记在 `src/desktop-session-observe/plugin.ts`。**该轮三者都是记录而非修复**，因为治法属于 Awareness 的 baseline 归属，在那一个 slice 内发明一个会变成「出口层去改动它本来只被要求转述的判词」。
 >
-> **Desktop Inspection Semantics v1 已实现、已通过 Functional / Architecture Review、已提交**（commit `ee73e17`）。它是**工作标签，不占用任何阶段编号**——**不是** P4-04，**不是** P4-03 的一部分，也**不是**一个新的 capability；它**没有**独立阶段文档（沿用上一条的最小必要文档取舍），事实由本状态行与源码记录。它修的是上一条记录下来的那条真实摩擦，**并且只修这一条**。
+> **Desktop Inspection Semantics v1 已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `ee73e17` + 状态记录 `d6bf03f`，CI Runtime Tests #35680370115 **success**：451 tests / 384 pass / 67 skipped / 0 fail；本机 451 / 450 pass / 1 skipped / 0 fail——CI 上被跳过的全部是依赖命名管道的用例）。它是**工作标签，不占用任何阶段编号**——**不是** P4-04，**不是** P4-03 的一部分，也**不是**一个新的 capability；它**没有**独立阶段文档（沿用上一条的最小必要文档取舍），事实由本状态行与源码记录。它修的是上一条记录下来的那条真实摩擦，**并且只修这一条**。
 >
 > **它交付的是一处语义修复，不是新能力**：`desktop-session-awareness` 现在**提供两个契约**，同一个 owner、同一份 baseline、同一个比较，差别只有一行赋值——`current()` 读出快照**并把它作为下一次比较的 baseline**（不变，逐字未改），`peek()` 用同一份 baseline 算出**同样**的 assessment，**不推进它**。`desktop-session-observe` 的 `requires` 因此从 `...current@1` 改为 `...peek@1`。**「inspection 不参与 judgement timeline」因此是它持有的能力的性质，而不是它遵守的一条规则**——它拿不到推进 baseline 的能力，所以不需要有测试去证明它不去推进，未来的改动也不可能在这里开始。组合里**只有** `desktop-session-awareness-loop` 持有 `current()`，并有一条遍历 `src/` 的测试钉住「持有者可数」。
 >
