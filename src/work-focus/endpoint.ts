@@ -30,8 +30,16 @@ import { MAX_WORK_FOCUS_REQUEST_LINE, type WorkFocusReply, type WorkFocusRequest
 
 /** The one thing this endpoint lets its owner do: answer a request that framed and decoded. */
 export interface WorkFocusHost {
-  /** Answers one decoded request. Never throws — a refusal is an answer, not an exception. */
-  handle(request: WorkFocusRequest): WorkFocusReply;
+  /**
+   * Answers one decoded request.
+   *
+   * Never throws and never rejects. A refusal is an answer rather than an exception, and so is a
+   * degraded one — by the time this resolves the host has already decided what the human is told, and
+   * this endpoint has no vocabulary of its own to say it in. It is asynchronous because answering may
+   * now take as long as a durable write takes; that is the host's business, and this file carries the
+   * promise without knowing why.
+   */
+  handle(request: WorkFocusRequest): Promise<WorkFocusReply>;
 }
 
 export interface WorkFocusEndpoint {
@@ -43,6 +51,12 @@ export interface WorkFocusEndpoint {
 // A client that connects and then says nothing is not an error to report, it is a connection to end.
 // Without this, a single local process could hold a connection open for as long as it liked, and the
 // plugin's own unload would be the thing left waiting on it.
+//
+// It is also the outermost bound on an answer now that one can wait for a durable write. Nothing here
+// measures the write — the number is not derived from it and is not a budget anyone tuned — so the
+// honest statement is about what exceeding it costs: the connection goes and the human gets no
+// answer. It never costs a *wrong* answer, which is the property worth having, since the state change
+// has already happened by the time the write starts and nothing below can take it back.
 const IDLE_CONNECTION_MS = 5000;
 
 export async function listenWorkFocusEndpoint(
@@ -101,14 +115,34 @@ export async function listenWorkFocusEndpoint(
 
 function serve(host: WorkFocusHost, socket: Socket, line: string): void {
   const decoded = decodeWorkFocusRequest(line);
-  const reply: WorkFocusReply =
-    decoded.kind === 'refused'
-      ? { outcome: 'failed', lines: [decoded.reason] }
-      : host.handle(decoded.request);
+  if (decoded.kind === 'refused') {
+    respond(socket, { outcome: 'failed', lines: [decoded.reason] });
+    return;
+  }
 
-  // A write that dies mid-reply must not become an unhandled rejection. The human either gets the
-  // answer or gets nothing; what they must not get is a process that reports a socket problem it has
-  // already decided is not worth reporting.
+  // The frame is the last thing this socket handler does with the request. Answering is a promise
+  // now, and it is handed off rather than awaited here, because a rejection escaping into a `data`
+  // handler would be an unhandled rejection in the process that owns the plugin's state. `answer`
+  // cannot reject, so nothing here has to be guarded for one.
+  void answer(host, socket, decoded.request);
+}
+
+// The host promises it never rejects; this catch is for the day it does. A broken promise ends one
+// conversation instead of the process, and it does not become a reply — a reply would be this
+// endpoint inventing a failure in the host's voice, and this file owns framing, not meanings.
+async function answer(host: WorkFocusHost, socket: Socket, request: WorkFocusRequest): Promise<void> {
+  try {
+    respond(socket, await host.handle(request));
+  } catch {
+    socket.destroy();
+  }
+}
+
+// A reply is worth writing only to a socket that is still there. The idle timeout can take this
+// connection while the host is still working, and `end()` on a destroyed socket would report a socket
+// problem this endpoint has already decided is not worth reporting.
+function respond(socket: Socket, reply: WorkFocusReply): void {
+  if (socket.destroyed) return;
   socket.on('error', () => socket.destroy());
   socket.end(encodeWorkFocusReply(reply));
 }

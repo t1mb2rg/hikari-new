@@ -239,12 +239,12 @@ export function productionComposition(options: ResidentOptions): Composition {
     },
     // The last member of the base, and the one a person writes through rather than reads from: it is
     // where a person declares what they are working on, and the member above is where a person reads
-    // what Hikari sees. It requires nothing, so its position costs nothing — but it is placed
-    // deliberately rather than appended, because the day it grows a dependency the order will already
-    // be the right one, and because the Repository CI chain, when it is loaded at all, is loaded
-    // after it and requires exactly the contract it provides. Being in this composition is what gives
-    // it the lifetime its endpoint needs: activated by the Runtime, torn down by the Runtime, gone
-    // when the process is.
+    // what Hikari sees. It requires Chronicle — it admits a durable fact about its own concern when a
+    // declaration actually moves the set — and Chronicle is the second member of this list, so its
+    // position at the end still costs nothing. It is placed deliberately rather than appended, because
+    // the Repository CI chain, when it is loaded at all, is loaded after it and requires exactly the
+    // contract it provides. Being in this composition is what gives it the lifetime its endpoint
+    // needs: activated by the Runtime, torn down by the Runtime, gone when the process is.
     {
       id: workFocusPlugin.id,
       load: (runtime) => runtime.loadPlugin(workFocusPlugin, { rootDir: options.dataDir }),

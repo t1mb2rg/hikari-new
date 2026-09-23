@@ -11,6 +11,16 @@ import { Runtime, defineEvent, defineService } from '../dist/index.js';
 import { controlEndpointPath, requestControl } from '../dist/cli/control.js';
 import { focusFailureLines, requestWorkFocus } from '../dist/cli/focus.js';
 import {
+  ChroniclePersistenceError,
+  chroniclePlugin,
+  chronicleService,
+  initializeChronicle,
+  openChronicle,
+} from '../dist/chronicle/index.js';
+import { continuityPlugin, initializeHikari, restoreHikari } from '../dist/continuity/index.js';
+import { workFocusFactDraft } from '../dist/work-focus/facts.js';
+import { createWorkFocusSession } from '../dist/work-focus/session.js';
+import {
   MAX_WORK_FOCUS_REQUEST_LINE,
   WORK_FOCUS_PROTOCOL_VERSION,
   WorkFocusLineReader,
@@ -33,6 +43,12 @@ const NO_PIPES = process.platform === 'win32' ? false : '命名管道只在 Wind
 const HEADER = '当前工作焦点：';
 const NONE = '（当前没有任何工作焦点。）';
 
+// The whole of the visible difference between a change whose record is confirmed and one whose is
+// not, written out here for the same reason `HEADER` and `NONE` are: a test that took the wording
+// from the module would agree with whatever the module happened to say, including after somebody
+// reworded it into something a human would misread.
+const UNCONFIRMED = '（这次变化已生效，但没有取得 Chronicle 的可靠持久化确认，可能没有被记下来。）';
+
 // The contract this plugin is forbidden to publish, named here so its absence can be asserted. A
 // test that claimed "no Event was emitted" without naming the Event it means would be asserting
 // nothing at all.
@@ -49,11 +65,48 @@ function createRoot(t) {
   return root;
 }
 
-async function withPlugin(t, body) {
+// A data directory with both stores a Runtime that holds this plugin needs. These are the same two
+// functions `hikari init` and `hikari chronicle init` call, so a test that needs a root set up does
+// not pay for two child processes to get one — and the assertions about the *commands* stay where they
+// belong, in the end-to-end test at the bottom of this file.
+function initializedRoot(t) {
   const root = createRoot(t);
+  const identity = initializeHikari({ rootDir: root });
+  initializeChronicle({ rootDir: root, identity });
+  return root;
+}
+
+// The composition this plugin is in now that it writes its own durable facts: a Runtime that holds
+// work-focus holds the fact history it writes into, exactly as the resident's does.
+//
+// Every test here that used to load the plugin alone loads this instead, and not for tidiness. A
+// plugin whose `requires` is unsatisfied stays `waiting` — `setup` never runs, no endpoint is ever
+// bound — so a test that kept the old bare Runtime would see every request answered by nobody, and
+// would be measuring the absence of a composition rather than the behaviour it is named for.
+async function compose(root) {
   const runtime = new Runtime();
+  await runtime.loadPlugin(continuityPlugin, { rootDir: root });
+  await runtime.loadPlugin(chroniclePlugin, { rootDir: root });
   const state = await runtime.loadPlugin(workFocusPlugin, { rootDir: root });
   assert.equal(state, 'active', '工作焦点插件没有激活');
+  return runtime;
+}
+
+// What the history holds, read by a reader that is not the writer: a separate service opened on the
+// same directory, which parses the store out of the file on every call. Asking the Runtime's own
+// service would be asking the plugin to grade its own work, and would pass just as happily if nothing
+// had reached the disk.
+async function readFacts(root) {
+  return openChronicle({ rootDir: root, identity: restoreHikari({ rootDir: root }) }).read();
+}
+
+function factTypes(facts) {
+  return facts.map((fact) => fact.type);
+}
+
+async function withPlugin(t, body) {
+  const root = initializedRoot(t);
+  const runtime = await compose(root);
 
   try {
     await body({ root, runtime });
@@ -478,7 +531,12 @@ test('读者能接受的最大请求仍然拿得到应答', { skip: NO_PIPES }, 
 test('work-focus.current@1 被登记，因为它有了真实的消费者', { skip: NO_PIPES }, async (t) => {
   await withPlugin(t, async ({ runtime }) => {
     assert.deepEqual(workFocusPlugin.provides, [workFocusCurrentService]);
-    assert.deepEqual(workFocusPlugin.requires, []);
+    // This read `[]` until durable admission existed, and the freeze it enforced was re-adjudicated
+    // for this plugin rather than dropped: the two reasons it named — no real ingress occurrence, no
+    // admitted durable fact to write — are both false now. The whole list is pinned rather than only
+    // the member that arrived, so a second hard dependency cannot appear without a line here naming
+    // it; what the dependency *does* has its own test below.
+    assert.deepEqual(workFocusPlugin.requires, [chronicleService]);
 
     const probe = {
       id: 'test.work-focus-service-probe',
@@ -524,7 +582,7 @@ test('work-focus.current@1 只暴露集合，而且是此刻的集合', { skip: 
 });
 
 test('没有 Event 被发出：一个订阅了它的插件永远收不到', { skip: NO_PIPES }, async (t) => {
-  const root = createRoot(t);
+  const root = initializedRoot(t);
   const runtime = new Runtime();
   const seen = [];
   const probe = {
@@ -545,6 +603,8 @@ test('没有 Event 被发出：一个订阅了它的插件永远收不到', { sk
     // an "I have arrived" announcement — structurally invisible. The claim is that no occurrence
     // becomes an Event, not that none does while somebody happens to be listening.
     assert.equal(await runtime.loadPlugin(probe), 'active');
+    await runtime.loadPlugin(continuityPlugin, { rootDir: root });
+    await runtime.loadPlugin(chroniclePlugin, { rootDir: root });
     assert.equal(await runtime.loadPlugin(workFocusPlugin, { rootDir: root }), 'active');
 
     await declare(root, 'A');
@@ -553,30 +613,42 @@ test('没有 Event 被发出：一个订阅了它的插件永远收不到', { sk
 
     // An occurrence that only mirrors a module's own state should not become an Event no matter how
     // many subscribers it has, and this one does not even claim to be one.
+    //
+    // The arrival of a durable fact does not change the answer, and the two are worth keeping apart:
+    // Chronicle is not an Event bus with a longer memory. An Event announces something to whoever is
+    // listening now; a durable fact is a proposition the owner wrote down for a reader who may not
+    // exist yet. This plugin does the second and still does not do the first.
     assert.deepEqual(seen, []);
   } finally {
     await runtime.shutdown();
   }
 });
 
-test('零持久化：插件运行前后数据目录里一个文件都没有', { skip: NO_PIPES }, async (t) => {
-  const root = createRoot(t);
-  assert.deepEqual(readdirSync(root), []);
+// This test used to assert that the data directory held nothing at all, before and after, and that is
+// no longer a true statement about a composed Runtime: the focus it holds now writes durable facts,
+// and the store those go into is one of the two a Runtime needs to exist at all.
+//
+// What survives from it is the half that was actually about *this plugin*: it has no store of its own.
+// Nothing here persists the set — a restart re-reads none of this — so the claim being pinned is that
+// three writes produce three facts in the store that was already there and no third file anywhere.
+test('工作焦点没有自己的存储：写入之后数据目录里仍然只有那两个文件', { skip: NO_PIPES }, async (t) => {
+  const root = initializedRoot(t);
+  const before = readdirSync(root).sort();
+  assert.ok(before.length > 0, '这个测试需要一个真的存在持久化介质的数据目录');
 
-  const runtime = new Runtime();
+  const runtime = await compose(root);
   try {
-    assert.equal(await runtime.loadPlugin(workFocusPlugin, { rootDir: root }), 'active');
     await declare(root, 'A');
+    await replace(root, ['B']);
     await clear(root);
 
-    // Not "the file is empty" — there is no file. A focus that outlived its process would be a
-    // different capability, and this is the assertion that keeps it from arriving by accident.
-    assert.deepEqual(readdirSync(root), []);
+    // Checked first, so the file-set comparison below cannot pass by having observed a plugin that
+    // never ran.
+    assert.equal((await readFacts(root)).length, 3);
+    assert.deepEqual(readdirSync(root).sort(), before, '工作焦点写了一个自己的文件');
   } finally {
     await runtime.shutdown();
   }
-
-  assert.deepEqual(readdirSync(root), []);
 });
 
 // Every file under `dir`, as `relative/path:size`. Sizes rather than names alone because the claim
@@ -588,30 +660,272 @@ function snapshot(dir) {
     .sort();
 }
 
-test('写这条事实不碰任何持久化介质，包括 Chronicle 的', { skip: NO_PIPES }, async (t) => {
-  const root = createRoot(t);
-  assert.equal(runCli('init', '--data-dir', root).code, 0);
-  assert.equal(runCli('chronicle', 'init', '--data-dir', root).code, 0);
+/** The names in a `snapshot`, without their sizes. */
+function fileNames(entries) {
+  return entries.map((entry) => entry.slice(0, entry.lastIndexOf(':')));
+}
 
-  // A real, durable store now exists on the root this plugin is given — the same root the Chronicle
-  // plugin is given. The test is only worth its name if that is true, so it is asserted rather than
-  // assumed: an empty directory would make the comparison below pass for the wrong reason.
+// The guard this replaces said the opposite, and the inversion is the slice.
+//
+// It read: a `declare`, a `replace` and a `clear` move no byte under the data directory, "including
+// Chronicle's" — the focus was in-memory, and a focus that reached a durable fact history would show
+// up here as a new file, a longer file or a changed one. The freeze it enforced was written for a
+// reason that no longer holds: there was no ingress, so there was no occurrence anyone could point at
+// as having happened, and there was no admitted durable fact for a plugin to write. Both are now
+// false. The ingress exists, the work focus is unambiguously the semantic owner of what a designation
+// is, and Chronicle's contract already existed — so the human ruling that produced this code
+// re-adjudicated the freeze for this plugin and no other.
+//
+// What replaces the guard is not the absence of one. The file set is still pinned (no third store
+// appears, above), the state is still not restored from any of this (below), and the writes are pinned
+// fact for fact — one per semantic transition, in order, each carrying what that transition did rather
+// than a set read back afterwards.
+test('三次真实写入写进 Chronicle 的正好是三条事实，顺序与载荷都对得上', { skip: NO_PIPES }, async (t) => {
+  const root = initializedRoot(t);
   const before = snapshot(root);
-  assert.ok(before.length > 0, '这个测试需要数据目录里真的存在一个持久化介质');
 
-  const runtime = new Runtime();
+  const runtime = await compose(root);
   try {
-    assert.equal(await runtime.loadPlugin(workFocusPlugin, { rootDir: root }), 'active');
     await declare(root, 'A');
-    await replace(root, ['B']);
+    await replace(root, ['B', 'C']);
     await clear(root);
   } finally {
     await runtime.shutdown();
   }
 
-  // A focus that reached a durable fact history would show up here as a new file, a longer file, or
-  // a changed one. None of the three happens.
-  assert.deepEqual(snapshot(root), before);
+  const facts = await readFacts(root);
+  assert.deepEqual(factTypes(facts), [
+    'work-focus.declared',
+    'work-focus.replaced',
+    'work-focus.cleared',
+  ]);
+  assert.deepEqual(
+    facts.map((fact) => fact.payload),
+    [{ designation: 'A' }, { designations: ['B', 'C'] }, {}],
+  );
+
+  // And they are on the disk rather than in a service's memory: the same directory, listed again,
+  // differs from what it was before the three writes only by the store's own growth. A fourth file
+  // would be a second place a focus lives, and an unchanged listing would mean the facts above were
+  // read from something that never reached a file.
+  const after = snapshot(root);
+  assert.deepEqual(fileNames(after), fileNames(before), '除了写入的存储之外，数据目录里多出了文件');
+  assert.notDeepEqual(after, before, '三条事实写完了，存储却和写之前逐字节一样');
+});
+
+// ---------------------------------------------------------------------------------------------
+// The durable admission rule. No host, no pipe, no Windows — the part CI can see.
+//
+// This group exists because of where CI runs. Everything that reaches a real endpoint is skipped on
+// Linux, and the rule below is the whole of what this slice added; a version of it that only ran on
+// the one machine with a pipe namespace would be a rule that nothing checks on the machine that
+// merges it.
+//
+// It drives `createWorkFocusSession` directly, and that is the claim: the same function `plugin.ts`
+// calls, so the rule asserted here is the rule a request over the pipe reaches — not a second
+// implementation of it, which would be a test that agrees with itself.
+//
+// What it is not is the instance the plugin built. This one the test constructs; the plugin's own is
+// reachable only through a bound pipe, and its wiring (`services.get(chronicleService)` above all) is
+// therefore proven by the pipe-gated tests and not here. Stated rather than glossed, because "the CI
+// segment covers the admission rule" and "the CI segment covers the plugin" are different claims and
+// only the first one is true on Linux.
+// ---------------------------------------------------------------------------------------------
+
+// A chronicle that keeps what it was handed and can be told to fail. Deliberately not the real one:
+// the failure below has no other way to be produced, because a store that only ever succeeds cannot
+// show what this plugin does when its history is not there.
+function fakeChronicle() {
+  const drafts = [];
+  const chronicle = {
+    drafts,
+    // Counted separately from `drafts`, and that is the point of having both: an append that throws
+    // leaves no draft behind, and "was it even attempted" is a different question from "did it work".
+    attempts: 0,
+    fail: false,
+    async append(draft) {
+      chronicle.attempts += 1;
+      if (chronicle.fail) throw new ChroniclePersistenceError('这个写入没有取得可靠持久化确认');
+      drafts.push(draft);
+      return {
+        ...draft,
+        factId: '00000000-0000-4000-8000-000000000000',
+        recordedAt: draft.occurredAt,
+      };
+    },
+    async get() {
+      return undefined;
+    },
+    async read() {
+      return [];
+    },
+  };
+  return chronicle;
+}
+
+test('工作焦点要求 chronicle，而且没有它时停在 waiting', async () => {
+  // The dependency is structural, and this is what "structural" means: a composition without
+  // Chronicle does not get a work focus that runs anyway and writes nowhere. It gets no work focus at
+  // all. Asserted on the record rather than on a returned string, because `waiting` is a state the
+  // composition has to be able to find the plugin in afterwards.
+  //
+  // It also needs no pipe on either platform, and not by luck: a plugin waiting on an unsatisfied
+  // `requires` never reaches `setup`, so the platform question this plugin asks there is never asked.
+  assert.deepEqual(workFocusPlugin.requires, [chronicleService]);
+
+  const runtime = new Runtime();
+  try {
+    assert.equal(await runtime.loadPlugin(workFocusPlugin, { rootDir: tmpdir() }), 'waiting');
+    assert.equal(runtime.getPluginState('work-focus'), 'waiting');
+  } finally {
+    await runtime.shutdown();
+  }
+});
+
+test('语义无操作连 append 都不调用：声明已有、清空空集、同集合替换、仅顺序不同的替换', async () => {
+  const chronicle = fakeChronicle();
+  const session = createWorkFocusSession(chronicle);
+
+  // One real transition to count from, so everything after it is compared against a set that is
+  // actually there.
+  await session.answer({ word: 'replace', designations: ['A', 'B'] });
+  assert.equal(chronicle.attempts, 1);
+
+  // Asking changes nothing and is not an occurrence.
+  await session.answer({ word: 'status' });
+
+  // Already declared. A set has no room for a second copy, so nothing moved.
+  await session.answer({ word: 'declare', designation: 'A' });
+
+  // The same members, in the other order. Order is not part of this contract, so this is the same set
+  // — which is the case that makes object identity the wrong test: this call does build a new array.
+  await session.answer({ word: 'replace', designations: ['B', 'A'] });
+
+  // And the same members with a repeat inside one request, which `replace` collapses before a set is
+  // ever built from them.
+  await session.answer({ word: 'replace', designations: ['A', 'B', 'A'] });
+
+  assert.equal(chronicle.attempts, 1, '无操作调用了 append');
+  assert.equal(chronicle.drafts.length, 1);
+
+  // The empty set is a state this domain holds, and a `clear` into it is a transition; a `clear` of
+  // it is not.
+  await session.answer({ word: 'clear' });
+  assert.equal(chronicle.attempts, 2);
+  await session.answer({ word: 'clear' });
+  assert.equal(chronicle.attempts, 2, 'clear 空集调用了 append');
+});
+
+test('每个真实转换恰好一条事实，且载荷来自那次转换而不是读的时候的 current()', async () => {
+  const chronicle = fakeChronicle();
+  const session = createWorkFocusSession(chronicle);
+
+  await session.answer({ word: 'declare', designation: 'A' });
+  await session.answer({ word: 'replace', designations: ['B', 'C'] });
+  await session.answer({ word: 'clear' });
+
+  assert.equal(chronicle.attempts, 3);
+  assert.deepEqual(
+    chronicle.drafts.map((draft) => draft.type),
+    ['work-focus.declared', 'work-focus.replaced', 'work-focus.cleared'],
+  );
+
+  // The `replaced` payload is the one that decides this. By the time it is read here the set has been
+  // cleared, so a draft derived from `current()` — or from the state whenever the fact is later read —
+  // would carry the empty set instead of the two designations that actually arrived.
+  assert.deepEqual(
+    chronicle.drafts.map((draft) => draft.payload),
+    [{ designation: 'A' }, { designations: ['B', 'C'] }, {}],
+  );
+  assert.deepEqual(session.current().designations, []);
+});
+
+test('事实的形状是 owner 自己声明的那一种，且来源只声称能证明的部分', async () => {
+  const chronicle = fakeChronicle();
+  const session = createWorkFocusSession(chronicle);
+
+  const before = Date.now();
+  await session.answer({ word: 'declare', designation: 'A' });
+  const after = Date.now();
+
+  const [draft] = chronicle.drafts;
+  // Exactly the five fields `FactDraft` has. Nothing a fact might be *judged* by is here — no
+  // importance, no salience, no confidence, no relation to another fact.
+  assert.deepEqual(Object.keys(draft).sort(), [
+    'occurredAt',
+    'payload',
+    'source',
+    'type',
+    'version',
+  ]);
+  assert.equal(draft.version, 1);
+
+  // `human` would be the tempting word and it is the wrong one: the ingress has no authentication, so
+  // anything on this host that can open the pipe can state a work focus. The endpoint is the whole of
+  // what this plugin can prove, and this assertion is what turns a rewording to `human` red.
+  assert.deepEqual(draft.source, { kind: 'work-focus.endpoint' });
+
+  // The occurrence's clock, read when the change happened, not when the fact is read back.
+  assert.match(draft.occurredAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+  const occurredAt = Date.parse(draft.occurredAt);
+  assert.ok(
+    occurredAt >= before && occurredAt <= after,
+    `occurredAt 不在这次请求的窗口内：${draft.occurredAt}`,
+  );
+});
+
+// The one clause of the admission rule that the session cannot observe, so it is asked directly.
+//
+// `facts.ts` answers `undefined` for `status`, and nothing that goes through the session can show it:
+// the session's change test has already refused to build a draft for a request that moved nothing, and
+// `status` never moves anything. The clause is not decoration for that reason — it is the family
+// saying it has no type for a question, which is a claim about this owner's vocabulary rather than
+// about one request path, and the next caller of this function will not be the session.
+//
+// The three types are asserted alongside it so that the first assertion cannot pass by the function
+// having collapsed into returning `undefined` for everything.
+test('这个家族里没有"问一句"这条事实：status 什么都不承认', () => {
+  const state = Object.freeze({ designations: Object.freeze(['A']) });
+  assert.equal(workFocusFactDraft({ word: 'status' }, state), undefined);
+
+  assert.equal(workFocusFactDraft({ word: 'declare', designation: 'A' }, state).type, 'work-focus.declared');
+  assert.equal(workFocusFactDraft({ word: 'replace', designations: ['B'] }, state).type, 'work-focus.replaced');
+  assert.equal(workFocusFactDraft({ word: 'clear' }, state).type, 'work-focus.cleared');
+});
+
+test('持久化未确认：状态照常改变、不回滚、不重试、不抛出，而降级对调用方可见', async () => {
+  const chronicle = fakeChronicle();
+  const session = createWorkFocusSession(chronicle);
+
+  await session.answer({ word: 'declare', designation: 'A' });
+  chronicle.fail = true;
+
+  // No try/catch here on purpose: the whole claim is that this resolves. A rejection would mean the
+  // failure had escaped into whoever asked, and in the resident that is a process that dies because
+  // its history is unavailable.
+  const degraded = await session.answer({ word: 'declare', designation: 'B' });
+
+  // The change stands. Undoing it would invent a state that never existed, on the strength of a write
+  // that — this is the part that matters — may well have reached the disk anyway.
+  assert.deepEqual(session.current().designations, ['A', 'B']);
+
+  // And it is not a different outcome: the request succeeded, because it did. What the caller can
+  // observe is the extra line, and nothing else.
+  assert.equal(degraded.outcome, 'ok');
+  assert.deepEqual(degraded.lines, [HEADER, 'A', 'B', UNCONFIRMED]);
+
+  // One attempt, not two. A retry against a write that may already have landed is how one fact
+  // becomes two, and nothing here knows which of the two it is.
+  assert.equal(chronicle.attempts, 2);
+  assert.equal(chronicle.drafts.length, 1);
+
+  // The failure is not sticky either: the next write that does get a confirmation is admitted
+  // normally, and the state it describes is the one that is actually held.
+  chronicle.fail = false;
+  const recovered = await session.answer({ word: 'declare', designation: 'C' });
+  assert.deepEqual(recovered.lines, [HEADER, 'A', 'B', 'C']);
+  assert.equal(chronicle.drafts.length, 2);
+  assert.deepEqual(chronicle.drafts[1].payload, { designation: 'C' });
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -658,14 +972,13 @@ test('exposure 的描述既说能做什么，也说不做什么', () => {
 // ---------------------------------------------------------------------------------------------
 
 test('endpoint 跟随 Plugin activation：加载前没有，卸载后没有', { skip: NO_PIPES }, async (t) => {
-  const root = createRoot(t);
+  const root = initializedRoot(t);
 
   // Before any plugin exists there is nothing listening, and asking is answered rather than failed.
   assert.deepEqual(await requestWorkFocus(root, { word: 'status' }), { kind: 'absent' });
 
-  const runtime = new Runtime();
+  const runtime = await compose(root);
   try {
-    assert.equal(await runtime.loadPlugin(workFocusPlugin, { rootDir: root }), 'active');
     assert.deepEqual(designationsOf(await declare(root, 'A')), ['A']);
 
     await runtime.unloadPlugin('work-focus');
@@ -680,9 +993,8 @@ test('endpoint 跟随 Plugin activation：加载前没有，卸载后没有', { 
 });
 
 test('卸载时仍有活动连接不会泄漏，也不会拖住卸载', { skip: NO_PIPES }, async (t) => {
-  const root = createRoot(t);
-  const runtime = new Runtime();
-  assert.equal(await runtime.loadPlugin(workFocusPlugin, { rootDir: root }), 'active');
+  const root = initializedRoot(t);
+  const runtime = await compose(root);
 
   // Connecting and then saying nothing is an ordinary thing for a local process to do, and a server
   // that only stopped accepting would leave this connection as the last thing holding the plugin's
@@ -706,28 +1018,37 @@ test('卸载时仍有活动连接不会泄漏，也不会拖住卸载', { skip: 
   assert.deepEqual(await requestWorkFocus(root, { word: 'status' }), { kind: 'absent' });
 });
 
-test('新的 Plugin 实例从空开始：重启之后什么都不记得', { skip: NO_PIPES }, async (t) => {
-  const root = createRoot(t);
+// The two halves of "history is not state", asserted together because each one alone is satisfiable
+// by the wrong implementation. A plugin that restored the set from the store would fail the first
+// assertion; a plugin that wrote nothing, or wrote somewhere that did not survive, would fail the
+// second. Only both at once says what this slice decided: the facts are durable, and they are not
+// this plugin's memory.
+test('新的 Plugin 实例从空开始，而上一轮生命周期的事实仍然读得到', { skip: NO_PIPES }, async (t) => {
+  const root = initializedRoot(t);
 
-  const first = new Runtime();
-  assert.equal(await first.loadPlugin(workFocusPlugin, { rootDir: root }), 'active');
+  const first = await compose(root);
   await declare(root, 'A');
   await declare(root, 'B');
   await first.shutdown();
 
-  const second = new Runtime();
+  const second = await compose(root);
   try {
-    assert.equal(await second.loadPlugin(workFocusPlugin, { rootDir: root }), 'active');
     const answer = await status(root);
     assert.equal(answer.outcome, 'ok');
     assert.deepEqual(answer.lines, [HEADER, NONE], '重启之后集合不是空的');
+
+    // Written by a Runtime that no longer exists, read by a reader that never held the state.
+    assert.deepEqual(factTypes(await readFacts(root)), [
+      'work-focus.declared',
+      'work-focus.declared',
+    ]);
   } finally {
     await second.shutdown();
   }
 });
 
 test('端点绑定失败 → Plugin failed，而不是一个没有入口的 active', { skip: NO_PIPES }, async (t) => {
-  const root = createRoot(t);
+  const root = initializedRoot(t);
   const path = workFocusEndpointPath(root);
 
   // The operating system enforces one listener per pipe name, so this is what a squatted name looks
@@ -738,8 +1059,13 @@ test('端点绑定失败 → Plugin failed，而不是一个没有入口的 acti
 
   const runtime = new Runtime();
   try {
+    await runtime.loadPlugin(continuityPlugin, { rootDir: root });
+    await runtime.loadPlugin(chroniclePlugin, { rootDir: root });
     assert.equal(await runtime.loadPlugin(workFocusPlugin, { rootDir: root }), 'failed');
     assert.ok(runtime.getPluginError('work-focus') instanceof Error);
+    // A plugin that never got past binding wrote nothing: the failure happened before any request
+    // could arrive, and a fact about a request that was never served would be a fabrication.
+    assert.deepEqual(await readFacts(root), []);
   } finally {
     await runtime.shutdown();
   }
@@ -901,6 +1227,28 @@ test('真实进程：declare / status / replace / clear 通过 CLI 走完整条�
   assert.equal(runCli('stop', '--data-dir', root).code, 0);
   const code = await within(exited, 30_000, 'stop 之后常驻进程没有退出');
   assert.equal(code, 0);
+
+  // The store, read after the resident is gone. The three writes above went through two real processes
+  // and a real pipe, and this is what reached the disk — so the claim being pinned is the whole chain
+  // (CLI → resident → endpoint → session → Chronicle) and not two halves of it. Without this the file
+  // would prove the chain reaches the socket here, and reaches the store in an in-process Runtime
+  // above, and would never join the two.
+  //
+  // Filtered to this plugin's own family rather than counted outright: the claim is that these three
+  // transitions admitted these three facts, and a future slice that writes facts of its own should not
+  // turn this test red for a reason that has nothing to do with the work focus.
+  const admitted = (await readFacts(root)).filter((fact) => fact.type.startsWith('work-focus.'));
+  assert.deepEqual(factTypes(admitted), [
+    'work-focus.declared',
+    'work-focus.replaced',
+    'work-focus.cleared',
+  ]);
+  // Exact where the contract is exact, and silent where it is not: order is not part of what a set of
+  // designations promises, so the `replaced` payload is compared as members — the same way the reply
+  // above is read, and for the same reason.
+  assert.deepEqual(admitted[0].payload, { designation: 't1mb2rg/hikari-new' });
+  assert.deepEqual(new Set(admitted[1].payload.designations), new Set(['DesktopAgent', 'hikari-new']));
+  assert.deepEqual(admitted[2].payload, {});
 
   // And the endpoint went with the process: the same question now gets a different, equally true
   // answer instead of a failed command. The line claims only that nothing is serving this ingress —

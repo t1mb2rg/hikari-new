@@ -6,11 +6,19 @@
 // to a model imports the agent-facing exposure, for the same reason and against the same failure — the
 // words that describe this domain's capability are this domain's to write.
 //
-// What is *not* exported is as deliberate as what is. The state transitions, the endpoint listener
-// and the renderer stay inside: a consumer that could import `applyWorkFocusRequest` would be a
-// second thing that knows how the set moves, and the day those two disagree about a duplicate, the
-// set a human reads back would depend on which one they went through. A consumer reads the set the
-// same way everybody else does — through `workFocusCurrentService`, which is exported below.
+// What is *not* exported is as deliberate as what is. The state transitions, the endpoint listener,
+// the renderer and the durable fact family stay inside: a consumer that could import
+// `applyWorkFocusRequest` would be a second thing that knows how the set moves, and the day those two
+// disagree about a duplicate, the set a human reads back would depend on which one they went through.
+// A consumer reads the set the same way everybody else does — through `workFocusCurrentService`, which
+// is exported below.
+//
+// The fact family is inside for that same reason and one more. The three type names are this owner's
+// statement about its own occurrences, and they travel in exactly one direction: this plugin writes
+// them into Chronicle. Nothing reads them back — not this module, which starts empty in a new Runtime
+// regardless of what the history holds, and not any other, since there is still no reader that asks
+// what this plugin's durable history says. Exporting the names would publish a vocabulary ahead of the
+// need for it, which is the shape `plugin-design-spec.md` §16 exists to refuse.
 
 export { workFocusCurrentService } from './contracts.js';
 export type { WorkFocusCurrentService } from './contracts.js';

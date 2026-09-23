@@ -6,7 +6,21 @@
 // reader inside the composition. So this plugin now provides `work-focus.current`, and provides it
 // for that one caller — see `contracts.ts` for why the contract is the set and nothing else.
 //
-// It still declares no Event. It requires nothing.
+// It still declares no Event. It requires Chronicle now, and writes it, and the reason is the
+// admission rule it is the first to exercise: only the semantic owner of a concern may admit a durable
+// fact about it, and only the proposition that owner is entitled to assert. Nothing else in Hikari is
+// entitled to say that a work focus was declared, so no recorder was invented and no Event was added
+// for one to subscribe to — the writer is the owner, in the file that owns the state.
+//
+// What it admits is a *semantic transition*, not a command that arrived. Two of the four words can
+// leave the set exactly where it was (`declare` of something already declared, `clear` of an
+// already-empty set), `status` never moves it at all, and order is not part of this contract — so a
+// `replace` naming the same members in another order moved nothing either. None of those is an
+// occurrence, and none of them reaches `chronicle.append`.
+//
+// The decision itself — move the set, decide whether that was an occurrence, record it, answer — is
+// in `session.ts`, and it is there rather than here because none of it is about a pipe. This file
+// wires that decision to an activation and an endpoint; it does not make it, and it holds no state.
 //
 // The endpoint still exists for exactly as long as this plugin is activated — no longer — and that is
 // what makes the resource story simple: the Runtime already knows when a plugin starts and stops, so
@@ -19,13 +33,13 @@
 // running". The client's wording accounts for both (`src/cli/focus.ts`); this file does not get to
 // pick which one a human is told.
 
+import { chronicleService } from '../chronicle/index.js';
 import type { PluginDefinition } from '../runtime/plugin.js';
 import { workFocusCurrentService } from './contracts.js';
 import { listenWorkFocusEndpoint } from './endpoint.js';
 import { workFocusEndpointPath } from './endpoint-path.js';
 import { WorkFocusError } from './errors.js';
-import { applyWorkFocusRequest, emptyWorkFocus, renderWorkFocus, type WorkFocusState } from './state.js';
-import type { WorkFocusReply } from './types.js';
+import { createWorkFocusSession } from './session.js';
 
 export interface WorkFocusPluginConfig {
   readonly rootDir: string;
@@ -34,9 +48,11 @@ export interface WorkFocusPluginConfig {
 export const workFocusPlugin: PluginDefinition<WorkFocusPluginConfig> = {
   id: 'work-focus',
   version: '1.0.0',
-  // Nothing is required: this plugin reads no other module and is a leaf. What it provides it
-  // provides for exactly one caller, and `contracts.ts` says what that caller is.
-  requires: [],
+  // Chronicle, because this plugin is the writer of its own durable facts. The dependency is hard:
+  // without a fact history there is nowhere to admit an occurrence, and a work focus that ran anyway
+  // would be silently deciding that its own history did not matter. Loaded before its provider it
+  // waits, exactly as any other dependent does.
+  requires: [chronicleService],
   provides: [workFocusCurrentService],
   config: {
     parse(input: unknown): WorkFocusPluginConfig {
@@ -53,40 +69,27 @@ export const workFocusPlugin: PluginDefinition<WorkFocusPluginConfig> = {
       throw new WorkFocusError('工作焦点入口依赖 Windows 命名管道，本机没有。');
     }
 
-    // The state lives in this closure and nowhere else. It is created by this activation, held by
-    // this activation and gone when this activation ends — which is what makes "empty after a
-    // restart" a structural property rather than a rule someone has to remember to enforce. There is
-    // no file, no store and no Chronicle entry behind it, so there is nothing that could survive.
-    let state: WorkFocusState = emptyWorkFocus();
+    // Pulled once, at activation: the contract is what this plugin needs, and holding it for the
+    // activation is the same lifetime the endpoint has. It is handed to the session, which is the
+    // only thing that uses it, and this file never touches it again.
+    const session = createWorkFocusSession(context.services.get(chronicleService));
 
     // Provided before the endpoint exists, so that the scope's LIFO teardown closes the ingress
     // first and withdraws the contract second: a request already being served keeps the state it is
     // reading until it is done, and nothing new can arrive to find the contract already gone.
     //
-    // The closure reads `state` at call time rather than capturing it, which is the whole of how a
-    // consumer sees a `declare` that happened after it was handed this. A captured snapshot would
-    // answer every later question with the set as it stood at activation.
+    // The closure reads the session's set at call time rather than capturing it, which is the whole of
+    // how a consumer sees a `declare` that happened after it was handed this. A captured snapshot
+    // would answer every later question with the set as it stood at activation.
     context.services.provide(
       workFocusCurrentService,
       Object.freeze({
-        current: async (): Promise<readonly string[]> => state.designations,
+        current: async (): Promise<readonly string[]> => session.current().designations,
       }),
     );
 
     const endpoint = await listenWorkFocusEndpoint(
-      {
-        handle(request): WorkFocusReply {
-          const transition = applyWorkFocusRequest(state, request);
-          if (transition.kind === 'refused') {
-            return { outcome: 'failed', lines: [transition.reason] };
-          }
-
-          state = transition.state;
-          // A write answers with the set it left behind, not with a claim about what it did. The
-          // human's question after any of the three writes is the same question `status` asks.
-          return { outcome: 'ok', lines: renderWorkFocus(state) };
-        },
-      },
+      { handle: (request) => session.answer(request) },
       path,
     );
 
