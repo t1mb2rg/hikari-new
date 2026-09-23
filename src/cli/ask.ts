@@ -33,7 +33,10 @@
 import { connect } from 'node:net';
 
 import {
+  LANGUAGE_EXPOSURES,
+  LANGUAGE_REPOSITORY_EXPOSURES,
   MAX_LANGUAGE_REPLY_LINE,
+  MODEL_TIMEOUT_MS,
   LanguageLineReader,
   decodeLanguageReply,
   encodeLanguageRequest,
@@ -44,33 +47,60 @@ import { oneLine } from '../terminal-text/index.js';
 
 import { RESIDENT_HINT } from './options.js';
 
-// The bound on the client's wait for the whole exchange, and it is derived from what the exchange can
-// actually cost rather than picked. It used to be 60s, which was correct for the pipeline that read it:
-// one model call at 15s, one possible desktop read, and framing. The loop changed the shape of the
-// worst case and the old number became a lie — an interaction may now make three model calls, so a
-// legitimate question could be killed by the client while the server was still working on it, and the
+// The bound on the client's wait for the whole exchange, and it is computed from what the exchange can
+// cost rather than picked. It used to be 60s, which was correct for the pipeline that read it: one model
+// call at 15s, one possible desktop read, and framing. The loop changed the shape of the worst case and
+// the old number became a lie — an interaction may make one model call per capability plus one more — so
+// a legitimate question could be killed by the client while the server was still working on it, and the
 // human would be told the entry point did not answer when it was about to.
 //
-//   up to 3 model calls, each with the transport's own 15s bound        45s
-//   one desktop peek, which acquires two sources at 10s each            20s
-//   framing, the focus read, and pipe overhead                          the rest
+//   one model call per offered capability, plus one more
+//     to close the interaction, at the transport's own bound   computed below
+//   the capability reads, the focus read and the framing       one budget, below
 //
-// So 90s, which is the sum with room to spare rather than a round number near it. Three calls is not a
-// guess: `LANGUAGE_EXPOSURES` has two entries and the loop cannot continue without consuming an unread
-// one, so `LANGUAGE_EXPOSURES.length + 1` is the ceiling this build can reach and the client is sized
-// for the ceiling rather than for the average. It is deliberately not a dynamic budget — the server
-// cannot tell the client what its worst case was, and a client that asked would be inventing a protocol
-// for arithmetic the client can already do from the size of a list that lives on this side of the pipe.
+// The first term is the one that moves when a capability is added, so it is computed rather than written
+// down — a literal here would be correct today and silently wrong the day a fourth read joins a variant.
+// It sizes for the *longest* exposure list this build can offer, and that is a consequence of what the
+// pipe does not carry: the resident it is talking to may hold either Language variant, and nothing on the
+// wire says which. The endpoint answers questions about a focus and a desktop, not about a roster. A
+// field announcing the composition would be a protocol addition to save arithmetic the client can
+// already do from constants on its own side of the pipe, and sizing for the base variant instead would
+// reintroduce exactly the bug above for every repository-aware resident.
 //
-// Exported for the test that pins that arithmetic. The claim being pinned is not "the number is 90" —
-// it is that the client's bound stays above what the loop can legitimately spend, which is a fact about
-// two other modules' constants and would otherwise only be discovered by a human whose question timed
-// out while it was being answered. Adding a third exposure that a model reads on its own is exactly the
-// change that should break this, and does.
+// Why the ceiling is `count + 1`: the loop cannot continue without consuming an unread capability, so it
+// makes at most one model call per capability, and the call that ends the interaction carries no reads.
+// It is deliberately not a dynamic budget either — the server cannot tell the client what its worst case
+// was, and a client that asked would be inventing a protocol for arithmetic it can do itself.
+//
+// The second term stays a budget rather than becoming a sum of the reads' own bounds, because those
+// bounds belong to modules this file does not own: a client that re-derived `desktop-session-world`'s
+// acquisition timeout would be holding a copy of another module's number, which is the drift this file
+// refuses everywhere else. It is sized generously on purpose — an acquisition runs its sources in
+// parallel, so the sum over-states it — and over-stating a client's patience costs a slow failure while
+// under-stating it reports an answer that was on its way as one that never came.
+//
+// Exported for the test that pins that arithmetic, and the test pins it two ways. The bound clears what
+// the loop can legitimately spend, which is the claim a human cares about — a question being answered is
+// not reported as one that never came — and it *is* the derivation above, evaluated against the longest
+// exposure list this build can offer. The second is what keeps the first true the day a capability is
+// added: a bound that only had to clear a floor would still clear it while the client was sized for the
+// shorter variant, which is the same bug one capability later.
 //
 // A timeout here is a claim about how long the human waited, and it should only be made once waiting has
 // genuinely stopped being reasonable.
-export const REPLY_TIMEOUT_MS = 90_000;
+const LONGEST_EXPOSURE_COUNT = Math.max(
+  LANGUAGE_EXPOSURES.length,
+  LANGUAGE_REPOSITORY_EXPOSURES.length,
+);
+
+// Exported for the same reason `REPLY_TIMEOUT_MS` is: the test that pins this arithmetic has to be able
+// to state the budget the bound is derived from, rather than a number that agrees with today's value. A
+// test that wrote `90_000` itself would keep passing the day this constant moved, which is one half of
+// the drift the derivation exists to refuse.
+export const READ_AND_FRAMING_BUDGET_MS = 90_000;
+
+export const REPLY_TIMEOUT_MS =
+  (LONGEST_EXPOSURE_COUNT + 1) * MODEL_TIMEOUT_MS + READ_AND_FRAMING_BUDGET_MS;
 
 export function requestLanguageAsk(rootDir: string, text: string): Promise<LanguageOutcome> {
   const path = languageEndpointPath(rootDir);

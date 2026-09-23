@@ -354,6 +354,10 @@ async function firstSelection(text, effort) {
         throw new Error('本实验不读取任何 Service。');
       },
       now: () => new Date().toISOString(),
+      // The base set, and it is what makes the four arms comparable: the depth is the only variable, so
+      // the tool schema has to be the production one. Passed rather than defaulted — the loop takes its
+      // closed set from its caller, and a default would be a second place the variant is decided.
+      exposures: LANGUAGE_EXPOSURES,
     });
 
     await answerer.answer(text);

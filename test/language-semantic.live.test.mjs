@@ -413,6 +413,11 @@ async function run(text) {
       return reader(exposure);
     },
     now: () => new Date().toISOString(),
+    // The base set, which is the surface this harness measures — the coverage test below asserts the
+    // same list, so the sentences and the tool schema cannot diverge about which capabilities exist.
+    // Passed rather than defaulted: the loop takes its closed set from its caller, and a default here
+    // would be a second place the variant is decided. See `answer.ts`.
+    exposures: LANGUAGE_EXPOSURES,
   });
 
   try {

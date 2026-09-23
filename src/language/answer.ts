@@ -36,11 +36,19 @@
 // not needed: **every iteration that continues must have consumed a capability that had not been read
 // yet in this interaction.** To reach another model call, every call in the batch must have been a
 // first read of its capability — a duplicate, an unknown name, a malformed call, or arguments all set
-// the same stop flag, and the loop leaves after finishing that batch. `LANGUAGE_EXPOSURES` is the
+// the same stop flag, and the loop leaves after finishing that batch. The exposure list handed in is the
 // closed set, so the set of names that can be newly read is finite and shrinking, and the loop is
-// bounded by its size: at most two reads and three model calls in this build.
+// bounded by its size: at most as many reads as that list has entries, and one model call more than that.
+// Both numbers are facts about the list rather than about this file, which is why neither is written
+// down here.
 //
-// A number would have been worse in a way that matters. `LANGUAGE_EXPOSURES` is a decision somebody
+// That list is a dependency rather than an import for the same reason. A base variant and a
+// repository-aware variant run this same loop over different closed sets, and a loop that reached for a
+// module-level list would be a loop that had decided which variant it was in — the decision belongs to
+// the plugin that built it, one file up. Nothing else here changes: `answer.ts` never learns what a
+// variant is, and could not act differently if it did.
+//
+// A number would have been worse in a way that matters. The exposure list is a decision somebody
 // makes by editing a file; a step limit is a second number that has to be kept in step with the first,
 // and when they disagree the one that is wrong is invisible — the loop just stops early, or the limit
 // is quietly raised until it stops mattering. The invariant cannot come apart from the list, because
@@ -84,6 +92,7 @@ import {
   truncatedLines,
   unclassifiedLines,
 } from './express.js';
+import type { LanguageExposure } from './exposure.js';
 import type { ExposureReader } from './read.js';
 import type { ModelMessage, ModelRequest, ModelStep, ModelTool } from './model.js';
 import { buildSystemPrompt } from './prompt.js';
@@ -102,6 +111,14 @@ export interface LanguageDependencies {
   readonly step: (request: ModelRequest) => Promise<ModelStep>;
   readonly read: ExposureReader;
   readonly now: () => string;
+  /**
+   * The closed set this loop runs over: what the model is offered, and what it will act on.
+   *
+   * One array serving both, rather than a set to offer and a lookup to resolve — see `tools.ts`. It is a
+   * dependency rather than an import so that the loop is the same loop in every variant, and the choice
+   * of variant is made once, by the plugin that constructed these dependencies.
+   */
+  readonly exposures: readonly LanguageExposure[];
 }
 
 export interface Answerer {
@@ -130,7 +147,7 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
         { role: 'system', content: buildSystemPrompt(contextUsed) },
         { role: 'user', content: text },
       ];
-      const tools: readonly ModelTool[] = toModelTools();
+      const tools: readonly ModelTool[] = toModelTools(dependencies.exposures);
 
       // What has been read, in the order it was read. This is the whole of the loop's memory and the
       // whole of the referent it may leave behind — one list serving both, so that "what was read" has
@@ -158,7 +175,8 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
           if (step.truncated) return { outcome: 'refused', lines: truncatedLines() };
 
           const chat = step.content.trim();
-          if (chat === '') return { outcome: 'refused', lines: unclassifiedLines() };
+          if (chat === '')
+            return { outcome: 'refused', lines: unclassifiedLines(dependencies.exposures) };
           return { outcome: 'chatted', lines: renderChat(chat) };
         }
 
@@ -176,7 +194,7 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
 
         let stopped = false;
         for (const call of step.toolCalls) {
-          const exposure = readCall(call);
+          const exposure = readCall(call, dependencies.exposures);
           if (exposure === undefined || alreadyRead(exposure.name)) {
             messages.push({ role: 'tool', toolCallId: call.id, content: UNRUN_CALL_RESULT });
             stopped = true;
@@ -208,7 +226,7 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
         // needs a first read of that name to be a repeat, so a batch containing one has already put a
         // block in `blocks` and leaves by the grounded path instead. Nothing was established, so nothing
         // is answered.
-        return { outcome: 'refused', lines: unclassifiedLines() };
+        return { outcome: 'refused', lines: unclassifiedLines(dependencies.exposures) };
       }
 
       // Only a grounded answer moves the referent. A chat reply read nothing, so it has no subject to

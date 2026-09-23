@@ -38,7 +38,7 @@ import { renderAssessment } from '../desktop-session-observe/index.js';
 import { oneLine } from '../terminal-text/index.js';
 
 import type { DialogueTurn } from './dialogue.js';
-import { LANGUAGE_EXPOSURES } from './exposure.js';
+import type { LanguageExposure } from './exposure.js';
 
 const FOCUS_HEADER = '你当前明确关注：';
 const FOCUS_NONE = '你当前还没有明确声明任何关注对象。';
@@ -147,17 +147,22 @@ export function renderFocus(designations: readonly string[]): readonly string[] 
  * statement of what another domain's capability covers, which is the drift `exposure.ts` exists to
  * prevent. A person who asks out of range reads what the owners actually said.
  *
+ * The list is handed in rather than read off a module here, because which capabilities exist is a
+ * property of the variant the person is talking to and not of this file. A resident without a repository
+ * scope has no relevance judgement, and a refusal that listed one would be telling a human about a
+ * capability their Hikari does not have — the same category of untruth as a refusal that listed nothing.
+ *
  * It never quotes what the model wrote. The model's sentence is not evidence about Hikari, and showing
  * it to a human would put the model's words on the wire that this whole surface exists to keep them off
  * — a refusal that quoted the model would be the prose channel reopened from the other end. It is also
  * why the wording is fixed: a refusal that varied with what the model said would be a second, unowned
  * rendering of the model's output.
  */
-export function unclassifiedLines(): readonly string[] {
+export function unclassifiedLines(exposures: readonly LanguageExposure[]): readonly string[] {
   return [
     '这句话我没有找到该读 Hikari 的哪一部分，所以没有回答。',
     '这个构建能读的是：',
-    ...LANGUAGE_EXPOSURES.map((exposure) => `  ${exposure.description}`),
+    ...exposures.map((exposure) => `  ${exposure.description}`),
   ];
 }
 

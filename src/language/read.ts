@@ -3,16 +3,37 @@
 // An exposure names a Service; this file is the step that turns that name into the lines a model is
 // shown. It is the adapter `principles.md` §6 puts on the consumer's side — the provider owns how the
 // thing is done and what it means, the consumer owns the question of what to do with the result — and
-// it is deliberately the smallest one that can exist: two branches, no new result type, and no domain
-// word written here.
+// it is deliberately the smallest one that can exist: one branch per exposure, no new result type, and no
+// domain word written here.
 //
-// Both branches end in a renderer that already existed. The desktop half is `renderAssessment` from
+// Every branch ends in a renderer that already existed. The desktop half is `renderAssessment` from
 // `desktop-session-observe`, which `hikari observe desktop-session status` also calls. The focus half is
 // `renderFocus` from `express.ts`, which is this surface's own statement about the focus reading and was
-// already what a human read. So the lines a model is handed are the lines a human is handed, byte for
-// byte, and that is the point rather than a convenience: a model shown a *different* view of the same
-// reading would be a second statement of it, and since these lines are also what the final answer
-// contains, the two could not come apart without the model having been told something the human was not.
+// already what a human read. The relevance half is `renderJudgement` from `repository-ci-relevance`,
+// which is the endpoint's own answer to the same question. So a model is handed the owner's own rendering
+// of a reading rather than a second view of it — the same function the human's path calls — and that is
+// the point rather than a convenience: a model shown a *different* view of the same reading would be a
+// second statement of it, and since these lines are also what the final answer contains, the two could not
+// come apart without the model having been told something the human was not.
+//
+// "The owner's rendering" is the claim, and it is deliberately not "byte for byte": this file applies one
+// transformation to every branch, `lineSafe` below, because an owner that hands raw bytes hands whoever
+// prints them the ability to forge a line — and a model reading two lines where the owner wrote one cannot
+// tell which of them Hikari said. `renderAssessment` already escapes its own output, so the call is a
+// no-op on the desktop branch; the relevance endpoint's caller prints its lines as they are, so the two
+// readers of that rendering differ by exactly this escaping and by nothing else.
+//
+// That last half is why the owner had to export its renderer rather than this file writing one. The
+// judgement is a verdict word and a designation, and a formatting of it written here would read the same
+// today and drift the first time the owner changed a line — with the drift invisible, because a model
+// shown the old words and a human shown the new ones are never in the same room to disagree. The
+// relevance capability is offered to a model as a reading of Hikari, so it travels as Hikari's own text.
+//
+// There are two readers rather than one, and the split is the variant split. `createExposureReader`
+// handles the two reads every variant performs; `createRepositoryExposureReader` handles those plus the
+// one only the repository-aware variant offers, by falling through to the first. The base reader is
+// still the whole of what a base variant can do, and it still throws on an exposure it was not built to
+// read — see the last branch, which is where a capability this build was never handed lands.
 //
 // What is *not* here: the raw contract values. `DesktopSessionAwarenessAssessment` is a union of nested
 // snapshots with facet verdicts, and handing that to a model would be handing it a tree to interpret —
@@ -30,6 +51,8 @@
 import type { DesktopSessionAwarenessAssessment } from '../desktop-session-awareness/index.js';
 import { desktopSessionAwarenessPeekService } from '../desktop-session-awareness/index.js';
 import { renderAssessment } from '../desktop-session-observe/index.js';
+import { renderJudgement, repositoryCiRelevanceService } from '../repository-ci-relevance/index.js';
+import type { RepositoryCiRelevanceJudgement } from '../repository-ci-relevance/index.js';
 import { oneLine } from '../terminal-text/index.js';
 import { workFocusCurrentService } from '../work-focus/index.js';
 
@@ -61,6 +84,39 @@ export function createExposureReader(dependencies: ExposureDependencies): Exposu
       return lineSafe(renderAssessment(await dependencies.peek()));
     }
     throw new LanguageError(`能力 ${exposure.name} 指向的服务不是这个构建能读取的服务。`);
+  };
+}
+
+/**
+ * What the repository-aware variant needs: the base two, plus the judgement.
+ *
+ * It extends rather than replaces, because that variant offers the base two as well. A reader that took
+ * only the third would be a second reader with an almost identical body, and the two would be free to
+ * disagree about what a base exposure reads.
+ */
+export interface RepositoryExposureDependencies extends ExposureDependencies {
+  readonly readRelevance: () => Promise<RepositoryCiRelevanceJudgement>;
+}
+
+/**
+ * The base reader, plus the one branch only the repository-aware variant can reach.
+ *
+ * The extra branch renders through the owner's `renderJudgement` rather than formatting the verdict
+ * here, which is the same rule both base branches follow and the reason the owner exports it. Everything
+ * else falls through to `createExposureReader`, so an exposure this build cannot read is refused by the
+ * same branch and with the same message as before — the repository variant does not grow a second way to
+ * fail at an unknown capability.
+ */
+export function createRepositoryExposureReader(
+  dependencies: RepositoryExposureDependencies,
+): ExposureReader {
+  const readBase = createExposureReader(dependencies);
+
+  return async function read(exposure: LanguageExposure): Promise<readonly string[]> {
+    if (exposure.service === repositoryCiRelevanceService) {
+      return lineSafe(renderJudgement(await dependencies.readRelevance()));
+    }
+    return readBase(exposure);
   };
 }
 

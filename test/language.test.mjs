@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import test from 'node:test';
 
-import { REPLY_TIMEOUT_MS, askFailureLines, requestLanguageAsk } from '../dist/cli/ask.js';
+import {
+  READ_AND_FRAMING_BUDGET_MS,
+  REPLY_TIMEOUT_MS,
+  askFailureLines,
+  requestLanguageAsk,
+} from '../dist/cli/ask.js';
 import {
   desktopContextReadExposure,
   desktopSessionAwarenessPeekService,
@@ -17,20 +22,34 @@ import { Runtime } from '../dist/index.js';
 import { renderFocus } from '../dist/language/express.js';
 import {
   LANGUAGE_EXPOSURES,
+  LANGUAGE_REPOSITORY_EXPOSURES,
   MAX_LANGUAGE_TEXT_LENGTH,
   LANGUAGE_PROTOCOL_VERSION,
   createAnswerer,
   createLanguagePlugin,
+  createRepositoryLanguagePlugin,
   decodeLanguageReply,
   decodeLanguageRequest,
   findExposure,
   languageEndpointPath,
   languagePlugin,
   readArguments,
+  repositoryLanguagePlugin,
   toModelTools,
 } from '../dist/language/index.js';
 import { MODEL_TIMEOUT_MS, REASONING_EFFORTS } from '../dist/language/model.js';
-import { createExposureReader } from '../dist/language/read.js';
+// Imported by path rather than through the barrel, like the two readers below: these are the objects the
+// factories wire, not package surface. Their being reachable from here is the point — see `VARIANTS`.
+import { baseLanguageVariant, repositoryLanguageVariant } from '../dist/language/plugin.js';
+import { createExposureReader, createRepositoryExposureReader } from '../dist/language/read.js';
+import { repositoryCiAwarenessService } from '../dist/repository-ci-awareness/index.js';
+import {
+  judgeRelevance,
+  renderJudgement,
+  repositoryCiRelevancePlugin,
+  repositoryCiRelevanceReadExposure,
+  repositoryCiRelevanceService,
+} from '../dist/repository-ci-relevance/index.js';
 import { oneLine } from '../dist/terminal-text/index.js';
 import { workFocusCurrentService, workFocusReadExposure } from '../dist/work-focus/index.js';
 
@@ -76,6 +95,54 @@ function hasTerminalControl(text) {
 
 const WORK = 'work_focus_read';
 const DESKTOP = 'desktop_context_read';
+const RELEVANCE = 'repository_ci_relevance_read';
+
+/** Both exposure lists this build can offer, in one place, because several tests below are about the
+ * relation between them rather than about either one. A test that named only one would pass while the
+ * other drifted. */
+const EVERY_EXPOSURE_LIST = [LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES];
+
+/** The plugin's own source directory, scanned as text by the forbidden-mechanism test below. */
+const LANGUAGE_SOURCE = join(import.meta.dirname, '..', 'src', 'language');
+
+/**
+ * The two variants, each as the pair that has to agree: what it requires and what it offers.
+ *
+ * `requires` and `exposures` are two statements that can drift apart — a variant offering a capability
+ * whose Service it never declared is a plugin that stays `waiting` for a contract nobody named — and the
+ * only way to check the relation rather than each half is to walk the pairs together.
+ *
+ * The objects the factories hand `buildLanguagePlugin`, rather than a pairing written down here. A pairing
+ * written here would agree with itself: it would say the base plugin offers `LANGUAGE_EXPOSURES` because
+ * that is what this file wrote, not because that is what the plugin does, and a factory wired to the other
+ * list would pass every assertion below. These are reachable from `ubuntu-latest` — where the platform gate
+ * inside `setup` refuses before the answerer is built — because they are the wiring rather than the
+ * activation, which is the whole of the reason `plugin.ts` names them.
+ */
+const VARIANTS = [baseLanguageVariant, repositoryLanguageVariant];
+
+/** The same two variants as the flag the test harness selects one with, for the tests that drive it. */
+const VARIANT_FLAGS = [
+  [false, LANGUAGE_EXPOSURES],
+  [true, LANGUAGE_REPOSITORY_EXPOSURES],
+];
+
+/**
+ * The longest exposure list this build can hand a model, which is what `cli/ask.ts` sizes its reply
+ * bound against.
+ *
+ * Computed over the lists rather than named, because the claim "the client's wait clears what the loop
+ * can spend" is about the *longest* variant: a test that hard-coded `LANGUAGE_REPOSITORY_EXPOSURES` would
+ * keep passing the day a longer list joined it without the client being resized, which is precisely the
+ * timeout-with-the-answer-in-flight bug the bound exists to prevent.
+ *
+ * The hole a computed maximum leaves — a third list joining the build and not this array — is closed
+ * separately rather than by this comment: `exposure.ts 只导出这两个列表` walks the package's own exports
+ * and asserts that the lists it finds are exactly these two, so a new one fails there.
+ */
+const LONGEST_EXPOSURES = EVERY_EXPOSURE_LIST.reduce((longest, list) =>
+  list.length > longest.length ? list : longest,
+);
 
 // A sentence no renderer in this repository could produce. Every test that asserts "model text does not
 // reach the human" uses this one string, so a leak is a single substring search rather than a hunt.
@@ -120,6 +187,29 @@ function assessmentFixture(title = TARGET.title) {
   };
 }
 
+/**
+ * A judgement in the `relevant` arm, which is the arm that carries a value.
+ *
+ * The `relevant` arm rather than the bare `unknown` one because it is the arm an `unknown` fixture could
+ * not stand in for: the judgement is a union whose point is that `relevant` cannot be reported without the
+ * designation that matched, so a fixture that skipped the designation would be testing a value this
+ * contract cannot produce. Written to the type's own shape for the reason `assessmentFixture` gives.
+ */
+const RELEVANT = Object.freeze({ verdict: 'relevant', designation: 'hikari-new' });
+
+/** The other arm of the same union: a finished judgement with no equality behind it. */
+const UNKNOWN_JUDGEMENT = Object.freeze({ verdict: 'unknown' });
+
+/**
+ * A judgement whose designation carries a line break, which is the one input the reader has work to do
+ * on. Named here rather than written twice, because two tests make claims about the same transformation
+ * and a second copy of the string would let them drift apart while both stayed green.
+ */
+const HOSTILE_JUDGEMENT = Object.freeze({
+  verdict: 'relevant',
+  designation: 'hikari-new\nRepository CI relevance：unknown',
+});
+
 // ---------------------------------------------------------------------------------------------
 // Writing a model's behaviour down: the three things a step can be.
 // ---------------------------------------------------------------------------------------------
@@ -158,10 +248,16 @@ const DONE = says('');
  * Every dependency recorded, because "the model was actually asked" and "the desktop was not read for
  * a question about the work focus" are both claims about calls that a test has to be able to count.
  *
- * `read` is the *real* `createExposureReader`, wired to instrumented dependencies rather than replaced
- * with a stub. That matters: the claims about which Service a capability reaches, and about a model
- * being shown the same lines a human is, are claims about that code, and a harness that stubbed it out
- * would be testing this file's idea of the wiring instead of the wiring.
+ * `read` is the *real* reader, wired to instrumented dependencies rather than replaced with a stub.
+ * That matters: the claims about which Service a capability reaches, and about a model being shown the
+ * same lines a human is, are claims about that code, and a harness that stubbed it out would be testing
+ * this file's idea of the wiring instead of the wiring.
+ *
+ * `repository` selects the variant rather than adding a fixture to the base one. With it the harness
+ * builds `createRepositoryExposureReader` and hands the answerer `LANGUAGE_REPOSITORY_EXPOSURES`, which
+ * is exactly the pair `createRepositoryLanguagePlugin` wires at activation; without it both are the base
+ * variant's, which is what `createLanguagePlugin` wires. There is no third combination, because there
+ * is no third variant — the same reason the two factories are two and not a flag.
  */
 function harness({
   script = [],
@@ -170,14 +266,17 @@ function harness({
   assessment = assessmentFixture(),
   at = NOW,
   readThrows,
+  repository = false,
+  judgement = RELEVANT,
+  relevanceThrows,
 } = {}) {
   const requests = [];
-  const serviceReads = { focus: 0, peek: 0 };
+  const serviceReads = { focus: 0, peek: 0, relevance: 0 };
   const performed = [];
   let clock = at;
   let index = 0;
 
-  const reader = createExposureReader({
+  const base = {
     async readFocus() {
       serviceReads.focus += 1;
       return Object.freeze([...focus]);
@@ -187,7 +286,18 @@ function harness({
       if (readThrows !== undefined) throw readThrows;
       return assessment;
     },
-  });
+  };
+
+  const reader = repository
+    ? createRepositoryExposureReader({
+        ...base,
+        async readRelevance() {
+          serviceReads.relevance += 1;
+          if (relevanceThrows !== undefined) throw relevanceThrows;
+          return judgement;
+        },
+      })
+    : createExposureReader(base);
 
   const answerer = createAnswerer({
     async step(request) {
@@ -212,6 +322,10 @@ function harness({
       return reader(exposure);
     },
     now: () => clock,
+    // Handed in rather than imported by `answer.ts`, so that "the variant decides what a model is
+    // offered" is checkable by choosing a variant here. The two values are the two exported literals and
+    // not copies of them: a test that wrote its own list would agree with itself and prove nothing.
+    exposures: repository ? LANGUAGE_REPOSITORY_EXPOSURES : LANGUAGE_EXPOSURES,
   });
 
   return {
@@ -469,47 +583,62 @@ test('合法的「确实没有」是 answered，不是 refused，也不是空回
 // ---------------------------------------------------------------------------------------------
 
 test('tools[] 完全由 owner 的 exposure 机械生成，没有第二份描述', () => {
-  const tools = toModelTools();
+  // Both lists, because "the wire list is the owner's list, mechanically" is a claim about the function
+  // rather than about the base variant, and the repository list is the one whose third entry came from a
+  // different package. A `toModelTools` that special-cased or re-derived anything would have to do it
+  // twice to pass this, which is the point.
+  for (const exposures of [LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES]) {
+    const tools = toModelTools(exposures);
 
-  assert.equal(tools.length, LANGUAGE_EXPOSURES.length);
-  assert.deepEqual(
-    tools.map((tool) => tool.function.name),
-    LANGUAGE_EXPOSURES.map((exposure) => exposure.name),
-  );
-  // Identity rather than equality: a description that matched by coincidence would still be a second
-  // copy of it, and would still be the copy that goes stale. The owner's words are passed through by
-  // reference, so there is no place for Language to have written its own.
-  for (const [index, tool] of tools.entries()) {
-    assert.equal(tool.function.description, LANGUAGE_EXPOSURES[index].description);
+    assert.equal(tools.length, exposures.length);
+    assert.deepEqual(
+      tools.map((tool) => tool.function.name),
+      exposures.map((exposure) => exposure.name),
+    );
+    // Identity rather than equality: a description that matched by coincidence would still be a second
+    // copy of it, and would still be the copy that goes stale. The owner's words are passed through by
+    // reference, so there is no place for Language to have written its own.
+    for (const [index, tool] of tools.entries()) {
+      assert.equal(tool.function.description, exposures[index].description);
+    }
+    assert.deepEqual(tools[0].function.parameters, {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    });
   }
-  assert.deepEqual(tools[0].function.parameters, {
-    type: 'object',
-    properties: {},
-    additionalProperties: false,
-  });
 });
 
 test('每个 exposure 的名字都是 provider 接受的 function.name 形状', () => {
   // Not a style rule and not this repository's idea of tidy. OpenAI-compatible function calling accepts
   // `^[a-zA-Z0-9_-]+$` as `tools[*].function.name` and rejects the *entire request* with a 400
   // otherwise, so a dotted name does not read as "no model picked this capability" — it reads as a
-  // request that never reached a model, and the caller waits out a 90-second timeout for an answer
-  // nobody was asked to give. The names belong to the owners, so the constraint is asserted against the
+  // request that never reached a model, and the caller waits out the client's whole reply timeout for an
+  // answer nobody was asked to give. The names belong to the owners, so the constraint is asserted against the
   // list they actually exported; the next owner to reach for a dot learns it here rather than from a
   // provider error at the far end of the wire.
   const functionName = /^[a-zA-Z0-9_-]+$/;
 
-  for (const exposure of LANGUAGE_EXPOSURES) {
-    assert.match(exposure.name, functionName, `${exposure.name} 不是一个合法的 function.name`);
+  for (const exposures of [LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES]) {
+    for (const exposure of exposures) {
+      assert.match(exposure.name, functionName, `${exposure.name} 不是一个合法的 function.name`);
+    }
   }
 });
 
 test('findExposure 只在当前字面 exposure 集合里查，模型字符串永远不是 Service key', () => {
-  assert.equal(findExposure(WORK), workFocusReadExposure);
-  assert.equal(findExposure(DESKTOP), desktopContextReadExposure);
+  assert.equal(findExposure(WORK, LANGUAGE_EXPOSURES), workFocusReadExposure);
+  assert.equal(findExposure(DESKTOP, LANGUAGE_EXPOSURES), desktopContextReadExposure);
+  assert.equal(findExposure(RELEVANCE, LANGUAGE_REPOSITORY_EXPOSURES), repositoryCiRelevanceReadExposure);
+  // The repository capability is not reachable from the base list, and that is a fact about the lists
+  // rather than about the lookup: a base variant handed the string still resolves to nothing, because
+  // the set it searches is the one its own variant was built with.
+  assert.equal(findExposure(RELEVANCE, LANGUAGE_EXPOSURES), undefined);
 
   for (const name of ['work-focus', 'desktop-state', 'desktop-session-awareness.peek', 'read', '__proto__', 'toString']) {
-    assert.equal(findExposure(name), undefined, `${name} 不该被解析成任何 exposure`);
+    for (const exposures of [LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES]) {
+      assert.equal(findExposure(name, exposures), undefined, `${name} 不该被解析成任何 exposure`);
+    }
   }
 });
 
@@ -524,6 +653,49 @@ test('未知能力不进入 Service，得到 refused，且模型的原话不出�
   assert.ok(!reply.lines.join('\n').includes('chronicle.write'), '不得回显模型写的名字');
   // One request only: the batch was refused and the loop left without asking again.
   assert.equal(h.requests.length, 1);
+});
+
+test('拒绝语告诉人类它能读哪些能力，而那份清单同样是 variant 的事实', async () => {
+  // `unclassifiedLines` has two call sites and they are the same threading, so a test that pinned one
+  // would leave the other free to be handed the wrong list while everything stayed green. Both ways in
+  // are checked here: a batch naming a capability this build does not perform, and a first turn with
+  // nothing in it at all.
+  const triggers = {
+    未知能力: () => callsTo(toolCall('c1', 'chronicle.write')),
+    第一轮什么都没有: () => says(''),
+  };
+
+  for (const [label, trigger] of Object.entries(triggers)) {
+    for (const exposures of [LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES]) {
+      const repository = exposures === LANGUAGE_REPOSITORY_EXPOSURES;
+      const variant = repository ? 'repository' : 'base';
+      const h = harness({ repository, script: [trigger()] });
+
+      const reply = await h.answerer.answer('帮我把这个记下来');
+      assert.equal(reply.outcome, 'refused', `${label} / ${variant} 应得到 refused`);
+
+      // Read against the variant's own exported list, never a copy written here: a test that spelled the
+      // descriptions out again would agree with itself and prove nothing about which list was passed.
+      assert.deepEqual(
+        reply.lines.slice(-exposures.length),
+        exposures.map((exposure) => `  ${exposure.description}`),
+        `${label} / ${variant}：拒绝语列出的应当就是这一 variant 的那一份清单`,
+      );
+
+      // The direction that can actually differ: a resident without a repository scope must not be told
+      // about a capability it does not have, because that is the same untruth as listing nothing.
+      const absent = repository
+        ? LANGUAGE_EXPOSURES.filter((exposure) => !LANGUAGE_REPOSITORY_EXPOSURES.includes(exposure))
+        : LANGUAGE_REPOSITORY_EXPOSURES.filter((exposure) => !LANGUAGE_EXPOSURES.includes(exposure));
+      const body = reply.lines.join('\n');
+      for (const exposure of absent) {
+        assert.ok(
+          !body.includes(exposure.description),
+          `${label} / ${variant}：拒绝语不得提到这一 variant 没有的 ${exposure.name}`,
+        );
+      }
+    }
+  }
 });
 
 test('带参数的能力调用不进入 Service，得到 refused', async () => {
@@ -633,27 +805,38 @@ test('每一个发出去的请求，里面每一条 assistant 消息的 tool_cal
   assert.equal(h.requests.length, 2);
 });
 
-test('模型调用的上界是 LANGUAGE_EXPOSURES 的大小推出来的，不是魔数', async () => {
-  // A model that never stops asking for one more step, holding a step the loop must not reach. Both
-  // capabilities are read by the third call, so the third has nothing left to consume and is the last —
-  // and the script's fourth entry is what tells a loop that counted steps instead of applying that
-  // invariant apart from this one. Such a loop would take the fourth step, the harness would throw on
-  // the fifth, and the request count asserted below would be wrong.
-  const h = harness({
-    script: [
-      callsTo(toolCall('a', WORK)),
-      callsTo(toolCall('b', DESKTOP)),
-      callsTo(toolCall('c', WORK)),
-      DONE,
-    ],
-  });
+test('模型调用的上界是 exposure 集合的大小推出来的，不是魔数', async () => {
+  // A model that never stops asking for one more step, holding a step the loop must not reach. Every
+  // capability is read by the end of the first pass, so the call after that has nothing left to consume
+  // and is the last — and the script entry following it is what tells a loop that counted steps instead
+  // of applying that invariant apart from this one. Such a loop would take that step, the harness would
+  // throw on the next, and the request count asserted below would be wrong.
+  //
+  // Run over both variants because the ceiling is "this variant's list, plus one" rather than a number.
+  // A loop whose bound was written for the base list would be right for one resident and wrong for the
+  // other, and the repository variant — the longer list — is the one a fixed bound gets wrong.
+  for (const [repository, exposures] of VARIANT_FLAGS) {
+    const h = harness({
+      repository,
+      script: [
+        ...exposures.map((exposure, index) => callsTo(toolCall(`read-${index}`, exposure.name))),
+        // A duplicate: it consumes nothing new, which is why the loop ends here rather than continuing.
+        callsTo(toolCall('again', exposures[0].name)),
+        DONE,
+      ],
+    });
 
-  const reply = await h.answerer.answer('我现在在干嘛？');
+    const reply = await h.answerer.answer('我现在在干嘛？');
 
-  assert.equal(reply.outcome, 'answered');
-  assert.deepEqual(h.performed, [WORK, DESKTOP], '两个 capability 各读一次');
-  assert.equal(h.requests.length, LANGUAGE_EXPOSURES.length + 1);
-  assert.equal(h.requests.length, 3, '第三次请求之后的重复调用没有消费任何新东西，loop 在这里结束');
+    assert.equal(reply.outcome, 'answered');
+    assert.deepEqual(
+      h.performed,
+      exposures.map((exposure) => exposure.name),
+      '每个 capability 各读一次',
+    );
+    assert.equal(h.requests.length, exposures.length + 1);
+    assert.equal(h.serviceReads.focus + h.serviceReads.peek + h.serviceReads.relevance, exposures.length);
+  }
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -846,6 +1029,10 @@ test('读到一半模型断了是 failed，不是把已经读到的拼成回答'
       return renderFocus(['hikari-new']);
     },
     now: () => NOW,
+    // The base variant's list, which is what is on offer here: this test is about the transport dying
+    // mid-loop rather than about which capabilities exist, so the shorter list keeps the failing step the
+    // only thing it depends on.
+    exposures: LANGUAGE_EXPOSURES,
   });
 
   const reply = await answerer.answer('我现在关注什么？');
@@ -991,6 +1178,7 @@ test('failed 不推进 referent，也不清除已有的那个', async () => {
       return renderFocus(['hikari-new']);
     },
     now: () => NOW,
+    exposures: LANGUAGE_EXPOSURES,
   });
 
   await answerer.answer('我现在关注什么？');
@@ -1115,13 +1303,44 @@ test('chatted 是协议里的第四个结果词，客户端读得懂', () => {
 test('CLI 的等待上界高于 loop 合法能花掉的时间', () => {
   // The bug this pins was real: the client waited 60s while the loop could legitimately spend 45s on
   // model calls alone plus a desktop read, so a question being answered could be reported as one that
-  // was never answered. The number is derived rather than asserted, so adding a third capability that a
-  // model reads on its own breaks this test instead of timing a human out.
-  const maxModelCalls = LANGUAGE_EXPOSURES.length + 1;
+  // was never answered. The number is derived rather than asserted, so adding a capability that a model
+  // reads on its own breaks this test instead of timing a human out.
+  //
+  // Derived from the *longest* list this build can offer, which is the change this slice made. The client
+  // cannot see which variant is on the other end of the pipe — nothing on the wire says — so it has to be
+  // sized for the worst composition it could be talking to, and the repository-aware variant is now that
+  // composition. Sizing for the base list would be correct for exactly the residents that need it least.
+  const maxModelCalls = LONGEST_EXPOSURES.length + 1;
   const modelTime = maxModelCalls * MODEL_TIMEOUT_MS;
 
   assert.ok(REPLY_TIMEOUT_MS > modelTime, `客户端上界 ${REPLY_TIMEOUT_MS} 必须高于模型时间的上界 ${modelTime}`);
   assert.ok(REPLY_TIMEOUT_MS > 60_000, '旧的 60s 上界不够，这里钉住它不会退回去');
+
+  // And the model calls are not the whole of it. An interaction may read twice — the desktop and the
+  // relevance judgement — and each acquisition reaches two sources that are each bounded at 10s. Those
+  // two sources run in parallel, so summing them over-states the read; this asserts the bound clears the
+  // over-statement rather than the optimistic figure, because a client that is just barely patient enough
+  // is one that reports an answer still in flight as an answer that never came.
+  //
+  const pessimisticReadTime = 2 * 2 * 10_000;
+  assert.ok(
+    REPLY_TIMEOUT_MS > modelTime + pessimisticReadTime,
+    `客户端上界 ${REPLY_TIMEOUT_MS} 必须高于模型 ${modelTime} 加上两次读取的悲观值 ${pessimisticReadTime}`,
+  );
+
+  // Both assertions above are floors, and a floor is not what this test is for. A bound sized for the
+  // *base* variant's two capabilities clears both of them — `(2 + 1) * 15s + 90s = 135s` is above the
+  // `100s` floor — while the repository-aware resident it would then be talking to can legitimately spend
+  // longer, which is the timeout-with-the-answer-in-flight bug this bound exists to prevent, arriving one
+  // variant later. So the derivation itself is pinned, evaluated against the longest list this build can
+  // offer: the list is read from `exposure.ts` and the budget from `ask.ts`, so what is compared is the
+  // client's number against two facts it does not own. A derivation replaced by a literal fails here the
+  // day a longer list joins the build; a derivation shrunk to the base list fails here today.
+  assert.equal(
+    REPLY_TIMEOUT_MS,
+    (LONGEST_EXPOSURES.length + 1) * MODEL_TIMEOUT_MS + READ_AND_FRAMING_BUDGET_MS,
+    `客户端上界 ${REPLY_TIMEOUT_MS} 必须等于按最长 exposure 清单推导的值`,
+  );
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -1222,20 +1441,26 @@ test('Language 允许的 exposure 就是两个 owner 自己的导出，不是复
   );
 });
 
-test('每个 exposure 都指向 Language 已经持有契约的既有 Service', () => {
+test('每个 exposure 都指向该 variant 自己已经持有契约的既有 Service', () => {
   // There is no second table and no lookup by name, so the two cannot drift — the exposure carries the
   // contract object itself rather than its id, and `read.ts` dispatches on that object.
-  const required = languagePlugin.requires ?? [];
-  for (const exposure of LANGUAGE_EXPOSURES) {
-    assert.ok(
-      required.includes(exposure.service),
-      `${exposure.name} 指向的 ${exposure.service.id} 必须在 Language 的 requires 里`,
-    );
+  //
+  // Read as a property of the *pair*, because the repository list's third entry is the one that could
+  // point at a Service its own plugin never declared — a capability the model is offered and the Runtime
+  // was never asked for, which would fail the first time a model picked it.
+  for (const variant of VARIANTS) {
+    for (const exposure of variant.exposures) {
+      assert.ok(
+        variant.requires.includes(exposure.service),
+        `${exposure.name} 指向的 ${exposure.service.id} 必须在同一个 variant 的 requires 里`,
+      );
+    }
   }
 
   assert.equal(LANGUAGE_EXPOSURES[0].service, workFocusCurrentService);
   assert.equal(LANGUAGE_EXPOSURES[1].service, desktopSessionAwarenessPeekService);
   assert.notEqual(LANGUAGE_EXPOSURES[1].service, desktopSessionAwarenessService);
+  assert.equal(LANGUAGE_REPOSITORY_EXPOSURES[2].service, repositoryCiRelevanceService);
 });
 
 test('旧的固定 topic 词表已经退役，剩下的闭集只有 exposure 一个', () => {
@@ -1250,6 +1475,374 @@ test('旧的固定 topic 词表已经退役，剩下的闭集只有 exposure 一
   // And nothing in the closed set is a topic this surface invented: every entry is an owner's export,
   // which the identity test above pins by reference.
   assert.equal(LANGUAGE_EXPOSURES.length, 2);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Two variants, differing by one independently optional capability.
+//
+// The whole of the difference is one Service, and every test below is about the fact that it stays one.
+// What would make this section unnecessary is a composition-time capability reachability mechanism; what
+// would make it a failure is a variant that quietly grew a second difference.
+// ---------------------------------------------------------------------------------------------
+
+test('provider 的存在不会让 base Language 自动多出第三个能力', () => {
+  // The claim this slice could most easily have broken, and the one a future reader is most likely to
+  // assume is broken. `repository-ci-relevance` now provides a Service and exports an exposure, and
+  // neither fact is reachable from the base variant: the base plugin is built from a literal that names
+  // two exposures, and no code path in `src` appends to it.
+  assert.equal(LANGUAGE_EXPOSURES.length, 2);
+  assert.equal(languagePlugin.requires.length, 2);
+  assert.equal(findExposure(RELEVANCE, LANGUAGE_EXPOSURES), undefined);
+  for (const exposure of LANGUAGE_EXPOSURES) {
+    assert.notEqual(exposure.service, repositoryCiRelevanceService);
+  }
+  // And the repository capability is a real one, so the assertions above are about a capability that
+  // exists rather than about a name nothing defines.
+  assert.equal(repositoryCiRelevanceReadExposure.name, RELEVANCE);
+});
+
+test('variant 递给答案器的，就是它自己那一份字面清单', () => {
+  // The assertion above reads `LANGUAGE_EXPOSURES`; this one reads the plugin, and they are different
+  // claims. A base factory wired to the repository list would leave every assertion above green while
+  // offering a resident with no repository scope a capability whose Service it never declared — the
+  // mismatch `tools.ts` and `read.ts` each have a half of, arriving as a tool the model can pick and a
+  // read that then refuses it. This is the half that no list assertion can reach, and it runs on
+  // `ubuntu-latest`: it needs the wiring, not the activation.
+  assert.equal(baseLanguageVariant.exposures, LANGUAGE_EXPOSURES);
+  assert.equal(repositoryLanguageVariant.exposures, LANGUAGE_REPOSITORY_EXPOSURES);
+
+  // Stated as an identity against two lists that are not the same object, so it is a decision this build
+  // made rather than the only value it could have had.
+  assert.notEqual(LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES);
+  assert.equal(repositoryLanguageVariant.exposures.length, LANGUAGE_EXPOSURES.length + 1);
+});
+
+test('第三个能力只有 repository variant 读得了，base variant 读不了', async () => {
+  // The reader half of the same wiring claim, reached without a pipe for the reason `plugin.ts` gives:
+  // `makeReader` is handed the context at activation and everything below the platform gate in `setup` is
+  // invisible to CI, so a variant wired to the base reader would be a variant whose third capability is
+  // offered and then refused — and the only test that would have noticed was the named-pipe one below.
+  const context = {
+    services: {
+      get(contract) {
+        if (contract === workFocusCurrentService) return { current: async () => ['hikari-new'] };
+        if (contract === desktopSessionAwarenessPeekService) {
+          return { peek: async () => assessmentFixture() };
+        }
+        if (contract === repositoryCiRelevanceService) return { current: async () => RELEVANT };
+        throw new Error(`组合不该被问到 ${contract.id}`);
+      },
+    },
+  };
+
+  const baseRead = baseLanguageVariant.makeReader(context);
+  const repositoryRead = repositoryLanguageVariant.makeReader(context);
+
+  // Read first, so that the refusal below is about the third capability rather than about a reader that
+  // throws at everything. Both variants read the shared capability and agree about what it says.
+  const expectedFocus = renderFocus(['hikari-new']).map(oneLine);
+  assert.deepEqual(await baseRead(workFocusReadExposure), expectedFocus);
+  assert.deepEqual(await repositoryRead(workFocusReadExposure), expectedFocus);
+
+  // The third capability through the reader the repository variant actually wires: the owner's own
+  // rendering, which is the same claim as the byte-for-byte test below, made about the shipped wiring
+  // rather than about a reader this file built.
+  assert.deepEqual(await repositoryRead(repositoryCiRelevanceReadExposure), renderJudgement(RELEVANT));
+
+  await assert.rejects(
+    () => baseRead(repositoryCiRelevanceReadExposure),
+    /不是这个构建能读取的服务/,
+  );
+});
+
+test('repository-aware Language 的 requires 是 base 那两个加上 relevance Service', () => {
+  assert.equal(repositoryLanguagePlugin.id, 'language');
+  assert.equal(repositoryLanguagePlugin.version, '1.0.0');
+
+  // A structural fact rather than a described one, for the reason the base version of this test gives:
+  // the Runtime has no optional requirement, so a variant that named this contract and got a composition
+  // without it is a variant that stays `waiting` — fail-closed, and the reason a resident that chose it
+  // has to have loaded the provider first.
+  assert.deepEqual(repositoryLanguagePlugin.requires, [
+    workFocusCurrentService,
+    desktopSessionAwarenessPeekService,
+    repositoryCiRelevanceService,
+  ]);
+  assert.deepEqual(repositoryLanguagePlugin.provides, []);
+
+  const keys = repositoryLanguagePlugin.requires.map(
+    (contract) => `${contract.id}@${contract.version}`,
+  );
+  assert.deepEqual(keys, [
+    'work-focus.current@1',
+    'desktop-session-awareness.peek@1',
+    'repository-ci-relevance.current@1',
+  ]);
+
+  // The base two come first and in the same order, so "repository-aware is base plus one" is true of the
+  // sequence and not merely of the set. This is also the sentence that says `peek` rather than `current`
+  // is still what is required — a variant that reached for the advancing contract would be a second,
+  // quieter change riding along with the one this slice is about.
+  assert.deepEqual(repositoryLanguagePlugin.requires.slice(0, 2), [...languagePlugin.requires]);
+});
+
+test('repository-aware Language 允许的 exposure 是 base 那两个加上 owner 自己的第三个', () => {
+  assert.equal(LANGUAGE_REPOSITORY_EXPOSURES.length, 3);
+  assert.equal(LANGUAGE_REPOSITORY_EXPOSURES[0], workFocusReadExposure);
+  assert.equal(LANGUAGE_REPOSITORY_EXPOSURES[1], desktopContextReadExposure);
+  assert.equal(LANGUAGE_REPOSITORY_EXPOSURES[2], repositoryCiRelevanceReadExposure);
+  assert.deepEqual(
+    LANGUAGE_REPOSITORY_EXPOSURES.map((exposure) => exposure.name),
+    [WORK, DESKTOP, RELEVANCE],
+  );
+  // The first two are the *same objects*, not two entries that read alike, so the reads a model is
+  // offered for the focus and the desktop are literally the same values in both variants. Two literals
+  // is the approved amount of duplication; two descriptions of the same capability would not be.
+  assert.deepEqual(LANGUAGE_REPOSITORY_EXPOSURES.slice(0, 2), [...LANGUAGE_EXPOSURES]);
+});
+
+test('两个 exposure 列表都是显式冻结的字面量，不是注册表或发现来的', () => {
+  for (const exposures of EVERY_EXPOSURE_LIST) {
+    assert.ok(Object.isFrozen(exposures), '列表本身必须是冻结的');
+    for (const exposure of exposures) {
+      assert.ok(Object.isFrozen(exposure), `${exposure.name} 必须是冻结的`);
+      assert.equal(typeof exposure.name, 'string');
+      assert.equal(typeof exposure.description, 'string');
+      // The description is the owner's statement of what its own capability covers, and it travels to a
+      // model untouched. An entry without one would be a capability the model is offered with nothing
+      // said about it, which is the one thing the exposure mechanism exists to prevent.
+      assert.ok(exposure.description.length > 0, `${exposure.name} 必须带着 owner 自己写的说明`);
+    }
+  }
+  // Fixed means finite and enumerable here: three distinct capabilities across both lists, no fourth, and
+  // the base list a strict prefix of the repository one rather than a set that overlaps it partly.
+  assert.equal(new Set(EVERY_EXPOSURE_LIST.flat().map((exposure) => exposure.name)).size, 3);
+});
+
+test('语言包只导出这两个 exposure 列表', async () => {
+  // The hole a computed "longest list" leaves: a third list could join the package and nothing above
+  // would notice, because everything above is a statement about the lists that are here. Walked over the
+  // module's own exports rather than over a list written here, so the check reads "this is all of them"
+  // rather than "these two agree with each other".
+  const language = await import('../dist/language/index.js');
+  const lists = Object.entries(language)
+    .filter(
+      ([, value]) =>
+        Array.isArray(value) &&
+        value.every((entry) => entry !== null && typeof entry === 'object' && 'service' in entry),
+    )
+    .map(([name]) => name)
+    .sort();
+
+  assert.deepEqual(lists, ['LANGUAGE_EXPOSURES', 'LANGUAGE_REPOSITORY_EXPOSURES']);
+});
+
+test('语言包没有把不存在的通用机制引进来', () => {
+  // The claim `plugin.ts` makes in prose — "not a brain, a planner, an action orchestrator, a tool
+  // registry, a capability registry, a global context, memory, a model router or a reasoning service" —
+  // checked as a property of the source rather than left as a sentence that could quietly stop being
+  // true. The list has to be reachable a second way and it is: a plugin that grew a tool registry would
+  // have had to name one.
+  //
+  // Every entry is a compound identifier, never the bare noun it is built from. That is not style: this
+  // module's own comments negate these words in the plain — "no Memory, no Chronicle", "Why this is not
+  // Memory" — so a pattern naming the nouns would red on the sentences that deny the thing. What is
+  // checked is the identifiers that would have to be introduced, which is the same reason
+  // `resident-cli.test.mjs`'s wider scan names `CapabilityRegistry` rather than `Registry`.
+  const forbidden =
+    /\b(?:ServiceLocator|ServiceRegistry|ToolRegistry|CapabilityRegistry|ExposureRegistry|PluginRegistry|PluginLoader|PluginDiscovery|DynamicPlugin|DynamicDiscovery|OptionalPlugin|CentralJudgement|GlobalBrain|GlobalWorldState|ModelRouter|ReasoningService|MemoryStore|MemoryService|ChronicleWriter|ProfileRegistry|FeatureFlag)\b/;
+  const offenders = sourceFiles(LANGUAGE_SOURCE).filter((file) => forbidden.test(readFileSync(file, 'utf8')));
+
+  assert.deepEqual(
+    offenders.map((file) => relative(LANGUAGE_SOURCE, file).replaceAll('\\', '/')),
+    [],
+  );
+});
+
+function sourceFiles(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory() ? sourceFiles(join(dir, entry.name)) : [join(dir, entry.name)],
+  );
+}
+
+test('relevance Service 缺席时，repository-aware Language 停在 waiting，不降级启动', async (t) => {
+  const root = createRoot(t);
+  const runtime = new Runtime();
+  t.after(() => runtime.shutdown());
+
+  const base = {
+    rootDir: root,
+    endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
+    model: 'test-model',
+    credentialEnv: undefined,
+    reasoningEffort: undefined,
+  };
+
+  // The two base requirements arrive, so the only thing unsatisfied is the third. A plugin that fell back
+  // to the base behaviour here would come up `active` and answer the first question about CI by telling
+  // the model it has no such capability — a resident that started and then could not do what its
+  // composition said it would.
+  assert.equal(
+    await runtime.loadPlugin(
+      provider('test.focus-provider', workFocusCurrentService, Object.freeze({ current: async () => [] })),
+    ),
+    'active',
+  );
+  assert.equal(
+    await runtime.loadPlugin(
+      provider(
+        'test.awareness-provider',
+        desktopSessionAwarenessPeekService,
+        Object.freeze({ peek: async () => assessmentFixture() }),
+      ),
+    ),
+    'active',
+  );
+  assert.equal(
+    await runtime.loadPlugin(
+      createRepositoryLanguagePlugin(() => {
+        throw new Error('模型工厂不该在 waiting 的插件上被调用');
+      }),
+      base,
+    ),
+    'waiting',
+  );
+
+  // Everything this test needs runs on a host with no named pipes: a plugin held at `waiting` never
+  // reaches `setup`, so the endpoint it would have opened is never asked for. That is why this half is
+  // not skipped on CI, and it is the half worth having there — the contrast that proves `waiting` is
+  // about the third requirement is the test after this one.
+});
+
+test('同一组合里换回 base variant，Language 就 active', { skip: NO_PIPES }, async (t) => {
+  // The contrast that makes the `waiting` above a fact about the composition rather than about the
+  // plugin being unable to start at all: the base variant, loaded into the very same set of providers,
+  // is `active`. Without it the assertion above would also pass if `requires` had grown a contract
+  // nothing in this build provides, which is a different bug with the same symptom.
+  //
+  // Windows-only because activating either variant opens the plugin's endpoint, and `setup` throws on a
+  // host without pipes. The `waiting` half needs no pipe for exactly the reason this one does.
+  //
+  // A second Runtime rather than a second `loadPlugin` on the first: both variants carry the id
+  // `language`, because only one of them is ever loaded and a resident's status line should not change
+  // with which one it is. The Runtime enforces that by refusing the second load, which is the right
+  // refusal and the reason this is two runtimes rather than one.
+  const root = createRoot(t);
+  const config = {
+    rootDir: root,
+    endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
+    model: 'test-model',
+    credentialEnv: undefined,
+    reasoningEffort: undefined,
+  };
+
+  const alsoBase = new Runtime();
+  t.after(() => alsoBase.shutdown());
+  assert.equal(
+    await alsoBase.loadPlugin(
+      provider('test.focus-provider', workFocusCurrentService, Object.freeze({ current: async () => [] })),
+    ),
+    'active',
+  );
+  assert.equal(
+    await alsoBase.loadPlugin(
+      provider(
+        'test.awareness-provider',
+        desktopSessionAwarenessPeekService,
+        Object.freeze({ peek: async () => assessmentFixture() }),
+      ),
+    ),
+    'active',
+  );
+  assert.equal(await alsoBase.loadPlugin(createLanguagePlugin(() => scriptedModel([says('在的。')])), config), 'active');
+});
+
+test('relevance Service 只被读一次，Language 不重新算一遍判定', async () => {
+  // Two judgements a recomputation would have to reach differently from what it was handed: the focus
+  // names a repository the judgement does not, and the assessment reports no repository at all. A reader
+  // that judged for itself would answer `unknown` in both cases and would be answering a question that
+  // already has an owner — so what comes back has to be the judgement it was given, not a second opinion
+  // about the same two sources.
+  for (const judgement of [RELEVANT, UNKNOWN_JUDGEMENT]) {
+    const h = harness({
+      repository: true,
+      judgement,
+      focus: ['t1mb2rg/hikari-new'],
+      script: [callsTo(toolCall('a', RELEVANCE)), DONE],
+    });
+
+    const reply = await h.answerer.answer('CI 那边怎么样？');
+
+    assert.equal(reply.outcome, 'answered');
+    assert.deepEqual(h.performed, [RELEVANCE]);
+    assert.equal(h.serviceReads.relevance, 1, '判定只应被读一次');
+    assert.equal(h.serviceReads.focus, 0, '读 relevance 不该顺手读 focus');
+    assert.equal(h.serviceReads.peek, 0, '读 relevance 不该顺手读 desktop');
+    assert.deepEqual(reply.lines, renderJudgement(judgement));
+  }
+});
+
+test('repository exposure 的读取结果与 owner 的 renderJudgement 逐字相同', async () => {
+  // Byte for byte, and the fixtures are the reason it is checkable: two judgements, one per arm of the
+  // union, so the claim covers the arm that carries a designation and the arm that carries nothing. The
+  // comparison is against the owner's own function rather than against the strings it happens to return,
+  // so a change to what this domain's verdict reads like moves both sides at once and cannot pass by
+  // being copied here.
+  //
+  // Neither fixture needs escaping, and that is what makes "byte for byte" the right description rather
+  // than an overstatement: the reader does not reformat a judgement, it hands the owner's lines on. The
+  // one transformation it applies is `oneLine`, to a designation a human typed — asserted below rather
+  // than left implied, because an identity that held only for well-behaved fixtures would be a claim
+  // about the fixtures.
+  for (const judgement of [RELEVANT, UNKNOWN_JUDGEMENT]) {
+    const read = createRepositoryExposureReader({
+      readFocus: async () => {
+        throw new Error('读 relevance 不该碰 focus');
+      },
+      peek: async () => {
+        throw new Error('读 relevance 不该碰 desktop');
+      },
+      readRelevance: async () => judgement,
+    });
+
+    assert.deepEqual(await read(repositoryCiRelevanceReadExposure), renderJudgement(judgement));
+  }
+
+  // And the transformation itself, stated as what it is: the owner's rendering, made line-safe. The
+  // end-to-end test below asserts the same relation through the loop; this one asserts it against the
+  // renderer, so a reader that stopped escaping fails in both places rather than only in the one that
+  // also has to get a question through a model first.
+  const hostileRead = createRepositoryExposureReader({
+    readFocus: async () => {
+      throw new Error('读 relevance 不该碰 focus');
+    },
+    peek: async () => {
+      throw new Error('读 relevance 不该碰 desktop');
+    },
+    readRelevance: async () => HOSTILE_JUDGEMENT,
+  });
+
+  assert.deepEqual(
+    await hostileRead(repositoryCiRelevanceReadExposure),
+    renderJudgement(HOSTILE_JUDGEMENT).map(oneLine),
+  );
+});
+
+test('model 看到的那几行同时就是人类看到的那几行，两者都还是 line-safe 的', async () => {
+  // The "one array, two readers" claim, checked on the one branch whose text can contain characters
+  // nobody in this repository wrote. A designation is free text a human typed, so a line break in one
+  // would otherwise reach the model as two lines — the second shaped exactly like a line Hikari wrote.
+  const h = harness({
+    repository: true,
+    judgement: HOSTILE_JUDGEMENT,
+    script: [callsTo(toolCall('a', RELEVANCE)), DONE],
+  });
+
+  const reply = await h.answerer.answer('CI 那边怎么样？');
+
+  assert.deepEqual(reply.lines, renderJudgement(HOSTILE_JUDGEMENT).map(oneLine));
+  assert.equal(reply.lines.filter((line) => line.startsWith('Repository CI relevance：')).length, 1);
+  assert.ok(reply.lines.some((line) => line.includes('\\n')), '换行必须被转义而不是被丢掉');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -1273,7 +1866,13 @@ function scriptedModel(script) {
   const requests = [];
   return {
     async step(request) {
-      requests.push({ messages: request.messages.map((message) => ({ ...message })) });
+      requests.push({
+        messages: request.messages.map((message) => ({ ...message })),
+        // Recorded for the same reason the offline harness records it, and this is the only place the
+        // question can be asked of the real wiring: which capabilities a model is offered is decided by
+        // the variant's factory at activation, and `tools` is the whole of what that decision emits.
+        tools: request.tools,
+      });
       const next = script[index];
       index += 1;
       if (next === undefined) throw new Error('模型脚本用完了，loop 却还在请求下一步');
@@ -1287,14 +1886,23 @@ function scriptedModel(script) {
   };
 }
 
-async function compose(t, { script = [says('在的。')], focus, assessment } = {}) {
+/**
+ * A resident, assembled far enough to answer one question over a real pipe.
+ *
+ * `repository` chooses the variant the way `cli/resident.ts` does — by loading one factory rather than
+ * the other, after the Service its requirements name is already in the composition. The relevance
+ * provider here is a test stand-in rather than the real plugin, because what this helper is for is the
+ * Language side: whether the real provider activates is that package's own question, and it is asked
+ * once below in `relevance provider 可以没有 consumer 而 active`.
+ */
+async function compose(t, { script = [says('在的。')], focus, assessment, repository = false, judgement = RELEVANT } = {}) {
   const root = createRoot(t);
   const runtime = new Runtime();
   t.after(() => runtime.shutdown());
 
   const connections = [];
   const models = [];
-  const plugin = createLanguagePlugin((connection) => {
+  const plugin = (repository ? createRepositoryLanguagePlugin : createLanguagePlugin)((connection) => {
     connections.push(connection);
     const model = scriptedModel(script);
     models.push(model);
@@ -1324,6 +1932,20 @@ async function compose(t, { script = [says('在的。')], focus, assessment } = 
     ),
     'active',
   );
+
+  if (repository) {
+    assert.equal(
+      await runtime.loadPlugin(
+        provider(
+          'test.relevance-provider',
+          repositoryCiRelevanceService,
+          Object.freeze({ current: async () => judgement }),
+        ),
+      ),
+      'active',
+    );
+  }
+
   assert.equal(
     await runtime.loadPlugin(plugin, {
       rootDir: root,
@@ -1335,8 +1957,174 @@ async function compose(t, { script = [says('在的。')], focus, assessment } = 
     '完整组合应 active',
   );
 
-  return { root, connections, models };
+  return { root, connections, models, runtime };
 }
+
+/**
+ * A plugin that requires one contract and does nothing with it but hand the Service to the test.
+ *
+ * Stands in for the real consumer, and stands in for it on purpose: what the two tests below are about
+ * is the Runtime's treatment of a provider whose consumer may or may not be there, and a probe that only
+ * ever asks for the Service is the smallest thing that can be present or absent.
+ */
+function consumer(pluginId, contract, capture) {
+  return {
+    id: pluginId,
+    version: '1.0.0',
+    requires: [contract],
+    provides: [],
+    setup(context) {
+      capture(context.services.get(contract));
+    },
+  };
+}
+
+/** A snapshot in which neither source could be observed: a question that was put and not answerable. */
+function unobservableSnapshot() {
+  return Object.freeze({
+    snapshotAt: SNAPSHOT_AT,
+    gitRepository: Object.freeze({ kind: 'unavailable' }),
+    githubCi: Object.freeze({ kind: 'unavailable' }),
+  });
+}
+
+test('relevance provider 可以没有 consumer 而 active，Service 也真的可被调用', { skip: NO_PIPES }, async (t) => {
+  // `plugin-design-spec.md` §16.2 asks for a real callable need before a Service exists, and the need is
+  // a *variant* rather than a fixture — so the provider must not depend on the consumer being present.
+  // A provider that only worked once something consumed it would be a provider deciding its own
+  // consumer, which is the direction this architecture refuses.
+  const root = createRoot(t);
+  const runtime = new Runtime();
+  t.after(() => runtime.shutdown());
+
+  const designations = Object.freeze(['hikari-new']);
+  const snapshot = unobservableSnapshot();
+
+  assert.equal(
+    await runtime.loadPlugin(
+      provider('test.focus-provider', workFocusCurrentService, Object.freeze({ current: async () => designations })),
+    ),
+    'active',
+  );
+  assert.equal(
+    await runtime.loadPlugin(
+      provider(
+        'test.awareness-provider',
+        repositoryCiAwarenessService,
+        Object.freeze({ current: async () => Object.freeze({ snapshot, commitComparison: 'indeterminate' }) }),
+      ),
+    ),
+    'active',
+  );
+
+  // No consumer anywhere in this composition, and the provider is fully up.
+  assert.equal(await runtime.loadPlugin(repositoryCiRelevancePlugin, { rootDir: root }), 'active');
+
+  // And the Service is not merely declared: a consumer that arrives afterwards gets the same judgement
+  // the owner's own function makes of the same two values. `provider` and `exposure` landed together, and
+  // this is the half that says the Service is backed by the judgement rather than by a second copy of it.
+  let received;
+  assert.equal(
+    await runtime.loadPlugin(consumer('test.relevance-consumer', repositoryCiRelevanceService, (service) => {
+      received = service;
+    })),
+    'active',
+  );
+
+  assert.deepEqual(await received.current(), judgeRelevance(designations, snapshot));
+});
+
+test('relevance Service 到达后，repository-aware Language 才 active', { skip: NO_PIPES }, async (t) => {
+  // The other half of the fail-closed pair. The test above showed that a missing Service leaves the
+  // variant `waiting`; this shows that the same plugin, in the same composition, comes up once the
+  // Service is there — so `waiting` was a fact about the composition and not about the plugin being
+  // unable to start at all.
+  const root = createRoot(t);
+  const runtime = new Runtime();
+  t.after(() => runtime.shutdown());
+
+  const config = {
+    rootDir: root,
+    endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
+    model: 'test-model',
+    credentialEnv: undefined,
+  };
+
+  assert.equal(
+    await runtime.loadPlugin(
+      provider('test.focus-provider', workFocusCurrentService, Object.freeze({ current: async () => [] })),
+    ),
+    'active',
+  );
+  assert.equal(
+    await runtime.loadPlugin(
+      provider(
+        'test.awareness-provider',
+        desktopSessionAwarenessPeekService,
+        Object.freeze({ peek: async () => assessmentFixture() }),
+      ),
+    ),
+    'active',
+  );
+
+  const plugin = createRepositoryLanguagePlugin(() => scriptedModel([DONE]));
+  assert.equal(await runtime.loadPlugin(plugin, config), 'waiting');
+
+  assert.equal(
+    await runtime.loadPlugin(
+      provider(
+        'test.relevance-provider',
+        repositoryCiRelevanceService,
+        Object.freeze({ current: async () => RELEVANT }),
+      ),
+    ),
+    'active',
+  );
+  // The Runtime reconciles on every load, so the plugin recorded as `waiting` is activated by the arrival
+  // rather than needing to be loaded again. Asserted through the state the Runtime reports rather than
+  // through a second `loadPlugin` call, because the second call is the thing that is not allowed to be
+  // how this works: a resident that had to reload a member would be one whose roster depends on order.
+  assert.equal(runtime.getPluginState('language'), 'active');
+});
+
+test('repository-aware 组合里，模型被给出的能力是三个，且 base 组合仍然是两个', { skip: NO_PIPES }, async (t) => {
+  // Over a real pipe and through the real factories, which is what makes this different from the tests
+  // above: those check the lists, and this checks that `createRepositoryLanguagePlugin` is what hands the
+  // longer one to the answerer at activation. A wiring that always passed `LANGUAGE_EXPOSURES` would pass
+  // every list assertion and fail here.
+  const repository = await compose(t, {
+    repository: true,
+    script: [callsTo(toolCall('a', RELEVANCE)), DONE],
+  });
+  const base = await compose(t, { script: [callsTo(toolCall('a', WORK)), DONE] });
+
+  // Asserted rather than discarded: an ask that never reached the answerer would leave both `tools`
+  // assertions below reading an empty request list, and the failure would point at the assertion rather
+  // than at the question that did not arrive.
+  const asked = await requestLanguageAsk(repository.root, 'CI 那边怎么样？');
+  assert.equal(asked.kind, 'replied');
+  const askedBase = await requestLanguageAsk(base.root, '我现在关注什么？');
+  assert.equal(askedBase.kind, 'replied');
+
+  // And the third capability is *read*, not merely offered. `requestLanguageAsk` answers `replied` for
+  // both `answered` and `failed`, so asking only for `kind` would accept an interaction in which the
+  // model's one read came back as "the service this capability names is not one this build can read" —
+  // which is exactly what a variant wired to the base reader produces while every list assertion above
+  // still passes. This is the assertion that separates "the model was shown three tools" from "the third
+  // one works".
+  assert.equal(asked.reply.outcome, 'answered');
+  assert.equal(askedBase.reply.outcome, 'answered');
+
+  const offeredBy = (composed) => composed.models[0].requests[0].tools.map((tool) => tool.function.name);
+
+  assert.deepEqual(offeredBy(repository), [WORK, DESKTOP, RELEVANCE]);
+  assert.deepEqual(offeredBy(base), [WORK, DESKTOP]);
+  // And the same fact as a count, on a resident that really activated: two tools offered rather than
+  // three. The refusal body is a different surface and is checked offline by 「拒绝语告诉人类它能读哪些
+  // 能力…」, which does not need a pipe — this assertion is about what the model was offered and says
+  // only that.
+  assert.equal(base.models[0].requests[0].tools.length, LANGUAGE_EXPOSURES.length);
+});
 
 function connectRaw(path) {
   return new Promise((settle) => {

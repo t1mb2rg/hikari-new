@@ -27,20 +27,38 @@
 // a named pipe would be a rule CI never checks. What lives here is the part that genuinely needs a
 // process, a socket and a network connection, and nothing else was allowed to move in with it.
 //
-// Two dependencies, and the boundary of this slice is exactly that pair.
+// Two variants, and the whole of the difference between them is one Service.
 //
-//   work-focus.current              the set a human declared, as they typed it
-//   desktop-session-awareness.peek  the desktop assessment, computed without advancing its baseline
+//   base Language               work-focus.current, desktop-session-awareness.peek
+//   repository-aware Language   those two, plus repository-ci-relevance.current
 //
-// Repository CI is deliberately not among them, and the reason is structural rather than editorial.
-// The Runtime has no optional requirement: `#requirementsSatisfied` is an `every`, so a plugin that
-// required a contract nobody provides stays `waiting`, and a resident with one waiting member is not
-// ready and exits. Requiring the relevance contract would therefore mean a default resident could not
-// load Language at all — and making *that* work would mean either an optional-require mechanism or a
-// capability registry, two pieces of Runtime architecture this slice is not allowed to add. So
-// Language can answer about the work focus itself and about the desktop, and cannot answer about CI.
-// That is a smaller capability and an honest one, and it is recorded as a limit rather than papered
-// over with a feature.
+// The base variant is what every resident with a model gets, and it is byte-for-byte the plugin this
+// file has always built: same id, same version, same two requirements, same two exposures. A resident
+// with no repository scope answers exactly what it answered before this slice, and nothing about the
+// repository-aware variant reaches it.
+//
+// The repository-aware variant is what a resident gets when a repository scope *and* a model were both
+// configured. It offers one more capability, so it depends on the Service behind that capability, and
+// the dependency is hard. That hardness is the v0 semantics and not an oversight: the Runtime has no
+// optional requirement — `#requirementsSatisfied` is an `every` — so a repository-aware Language loaded
+// into a composition without the relevance plugin stays `waiting`, and a resident with a waiting member
+// is not ready and exits rather than coming up with a capability that would fail the first time a model
+// asked for it. Fail-closed is the honest shape, and the alternative would be an optional-require
+// mechanism, a service locator, a capability registry, dynamic discovery or a generic optional-plugin
+// framework — four pieces of Runtime architecture this slice is explicitly not allowed to add, and none
+// of which the problem actually needs.
+//
+// What that does *not* mean, recorded because it is the easiest thing to misread: base Language does not
+// depend on Repository CI. With no repository scope `LANGUAGE_EXPOSURES` is unchanged and the plugin
+// offering it is unchanged, so the dependency lives in the variant that offers the capability and
+// nowhere else. That is what keeps "is there a repository scope" a composition decision rather than a
+// condition this plugin evaluates, and it is why the resident selects a variant instead of the plugin
+// negotiating one.
+//
+// Two named factories rather than a flag or an options bag, for the reason `exposure.ts` records at
+// length: the mechanism is approved for exactly two variants differing by one independently optional
+// capability. A second such capability is the trigger for a Composition Boundary Review — not for a
+// third factory here, and not for a `CalendarLanguage` beside these two.
 //
 // The peek contract rather than the current one, for the reason `desktop-session-observe` gives: a
 // question a human asks must not become the next comparison partner of the timeline they are asking
@@ -48,10 +66,12 @@
 // follows — there is no code path here that could advance the baseline, so no test has to prove one
 // does not.
 //
-// No Service is provided, and by the Contract Creation Gate there is nothing to provide. Nothing in
-// the composition asks this plugin for anything: the one thing that does is a person, arriving over the
-// endpoint below. Publishing a Service for that would be publishing one for nobody, and the day a real
-// consumer exists is the day this line gets an argument rather than a guess.
+// No Service is provided by either variant, and by the Contract Creation Gate there is nothing to
+// provide. Nothing in the composition asks this plugin for anything: the one thing that does is a
+// person, arriving over the endpoint below. Publishing a Service for that would be publishing one for
+// nobody, and the day a real consumer exists is the day this line gets an argument rather than a guess.
+// Offering a capability to a model and providing one to the composition are different directions, and
+// this plugin only ever does the first.
 //
 // The endpoint is the plugin's own, over the same named-pipe precedent every other plugin-owned
 // ingress uses. The CLI is a transport client: it carries the sentence in and the lines out and forms
@@ -65,14 +85,18 @@
 // Chronicle entry anywhere behind this plugin, so "Hikari forgot the conversation because it
 // restarted" is a structural fact rather than a cleanup somebody has to remember to run.
 
-import type { PluginDefinition } from '../runtime/plugin.js';
+import type { ServiceContract } from '../runtime/contracts.js';
+import type { PluginContext, PluginDefinition } from '../runtime/plugin.js';
 import { desktopSessionAwarenessPeekService } from '../desktop-session-awareness/index.js';
+import { repositoryCiRelevanceService } from '../repository-ci-relevance/index.js';
 import { workFocusCurrentService } from '../work-focus/index.js';
 
 import { createAnswerer } from './answer.js';
 import { listenLanguageEndpoint } from './endpoint.js';
 import { languageEndpointPath } from './endpoint-path.js';
 import { LanguageError } from './errors.js';
+import { LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES } from './exposure.js';
+import type { LanguageExposure } from './exposure.js';
 import {
   REASONING_EFFORTS,
   createHttpModel,
@@ -81,7 +105,8 @@ import {
   type LanguageModelConnection,
   type ReasoningEffort,
 } from './model.js';
-import { createExposureReader } from './read.js';
+import { createExposureReader, createRepositoryExposureReader } from './read.js';
+import type { ExposureReader } from './read.js';
 
 /**
  * What the composition must tell this plugin: where its endpoint goes, which model to ask, and how much
@@ -113,6 +138,29 @@ export interface LanguagePluginConfig {
 }
 
 /**
+ * One variant: what it requires, what it offers, and how it reads.
+ *
+ * The three travel in one object literal per variant because they have to agree, and this is what makes
+ * "these three agree" checkable by reading one place instead of cross-referencing three. The two objects
+ * below are the whole set: nothing outside this file constructs one, and a third would be the trigger for
+ * a Composition Boundary Review rather than a third entry.
+ */
+interface LanguageVariant {
+  /** The Services this variant reads. Everything it offers has to be reachable through one of these. */
+  readonly requires: readonly ServiceContract<unknown>[];
+  /** The capabilities it offers, in the order a model is shown them. */
+  readonly exposures: readonly LanguageExposure[];
+  /**
+   * Build this variant's reader, once, at activation.
+   *
+   * Takes the Runtime's plugin context so it can pull the Services the `requires` above names. A reader
+   * that reached a Service outside that list would be holding something this build was never granted,
+   * which is why the pulling happens here rather than anywhere the reader could influence it.
+   */
+  readonly makeReader: (context: PluginContext) => ExposureReader;
+}
+
+/**
  * The model factory is injected rather than constructed here, and the seam exists for the reason
  * `github-ci/plugin.ts` gives for its acquirer: the behaviour of this plugin has to be testable
  * without a network. Every question about whether a model's words can reach a human is a question
@@ -123,16 +171,21 @@ export interface LanguagePluginConfig {
  * by choosing one string; a loop can only be tested by choosing a *sequence*, and the factory is what
  * lets a test write one down — including the sequences no real endpoint would produce, which are the
  * ones the termination and batch-completeness rules are about.
+ *
+ * The variant is the second thing a caller chooses, and it is a whole `LanguageVariant` rather than a
+ * flag. The two factories below are the only callers, so what a boolean would buy — a choice made at
+ * some third site — is exactly what should not exist here.
  */
-export function createLanguagePlugin(
+function buildLanguagePlugin(
   createModel: (connection: LanguageModelConnection) => LanguageModel,
+  variant: LanguageVariant,
 ): PluginDefinition<LanguagePluginConfig> {
   return {
     id: 'language',
     version: '1.0.0',
-    // The frozen pair, and nothing else. What is *absent* here is the argument: no Repository CI, no
+    // The variant's own list and nothing else. What is *absent* from both variants is the argument: no
     // Memory, no Chronicle, no Runtime service that would make this a place other plugins reach in.
-    requires: [workFocusCurrentService, desktopSessionAwarenessPeekService],
+    requires: variant.requires,
     provides: [],
     config: {
       parse(input: unknown): LanguagePluginConfig {
@@ -165,19 +218,14 @@ export function createLanguagePlugin(
       // nothing new can arrive to find the model aborted.
       context.defer(() => model.dispose());
 
-      const focus = context.services.get(workFocusCurrentService);
-      const awareness = context.services.get(desktopSessionAwarenessPeekService);
-
       // The reader is the only thing in this plugin that knows which Service an exposure points at,
-      // and it is handed the two contract calls rather than the two Services — a reader that could
-      // reach a Service object could reach one this build was never granted. It is built here, beside
-      // the `requires` above, so the two are read together by anyone checking that they agree.
-      const read = createExposureReader({
-        readFocus: () => focus.current(),
-        peek: () => awareness.peek(),
-      });
+      // and it is handed contract calls rather than Service objects — a reader that could reach a
+      // Service could reach one this build was never granted. The variant builds it, so that the
+      // Services it pulls and the `requires` it declares are written in the same object literal, and
+      // anyone checking that the two agree reads one place rather than two files.
+      const read = variant.makeReader(context);
 
-      // Three dependencies are wired here and nowhere else, and the loop they feed keeps its own
+      // Four dependencies are wired here and nowhere else, and the loop they feed keeps its own
       // dialogue turn — see `answer.ts` for why the decisions live in a plain function instead of this
       // closure. Nothing below this line decides what a question means; this is the wiring, and the
       // wiring is the whole of it.
@@ -185,6 +233,7 @@ export function createLanguagePlugin(
         step: (request) => model.step(request),
         read,
         now: () => new Date().toISOString(),
+        exposures: variant.exposures,
       });
 
       const endpoint = await listenLanguageEndpoint(
@@ -254,6 +303,100 @@ function readConfig(input: unknown): LanguagePluginConfig {
   });
 }
 
+/**
+ * The base variant: the two reads that need nothing beyond the pair this plugin has always required.
+ *
+ * A resident with a model and no repository scope gets this one, and it is the plugin every build before
+ * this slice built — same id, same version, same two requirements, same two exposures.
+ *
+ * Exported, and for the reason `index.ts` gives for exporting `createAnswerer`: on `ubuntu-latest` the
+ * platform gate in `setup` refuses before anything under it runs, so a wiring that only `setup` could
+ * observe would be a wiring CI never checks. What a test reads here is the object
+ * `createLanguagePlugin` hands `buildLanguagePlugin`, so "the base variant offers two capabilities and
+ * reads them through the base reader" is a statement about the plugin rather than about the literals it
+ * was assembled from — and the two can differ, which is the version of this that matters: a variant
+ * built from the other list is a plugin whose model is shown a capability its own reader refuses.
+ *
+ * Two named objects rather than a table of them. A third variant is the trigger for a Composition
+ * Boundary Review — see `exposure.ts` — and not a third entry here.
+ */
+export const baseLanguageVariant: LanguageVariant = Object.freeze({
+  requires: [workFocusCurrentService, desktopSessionAwarenessPeekService],
+  exposures: LANGUAGE_EXPOSURES,
+  makeReader: (context: PluginContext) => {
+    const focus = context.services.get(workFocusCurrentService);
+    const awareness = context.services.get(desktopSessionAwarenessPeekService);
+
+    return createExposureReader({
+      readFocus: () => focus.current(),
+      peek: () => awareness.peek(),
+    });
+  },
+});
+
+/**
+ * The base variant, as the plugin a composition loads.
+ *
+ * The factory is here rather than at the definition because the model connection is injected — see
+ * `buildLanguagePlugin` for why that seam exists — and everything the variant itself decides lives in
+ * the object above, so that there is one place to read for what this plugin requires and one for what it
+ * offers.
+ */
+export function createLanguagePlugin(
+  createModel: (connection: LanguageModelConnection) => LanguageModel,
+): PluginDefinition<LanguagePluginConfig> {
+  return buildLanguagePlugin(createModel, baseLanguageVariant);
+}
+
+/**
+ * The repository-aware variant: the base two, plus the Repository CI relevance judgement.
+ *
+ * Loaded only by a composition that has already loaded the plugin providing
+ * `repositoryCiRelevanceService`, and that ordering decision lives in `cli/resident.ts` rather than
+ * here — this variant states the need and the Runtime reconciles it. Because it is a hard requirement,
+ * a composition that got the order wrong does not come up degraded: this plugin stays `waiting`, the
+ * resident reports it, and an operator sees which member is missing instead of a capability that fails
+ * the first time a model asks for it.
+ *
+ * The two base reads are pulled here a second time, in this literal, rather than shared with the base
+ * variant. That is deliberate: each variant states its own requirements in full, so a reader comparing
+ * a variant's reader against its `requires` never has to follow a second definition to know what the
+ * services it pulls are.
+ *
+ * Exported for the reason the base variant records above, and it is the half that needs it more: this is
+ * the variant whose third capability can be offered without a reader that can read it, which is a
+ * mismatch that shows up on the first question a model asks rather than at activation.
+ */
+export const repositoryLanguageVariant: LanguageVariant = Object.freeze({
+  requires: [
+    workFocusCurrentService,
+    desktopSessionAwarenessPeekService,
+    repositoryCiRelevanceService,
+  ],
+  exposures: LANGUAGE_REPOSITORY_EXPOSURES,
+  makeReader: (context: PluginContext) => {
+    const focus = context.services.get(workFocusCurrentService);
+    const awareness = context.services.get(desktopSessionAwarenessPeekService);
+    const relevance = context.services.get(repositoryCiRelevanceService);
+
+    return createRepositoryExposureReader({
+      readFocus: () => focus.current(),
+      peek: () => awareness.peek(),
+      readRelevance: () => relevance.current(),
+    });
+  },
+});
+
+/** The repository-aware variant, as the plugin a composition loads. See the factory above. */
+export function createRepositoryLanguagePlugin(
+  createModel: (connection: LanguageModelConnection) => LanguageModel,
+): PluginDefinition<LanguagePluginConfig> {
+  return buildLanguagePlugin(createModel, repositoryLanguageVariant);
+}
+
 export const languagePlugin: PluginDefinition<LanguagePluginConfig> = createLanguagePlugin((connection) =>
   createHttpModel(connection),
 );
+
+export const repositoryLanguagePlugin: PluginDefinition<LanguagePluginConfig> =
+  createRepositoryLanguagePlugin((connection) => createHttpModel(connection));
