@@ -34,9 +34,10 @@ import { foregroundPlugin } from '../foreground/index.js';
 import { gitHubCiPlugin } from '../github-ci/index.js';
 import { gitRepositoryPlugin } from '../git-repository/index.js';
 import { inputActivityPlugin } from '../input-activity/index.js';
-import { languagePlugin } from '../language/index.js';
+import { languagePlugin, repositoryLanguagePlugin } from '../language/index.js';
+import type { LanguagePluginConfig } from '../language/index.js';
 import { Runtime } from '../index.js';
-import type { PluginState } from '../index.js';
+import type { PluginDefinition, PluginState } from '../index.js';
 import { repositoryCiAwarenessPlugin } from '../repository-ci-awareness/index.js';
 import { repositoryCiRelevancePlugin } from '../repository-ci-relevance/index.js';
 import { repositoryCiWorldPlugin } from '../repository-ci-world/index.js';
@@ -115,26 +116,48 @@ interface LoadedMember {
 //
 // There are four legal compositions, and they are two independent branches:
 //
-//   base                     the nine members below
-//   + language               when --model-endpoint and --model were both given
-//   + Repository CI chain    when --repository-root and --repository were both given
+//   base                       the nine members below
+//   base + language            when --model-endpoint and --model were both given
+//   base + Repository CI chain when --repository-root and --repository were both given
+//   base + chain + language    when all four were given — Language last, and repository-aware
 //
 // Each is loaded if and only if its own pair was given, and neither given is the ordinary case: a
 // resident with neither has no repository scope, needs no Git, no GitHub and no model, and starts
 // normally. A half-given pair never reaches here at all, because `options.ts` refuses it as a
 // configuration error rather than letting this function guess the other half.
 //
-// Language is added before the chain rather than after it, and the ordering is what keeps this file's
-// one structural claim intact: the default roster stays a prefix of every larger one, so a member that
-// is present in a bigger composition is present in the same position, and no member's arrival can
-// reorder another's. Nothing depends on that yet, which is exactly why it is worth keeping — the day
-// something does, nobody will have to work out which of the four orders was the real one.
+// The fourth is where the two branches meet, and the only one whose shape could not be guessed from the
+// other three: when a repository scope exists, the Language this file loads is not the same plugin the
+// second composition loads. It is the same id, the same version and the same code with one more
+// requirement and one more exposure, and selecting it is the whole of what this file decides about the
+// variant.
 //
-// Crucially, language does not *replace* anything and does not gate anything: a resident with a model
-// and no repository scope answers questions about the work focus and the desktop, and a resident with a
-// repository scope and no model answers `relevance` and `observe` and refuses `ask` by saying there is
-// no language entry point. Neither capability is a condition of the other, and neither is a condition
-// of readiness for the rest.
+// Language is added *after* the chain when both are configured, and that is a change from the order this
+// function used to have. The old order put Language directly after the base and the chain last, which
+// made the rosters *nested*: each was a literal prefix of the next larger one, on the argument that
+// nothing depended on it yet and the day something did nobody would have to work out which order was the
+// real one. Something depends on it now.
+//
+// The repository-aware Language variant requires `repository-ci-relevance.current@1`, which the last
+// chain member provides, and a plugin whose requirements are not yet satisfied is recorded `waiting` —
+// so placing Language first would not merely be untidy, it would make the resident refuse to start. The
+// nesting is therefore given up deliberately, and for the reason it was worth keeping at all: a real
+// dependency now decides the order. What is *not* given up, and is the part that was doing the work, is
+// the property the nesting was a strong form of — the base nine are still the common prefix of all four
+// compositions and keep their relative order in every one of them, which is to say the default roster is
+// still a literal prefix of every larger one. What changes is only where the optional repository-aware
+// reader sits: no longer directly after the base, but after the thing it reads.
+//
+// The Runtime was not touched to make this work, and must not be. It is the same `#requirementsSatisfied`
+// and the same reconcile loop; ordering is this file's job, because this file is the only place that
+// knows what was configured. Teaching the Runtime to keep an invariant of the *composition* would be
+// moving a policy into the mechanism.
+//
+// Crucially, language still does not *replace* anything and does not gate anything: a resident with a
+// model and no repository scope answers questions about the work focus and the desktop, and a resident
+// with a repository scope and no model answers `relevance` and `observe` and refuses `ask` by saying
+// there is no language entry point. Neither capability is a condition of the other, and neither is a
+// condition of readiness for the rest.
 //
 // This is deliberately not a Profile system, a capability registry, an optional-plugin mechanism or
 // a conditional-composition framework, and it should not become one. It is the local implementation
@@ -142,11 +165,12 @@ interface LoadedMember {
 // observation concerns the work focus they declared — and a general facility built ahead of a second
 // such need would be an architecture layer invented for a need that has not arrived.
 //
-// The enabled composition is the base *plus* the chain rather than an interleaved list, and that is
-// what makes the default roster literally a prefix of it. It is also what satisfies the chain's one
-// inbound dependency: `repository-ci-relevance` requires `work-focus.current`, and `work-focus` is
-// the last member of the base. Nothing in the chain is required by anything in the base, so the
-// default composition loses nothing by omitting it.
+// The enabled composition is the base, then the chain, then Language — never an interleaved list. That
+// satisfies both inbound dependencies in the only order that can: `repository-ci-relevance` requires
+// `work-focus.current`, and `work-focus` is the last member of the base; the repository-aware Language
+// requires `repository-ci-relevance.current`, and the relevance plugin is the last member of the chain.
+// Nothing in the base requires anything from the chain, so the default composition loses nothing by
+// omitting it.
 //
 // In particular the resident adds no subscriber of its own: `desktop-session-awareness-loop.assessed`
 // has zero subscribers in production, and that is a property of the design rather than a gap for this
@@ -228,26 +252,31 @@ export function productionComposition(options: ResidentOptions): Composition {
   ];
 
   const model = options.model;
-  const withLanguage: Composition =
-    model === undefined
-      ? base
-      : [
-          ...base,
-          {
-            id: languagePlugin.id,
-            load: (runtime) =>
-              runtime.loadPlugin(languagePlugin, {
-                rootDir: options.dataDir,
-                endpoint: model.endpoint,
-                model: model.model,
-                credentialEnv: model.credentialEnv,
-                reasoningEffort: model.reasoningEffort,
-              }),
-          },
-        ];
-
   const repositoryCi = options.repositoryCi;
-  if (repositoryCi === undefined) return withLanguage;
+
+  // The member shape is the same for both variants — same id, same four config values — and only the
+  // *definition* differs. Building it once from a definition is what keeps the id and the configuration
+  // from being able to differ between the two compositions that use it.
+  const languageMember = (
+    definition: PluginDefinition<LanguagePluginConfig>,
+    model: ModelOptions,
+  ): CompositionMember => ({
+    id: definition.id,
+    load: (runtime) =>
+      runtime.loadPlugin(definition, {
+        rootDir: options.dataDir,
+        endpoint: model.endpoint,
+        model: model.model,
+        credentialEnv: model.credentialEnv,
+        reasoningEffort: model.reasoningEffort,
+      }),
+  });
+
+  if (repositoryCi === undefined) {
+    // No repository scope, so no chain and no repository-aware Language. This is the composition every
+    // build before this slice produced, unchanged.
+    return model === undefined ? base : [...base, languageMember(languagePlugin, model)];
+  }
 
   // The other branch. The two source plugins are configured with the two values that were given
   // together — a path and an `owner/name` — and nothing here checks that they describe the same
@@ -257,8 +286,7 @@ export function productionComposition(options: ResidentOptions): Composition {
   // The relevance plugin is configured with the *data directory* rather than the repository root,
   // because what it needs a path for is its own endpoint — which belongs to this resident, not to the
   // repository — and a client asking a question has the data directory and nothing else.
-  return [
-    ...withLanguage,
+  const chain: Composition = [
     {
       id: gitRepositoryPlugin.id,
       load: (runtime) =>
@@ -278,9 +306,21 @@ export function productionComposition(options: ResidentOptions): Composition {
     },
     {
       id: repositoryCiRelevancePlugin.id,
-      load: (runtime) => runtime.loadPlugin(repositoryCiRelevancePlugin, { rootDir: options.dataDir }),
+      load: (runtime) =>
+        runtime.loadPlugin(repositoryCiRelevancePlugin, { rootDir: options.dataDir }),
     },
   ];
+
+  // Language last, and only here, because the variant chosen depends on whether the chain above is
+  // present: a resident with a repository scope gets the repository-aware Language, which requires the
+  // relevance contract the chain's last member provides. A resident with a repository scope and no
+  // model gets the chain and no Language at all, for the same reason the branch above does: the plugin
+  // cannot be configured without an endpoint and a model. Loading one anyway would not be the wrong
+  // variant — in this composition both variants' requirements are satisfied, so either would come up
+  // `active` — it would be a plugin with nothing to ask.
+  return model === undefined
+    ? [...base, ...chain]
+    : [...base, ...chain, languageMember(repositoryLanguagePlugin, model)];
 }
 
 export interface ResidentIo {

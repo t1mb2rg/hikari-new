@@ -10,6 +10,9 @@ import { pathToFileURL } from 'node:url';
 import { parseCommandLine } from '../dist/cli/options.js';
 import { createLifetimeLease, productionComposition, residentCommand } from '../dist/cli/resident.js';
 import { NotInitializedError } from '../dist/continuity/index.js';
+// The two Language variants, imported so the roster test below can name which one a composition holds
+// rather than only what it is called. See that test for why a name is not enough.
+import { languagePlugin, repositoryLanguagePlugin } from '../dist/language/index.js';
 
 const CLI = join(import.meta.dirname, '..', 'dist', 'cli', 'main.js');
 const RESIDENT_URL = pathToFileURL(join(import.meta.dirname, '..', 'dist', 'cli', 'resident.js')).href;
@@ -99,6 +102,17 @@ const REPOSITORY_CI_MEMBER_IDS = [
 
 const ROSTER_DATA_DIR = join(tmpdir(), 'hikari-resident-roster');
 
+// The two optional capabilities, as the options that request them. Named once because the cross-roster
+// test below builds all four rosters, and four copies of an endpoint string would make that test's
+// failures about a typo rather than about the ordering it exists to pin.
+const MODEL_OPTIONS = {
+  endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
+  model: 'local-model',
+  credentialEnv: undefined,
+};
+
+const REPOSITORY_CI_OPTIONS = { rootDir: 'C:\\work\\hikari-new', repository: 't1mb2rg/hikari-new' };
+
 // Verified before this test existed: deleting `work-focus` from `productionComposition` left the
 // entire suite green on both platforms. The tests that would have noticed end to end are the ones
 // that need a named pipe, and CI runs on a host that has none — so the member that only exists to
@@ -132,12 +146,21 @@ test('显式配置 Repository CI 后，生产组合是这九个加上那五个',
   );
 });
 
-// The language member, and the one composition decision this slice made that a reader could get wrong
-// without any test going red: *where* in the list it goes. It is appended directly after the base and
-// before the Repository CI chain, which is what keeps "the default composition plus a capability" true
-// of both optional capabilities at once — `base`, `base + language`, `base + repositoryCi` and
-// `base + language + repositoryCi` are four rosters, and the first is a prefix of the second which is a
-// prefix of the last.
+// The language member, and the one composition decision a reader could get wrong without any test going
+// red: *where* in the list it goes.
+//
+// Four rosters, and the ordering rule changed when the repository-aware variant landed. It used to be
+// that every roster was `base + something`, so the language member sat directly after the base and the
+// default composition was a prefix of all of them. That is now false of the fourth roster and the change
+// is deliberate: a repository-aware Language requires `repository-ci-relevance.current@1`, the Runtime
+// activates on satisfied requirements in load order and never reorders, and a member loaded before the
+// thing it requires is recorded `waiting` — which for a resident means it does not come up at all.
+//
+// So order is now decided by dependency semantics rather than by list shape, and what survives is the
+// weaker but true set of relations asserted below: the base is a common prefix of all four, members
+// shared by two rosters keep their relative order, and the repository-aware language member follows the
+// whole chain it depends on. `不要修改 Runtime readiness semantics 来人为保存旧 invariant` — the
+// invariant was given up instead, and this file is where that is written down rather than assumed.
 test('给了模型端点与模型之后，生产组合是这九个加上 language', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
@@ -169,7 +192,7 @@ test('给了模型端点与模型之后，生产组合是这九个加上 languag
   );
 });
 
-test('Repository CI 与语言入口可以同时在场，且语言在前', () => {
+test('Repository CI 与语言入口可以同时在场，且语言在 CI 链之后', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
@@ -181,15 +204,97 @@ test('Repository CI 与语言入口可以同时在场，且语言在前', () => 
     },
   });
 
-  const ids = composition.map((member) => member.id);
-  assert.deepEqual(ids, [...BASE_MEMBER_IDS, 'language', ...REPOSITORY_CI_MEMBER_IDS]);
+  // A literal, for the reason the three tests above give, and it states the whole rule: the base, then
+  // the entire Repository CI chain, then the language member — which is the plugin that requires the
+  // last link of that chain.
+  assert.deepEqual(composition.map((member) => member.id), [
+    ...BASE_MEMBER_IDS,
+    'git-repository',
+    'github-ci',
+    'repository-ci-world',
+    'repository-ci-awareness',
+    'repository-ci-relevance',
+    'language',
+  ]);
+});
 
-  // Neither capability gates the other, and the shape that would hide a mistake is the opposite one:
-  // the language member placed after the CI chain would make `base + language` no longer a prefix of
-  // this roster, so the default composition would stop being describable as "the base plus what was
-  // configured".
-  assert.deepEqual(ids.slice(0, BASE_MEMBER_IDS.length), BASE_MEMBER_IDS);
-  assert.equal(ids[BASE_MEMBER_IDS.length], 'language');
+// The relations that survive the reordering, asserted as relations rather than as three more literals.
+//
+// These are what make the four rosters one composition system rather than four lists that happen to
+// work: a member that moved between them, or a base that stopped being common, would be a resident whose
+// behaviour depended on which capabilities were configured rather than on what it was configured with.
+test('四个 roster 共享同一个基础前缀，且共有成员保持相对顺序', async () => {
+  const rosters = {
+    base: productionComposition({ dataDir: ROSTER_DATA_DIR, desktopAwarenessDelayMs: 1000 }),
+    language: productionComposition({
+      dataDir: ROSTER_DATA_DIR,
+      desktopAwarenessDelayMs: 1000,
+      model: MODEL_OPTIONS,
+    }),
+    repositoryCi: productionComposition({
+      dataDir: ROSTER_DATA_DIR,
+      desktopAwarenessDelayMs: 1000,
+      repositoryCi: REPOSITORY_CI_OPTIONS,
+    }),
+    both: productionComposition({
+      dataDir: ROSTER_DATA_DIR,
+      desktopAwarenessDelayMs: 1000,
+      repositoryCi: REPOSITORY_CI_OPTIONS,
+      model: MODEL_OPTIONS,
+    }),
+  };
+
+  for (const [name, roster] of Object.entries(rosters)) {
+    const ids = roster.map((member) => member.id);
+    assert.deepEqual(
+      ids.slice(0, BASE_MEMBER_IDS.length),
+      BASE_MEMBER_IDS,
+      `${name} 必须以基础组合为前缀`,
+    );
+    // And the base prefix is the *whole* of the base — no base member may be pushed after an optional
+    // one, which is the failure a prefix check alone would not catch if the base itself were reordered.
+    assert.equal(ids.length, new Set(ids).size, `${name} 里不得有重复成员`);
+  }
+
+  // Relative order, checked on the pair the reordering actually moved. `repository-ci-relevance` is
+  // required by the repository-aware language member, so it has to precede it in the one roster that
+  // holds both; in the roster that holds only the chain, it is last.
+  const both = rosters.both.map((member) => member.id);
+  assert.ok(
+    both.indexOf('repository-ci-relevance') < both.indexOf('language'),
+    'language 依赖 repository-ci-relevance，必须排在它之后',
+  );
+  assert.equal(both.at(-1), 'language', 'language 是唯一被依赖决定位置而排到最后的成员');
+  assert.equal(rosters.repositoryCi.map((member) => member.id).at(-1), 'repository-ci-relevance');
+
+  // Which *variant* the language member holds, which no comparison above can see. Both definitions carry
+  // the id `language` — deliberately, so a resident's status line does not change with the variant — so
+  // every assertion in this file is blind to the swap. Verified before this test existed: swapping
+  // `repositoryLanguagePlugin` for `languagePlugin` in the fourth roster leaves the entire suite green on
+  // both platforms, and the resident it produces advertises a repository scope, runs the whole CI chain,
+  // and then offers a model two capabilities instead of three. Nothing reaches that behaviour except a
+  // named pipe, so nothing else here would have caught it either.
+  //
+  // Asserted on the definition handed to `loadPlugin` rather than on the member, because the member is a
+  // wrapper that carries only an id and a `load` — the definition is what the Runtime actually sees, and
+  // the `requires` that decides this whole slice's ordering is the definition's.
+  const variantOf = async (member) => {
+    const loaded = [];
+    await member.load({ loadPlugin: (definition) => (loaded.push(definition), Promise.resolve('active')) });
+    assert.equal(loaded.length, 1, '成员必须恰好加载一个插件');
+    return loaded[0];
+  };
+
+  for (const [name, roster, variant] of [
+    ['language', rosters.language, languagePlugin],
+    ['both', rosters.both, repositoryLanguagePlugin],
+  ]) {
+    assert.equal(
+      await variantOf(roster.at(-1)),
+      variant,
+      `${name} roster 的 language 成员必须是对应的 variant`,
+    );
+  }
 });
 
 function fakeRuntime({ errors = {}, shutdown } = {}) {
