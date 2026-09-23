@@ -12,7 +12,9 @@ import {
   RELEVANCE_PROTOCOL_VERSION,
   judgeRelevance,
   relevanceEndpointPath,
+  renderJudgement,
   repositoryCiRelevancePlugin,
+  repositoryCiRelevanceService,
 } from '../dist/repository-ci-relevance/index.js';
 import { workFocusCurrentService } from '../dist/work-focus/index.js';
 
@@ -152,6 +154,24 @@ test('判定不修改交给它的工作焦点集合', () => {
   assert.deepEqual([...designations], ['P4-03', CANONICAL]);
 });
 
+test('relevance 声明自己提供这个 Service，且不要求任何 consumer', () => {
+  // The declaration, read where no pipe is needed and therefore on CI. Everything below that establishes
+  // the Service really answers goes through the endpoint, which `ubuntu-latest` skips; this is the half
+  // that says the contract the repository-aware Language variant names is one this plugin offers. A
+  // `provides` emptied — with or without the `provide()` call going with it — is a Language variant that
+  // stays `waiting` for a contract nobody publishes, and the resident then refuses to start.
+  assert.deepEqual(repositoryCiRelevancePlugin.provides, [repositoryCiRelevanceService]);
+  assert.equal(repositoryCiRelevanceService.id, 'repository-ci-relevance.current');
+  assert.equal(repositoryCiRelevanceService.version, 1);
+
+  // And nothing in its own requirements names a consumer, which is what lets it be `active` in a
+  // composition nobody is asking: the Runtime reconciles requirements, not demand.
+  const keys = (repositoryCiRelevancePlugin.requires ?? []).map(
+    (contract) => `${contract.id}@${contract.version}`,
+  );
+  assert.deepEqual(keys, ['work-focus.current@1', 'repository-ci-awareness.current@1']);
+});
+
 // No injection seam, as elsewhere in this suite: the tests supply fake *providers* as ordinary
 // plugins and let the real Runtime dependency graph decide who is active. The plugin under test is
 // the production one, reached through its real endpoint by the production client.
@@ -162,6 +182,19 @@ function provider(pluginId, contract, behaviour) {
     provides: [contract],
     setup(context) {
       context.services.provide(contract, behaviour);
+    },
+  };
+}
+
+/** A consumer that does nothing but pull the Service, so a test can call it the way the repository-aware
+ * Language variant does. No behaviour of its own: what is under test is what the provider published. */
+function consumer(capture) {
+  return {
+    id: 'test.relevance-consumer',
+    version: '1.0.0',
+    requires: [repositoryCiRelevanceService],
+    setup(context) {
+      capture(context.services.get(repositoryCiRelevanceService));
     },
   };
 }
@@ -214,6 +247,42 @@ test('端点把判定原样交给提问者', { skip: NO_PIPES }, async (t) => {
     'Repository CI relevance：relevant',
     `与工作焦点逐字相同：${CANONICAL}`,
   ]);
+});
+
+test('端点与 Service 走同一次判定，两边都不缓存', { skip: NO_PIPES }, async (t) => {
+  // The Service exists because a model asks for this judgement from inside the composition, and the
+  // endpoint exists because a human asks for it from outside. Both are the same comparison, and this is
+  // what says so rather than a comment claiming it: `plugin.ts` builds one `judge` closure and hands it
+  // to both, so the two ways in cannot disagree about the comparison — only about when it ran.
+  let designations = Object.freeze(['P4-03']);
+  const { root, runtime } = await compose(t, {
+    designations: () => designations,
+    assessment: () => Object.freeze({ snapshot: snapshotOf(CANONICAL), commitComparison: 'same' }),
+  });
+
+  let service;
+  assert.equal(await runtime.loadPlugin(consumer((pulled) => (service = pulled))), 'active');
+
+  // The provider is up with a consumer present, which is half of §16.2's argument; the other half — that
+  // it is up with no consumer at all — is `test/language.test.mjs`, which is where the Language variant
+  // that genuinely needs this lives.
+  assert.equal((await requestRelevance(root)).reply.verdict, 'unknown');
+  assert.equal((await service.current()).verdict, 'unknown');
+
+  // Move the focus and both answers move with it, which is what says neither way in kept the previous
+  // judgement. A Service that memoised would be a memory of an answer where the contract says "now" —
+  // and it would disagree with the endpoint here, which reads its sources afresh by construction.
+  designations = Object.freeze([CANONICAL]);
+  assert.equal((await requestRelevance(root)).reply.verdict, 'relevant');
+  assert.equal((await service.current()).verdict, 'relevant');
+
+  // And what the Service hands back is the judgement itself: the same value the domain function produces
+  // from the same two inputs, rendering to the same lines the endpoint sent. A Service returning a
+  // summary, a second verdict, or a re-rendered string would fail here while every endpoint test above
+  // stayed green.
+  const judgement = await service.current();
+  assert.deepEqual(judgement, judgeRelevance([CANONICAL], snapshotOf(CANONICAL)));
+  assert.deepEqual((await requestRelevance(root)).reply.lines, renderJudgement(judgement));
 });
 
 test('判定与 commitComparison 正交：three ways of comparing commits, one verdict', { skip: NO_PIPES }, async (t) => {

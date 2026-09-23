@@ -3,8 +3,10 @@
 //
 // This is the first real production reader of the relevance judgement, and it is a *client*: it
 // reaches the plugin over the plugin's own endpoint, exactly as `hikari focus` reaches the work
-// focus. That is why the judgement needs no Service — the only thing that asks for a verdict arrives
-// through a pipe, and publishing a contract for it would be publishing one for nobody.
+// focus. Being the first reader is not what earned the judgement a Service — a client arriving through
+// a pipe is what §16.2 refuses to publish for, and it was for a round the reason none existed. What
+// earned it one is the repository-aware Language variant, which calls the same judgement from inside
+// the composition. This command is unchanged by that and reaches the plugin the same way it always did.
 //
 // Nothing here keeps state between invocations and nothing here could: each command opens the pipe,
 // puts its one question and exits. The composition a human asks about is the one a resident is
