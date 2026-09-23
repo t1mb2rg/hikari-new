@@ -1,7 +1,7 @@
 # Language Tool-use Loop v1
 
 > 轮次：**工作标签，不占用任何阶段编号**（不是 P4-04，不是 P4-03 的一部分）
-> 状态：**实现完成、测试通过**；交付事实（commit / CI run / 测试计数）由随后的状态记录提交补记
+> 状态：**实现完成、已通过 Functional / Architecture Review、已提交、已 push、CI 通过**（commit `38bf7cd`，CI Runtime Tests #35812104427 **success**）
 > 前置：`Agent-callable Capability Surface v0`（commit `fdacd93`）已让两个 owner 导出各自的 exposure；`LANGUAGE TOOL-USE LOOP v1 Boundary Review` 的 5 项 NARROW 已由人类全部裁决
 > 本轮开工时的 `HEAD` = `85dd4fe`
 > 边界依据：人类 mandate + 两层验证冻结；本文件是 **after-the-fact record**，不是新的设计阶段
@@ -296,10 +296,11 @@ Grounded LLM Expression
 **第一层：自动化结构测试（`npm test`）。**
 
 ```text
-533 tests / 531 pass / 0 fail / 2 skipped   （本机 Windows）
+本机（Windows）   533 tests / 531 pass / 0 fail / 2 skipped
+CI（ubuntu）      533 tests / 455 pass / 0 fail / 78 skipped   # Runtime Tests #35812104427 success
 ```
 
-两条 skip：环境门控的语义 live 测试（`test/language-semantic.live.test.mjs`）与 POSIX SIGTERM 用例。
+本机的两条 skip：环境门控的语义 live 测试（`test/language-semantic.live.test.mjs`）与 POSIX SIGTERM 用例。CI 的 78 条在此之上多出 **76** 条 `NO_PIPES` 用例——命名管道只在 Windows 上存在，`test/language.test.mjs` 里走真实端点的那一类因此在 Linux 上被跳过（本 slice 让该文件从 9 条变成 11 条，加上语义 live 测试 1 条，正是 75 → 78 的差额）。
 
 这一层证明的是：**给定相应 model decision 之后系统执行路径正确**；`chatted` 路径真实可达；0-tool decision 确实产生 0 次 Service 读；capability decision 只读取被选择的 Service。**它不证明真实模型完成了语义选择。**
 
@@ -327,4 +328,11 @@ node --test test/language-semantic.live.test.mjs
 
 ## 14. 交付
 
-交付事实（commit / CI run / 测试计数）由随后的**状态记录提交**补记——沿用 `Agent-callable Capability Surface v0` 的同一分工：**feat 提交不携带交付事实。**
+```text
+feat 提交     38bf7cd  "feat: 用 native tool calling 取代 Language 的固定 topic 路由"
+CI            Runtime Tests #35812104427  success  (533 / 455 pass / 78 skipped / 0 fail)
+```
+
+沿用 `Agent-callable Capability Surface v0` 的同一分工：**feat 提交不携带交付事实**，交付事实由随后的**状态记录提交**补记。
+
+**GitNexus 证据**（`detect_changes --scope all`）：135 个 changed symbol、16 个 affected process，`risk_level: critical`——这是本 slice 的规模本身（Language 内部路由被整体替换），不是一处未预期的扩散。两个 public contract 的 upstream impact 都是 **LOW**：`decodeLanguageReply` 的 d=1 消费者只有 `askRunningHikari`（在 diff 内），`createLanguagePlugin` 的 d=1 消费者在 diff 外但**签名未变**——`src/cli/resident.ts` 加载的是 `languagePlugin` 对象，该文件本轮未改，`src/runtime/**` 同样一个字节未改。
