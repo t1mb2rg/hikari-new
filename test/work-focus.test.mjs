@@ -623,9 +623,9 @@ test('写这条事实不碰任何持久化介质，包括 Chronicle 的', { skip
 
 test('工作焦点的 exposure 由本插件导出，指向的仍是 work-focus.current@1', () => {
   // The name is the vocabulary of the layer that will offer it, so it is deliberately not the contract
-  // id: `work-focus.current` names the Service, `work_focus.read` names the offer. What ties them
+  // id: `work-focus.current` names the Service, `work_focus_read` names the offer. What ties them
   // together is the field below rather than a convention, which is why it is asserted by identity.
-  assert.equal(workFocusReadExposure.name, 'work_focus.read');
+  assert.equal(workFocusReadExposure.name, 'work_focus_read');
   assert.equal(workFocusReadExposure.service, workFocusCurrentService);
   assert.equal(workFocusReadExposure.service.id, 'work-focus.current');
   assert.equal(workFocusReadExposure.service.version, 1);

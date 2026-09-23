@@ -39,7 +39,16 @@ import { workFocusCurrentService, type WorkFocusCurrentService } from './contrac
  * underneath them would be a label a consumer could attach to whichever Service it preferred.
  */
 export interface WorkFocusReadExposure {
-  /** The stable name a model selects this by. Agent-facing vocabulary, deliberately not a contract id. */
+  /**
+   * The stable name a model selects this by. Agent-facing vocabulary, deliberately not a contract id.
+   *
+   * It is also the string that goes on the wire as `tools[*].function.name`, and that wire constrains it
+   * rather than this repo: OpenAI-compatible function calling requires `^[a-zA-Z0-9_-]+$`. A contract id
+   * such as `work-focus.current@1` is legal here and a dotted `work_focus.read` is not — the provider
+   * answers a malformed name with a 400 on the request, which reaches the caller as a model that never
+   * spoke rather than as a capability a model declined to pick. The two vocabularies are separate on
+   * purpose: this one is chosen to survive the wire, the contract id is chosen to be a stable identity.
+   */
   readonly name: string;
   /** What the capability covers and, just as load-bearingly, what it does not. */
   readonly description: string;
@@ -56,7 +65,7 @@ export interface WorkFocusReadExposure {
  * would be answering a question this plugin was never given the facts for.
  */
 export const workFocusReadExposure: WorkFocusReadExposure = Object.freeze({
-  name: 'work_focus.read',
+  name: 'work_focus_read',
   description:
     '读取用户当前明确声明的工作焦点。结果只是用户明确声明过的那组 designation，不解释它们的含义，也不推断优先级、重要性，或者用户此刻实际正在做什么。',
   service: workFocusCurrentService,

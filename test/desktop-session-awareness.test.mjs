@@ -866,10 +866,10 @@ test('持有 current 的插件只有一个，推进时间线的能力因此是�
 // ---------------------------------------------------------------------------------------------
 
 test('桌面的 exposure 由本插件导出，且指向 peek 而不是 current', () => {
-  // `work-focus.current` names the Service and `desktop_context.read` names the offer, so the two are
+  // `work-focus.current` names the Service and `desktop_context_read` names the offer, so the two are
   // tied by the field below and not by a naming convention — which is why it is asserted by identity
   // rather than by comparing ids that would match again if both were renamed together.
-  assert.equal(desktopContextReadExposure.name, 'desktop_context.read');
+  assert.equal(desktopContextReadExposure.name, 'desktop_context_read');
   assert.equal(desktopContextReadExposure.service, desktopSessionAwarenessPeekService);
   assert.equal(desktopContextReadExposure.service.id, 'desktop-session-awareness.peek');
   assert.equal(desktopContextReadExposure.service.version, 1);

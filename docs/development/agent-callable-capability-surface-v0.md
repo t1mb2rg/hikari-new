@@ -8,6 +8,8 @@
 > 交付事实（commit / CI run / 测试计数）见 §12
 >
 > **口径更新（`Language Tool-use Loop v1` 之后，2026-09-23）**：本轮交付的两个 exposure、owner 归属、metadata 的 `{name, description, service}` 形状、以及「exposure 不携带权限」这条边界**全部仍然成立**，并且正是下一个 slice 的输入。**已被取代的只有本文件对「下一 slice 还没发生」的描述**：§7 与 §8 关于 `current-context` / `LanguageTopic` 的裁决（「仍在 `LANGUAGE_TOPICS` 里、且不在 `LANGUAGE_EXPOSURES` 里」）、§11 测试表里同一件事那一行、§12 第 7 条与第 5 条、以及 §13 末行把 `src/language/topics.ts` 列为未改动文件——`Language Tool-use Loop v1` 已删除 `topics.ts` 与 `understanding.ts`，`current-context` **没有**成为 exposure，而是**消失**了：它不是 capability，是「都读一遍」，而那正是 loop 读两次做的事。**§7/§8 当时的裁决本身没有被推翻**——它说的是「不把它硬塞进 exposure」，这一条仍然是现在的实际状态。
+>
+> **口径更新（provider function name 修正之后）**：本文件里作为**名字**出现的 `work_focus.read` / `desktop_context.read`（§3.1、§3.2、§3.3、§7 的 B 行）现已改为 `work_focus_read` / `desktop_context_read`；§3.1/§3.2 的标题保留本轮交付时的原样，是历史记录而不是当前名字。改名理由是 wire 而不是本仓库：OpenAI-compatible function calling 要求 `tools[*].function.name` 匹配 `^[a-zA-Z0-9_-]+$`，带点会被服务端以 400 拒绝整个请求。**§3.3 的裁决因此被实际验证了一次**：`name` 与契约 id 确实不是一回事，契约 id（`work-focus.current@1`、`desktop-session-awareness.peek@1`）**一个字未动**，`service` 仍然按**引用同一性**绑定，本文件其余全部结论不变。
 
 ---
 

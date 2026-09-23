@@ -50,7 +50,17 @@ import {
  * underneath them would be a label a consumer could attach to whichever Service it preferred.
  */
 export interface DesktopContextReadExposure {
-  /** The stable name a model selects this by. Agent-facing vocabulary, deliberately not a contract id. */
+  /**
+   * The stable name a model selects this by. Agent-facing vocabulary, deliberately not a contract id.
+   *
+   * It is also the string that goes on the wire as `tools[*].function.name`, and that wire constrains it
+   * rather than this repo: OpenAI-compatible function calling requires `^[a-zA-Z0-9_-]+$`. A contract id
+   * such as `desktop-session-awareness.peek@1` is legal here and a dotted `desktop_context.read` is not —
+   * the provider answers a malformed name with a 400 on the request, which reaches the caller as a model
+   * that never spoke rather than as a capability a model declined to pick. The two vocabularies are
+   * separate on purpose: this one is chosen to survive the wire, the contract id is chosen to be a
+   * stable identity.
+   */
   readonly name: string;
   /** What the capability covers and, just as load-bearingly, what it does not. */
   readonly description: string;
@@ -67,7 +77,7 @@ export interface DesktopContextReadExposure {
  * reading twice through a real awareness plugin and watching what the next `current()` reports.
  */
 export const desktopContextReadExposure: DesktopContextReadExposure = Object.freeze({
-  name: 'desktop_context.read',
+  name: 'desktop_context_read',
   description:
     '读取 Hikari 当前的桌面会话观察与 awareness assessment，这次读取不会推进 desktop awareness 的时间线。返回的是 Hikari 已经建立的事实与判词本身，不含引申：前台是某个应用不等于用户正在做与之相关的事，stable 不等于什么都没发生，changed 不等于重要，输入活动不等于用户的专注程度。',
   service: desktopSessionAwarenessPeekService,
