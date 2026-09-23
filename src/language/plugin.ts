@@ -1,16 +1,25 @@
 // Talking with the person who runs Hikari, as a plugin.
 //
-// One concern, three parts, one plugin: understanding a sentence (natural language in, one of a closed
-// set of internal topics out), the short-term context a follow-up needs, and expressing a grounded
-// domain result back to a human. They are one plugin because they are one act — a person asks a
-// question and gets an answer — and splitting them would create two things that have to agree about
-// what a question was, which is a contract nobody has asked for.
+// One concern, three parts, one plugin: running the loop (natural language in, a conversation or a set
+// of readings out), the short-term context a follow-up needs, and expressing a grounded domain result
+// back to a human. They are one plugin because they are one act — a person asks a question and gets an
+// answer — and splitting them would create two things that have to agree about what a question was,
+// which is a contract nobody has asked for.
 //
 // What this plugin is not, and the list is here because each entry is a thing it would have been easy
 // to become: it is not a brain, a planner, an action orchestrator, a tool registry, a capability
 // registry, a global context, memory, a model router or a reasoning service. It answers questions
 // about facts other plugins already established. It reads; it does not write. `ask` is the only word
 // it speaks and every one of those roles would need a second.
+//
+// The loop it now runs makes that list worth re-reading rather than assuming, because "the model picks
+// a tool" is the shape most of those roles arrive in. Three things keep it from being any of them, and
+// all three are structural. The set of things the model may pick from is a frozen literal in
+// `exposure.ts`, not a registry it can be added to at runtime — there is no `register`, no discovery
+// and no enumeration of the Runtime. The set is consumed by a `find` over that literal, not by handing
+// a name to a Service lookup — a string a model wrote can never become a key. And the loop's only move
+// is "read a thing I have not read"; it does not plan, it cannot write, and it cannot act. What is left
+// is a conventional agent loop inside one plugin, which `core-architecture-v0.md` allows by name.
 //
 // This file is the wiring — config, endpoint, model connection, and the four dependencies the pipeline
 // is handed — and deliberately not the decisions. Those are in `answer.ts`, as a plain function, because
@@ -65,18 +74,19 @@ import { listenLanguageEndpoint } from './endpoint.js';
 import { languageEndpointPath } from './endpoint-path.js';
 import { LanguageError } from './errors.js';
 import {
-  createHttpClassifier,
+  createHttpModel,
   readModelCredential,
-  type LanguageClassifier,
+  type LanguageModel,
   type LanguageModelConnection,
 } from './model.js';
+import { createExposureReader } from './read.js';
 
 /**
  * What the composition must tell this plugin: where its endpoint goes and which model to ask.
  *
  * All four are required and none has a default. `credentialEnv` is a variable *name* and not a secret —
- * the value is read once in `setup` and lives in the classifier's closure, never in this config, which
- * is the object a test constructs and a status line could reach.
+ * the value is read once in `setup` and lives in the model connection's closure, never in this config,
+ * which is the object a test constructs and a status line could reach.
  */
 export interface LanguagePluginConfig {
   readonly rootDir: string;
@@ -86,14 +96,19 @@ export interface LanguagePluginConfig {
 }
 
 /**
- * The classifier factory is injected rather than constructed here, and the seam exists for the reason
+ * The model factory is injected rather than constructed here, and the seam exists for the reason
  * `github-ci/plugin.ts` gives for its acquirer: the behaviour of this plugin has to be testable
  * without a network. Every question about whether a model's words can reach a human is a question
- * about what happens to the classifier's answer, and a test answers it by choosing that answer rather
- * than by standing up something that pretends to be a model.
+ * about what happens to the model's answer, and a test answers it by choosing that answer rather than
+ * by standing up something that pretends to be a model.
+ *
+ * Since the loop landed the seam carries more than it used to. A single classification could be tested
+ * by choosing one string; a loop can only be tested by choosing a *sequence*, and the factory is what
+ * lets a test write one down — including the sequences no real endpoint would produce, which are the
+ * ones the termination and batch-completeness rules are about.
  */
 export function createLanguagePlugin(
-  createClassifier: (connection: LanguageModelConnection) => LanguageClassifier,
+  createModel: (connection: LanguageModelConnection) => LanguageModel,
 ): PluginDefinition<LanguagePluginConfig> {
   return {
     id: 'language',
@@ -121,24 +136,32 @@ export function createLanguagePlugin(
       // here, so a misconfigured credential is a plugin that refused to start rather than a resident
       // that answers questions unauthenticated.
       const credential = readModelCredential(config.credentialEnv);
-      const classifier = createClassifier({ endpoint: config.endpoint, model: config.model, credential });
+      const model = createModel({ endpoint: config.endpoint, model: config.model, credential });
 
       // Registered before the endpoint, so the Runtime's LIFO teardown disposes the model *after* the
       // ingress is gone: a question already being answered keeps its connection until it is done, and
       // nothing new can arrive to find the model aborted.
-      context.defer(() => classifier.dispose());
+      context.defer(() => model.dispose());
 
       const focus = context.services.get(workFocusCurrentService);
       const awareness = context.services.get(desktopSessionAwarenessPeekService);
 
-      // All four dependencies are wired here and nowhere else, and the pipeline they feed keeps its own
+      // The reader is the only thing in this plugin that knows which Service an exposure points at,
+      // and it is handed the two contract calls rather than the two Services — a reader that could
+      // reach a Service object could reach one this build was never granted. It is built here, beside
+      // the `requires` above, so the two are read together by anyone checking that they agree.
+      const read = createExposureReader({
+        readFocus: () => focus.current(),
+        peek: () => awareness.peek(),
+      });
+
+      // Three dependencies are wired here and nowhere else, and the loop they feed keeps its own
       // dialogue turn — see `answer.ts` for why the decisions live in a plain function instead of this
       // closure. Nothing below this line decides what a question means; this is the wiring, and the
       // wiring is the whole of it.
       const answerer = createAnswerer({
-        classify: (prompt) => classifier.classify(prompt),
-        readFocus: () => focus.current(),
-        peek: () => awareness.peek(),
+        step: (request) => model.step(request),
+        read,
         now: () => new Date().toISOString(),
       });
 
@@ -191,5 +214,5 @@ function readConfig(input: unknown): LanguagePluginConfig {
 }
 
 export const languagePlugin: PluginDefinition<LanguagePluginConfig> = createLanguagePlugin((connection) =>
-  createHttpClassifier(connection),
+  createHttpModel(connection),
 );

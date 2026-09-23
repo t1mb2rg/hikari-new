@@ -167,8 +167,11 @@ export const USAGE = [
   '说明：',
   '  hikari resident 同时给出 --model-endpoint 与 --model 时才会加载语言插件；',
   '  没有给出时语言插件不加载，hikari ask 会说明没有语言入口。',
-  '  hikari ask 会把你说的话原文发送到 --model-endpoint 指定的模型端点，用于理解你在问什么；',
-  '  模型只负责把问题归类到内部主题，答案由 Hikari 根据自己已有的事实生成。',
+  '  hikari ask 会把你说的话原文发送到 --model-endpoint 指定的模型端点；',
+  '  模型只负责决定这一句要不要读 Hikari 已经掌握的东西，以及读哪一些。',
+  '  读到的内容由 Hikari 自己渲染成回答；模型不解释事实，也不替 Hikari 说话。',
+  '  端点必须支持 OpenAI 兼容的原生 tool calling（tools / tool_calls / tool 结果消息）；',
+  '  不支持的端点会让这次交互失败，Hikari 不会退回另一套协议。',
   '  --model-credential-env 给的是环境变量的名字，不是凭据本身。',
   '',
 ].join('\n');

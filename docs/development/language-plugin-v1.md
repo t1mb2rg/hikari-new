@@ -6,6 +6,8 @@
 > 本轮开工时的 `HEAD` = `b1dba7b`（`docs: record desktop inspection semantics state`）
 > 边界记录依据：产品 mandate 已由人类冻结 concern 与 v1 范围；本文件是 mandate 要求的 **after-the-fact record**，不是新的设计阶段
 > 交付事实（commit / CI run / 测试计数）见 §12
+>
+> **口径更新（`Language Tool-use Loop v1` 之后，2026-09-23）**：本文件描述的是那一轮**实际交付**的 v1，其内部路由是**固定四选一的 topic**。此后 `Language Tool-use Loop v1` 把它换成了**模型直接调用 capability 的 tool-use loop**，因此本文件下列内容**不再描述当前构建**，只作为那一轮的历史记录：§2.1 的 `readUnderstanding(content) → LanguageTopic`、§2.1 的归一化与整串匹配规则、§2.1 的 `current-context` 行、§7 的三词表（现在是**四个** outcome，多了 `chatted`）、以及 §9 风险 1 里把 `topics.ts` 的 `LANGUAGE_TOPICS` 长度当作触发信号的那一句（`topics.ts` 已删除，触发信号改为 `LANGUAGE_EXPOSURES` 的长度）。**§1 Concern、§3 冻结边界、§4～§6 的架构立场、§10 已知限制的其余各条仍然成立。** 当前形状以 `docs/development/language-tool-use-loop-v1.md` 为准。
 
 ---
 

@@ -12,10 +12,12 @@
 // Three situations, the same three as the observation client, and for the same reason: this plugin is
 // loaded only when an operator configured a model, and a resident either has it or is not running.
 //
-//   replied       the question was processed. The reply's own `outcome` — `answered`, `refused` or
-//                 `failed` — is carried through untouched, because those three are the language
-//                 plugin's statement about what happened and this file has no standing to merge,
-//                 rename or re-derive any of them.
+//   replied       the question was processed. The reply's own `outcome` — `chatted`, `answered`,
+//                 `refused` or `failed` — is carried through untouched, because those four are the
+//                 language plugin's statement about what happened and this file has no standing to
+//                 merge, rename or re-derive any of them. `chatted` in particular is not an error and
+//                 not a lesser `answered`: it is a conversation, and this client prints it and exits
+//                 zero exactly as it does for a grounded answer.
 //   unavailable   something went wrong reaching the endpoint, or it answered unreadably.
 //   absent        nothing is serving this endpoint on this data directory.
 //
@@ -42,13 +44,33 @@ import { oneLine } from '../terminal-text/index.js';
 
 import { RESIDENT_HINT } from './options.js';
 
-// Longer than either of the two bounds this answer sits on top of, and deliberately so. The model call
-// carries its own 15s bound and the desktop read behind a `peek` is the observation client's 30s
-// concern; this is the bound on the client's wait for the whole exchange, so a value at or below
-// either of them would report "no answer" for a question that was still being answered. A timeout
-// here is a claim about how long the human waited, and it should only be made once waiting has
+// The bound on the client's wait for the whole exchange, and it is derived from what the exchange can
+// actually cost rather than picked. It used to be 60s, which was correct for the pipeline that read it:
+// one model call at 15s, one possible desktop read, and framing. The loop changed the shape of the
+// worst case and the old number became a lie — an interaction may now make three model calls, so a
+// legitimate question could be killed by the client while the server was still working on it, and the
+// human would be told the entry point did not answer when it was about to.
+//
+//   up to 3 model calls, each with the transport's own 15s bound        45s
+//   one desktop peek, which acquires two sources at 10s each            20s
+//   framing, the focus read, and pipe overhead                          the rest
+//
+// So 90s, which is the sum with room to spare rather than a round number near it. Three calls is not a
+// guess: `LANGUAGE_EXPOSURES` has two entries and the loop cannot continue without consuming an unread
+// one, so `LANGUAGE_EXPOSURES.length + 1` is the ceiling this build can reach and the client is sized
+// for the ceiling rather than for the average. It is deliberately not a dynamic budget — the server
+// cannot tell the client what its worst case was, and a client that asked would be inventing a protocol
+// for arithmetic the client can already do from the size of a list that lives on this side of the pipe.
+//
+// Exported for the test that pins that arithmetic. The claim being pinned is not "the number is 90" —
+// it is that the client's bound stays above what the loop can legitimately spend, which is a fact about
+// two other modules' constants and would otherwise only be discovered by a human whose question timed
+// out while it was being answered. Adding a third exposure that a model reads on its own is exactly the
+// change that should break this, and does.
+//
+// A timeout here is a claim about how long the human waited, and it should only be made once waiting has
 // genuinely stopped being reasonable.
-const REPLY_TIMEOUT_MS = 60_000;
+export const REPLY_TIMEOUT_MS = 90_000;
 
 export function requestLanguageAsk(rootDir: string, text: string): Promise<LanguageOutcome> {
   const path = languageEndpointPath(rootDir);

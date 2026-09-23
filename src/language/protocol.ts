@@ -10,9 +10,15 @@
 // repository, for the same reason: an envelope that shrugged at an unknown field would already be an
 // extensible schema, and the next person to want a field would find the room already reserved.
 //
-// The reply's `outcome` is the three-word vocabulary from `types.ts` and it is checked here rather
+// The reply's `outcome` is the four-word vocabulary from `types.ts` and it is checked here rather
 // than assumed. That check is duplicated from the type on purpose: the union is a compile-time fact
 // about our own code, and this is the runtime boundary where a string we did not write arrives.
+//
+// The four words are listed out below rather than derived from the union, which is the one place in
+// this repository where a hand-written list guards a type that could produce it. Deriving it would need
+// a runtime array of the outcomes, and a runtime array is a value a `types.ts` that promises to be a
+// type declaration would then have to carry — so the list stays here, at the boundary that actually
+// needs it, and a fifth outcome fails to decode loudly rather than silently.
 
 import {
   LANGUAGE_PROTOCOL_VERSION,
@@ -91,7 +97,7 @@ export function decodeLanguageReply(line: string): DecodedLanguageReply {
     return unreadable(`应答的字段必须恰好是 ${REPLY_KEYS.join('、')}。`);
   }
 
-  if (outcome !== 'answered' && outcome !== 'refused' && outcome !== 'failed') {
+  if (outcome !== 'chatted' && outcome !== 'answered' && outcome !== 'refused' && outcome !== 'failed') {
     return unreadable(`未知应答结果：${JSON.stringify(outcome)}。`);
   }
 

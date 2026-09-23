@@ -19,9 +19,13 @@
 // The list is written out rather than assembled, because there are two and a v0 that discovered them
 // would need a registry to discover them with. There is no lookup by name here, no registration, no
 // iteration over the Runtime and no way to add an entry without editing this file — the list is a
-// decision somebody made, and it reads like one. Nothing in this file is reachable from a
-// model yet: this slice builds the foundation and stops, and the slice that consumes it is the one that
-// brings the selection loop.
+// decision somebody made, and it reads like one.
+//
+// This is now the list a model chooses from, and the way it is consumed is what keeps that from being a
+// registry. `tools.ts` maps over it to build the request's `tools` array and searches it by name to
+// resolve what came back, so the set a model may pick from and the set the loop will act on are the
+// same array rather than two lists that agree. Nothing is added at runtime, nothing is discovered, and
+// a name that is not in this file resolves to nothing.
 //
 // What an entry does not carry: any permission. An exposure says a capability may be *offered*, and says
 // nothing about whether a particular caller may use it or whether this particular act is allowed.
@@ -30,14 +34,37 @@
 // Services below are in this plugin's `requires` because it reads them, which it did before this file
 // existed, and being listed here grants no access that the Runtime had not already granted.
 //
-// `LANGUAGE_TOPICS` in `topics.ts` is a different list and stays where it is. That one is the closed set
-// this build's understanding step currently chooses between, and it is what `answer.ts` dispatches on
-// today. This one is the material a model-driven selection loop will choose between later. They coexist
-// deliberately and neither derives from the other; the slice that migrates the first onto the second is
-// the slice that gets to decide how, and doing it here would be the double router this round refused.
+// The fixed topic vocabulary this file used to coexist with is gone, and the way it went is worth
+// recording because "we deleted the old one" is not the interesting part. `LANGUAGE_TOPICS` and its
+// glosses named four questions this build could answer — "your work focus", "the desktop now", "the
+// desktop versus last time", "everything" — and the model picked one of them, and then `answer.ts`
+// dispatched that word onto a Service call. That is two routers in a row. The word was this surface's
+// own invention, so the model had to be taught it and a follow-up had to be translated back out of it
+// before anything could be read, and none of it was a fact about a capability — it was a fact about
+// how this plugin used to be organised.
+//
+// Removing the first router is what this file makes possible, and it did not need anything added to do
+// it. A capability's name is already the thing the model needs to write, so the topic layer had nothing
+// left to translate: `work-focus` maps onto `work_focus.read`, both desktop topics map onto the single
+// `desktop_context.read`, and `current-context` turned out not to be a capability at all — it was "read
+// everything", which is what a loop does by reading twice. Keeping both would have meant a model picking
+// a topic and then picking a capability inside it, with the second choice constrained by a word the
+// first one produced.
 
+import type { DesktopContextReadExposure } from '../desktop-session-awareness/index.js';
 import { desktopContextReadExposure } from '../desktop-session-awareness/index.js';
+import type { WorkFocusReadExposure } from '../work-focus/index.js';
 import { workFocusReadExposure } from '../work-focus/index.js';
+
+/**
+ * One entry of the list: whichever owner's export it is.
+ *
+ * The union is written from the owners' own types rather than as a structural `{name, description,
+ * service}`, so an entry that stopped carrying a field an owner's type requires would fail to compile
+ * here instead of being silently accepted into the list. What the two shapes have in common is a
+ * coincidence of two owners agreeing, not a shape this file declares and asks them to satisfy.
+ */
+export type LanguageExposure = WorkFocusReadExposure | DesktopContextReadExposure;
 
 /**
  * The capabilities this plugin offers, in the order a model would be shown them.

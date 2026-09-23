@@ -7,14 +7,25 @@
 // answered, and "this build does not know that request" would stop being sayable — which is the same
 // argument `desktop-session-observe/types.ts` and `work-focus/types.ts` make for their own words.
 //
-// The reply has three outcomes, and the whole point of this slice is that they stay three.
+// The reply has four outcomes, and they are four rather than three because two different things used to
+// be spelled the same way.
 //
-//   answered   this build understood the question, read the facts it is grounded in, and answered.
+//   chatted    nothing was read. The model talked to the human and that conversation is the answer.
+//   answered   at least one capability was read, and the answer is what was read.
 //   refused    this build understood the *request* and will not answer *that*: the question is empty,
-//              it is longer than any question needs to be, or the model did not place it in one of the
-//              closed topics this build knows how to answer.
+//              it is longer than any question needs to be, or the model produced nothing this build
+//              could act on — no reading it could perform, no usable reply.
 //   failed     this build itself did not get to a verdict — the model could not be reached, or a
 //              contract the answer is grounded in rejected on the way.
+//
+// `chatted` is new, and the reason it is not folded into `answered` is the whole reason it exists. An
+// answer that quotes Hikari's own observations and an answer that is the model making conversation are
+// different kinds of thing, and only one of them is entitled to be believed about the machine. A
+// `answered` reply is a reading; a `chatted` one is a sentence, and a client that had to guess which it
+// was holding would be guessing about exactly the distinction this surface exists to keep. The mandate
+// is explicit that they stay separate, and the separation is enforced upstream rather than here: the
+// loop only produces `chatted` when it read nothing at all, so the outcome cannot be chosen
+// independently of what happened.
 //
 // `refused` and `failed` are not two spellings of "no". A refusal is Hikari saying it does not answer
 // this; a failure is Hikari saying it did not finish. Folding them together would tell a human their
@@ -48,14 +59,20 @@ export interface LanguageRequest {
 }
 
 /**
- * The answer, in the three shapes the plugin can give, named as the mandate names them.
+ * The answer, in the four shapes the plugin can give, named as the mandate names them.
  *
- * All three are lines and there is deliberately no machine-readable verdict beside them, for the
- * reason the observe endpoint gives: any field rich enough to carry what was asked and what was read
- * would be a second encoding of facts that already have owners. What a client has to tell apart is
- * which of the three happened, and `outcome` says exactly that.
+ * All four are lines and there is deliberately no machine-readable verdict beside them, for the reason
+ * the observe endpoint gives: any field rich enough to carry what was asked and what was read would be
+ * a second encoding of facts that already have owners. What a client has to tell apart is which of the
+ * four happened, and `outcome` says exactly that.
+ *
+ * Which lines belong to which outcome is the load-bearing part. A `chatted` reply's lines are model
+ * prose and nothing else; an `answered` reply's lines are owner-rendered readings and contain no model
+ * prose at all, not even a joining sentence. There is no outcome under which the two are mixed, and
+ * that is by construction rather than by convention — see the one-way door in `answer.ts`.
  */
 export type LanguageReply =
+  | { readonly outcome: 'chatted'; readonly lines: readonly string[] }
   | { readonly outcome: 'answered'; readonly lines: readonly string[] }
   | { readonly outcome: 'refused'; readonly lines: readonly string[] }
   | { readonly outcome: 'failed'; readonly lines: readonly string[] };

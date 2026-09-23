@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { askFailureLines, requestLanguageAsk } from '../dist/cli/ask.js';
+import { REPLY_TIMEOUT_MS, askFailureLines, requestLanguageAsk } from '../dist/cli/ask.js';
 import {
   desktopContextReadExposure,
   desktopSessionAwarenessPeekService,
@@ -13,37 +14,48 @@ import {
 } from '../dist/desktop-session-awareness/index.js';
 import { renderAssessment } from '../dist/desktop-session-observe/index.js';
 import { Runtime } from '../dist/index.js';
+import { renderFocus } from '../dist/language/express.js';
 import {
+  LANGUAGE_EXPOSURES,
+  MAX_LANGUAGE_TEXT_LENGTH,
+  LANGUAGE_PROTOCOL_VERSION,
   createAnswerer,
   createLanguagePlugin,
   decodeLanguageReply,
   decodeLanguageRequest,
-  LANGUAGE_PROTOCOL_VERSION,
-  LANGUAGE_TOPICS,
+  findExposure,
   languageEndpointPath,
   languagePlugin,
-  MAX_LANGUAGE_TEXT_LENGTH,
-  TOPIC_GLOSS,
+  readArguments,
+  toModelTools,
 } from '../dist/language/index.js';
-// Imported by path rather than through the barrel, and that is the honest shape of it: this list has no
-// cross-module reader today, so exporting it would be a public symbol justified by "a test needs it" —
-// the one reason `plugin-design-spec.md` §7 names as insufficient. The barrel can export it the day a
-// module other than this one reads it.
-import { LANGUAGE_EXPOSURES } from '../dist/language/exposure.js';
+import { MODEL_TIMEOUT_MS } from '../dist/language/model.js';
+import { createExposureReader } from '../dist/language/read.js';
+import { oneLine } from '../dist/terminal-text/index.js';
 import { workFocusCurrentService, workFocusReadExposure } from '../dist/work-focus/index.js';
 
 // Two halves in one file, and the split between them is the point of the whole design.
 //
-// The pipeline tests need no pipe, no model and no resident: `createAnswerer` takes its four
-// dependencies as arguments, so a test chooses what the model says and reads what came back. They run
+// The loop tests need no pipe, no network and no resident: `createAnswerer` takes its dependencies as
+// arguments, so a test chooses the sequence of model steps and reads what came back. They run
 // everywhere, including CI, which is where they matter most — this repository's tests run on
 // `ubuntu-latest`, where there are no named pipes and every endpoint test is skipped.
 //
 // The endpoint tests are the other half and run only on Windows. They are here rather than in a
 // separate file for the reason `desktop-session-observe.test.mjs` gives: splitting them would put the
-// claims about the wire on the side of the split that CI never runs, and the pipeline half would then
-// be the only thing anybody checked.
+// claims about the wire on the side of the split that CI never runs, and the loop half would then be
+// the only thing anybody checked.
+//
+// What the scripted model can and cannot prove is worth stating once, here, because the last round's
+// review turned on exactly this. A scripted model proves *structure*: given that the model decided X,
+// the loop does Y. It cannot prove that a real model would decide X. "The model reads the desktop
+// because the user asked what is on screen" is a claim about a model's semantic selection, and a fake
+// who was told to emit `desktop_context.read` agrees with it by construction. The live-endpoint harness
+// that can make that claim is `language-semantic.live.test.mjs`, which is skipped unless an operator
+// points it at a real endpoint; nothing in this file is evidence for it.
 const NO_PIPES = process.platform === 'win32' ? false : '命名管道只在 Windows 上存在';
+
+const CLI = join(import.meta.dirname, '..', 'dist', 'cli', 'main.js');
 
 // Spelled as code points rather than as escapes or as literal characters, so that this file holds no
 // invisible bytes — a test about invisible characters is a poor place to hide some, which is the same
@@ -62,20 +74,12 @@ function hasTerminalControl(text) {
   return false;
 }
 
-// The sentence the prompt uses to offer the previous turn, and the whole way a test can tell whether a
-// turn was offered. It has to be a marker rather than a search for the topic name: the topic names are
-// in *every* prompt — that is what a closed set is — so `system.includes('work-focus')` is true of a
-// first turn, a follow-up and a restart alike, and would pin nothing.
-const OFFERED_PREVIOUS = '这个人上一轮问的是：';
+const WORK = 'work_focus.read';
+const DESKTOP = 'desktop_context.read';
 
-/** The topic a prompt offered as the previous turn, or `null` when it offered none. */
-function offeredPrevious(prompt) {
-  const at = prompt.system.indexOf(OFFERED_PREVIOUS);
-  if (at === -1) return null;
-  // The topic runs to the end of that sentence; what follows it is the instruction about what to do
-  // with it.
-  return prompt.system.slice(at + OFFERED_PREVIOUS.length).split('。')[0];
-}
+// A sentence no renderer in this repository could produce. Every test that asserts "model text does not
+// reach the human" uses this one string, so a leak is a single substring search rather than a hunt.
+const CONFABULATION = '你现在正在专注写 Hikari';
 
 const SNAPSHOT_AT = '2026-02-01T08:30:00.000Z';
 const NOW = '2026-02-01T08:31:00.000Z';
@@ -116,86 +120,518 @@ function assessmentFixture(title = TARGET.title) {
   };
 }
 
-// Every dependency recorded, because "the model was actually asked" and "the desktop was not read for
-// a question about the work focus" are both claims about calls that a test has to be able to count.
+// ---------------------------------------------------------------------------------------------
+// Writing a model's behaviour down: the three things a step can be.
+// ---------------------------------------------------------------------------------------------
+
+/** A step in which the model said something and called nothing. */
+function says(content) {
+  return { content, toolCalls: [], truncated: false };
+}
+
+/** A step in which the model called tools, with no prose alongside. */
+function callsTo(...toolCalls) {
+  return { content: '', toolCalls, truncated: false };
+}
+
+/** One tool call, as the transport would have parsed it. */
+function toolCall(id, name, args = '') {
+  return { id, name, arguments: args };
+}
+
+/** The step that means "stop": no calls, no text. In a grounded interaction this is `done`. */
+const DONE = says('');
+
+/**
+ * Every dependency recorded, because "the model was actually asked" and "the desktop was not read for
+ * a question about the work focus" are both claims about calls that a test has to be able to count.
+ *
+ * `read` is the *real* `createExposureReader`, wired to instrumented dependencies rather than replaced
+ * with a stub. That matters: the claims about which Service a capability reaches, and about a model
+ * being shown the same lines a human is, are claims about that code, and a harness that stubbed it out
+ * would be testing this file's idea of the wiring instead of the wiring.
+ */
 function harness({
-  topic = 'work-focus',
+  script = [],
   throws,
-  focus = Object.freeze(['hikari-new']),
+  focus = ['hikari-new'],
   assessment = assessmentFixture(),
   at = NOW,
+  readThrows,
 } = {}) {
-  const prompts = [];
-  const calls = { focus: 0, peek: 0 };
+  const requests = [];
+  const serviceReads = { focus: 0, peek: 0 };
+  const performed = [];
   let clock = at;
-  let answer = topic;
+  let index = 0;
 
-  const answerer = createAnswerer({
-    async classify(prompt) {
-      prompts.push(prompt);
-      if (throws !== undefined) throw throws;
-      return answer;
-    },
+  const reader = createExposureReader({
     async readFocus() {
-      calls.focus += 1;
-      return focus;
+      serviceReads.focus += 1;
+      return Object.freeze([...focus]);
     },
     async peek() {
-      calls.peek += 1;
+      serviceReads.peek += 1;
+      if (readThrows !== undefined) throw readThrows;
       return assessment;
+    },
+  });
+
+  const answerer = createAnswerer({
+    async step(request) {
+      // Snapshotted rather than kept by reference. The loop keeps pushing onto the array it handed
+      // over, so a reference would make every recorded request show the messages added after it was
+      // sent — and "was this request complete when it went out" is exactly the question one of these
+      // tests asks.
+      requests.push({
+        messages: request.messages.map((message) => ({ ...message })),
+        tools: request.tools,
+      });
+      if (throws !== undefined) throw throws;
+      const next = script[index];
+      index += 1;
+      if (next === undefined) {
+        throw new Error(`模型脚本在第 ${requests.length} 次调用时就用完了，loop 却还在请求下一步`);
+      }
+      return next;
+    },
+    async read(exposure) {
+      performed.push(exposure.name);
+      return reader(exposure);
     },
     now: () => clock,
   });
 
   return {
     answerer,
-    prompts,
-    calls,
-    say: (next) => {
-      answer = next;
-    },
+    requests,
+    serviceReads,
+    performed,
     advance: (ms) => {
       clock = new Date(Date.parse(clock) + ms).toISOString();
     },
   };
 }
 
+/**
+ * The wire invariant, checked on a request that was actually about to be sent.
+ *
+ * An OpenAI-compatible endpoint rejects the whole request if any assistant message's tool calls are
+ * not answered by tool messages before it goes out. Reading the assertion as "for every assistant
+ * message in this request, every id it named has a result later in the same array" is the invariant
+ * itself rather than a proxy for it. Asserted over every recorded request in the batch and duplicate
+ * tests below, not only the one that names it.
+ */
+function assertWireComplete(request, label) {
+  const { messages } = request;
+  for (let index = 0; index < messages.length; index += 1) {
+    const message = messages[index];
+    if (message.role !== 'assistant') continue;
+
+    const answered = new Set(
+      messages
+        .slice(index + 1)
+        .filter((later) => later.role === 'tool')
+        .map((later) => later.toolCallId),
+    );
+    for (const call of message.toolCalls) {
+      assert.ok(answered.has(call.id), `${label}: tool_call ${call.id} 没有对应的 tool 结果`);
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------------------------
-// Understand: the model's text becomes one of a closed set, or nothing.
+// Speech sovereignty: what the model says, and what the human is shown.
+//
+// These four are the structural half of the mandate's speech rules. Every one of them is a claim about
+// this repository's own control flow, which is a thing a scripted model can settle completely — unlike
+// the semantic half, which it cannot touch at all.
 // ---------------------------------------------------------------------------------------------
 
-test('模型给出闭集内的主题时，问题得到回答，且提示词里有全部主题', async () => {
-  const h = harness({ topic: 'work-focus' });
+test('tool_calls 非空时，model 的 content 一个字都不进入回答', async () => {
+  const h = harness({
+    script: [{ content: CONFABULATION, toolCalls: [toolCall('c1', WORK)], truncated: false }, DONE],
+  });
 
   const reply = await h.answerer.answer('我现在关注什么？');
 
   assert.equal(reply.outcome, 'answered');
-  assert.equal(h.prompts.length, 1, 'fake 模型应被调用恰好一次');
-
-  // The prompt carries the closed set, and it carries it from the owner's own table: a topic added to
-  // `LANGUAGE_TOPICS` without a gloss, or a gloss left behind by a removed topic, fails here.
-  for (const topic of LANGUAGE_TOPICS) {
-    assert.ok(h.prompts[0].system.includes(topic), `提示词应包含主题 ${topic}`);
-    assert.ok(h.prompts[0].system.includes(TOPIC_GLOSS[topic]), `提示词应包含 ${topic} 的说明`);
-  }
-
-  // The human's sentence is carried verbatim. Not trimmed, not folded, not rewritten — the model is
-  // asked about what the person typed, and this is the only place that can be checked.
-  assert.ok(h.prompts[0].user.includes('我现在关注什么？'));
+  const printed = reply.lines.join('\n');
+  assert.ok(!printed.includes(CONFABULATION), 'tool_calls 非空时 content 必须被忽略');
+  // Not merely absent from the lines — absent from the machinery. The assistant message echoed back on
+  // the next request carries no content at all, so the model is never told it said something no human
+  // saw. Asserting the lines alone would pass for an implementation that echoed it into the transcript.
+  const echoed = h.requests[1].messages.filter((message) => message.role === 'assistant');
+  assert.equal(echoed.length, 1);
+  assert.equal(echoed[0].content, undefined, '回填的 assistant 消息不得带 content');
 });
 
-test('模型说出闭集之外的东西时是 refused，不是 answered', async () => {
-  const h = harness({ topic: '你现在正在专注写 Hikari' });
+test('一旦读过 capability，之后模型写的散文不进回答，也不报错', async () => {
+  const h = harness({ script: [callsTo(toolCall('c1', WORK)), says(CONFABULATION)] });
+
+  const reply = await h.answerer.answer('我现在关注什么？');
+
+  // Not `refused`, not `failed`. The model returning prose in a grounded state is a normal end of the
+  // loop, and reporting it as an error would blame Hikari for something it handled.
+  assert.equal(reply.outcome, 'answered');
+  assert.ok(!reply.lines.join('\n').includes(CONFABULATION), 'grounded 状态下模型散文不得进入回答');
+  // Exactly the deterministic block, nothing appended. The one-way door closing is only observable as
+  // the absence of an extra line, so this is a deep comparison rather than a substring search.
+  assert.deepEqual(reply.lines, renderFocus(['hikari-new']));
+});
+
+test('grounded 回答完全由 deterministic renderer 产生，没有第二套表述', async () => {
+  const assessment = assessmentFixture();
+  const h = harness({
+    script: [callsTo(toolCall('c1', DESKTOP)), says(CONFABULATION)],
+    assessment,
+  });
+
+  const reply = await h.answerer.answer('你现在看到什么？');
+
+  assert.equal(reply.outcome, 'answered');
+  // Byte-identical to what `hikari observe desktop-session status` prints, because it is the same call
+  // to the same function. A second renderer would drift from the first and both would still look right.
+  assert.deepEqual(reply.lines, renderAssessment(assessment));
+});
+
+test('模型看到的工具结果，就是人被展示的那些行', async () => {
+  const assessment = assessmentFixture();
+  // The forged designation rather than a clean one, because escaping is the only thing that *can*
+  // differ between the model's copy and the human's copy, and a value with nothing to escape lets them
+  // differ with this test still green. What the value is shaped to do is in the test below.
+  const focus = ['hikari-new\n判词：stable'];
+  const h = harness({
+    script: [callsTo(toolCall('c1', WORK), toolCall('c2', DESKTOP)), DONE],
+    focus,
+    assessment,
+  });
 
   const reply = await h.answerer.answer('我现在在干嘛？');
 
-  assert.equal(reply.outcome, 'refused');
-  assert.equal(h.prompts.length, 1, 'refused 也是一次真实的模型调用');
-  assert.ok(
-    !reply.lines.join('\n').includes('你现在正在专注写 Hikari'),
-    '模型写的话不得出现在回答里',
-  );
+  assert.equal(reply.outcome, 'answered');
+  // One turn's tool results, taken off the request the loop actually sent, against the answer the human
+  // got. A model shown a different view of a reading would be answering from a fact nobody else can
+  // see, and this is the assertion that would catch it — including the case where the model is handed
+  // the raw contract value instead of the owner's rendering, and the case where the model is handed the
+  // owner's rendering *unescaped* while the human is handed it escaped.
+  const results = h.requests[1].messages
+    .filter((message) => message.role === 'tool')
+    .map((message) => message.content);
+  assert.deepEqual(results, [
+    renderFocus(focus).map(oneLine).join('\n'),
+    renderAssessment(assessment).map(oneLine).join('\n'),
+  ]);
+  assert.deepEqual(reply.lines, [
+    ...renderFocus(focus).map(oneLine),
+    ...renderAssessment(assessment).map(oneLine),
+  ]);
+  // Stated once as the thing itself rather than as the equality above: the model's copy of the focus
+  // reading is the human's copy, so the line that looks like a Hikari verdict is escaped on both sides
+  // and the model is not shown a third line the human never saw.
+  const focusLines = reply.lines.slice(0, renderFocus(focus).length);
+  assert.equal(results[0], focusLines.join('\n'));
+  assert.ok(!results[0].split('\n').includes('判词：stable'), '模型那一侧的值也必须仍是一行');
 });
+
+test('domain plugin 拿不到面向用户的说话位置：回答里的每一行都出自 owner 的 renderer', async () => {
+  // A work focus whose text is deliberately shaped like a line of Hikari's own — the only way this
+  // surface could be made to speak for a domain is by transcribing a value that reads like a verdict.
+  const focus = ['hikari-new\n判词：stable'];
+  const h = harness({ script: [callsTo(toolCall('c1', WORK)), DONE], focus });
+
+  const reply = await h.answerer.answer('我现在关注什么？');
+
+  assert.equal(reply.outcome, 'answered');
+  // The value is carried, escaped, on its own line — never promoted into a line of its own the way an
+  // owner-authored line would be. The block is still exactly the renderer's output, so the domain's
+  // material is transcribed rather than spoken. `read.ts` escapes it on the way out and `renderAnswer`
+  // escapes the same lines again on the way to the terminal, which is a no-op — `oneLine` leaves a
+  // backslash alone — and that is why this is a deep comparison against the renderer rather than a
+  // substring search.
+  assert.deepEqual(reply.lines, renderFocus(focus).map(oneLine));
+  assert.ok(!reply.lines.some((line) => line === '判词：stable'), '值不得自己成为一行');
+  for (const line of reply.lines) {
+    assert.ok(!hasTerminalControl(line), '回答里不得有控制字符');
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Product acceptance: the five behaviours the mandate names, driven through the real loop.
+//
+// These are scripted-model tests and they are labelled as such. What each one settles is that the
+// system executes the right path once a model has decided something; what none of them settles is that
+// a real model would decide it. See the note at the top of this file.
+// ---------------------------------------------------------------------------------------------
+
+test('验收 A：打招呼 → chatted，零次 Service 读取', async () => {
+  const h = harness({ script: [says('哟，在呢。')] });
+
+  const reply = await h.answerer.answer('ayobro');
+
+  assert.equal(reply.outcome, 'chatted');
+  assert.deepEqual(reply.lines, ['哟，在呢。']);
+  assert.equal(h.serviceReads.focus, 0);
+  assert.equal(h.serviceReads.peek, 0);
+  assert.deepEqual(h.performed, []);
+  assert.equal(h.requests.length, 1, 'chatted 只走一次模型调用');
+});
+
+test('验收 B：问关注什么 → work_focus.read 一次 → answered', async () => {
+  const h = harness({ script: [callsTo(toolCall('c1', WORK)), DONE] });
+
+  const reply = await h.answerer.answer('我现在关注什么？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(h.performed, [WORK]);
+  assert.equal(h.serviceReads.focus, 1);
+  assert.equal(h.serviceReads.peek, 0, '问工作焦点不该读桌面');
+  assert.equal(h.requests.length, 2);
+});
+
+test('验收 C：问看到什么 → desktop_context.read → answered', async () => {
+  const assessment = assessmentFixture();
+  const h = harness({ script: [callsTo(toolCall('c1', DESKTOP)), DONE], assessment });
+
+  const reply = await h.answerer.answer('你现在看到什么？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(h.performed, [DESKTOP]);
+  assert.equal(h.serviceReads.peek, 1);
+  assert.equal(h.serviceReads.focus, 0, '问桌面不该读工作焦点');
+  assert.deepEqual(reply.lines, renderAssessment(assessment));
+});
+
+test('验收 D：两个都要 → 两次读取、三次模型调用', async () => {
+  const assessment = assessmentFixture();
+  const h = harness({
+    script: [callsTo(toolCall('c1', WORK)), callsTo(toolCall('c2', DESKTOP)), DONE],
+    assessment,
+  });
+
+  const reply = await h.answerer.answer('我现在在干嘛？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(h.performed, [WORK, DESKTOP], '读取顺序就是模型选择的顺序');
+  assert.equal(h.serviceReads.focus, 1);
+  assert.equal(h.serviceReads.peek, 1);
+  assert.equal(h.requests.length, 3, '两次读取加一次收尾');
+  // Both blocks, in the order they were read, with nothing joining them. A connective sentence would
+  // be this surface composing a claim out of two readings.
+  assert.deepEqual(reply.lines, [...renderFocus(['hikari-new']), ...renderAssessment(assessment)]);
+});
+
+test('验收 E：随口说一句 → chatted，零次 Service 读取', async () => {
+  const h = harness({ script: [says('那就先歇会儿。')] });
+
+  const reply = await h.answerer.answer('最近写 Hikari 写麻了');
+
+  assert.equal(reply.outcome, 'chatted');
+  assert.deepEqual(reply.lines, ['那就先歇会儿。']);
+  assert.equal(h.serviceReads.focus + h.serviceReads.peek, 0);
+  assert.equal(h.requests.length, 1);
+});
+
+test('合法的「确实没有」是 answered，不是 refused，也不是空回答', async () => {
+  // The domain was read and it honestly has nothing to report. That is a fact about the machine, not a
+  // failure of the pipeline, and the renderer already says so in its own words — so the answer is
+  // `answered`, and the human gets the focus surface's statement that no designation exists.
+  //
+  // Worth its own test because the shape of the wrong implementation is subtle: "a block was read" and
+  // "a block has lines" are two different facts, and a loop that conflated them would report the empty
+  // case as `refused` while every other test in this file stayed green — none of them ever hands the
+  // language surface an empty reading.
+  const h = harness({ script: [callsTo(toolCall('c1', WORK)), DONE], focus: [] });
+
+  const reply = await h.answerer.answer('我现在关注什么？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.equal(h.serviceReads.focus, 1, '「没有」也是真的读了一次才知道的');
+  assert.deepEqual(h.performed, [WORK]);
+  assert.deepEqual(reply.lines, renderFocus([]));
+  assert.ok(reply.lines.length > 0, '空集不得变成空回答');
+});
+
+// ---------------------------------------------------------------------------------------------
+// The closed set: what a model may name, and what happens to everything else.
+// ---------------------------------------------------------------------------------------------
+
+test('tools[] 完全由 owner 的 exposure 机械生成，没有第二份描述', () => {
+  const tools = toModelTools();
+
+  assert.equal(tools.length, LANGUAGE_EXPOSURES.length);
+  assert.deepEqual(
+    tools.map((tool) => tool.function.name),
+    LANGUAGE_EXPOSURES.map((exposure) => exposure.name),
+  );
+  // Identity rather than equality: a description that matched by coincidence would still be a second
+  // copy of it, and would still be the copy that goes stale. The owner's words are passed through by
+  // reference, so there is no place for Language to have written its own.
+  for (const [index, tool] of tools.entries()) {
+    assert.equal(tool.function.description, LANGUAGE_EXPOSURES[index].description);
+  }
+  assert.deepEqual(tools[0].function.parameters, {
+    type: 'object',
+    properties: {},
+    additionalProperties: false,
+  });
+});
+
+test('findExposure 只在当前字面 exposure 集合里查，模型字符串永远不是 Service key', () => {
+  assert.equal(findExposure(WORK), workFocusReadExposure);
+  assert.equal(findExposure(DESKTOP), desktopContextReadExposure);
+
+  for (const name of ['work-focus', 'desktop-state', 'desktop-session-awareness.peek', 'read', '__proto__', 'toString']) {
+    assert.equal(findExposure(name), undefined, `${name} 不该被解析成任何 exposure`);
+  }
+});
+
+test('未知能力不进入 Service，得到 refused，且模型的原话不出现在回答里', async () => {
+  const h = harness({ script: [callsTo(toolCall('c1', 'chronicle.write', '{"text":"hi"}'))] });
+
+  const reply = await h.answerer.answer('帮我把这个记下来');
+
+  assert.equal(reply.outcome, 'refused');
+  assert.deepEqual(h.performed, [], '未知能力不得导致任何 Service 读取');
+  assert.equal(h.serviceReads.focus + h.serviceReads.peek, 0);
+  assert.ok(!reply.lines.join('\n').includes('chronicle.write'), '不得回显模型写的名字');
+  // One request only: the batch was refused and the loop left without asking again.
+  assert.equal(h.requests.length, 1);
+});
+
+test('带参数的能力调用不进入 Service，得到 refused', async () => {
+  for (const args of ['{"topic":"work-focus"}', '{"name":"x"}', '[]', 'null', 'not json', '"x"']) {
+    const h = harness({ script: [callsTo(toolCall('c1', WORK, args))] });
+
+    const reply = await h.answerer.answer('我现在关注什么？');
+
+    assert.equal(reply.outcome, 'refused', `应拒绝参数 ${args}`);
+    assert.deepEqual(h.performed, [], `参数 ${args} 不得导致 Service 读取`);
+    assert.equal(h.requests.length, 1);
+  }
+});
+
+test('零参数规则的封闭集合：只有空、空白与空对象是「没有参数」', () => {
+  for (const raw of ['', '   ', '\n', '{}', ' { } ']) {
+    assert.equal(readArguments(raw), 'none', `${JSON.stringify(raw)} 应读作没有参数`);
+  }
+  for (const raw of ['{"a":1}', '[]', 'null', '42', '"x"', 'true', 'nope', '{']) {
+    assert.equal(readArguments(raw), 'malformed', `${JSON.stringify(raw)} 应读作带了参数`);
+  }
+});
+
+// ---------------------------------------------------------------------------------------------
+// Termination, and the batch rules that make it safe.
+// ---------------------------------------------------------------------------------------------
+
+test('永远重复同一个调用的模型，确定性终止：一次 Service 读取，两次模型调用', async () => {
+  // A model that will never stop asking. There is no step counter in the loop to catch this; what stops
+  // it is that a repeat consumes nothing new, so the loop cannot continue.
+  //
+  // The script holds one step more than the loop is allowed to take, and the harness throws when asked
+  // for a step past the end. So a loop that failed to terminate would come back `failed` with the
+  // harness's own complaint, rather than quietly reporting the answer these assertions look for.
+  const h = harness({
+    script: [
+      callsTo(toolCall('c1', WORK)),
+      callsTo(toolCall('c2', WORK)),
+      callsTo(toolCall('c3', WORK)),
+    ],
+  });
+
+  const reply = await h.answerer.answer('我现在关注什么？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.equal(h.serviceReads.focus, 1, '同一个 capability 一轮内只读一次');
+  assert.equal(h.requests.length, 2, '第二次请求里的重复调用让 loop 停下，不发第三次');
+  assert.deepEqual(reply.lines, renderFocus(['hikari-new']));
+});
+
+test('批量里第二个是重复调用：只真正读一次，两个 call id 都得到完整处理，且不再发下一次请求', async () => {
+  // The mandate's case, written exactly as asked: one assistant message with two tool_calls, the
+  // second a duplicate of the first.
+  const h = harness({ script: [callsTo(toolCall('first', WORK), toolCall('second', WORK))] });
+
+  const reply = await h.answerer.answer('我现在关注什么？');
+
+  assert.equal(reply.outcome, 'answered');
+  // Read once. The second call is answered on the wire but performed nowhere.
+  assert.deepEqual(h.performed, [WORK]);
+  assert.equal(h.serviceReads.focus, 1);
+  // Both calls were resolved — the batch is finished before the loop decides anything — and the
+  // interaction stopped, so there is no next request that could be missing a result.
+  assert.equal(h.requests.length, 1);
+  assert.deepEqual(reply.lines, renderFocus(['hikari-new']));
+});
+
+test('后面的批量里出现重复调用：不重读，批次照样走完，且模型请求始终 wire-complete', async () => {
+  const assessment = assessmentFixture();
+  const h = harness({
+    script: [callsTo(toolCall('a', WORK)), callsTo(toolCall('b', WORK), toolCall('c', DESKTOP))],
+    assessment,
+  });
+
+  const reply = await h.answerer.answer('我现在在干嘛？');
+
+  assert.equal(reply.outcome, 'answered');
+  // `b` is a duplicate of a capability already read and `c` is fresh. The fresh one is performed; the
+  // duplicate is answered on the wire and not re-read.
+  assert.deepEqual(h.performed, [WORK, DESKTOP]);
+  assert.equal(h.serviceReads.focus, 1);
+  assert.equal(h.serviceReads.peek, 1);
+  // The second request carries the first batch's assistant message, and it went out only once that
+  // message's call had a result. Then the loop left, so there is no third request.
+  assert.equal(h.requests.length, 2);
+  assertWireComplete(h.requests[1], '第二批请求');
+  assert.deepEqual(reply.lines, [...renderFocus(['hikari-new']), ...renderAssessment(assessment)]);
+});
+
+test('每一个发出去的请求，里面每一条 assistant 消息的 tool_call 都有结果', async () => {
+  const h = harness({
+    script: [
+      callsTo(toolCall('a', WORK), toolCall('b', DESKTOP)),
+      callsTo(toolCall('c', DESKTOP), toolCall('d', 'no.such.capability')),
+      DONE,
+    ],
+  });
+
+  const reply = await h.answerer.answer('我现在在干嘛？');
+
+  assert.equal(reply.outcome, 'answered');
+  for (const [index, request] of h.requests.entries()) {
+    assertWireComplete(request, `第 ${index + 1} 次请求`);
+  }
+  // `c` is a duplicate and `d` is unknown, so the batch stops the loop — after both were resolved.
+  assert.deepEqual(h.performed, [WORK, DESKTOP]);
+  assert.equal(h.requests.length, 2);
+});
+
+test('模型调用的上界是 LANGUAGE_EXPOSURES 的大小推出来的，不是魔数', async () => {
+  // A model that never stops asking for one more step, holding a step the loop must not reach. Both
+  // capabilities are read by the third call, so the third has nothing left to consume and is the last —
+  // and the script's fourth entry is what tells a loop that counted steps instead of applying that
+  // invariant apart from this one. Such a loop would take the fourth step, the harness would throw on
+  // the fifth, and the request count asserted below would be wrong.
+  const h = harness({
+    script: [
+      callsTo(toolCall('a', WORK)),
+      callsTo(toolCall('b', DESKTOP)),
+      callsTo(toolCall('c', WORK)),
+      DONE,
+    ],
+  });
+
+  const reply = await h.answerer.answer('我现在在干嘛？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(h.performed, [WORK, DESKTOP], '两个 capability 各读一次');
+  assert.equal(h.requests.length, LANGUAGE_EXPOSURES.length + 1);
+  assert.equal(h.requests.length, 3, '第三次请求之后的重复调用没有消费任何新东西，loop 在这里结束');
+});
+
+// ---------------------------------------------------------------------------------------------
+// Failure semantics: four outcomes, and the reason they are four.
+// ---------------------------------------------------------------------------------------------
 
 test('模型不可达是 failed，不是 refused', async () => {
   const h = harness({ throws: new Error('connect ECONNREFUSED 127.0.0.1:11434') });
@@ -208,248 +644,244 @@ test('模型不可达是 failed，不是 refused', async () => {
   assert.ok(reply.lines.join('\n').includes('ECONNREFUSED'));
 });
 
-test('refused 与 failed 是两件不同的事，不能说成同一件', async () => {
-  const unclassified = await harness({ topic: '听不懂' }).answerer.answer('嗯');
-  const unreachable = await harness({ throws: new Error('模型端点不可达') }).answerer.answer('嗯');
-
-  assert.notEqual(unclassified.outcome, unreachable.outcome);
-  assert.notDeepEqual(unclassified.lines, unreachable.lines);
-
-  // The separation is not only a word: the refusal must not claim the model failed, and the failure
-  // must not claim the question was not understood. A surface that reported "I did not understand
-  // you" for a model that is down would blame the human for this side's failure.
-  assert.ok(!unclassified.lines.join('\n').includes('模型端点不可达'));
-  assert.ok(!unreachable.lines.join('\n').includes('没听懂'));
-});
-
-test('模型的自由文本没有任何一条通路到最终回答', async () => {
-  // Each model answer contains a sentence no renderer could produce, and is spelled so that a lookup
-  // either accepts it whole or does not accept it at all. The middle case is the interesting one:
-  // `work-focus` followed by a sentence is a *legal* topic with something appended, and it must be
-  // refused rather than matched leniently.
-  const CONFABULATION = '你现在正在专注写 Hikari';
-  const outputs = [
-    `work-focus\n${CONFABULATION}`,
-    `${CONFABULATION}：work-focus`,
-    `work-focus ${CONFABULATION}`,
-    CONFABULATION,
-    `work-focus${ESC}[31m${CONFABULATION}`,
-  ];
-
-  for (const output of outputs) {
-    const h = harness({ topic: output });
-    const reply = await h.answerer.answer('我现在关注什么？');
-    const printed = reply.lines.join('\n');
-
-    assert.equal(reply.outcome, 'refused', `应拒绝：${JSON.stringify(output)}`);
-    assert.ok(!printed.includes(CONFABULATION), `模型的话不得出现在回答里：${JSON.stringify(output)}`);
-    // Not even a byte of it. A control character that survived would let a model move the cursor on
-    // the terminal that prints the answer.
-    assert.ok(!printed.includes(ESC), '回答里不得有 ESC');
-  }
-});
-
-test('模型把问题原样抄回来时，那也不是一个主题', async () => {
-  // The model is asked to answer with one of four words. If it echoes the question instead, the answer
-  // is a refusal rather than a sentence in the reply — the lookup is on the whole string, so the
-  // question itself is not `desktop-state` no matter how close it looks.
-  const h = harness({ topic: '光，你现在看到什么？' });
-
-  const reply = await h.answerer.answer('光，你现在看到什么？');
-
-  assert.equal(reply.outcome, 'refused');
-  assert.ok(!reply.lines.join('\n').includes('光，你现在看到什么？'));
-});
-
-// ---------------------------------------------------------------------------------------------
-// Express: what is said back is the domain's own material, transcribed.
-// ---------------------------------------------------------------------------------------------
-
-test('关于工作焦点的问题只读工作焦点，不读桌面', async () => {
-  const h = harness({ topic: 'work-focus', focus: Object.freeze(['hikari-new', '另一件事']) });
-
-  const reply = await h.answerer.answer('我现在关注什么？');
-
-  assert.equal(reply.outcome, 'answered');
-  const printed = reply.lines.join('\n');
-  assert.ok(printed.includes('hikari-new'));
-  assert.ok(printed.includes('另一件事'));
-  // `work-focus` is the common question and it costs no acquisition. The obvious implementation reads
-  // both sources unconditionally, and nothing would notice until somebody wondered why asking about
-  // the focus launched a subprocess.
-  assert.equal(h.calls.peek, 0, '关于工作焦点的问题不该读桌面');
-  assert.equal(h.calls.focus, 1);
-});
-
-test('关于桌面的问题是 renderAssessment 的原样转写，一个字都不加', async () => {
-  const assessment = assessmentFixture();
-  const h = harness({ topic: 'desktop-state', assessment });
-
-  const reply = await h.answerer.answer('光，你现在看到什么？');
-
-  assert.equal(reply.outcome, 'answered');
-  // The strongest available statement that this surface invents nothing: the block a human gets from
-  // `hikari ask` is byte-identical to the block `hikari observe desktop-session status` prints, because
-  // it is the same call to the same function. A second renderer would drift from the first and both
-  // would still look right.
-  const block = renderAssessment(assessment);
-  const start = reply.lines.indexOf(block[0]);
-  assert.notEqual(start, -1, '回答里应有桌面观察块');
-  assert.deepEqual(reply.lines.slice(start, start + block.length), block);
-  assert.equal(h.calls.focus, 0, '关于桌面的问题不该读工作焦点');
-  assert.equal(h.calls.peek, 1);
-});
-
-test('桌面块里的控制字符不会被第二次转义', async () => {
-  // The answer as a whole goes through `oneLine`, and the desktop block inside it went through the same
-  // rule on its own way out of `desktop-session-observe`. That composition is only harmless if applying
-  // the rule twice does the same thing as applying it once, and the title here carries an escape
-  // sequence and a newline so that this is a claim about a line with something to escape rather than
-  // about a line that happens to be plain text.
-  const assessment = assessmentFixture(`${ESC}[2J判词：stable\nPWNED`);
-  const h = harness({ topic: 'desktop-state', assessment });
-
-  const reply = await h.answerer.answer('光，你现在看到什么？');
-
-  assert.equal(reply.outcome, 'answered');
-  const block = renderAssessment(assessment);
-  // Byte-identical to what `hikari observe desktop-session status` prints means the second pass changed
-  // nothing — a `\\u001b` that came back as `\\\\u001b` would break this, and so would one that came
-  // back unescaped.
-  const start = reply.lines.indexOf(block[0]);
-  assert.notEqual(start, -1);
-  assert.deepEqual(reply.lines.slice(start, start + block.length), block);
-  // And the title still did not become a verdict: the only line on this surface that starts with the
-  // verdict label is Hikari's own.
-  assert.deepEqual(
-    block.filter((line) => line.startsWith('判词：')),
-    ['判词：baseline'],
-  );
-});
-
-test('current-context 把两者并排放，不产生新的判断', async () => {
-  const assessment = assessmentFixture();
-  const h = harness({ topic: 'current-context', focus: Object.freeze(['hikari-new']), assessment });
-
-  const reply = await h.answerer.answer('我现在看到什么？');
-
-  assert.equal(reply.outcome, 'answered');
-  const printed = reply.lines.join('\n');
-  assert.ok(printed.includes('hikari-new'), '应包含工作焦点');
-  assert.ok(printed.includes(renderAssessment(assessment)[0]), '应包含桌面观察块');
-
-  // Both blocks are present whole. What must not happen is a sentence *about* them — that a window is
-  // an editor, that the two together mean the person is coding. Nothing in this answer says anything
-  // that is not a field of one of the two readings.
-  const block = renderAssessment(assessment);
-  const start = reply.lines.indexOf(block[0]);
-  assert.notEqual(start, -1);
-  assert.deepEqual(reply.lines.slice(start, start + block.length), block);
-  assert.equal(h.calls.focus, 1);
-  assert.equal(h.calls.peek, 1);
-});
-
-test('工作焦点里的换行和控制字符进不了终端', async () => {
-  // Work focus designations are free text a human typed, and Language is the second surface that
-  // prints them — which is why the rule moved out of the observation renderer instead of being copied
-  // into this one.
-  const h = harness({
-    topic: 'work-focus',
-    focus: Object.freeze(['hikari-new\n判词：stable', `${ESC}[2J被抹掉的屏幕`]),
+test('读到一半模型断了是 failed，不是把已经读到的拼成回答', async () => {
+  // Written by hand rather than through the harness, because the sequence this test is about is one
+  // where the *second* step fails — the first already performed a real read, so the loop is holding a
+  // block when the transport dies.
+  let seen = 0;
+  const answerer = createAnswerer({
+    async step() {
+      seen += 1;
+      if (seen === 1) return callsTo(toolCall('a', WORK));
+      throw new Error('模型端点没有应答');
+    },
+    async read() {
+      return renderFocus(['hikari-new']);
+    },
+    now: () => NOW,
   });
 
-  const reply = await h.answerer.answer('我现在关注什么？');
+  const reply = await answerer.answer('我现在关注什么？');
 
-  assert.equal(reply.outcome, 'answered');
-  for (const line of reply.lines) {
-    assert.ok(!line.includes('\n'), '一个元素必须是一行');
-    assert.ok(!line.includes(ESC), '回答里不得有 ESC');
-    assert.ok(!hasTerminalControl(line), '回答里不得有控制字符');
+  assert.equal(reply.outcome, 'failed');
+  assert.equal(seen, 2, '第一次读取应当真的发生过，否则这条测试什么都没测到');
+  // Answering out of whatever arrived before the failure would be this pipeline forming a sentence
+  // about a reading that never completed.
+  assert.ok(!reply.lines.join('\n').includes('hikari-new'), '半途失败不得输出部分读取结果');
+});
+
+test('capability Service 拒绝时是 failed，且回答里没有部分结果', async () => {
+  const h = harness({
+    script: [callsTo(toolCall('a', WORK), toolCall('b', DESKTOP))],
+    readThrows: new Error('desktop 采集器没有响应'),
+  });
+
+  const reply = await h.answerer.answer('我现在在干嘛？');
+
+  assert.equal(reply.outcome, 'failed');
+  assert.ok(reply.lines.join('\n').includes('desktop 采集器没有响应'));
+  assert.ok(!reply.lines.join('\n').includes('你当前明确关注'), '失败的回答不含已经读到的那一半');
+});
+
+test('模型第一轮什么都没给是 refused，不是 failed', async () => {
+  for (const step of [says(''), says('   \n ')]) {
+    const h = harness({ script: [step] });
+    const reply = await h.answerer.answer('嗯');
+    assert.equal(reply.outcome, 'refused');
+    assert.equal(h.serviceReads.focus + h.serviceReads.peek, 0);
   }
-  // The text is still carried — escaped, not dropped. A human can still read what they typed, and the
-  // second line can no longer impersonate a verdict of Hikari's.
-  assert.ok(reply.lines.join('\n').includes('判词：stable'));
+});
+
+test('refused 与 failed 是两件不同的事，不能说成同一件', async () => {
+  const refused = await harness({ script: [says('')] }).answerer.answer('嗯');
+  const failed = await harness({ throws: new Error('模型端点不可达') }).answerer.answer('嗯');
+
+  assert.notEqual(refused.outcome, failed.outcome);
+  assert.notDeepEqual(refused.lines, failed.lines);
+  assert.ok(!refused.lines.join('\n').includes('模型端点不可达'));
+  assert.ok(!failed.lines.join('\n').includes('没有找到该读'));
+});
+
+test('chatted 与 answered 是两件不同的事，chatted 不是低一等的 answered', async () => {
+  const chatted = await harness({ script: [says('在的。')] }).answerer.answer('ayobro');
+  const answered = await harness({ script: [callsTo(toolCall('a', WORK)), DONE] }).answerer.answer('关注什么');
+
+  assert.equal(chatted.outcome, 'chatted');
+  assert.equal(answered.outcome, 'answered');
+  assert.deepEqual(chatted.lines, ['在的。']);
+  // The grounded answer contains no conversational text at all, and the chat answer contains no
+  // reading. Neither is a degraded form of the other.
+  assert.ok(!answered.lines.join('\n').includes('在的。'));
+  assert.ok(!chatted.lines.join('\n').includes('你当前明确关注'));
+});
+
+test('被截断的聊天回答不展示，也不是 failed', async () => {
+  const h = harness({ script: [{ content: '这个嘛，我想想，其实是', toolCalls: [], truncated: true }] });
+
+  const reply = await h.answerer.answer('你怎么看');
+
+  // The model answered and ran out of room. Reporting `failed` would claim it was unreachable; showing
+  // the prefix would show a human a sentence the model did not finish.
+  assert.equal(reply.outcome, 'refused');
+  assert.ok(!reply.lines.join('\n').includes('这个嘛'));
+});
+
+test('模型自由文本不进拒绝文案、不进细节行', async () => {
+  // Two refusals, both of which the model reached by writing something this build would not act on.
+  // The prose is alongside the call in each case, so the temptation being tested is a diagnostic that
+  // quotes what the model said in order to explain why it was not acted on.
+  const unknown = await harness({
+    script: [{ content: CONFABULATION, toolCalls: [toolCall('a', 'nope')], truncated: false }],
+  }).answerer.answer('嗯');
+
+  const malformed = await harness({
+    script: [
+      { content: CONFABULATION, toolCalls: [toolCall('a', WORK, `{"x":"${CONFABULATION}"}`)], truncated: false },
+    ],
+  }).answerer.answer('嗯');
+
+  for (const reply of [unknown, malformed]) {
+    assert.equal(reply.outcome, 'refused');
+    assert.ok(!reply.lines.join('\n').includes(CONFABULATION), '模型自由文本不得出现在任何一行');
+    assert.ok(!reply.lines.join('\n').includes(ESC), '回答里不得有 ESC');
+  }
 });
 
 // ---------------------------------------------------------------------------------------------
-// Dialogue: the smallest thing a follow-up needs, and nothing more than that.
+// Dialogue: the referent is what was read, and only a grounded answer moves it.
 // ---------------------------------------------------------------------------------------------
 
-test('后续问题按上一轮的主题理解，并说明是按哪一轮理解的', async () => {
-  const h = harness({ topic: 'work-focus' });
+test('后续问题带上上一轮真正读到过的 capability', async () => {
+  const h = harness({ script: [callsTo(toolCall('a', WORK)), DONE, DONE] });
   await h.answerer.answer('我现在关注什么？');
+  await h.answerer.answer('那现在呢？');
 
-  h.say('desktop-state');
-  const reply = await h.answerer.answer('那现在呢？');
-
-  assert.equal(reply.outcome, 'answered');
-  assert.equal(offeredPrevious(h.prompts[1]), 'work-focus', '第二轮提示词应带上上一轮的主题');
-  assert.equal(offeredPrevious(h.prompts[0]), null, '第一轮没有上一轮可用');
-  assert.ok(reply.lines.join('\n').includes('work-focus'), '回答应说明是按上一轮的主题理解的');
+  assert.ok(!h.requests[0].messages[0].content.includes('上一轮这个人问的问题'), '第一轮没有 referent');
+  assert.ok(h.requests[2].messages[0].content.includes(WORK), '第二轮提示词应带上上一轮读到的能力');
 });
 
-test('refused 和 failed 都不会成为下一轮理解的依据', async () => {
-  const refused = harness({ topic: '听不懂' });
-  await refused.answerer.answer('嗯');
-  refused.say('desktop-state');
-  await refused.answerer.answer('那现在呢？');
-  assert.equal(offeredPrevious(refused.prompts[1]), null, 'refused 的一轮不是一次理解');
+test('chatted 不成为 referent，也不清除已有的 grounded referent', async () => {
+  const h = harness({ script: [callsTo(toolCall('a', WORK)), DONE, says('哈哈'), DONE] });
 
-  const failed = harness({ throws: new Error('模型端点不可达') });
-  await failed.answerer.answer('嗯');
-  failed.say('desktop-state');
-  await failed.answerer.answer('那现在呢？');
-  assert.equal(offeredPrevious(failed.prompts[1]), null, '失败的调用没有理解任何主题');
+  await h.answerer.answer('我现在关注什么？');
+  const chat = await h.answerer.answer('ayobro');
+  assert.equal(chat.outcome, 'chatted');
+
+  await h.answerer.answer('那现在呢？');
+
+  // `requests[3]` is the third turn's first request. The chat turn in between read nothing, so it lent
+  // nothing and took nothing: the referent is still the focus read. A human who says "ayobro" between
+  // two questions about their focus has not changed the subject, and a chat turn that erased the
+  // referent would make the second question worse than it was before the greeting.
+  assert.ok(h.requests[3].messages[0].content.includes(WORK), 'chatted 不得覆盖 grounded referent');
 });
 
-test('对话上下文会过期，过期后不再被当成依据', async () => {
-  const h = harness({ topic: 'work-focus' });
+test('refused 不推进 referent，也不清除已有的那个', async () => {
+  const h = harness({ script: [callsTo(toolCall('a', WORK)), DONE, says(''), DONE] });
+
+  await h.answerer.answer('我现在关注什么？');
+  const refused = await h.answerer.answer('嗯');
+  assert.equal(refused.outcome, 'refused');
+
+  await h.answerer.answer('那现在呢？');
+
+  assert.ok(h.requests[2].messages[0].content.includes(WORK), 'refused 不得清除 grounded referent');
+});
+
+test('failed 不推进 referent，也不清除已有的那个', async () => {
+  let step = 0;
+  const requests = [];
+  const answerer = createAnswerer({
+    async step(request) {
+      requests.push({ messages: request.messages.map((message) => ({ ...message })) });
+      step += 1;
+      if (step === 1) return callsTo(toolCall('a', WORK));
+      if (step === 2) return DONE;
+      if (step === 3) throw new Error('模型端点不可达');
+      return DONE;
+    },
+    async read() {
+      return renderFocus(['hikari-new']);
+    },
+    now: () => NOW,
+  });
+
+  await answerer.answer('我现在关注什么？');
+  const failed = await answerer.answer('嗯');
+  assert.equal(failed.outcome, 'failed');
+
+  await answerer.answer('那现在呢？');
+
+  assert.ok(requests[3].messages[0].content.includes(WORK), 'failed 不得清除 grounded referent');
+});
+
+test('新的激活不带上一轮的任何东西', async () => {
+  const first = harness({ script: [callsTo(toolCall('a', WORK)), DONE] });
+  await first.answerer.answer('我现在关注什么？');
+
+  // A second answerer is what a resident restart produces: the turn is the activation's, so nothing
+  // crosses between them. This is the "reactivation 清空" case, and it holds without any cleanup code
+  // because there is nowhere for the turn to be stored except the closure that just died.
+  const second = harness({ script: [DONE] });
+  await second.answerer.answer('那现在呢？');
+
+  assert.ok(!second.requests[0].messages[0].content.includes('上一轮这个人问的问题'));
+});
+
+test('referent 会过期，过期后不再被当成依据', async () => {
+  // The model re-reads on the second question, because that is what an expired referent leaves it to
+  // do: it is told nothing about the previous turn, so a `那现在呢` has to be resolved by reading again.
+  const h = harness({
+    script: [callsTo(toolCall('a', WORK)), DONE, callsTo(toolCall('b', WORK)), DONE],
+  });
   await h.answerer.answer('我现在关注什么？');
 
   h.advance(5 * 60 * 1000 + 1000);
-  h.say('desktop-state');
   const reply = await h.answerer.answer('那现在呢？');
 
   assert.equal(reply.outcome, 'answered');
-  assert.equal(offeredPrevious(h.prompts[1]), null, '过期后不该再带上上一轮的主题');
-  assert.ok(!reply.lines.join('\n').includes('按上一轮'), '过期后不该声称按上一轮理解');
+  assert.ok(!h.requests[2].messages[0].content.includes('上一轮这个人问的问题'), '过期后不该再带上 referent');
+  assert.ok(!reply.lines.join('\n').includes('按上一轮'), '过期后不该声称按上一轮回答');
 });
 
-test('重启（新的激活）不带任何上一轮的上下文', async () => {
-  const first = harness({ topic: 'work-focus' });
-  await first.answerer.answer('我现在关注什么？');
+test('一次提问里桌面只经 peek，绝不碰 current', async () => {
+  const h = harness({ script: [callsTo(toolCall('a', DESKTOP)), DONE] });
+  await h.answerer.answer('你现在看到什么？');
 
-  // A new answerer is a new activation: it has never been asked anything, and there is nowhere for the
-  // turn to have been kept. This is the constructor's behaviour rather than a cleanup path, which is
-  // why it cannot be forgotten by a later edit.
-  const restarted = harness({ topic: 'desktop-state' });
-  await restarted.answerer.answer('那现在呢？');
-
-  assert.equal(offeredPrevious(restarted.prompts[0]), null);
+  // `current()` would make the question the next comparison partner of the timeline it is asking
+  // about. The plugin is not given that contract at all — see the `requires` test below — and this is
+  // the behavioural half of the same claim.
+  assert.equal(h.serviceReads.peek, 1);
+  assert.ok(!languagePlugin.requires.includes(desktopSessionAwarenessService));
 });
 
 // ---------------------------------------------------------------------------------------------
-// Request bounds: what this build refuses to answer, and what it refuses to call a question.
+// Request bounds and the wire vocabulary.
 // ---------------------------------------------------------------------------------------------
 
 test('空问题和超长问题是 refused，而且不会去问模型', async () => {
   for (const text of ['', '   \n ']) {
-    const h = harness();
+    const h = harness({ script: [DONE] });
     assert.equal((await h.answerer.answer(text)).outcome, 'refused');
-    assert.equal(h.prompts.length, 0, '空问题不该产生一次模型调用');
+    assert.equal(h.requests.length, 0, '空问题不该产生一次模型调用');
   }
 
-  const tooLong = harness();
+  const tooLong = harness({ script: [DONE] });
   const long = await tooLong.answerer.answer('x'.repeat(MAX_LANGUAGE_TEXT_LENGTH + 1));
   assert.equal(long.outcome, 'refused');
-  assert.equal(tooLong.prompts.length, 0, '超长问题不该产生一次模型调用');
+  assert.equal(tooLong.requests.length, 0, '超长问题不该产生一次模型调用');
 
   // Exactly at the bound is a question, not a refusal. A bound that rejected its own limit would make
   // the number in the message a lie.
-  const atLimit = harness();
+  const atLimit = harness({ script: [says('嗯')] });
   const accepted = await atLimit.answerer.answer('x'.repeat(MAX_LANGUAGE_TEXT_LENGTH));
-  assert.equal(accepted.outcome, 'answered');
-  assert.equal(atLimit.prompts.length, 1);
+  assert.equal(accepted.outcome, 'chatted');
+  assert.equal(atLimit.requests.length, 1);
+
+  // The human's sentence travels verbatim, as the user message and nothing else.
+  const h = harness({ script: [says('嗯')] });
+  await h.answerer.answer('  光，你现在看到什么？  ');
+  assert.equal(h.requests[0].messages[1].content, '  光，你现在看到什么？  ');
 });
 
 test('信封不是一个合法请求时，解码就拒绝；而空问题解码通过、由插件来拒绝', () => {
@@ -468,9 +900,6 @@ test('信封不是一个合法请求时，解码就拒绝；而空问题解码�
     assert.equal(decodeLanguageRequest(line).kind, 'refused', `应拒绝：${line}`);
   }
 
-  // Structural and semantic are two questions and this is where the line is drawn. An empty question
-  // is a well-formed ask, so it decodes and the plugin refuses it — "this build will not answer that"
-  // is a statement about the question, not about the envelope.
   const empty = decodeLanguageRequest(
     JSON.stringify({ protocol: LANGUAGE_PROTOCOL_VERSION, request: 'ask', text: '' }),
   );
@@ -478,13 +907,34 @@ test('信封不是一个合法请求时，解码就拒绝；而空问题解码�
   assert.equal(empty.request.text, '');
 });
 
-test('应答里出现未知的结果词时，客户端读不懂而不是猜一个', () => {
+test('chatted 是协议里的第四个结果词，客户端读得懂', () => {
+  const line = JSON.stringify({
+    protocol: LANGUAGE_PROTOCOL_VERSION,
+    outcome: 'chatted',
+    lines: ['在的。'],
+  });
+  const decoded = decodeLanguageReply(line);
+  assert.equal(decoded.kind, 'reply');
+  assert.equal(decoded.reply.outcome, 'chatted');
+
   const unknown = JSON.stringify({
     protocol: LANGUAGE_PROTOCOL_VERSION,
     outcome: 'ok',
     lines: ['x'],
   });
   assert.equal(decodeLanguageReply(unknown).kind, 'unreadable');
+});
+
+test('CLI 的等待上界高于 loop 合法能花掉的时间', () => {
+  // The bug this pins was real: the client waited 60s while the loop could legitimately spend 45s on
+  // model calls alone plus a desktop read, so a question being answered could be reported as one that
+  // was never answered. The number is derived rather than asserted, so adding a third capability that a
+  // model reads on its own breaks this test instead of timing a human out.
+  const maxModelCalls = LANGUAGE_EXPOSURES.length + 1;
+  const modelTime = maxModelCalls * MODEL_TIMEOUT_MS;
+
+  assert.ok(REPLY_TIMEOUT_MS > modelTime, `客户端上界 ${REPLY_TIMEOUT_MS} 必须高于模型时间的上界 ${modelTime}`);
+  assert.ok(REPLY_TIMEOUT_MS > 60_000, '旧的 60s 上界不够，这里钉住它不会退回去');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -513,47 +963,27 @@ test('Language 的 requires 恰好是冻结的那两个，provides 为空', () =
 test('Language 不依赖 Repository CI，因此 CI 缺席时它不会失败', () => {
   const keys = languagePlugin.requires.map((contract) => `${contract.id}@${contract.version}`);
 
-  // The claim is about what is *absent*, so it is checked against the whole set rather than by looking
-  // for one name: nothing this plugin is handed comes from the CI chain, and nothing in the chain is
-  // required for it to activate. That is what makes a default resident — the one with no repository
-  // scope at all — able to load it.
   for (const key of keys) {
     assert.ok(!key.includes('repository-ci'), `${key} 不该来自 Repository CI`);
     assert.ok(!key.startsWith('git-'), `${key} 不该来自 Git`);
     assert.ok(!key.startsWith('github'), `${key} 不该来自 GitHub`);
   }
-  // And `current()`, which would let a question move the timeline it is asking about, is not here
-  // either. This single assertion is what makes "asking does not participate in judgement" a property
-  // of what the plugin was given rather than a rule it follows.
   assert.ok(!keys.includes('desktop-session-awareness.current@1'));
 });
 
-// ---------------------------------------------------------------------------------------------
-// What this plugin is willing to offer, and why the list is short and written down.
-//
-// Nothing below reaches a model in this slice. The list is built so the slice that brings the
-// selection loop has something to select from, and it is checked here because every claim it makes is
-// a claim about the owners' objects and about `requires` — neither of which needs a pipe.
-// ---------------------------------------------------------------------------------------------
-
 test('Language 允许的 exposure 就是两个 owner 自己的导出，不是复制来的字符串', () => {
-  // Identity rather than equality, and the difference is the whole test. A copy that matches today
-  // matches by coincidence tomorrow; the claim is that these words have exactly one author, and the
-  // only way to check that is against the author's own object.
   assert.equal(LANGUAGE_EXPOSURES.length, 2);
   assert.equal(LANGUAGE_EXPOSURES[0], workFocusReadExposure);
   assert.equal(LANGUAGE_EXPOSURES[1], desktopContextReadExposure);
   assert.deepEqual(
     LANGUAGE_EXPOSURES.map((exposure) => exposure.name),
-    ['work_focus.read', 'desktop_context.read'],
+    [WORK, DESKTOP],
   );
 });
 
 test('每个 exposure 都指向 Language 已经持有契约的既有 Service', () => {
-  // The mapping between an offer and the thing that would execute it, and the whole of it: an exposure
-  // names a contract, and that contract has to be in this plugin's `requires`, which is the only list
-  // that decides what the Runtime will hand it. There is no second table and no lookup by name, so the
-  // two cannot drift — the exposure carries the contract object itself rather than its id.
+  // There is no second table and no lookup by name, so the two cannot drift — the exposure carries the
+  // contract object itself rather than its id, and `read.ts` dispatches on that object.
   const required = languagePlugin.requires ?? [];
   for (const exposure of LANGUAGE_EXPOSURES) {
     assert.ok(
@@ -564,23 +994,21 @@ test('每个 exposure 都指向 Language 已经持有契约的既有 Service', (
 
   assert.equal(LANGUAGE_EXPOSURES[0].service, workFocusCurrentService);
   assert.equal(LANGUAGE_EXPOSURES[1].service, desktopSessionAwarenessPeekService);
-
-  // The discriminating half. Language provides and requires the *peek* contract, so an offer pointing
-  // at `current()` would be the one bug this whole shape is arranged to make impossible: a model whose
-  // question moved the judgement timeline it was asking about. This slice added no dependency either —
-  // the `requires` test above pins the list exactly, and both entries here were already on it.
-  assert.ok(!required.includes(desktopSessionAwarenessService));
   assert.notEqual(LANGUAGE_EXPOSURES[1].service, desktopSessionAwarenessService);
 });
 
-test('current-context 仍然留在 v1 的主题闭集里，没有被搬进 capability 词汇', () => {
-  // The ruling this pins: "what were we just talking about" is Language's own dialogue concern and not
-  // an external capability. It reads no provider's facts — it reads the turn this plugin kept — so
-  // there is no owner who could write a description of it, and asking a model to call a tool to
-  // remember its own last question would be the vocabulary being made tidy at the expense of the only
-  // thing it was describing. `LANGUAGE_TOPICS` is untouched by this slice and stays where it is.
-  assert.ok(LANGUAGE_TOPICS.includes('current-context'));
-  assert.ok(!LANGUAGE_EXPOSURES.some((exposure) => exposure.name === 'current-context'));
+test('旧的固定 topic 词表已经退役，剩下的闭集只有 exposure 一个', () => {
+  // The slice replaced fixed-topic routing rather than sitting beside it. What would be a double router
+  // is a second closed set a model could be asked to choose from, so the check is that no such set
+  // survives — not that a particular file is gone, which would be a check about tidiness rather than
+  // about behaviour.
+  const names = LANGUAGE_EXPOSURES.map((exposure) => exposure.name);
+  for (const retired of ['work-focus', 'desktop-state', 'desktop-change', 'current-context']) {
+    assert.ok(!names.includes(retired), `${retired} 不该作为模型可选的名字存在`);
+  }
+  // And nothing in the closed set is a topic this surface invented: every entry is an owner's export,
+  // which the identity test above pins by reference.
+  assert.equal(LANGUAGE_EXPOSURES.length, 2);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -598,23 +1026,38 @@ function provider(pluginId, contract, behaviour) {
   };
 }
 
-async function compose(t, { topic = 'work-focus', throws, focus, assessment } = {}) {
+/** A model whose steps are written down in advance, for the tests that go through a real pipe. */
+function scriptedModel(script) {
+  let index = 0;
+  const requests = [];
+  return {
+    async step(request) {
+      requests.push({ messages: request.messages.map((message) => ({ ...message })) });
+      const next = script[index];
+      index += 1;
+      if (next === undefined) throw new Error('模型脚本用完了，loop 却还在请求下一步');
+      return next;
+    },
+    dispose() {},
+    // Recorded for the same reason the harness records them: "the follow-up carried the previous
+    // turn's reads" is a claim about what left the process, and over a pipe that is the only place it
+    // can be observed at all.
+    requests,
+  };
+}
+
+async function compose(t, { script = [says('在的。')], focus, assessment } = {}) {
   const root = createRoot(t);
   const runtime = new Runtime();
   t.after(() => runtime.shutdown());
 
-  const calls = { classify: 0 };
   const connections = [];
+  const models = [];
   const plugin = createLanguagePlugin((connection) => {
     connections.push(connection);
-    return {
-      async classify() {
-        calls.classify += 1;
-        if (throws !== undefined) throw throws;
-        return topic;
-      },
-      dispose() {},
-    };
+    const model = scriptedModel(script);
+    models.push(model);
+    return model;
   });
 
   const designations = focus ?? Object.freeze(['hikari-new']);
@@ -651,12 +1094,38 @@ async function compose(t, { topic = 'work-focus', throws, focus, assessment } = 
     '完整组合应 active',
   );
 
-  return { root, calls, connections };
+  return { root, connections, models };
 }
 
 function connectRaw(path) {
   return new Promise((settle) => {
     const socket = connect(path, () => settle(socket));
+  });
+}
+
+/**
+ * One `hikari ask`, as a shell would run it: a real process against whatever pipe is listening.
+ *
+ * Asynchronous rather than `spawnSync`, and not as a style preference. The resident these tests talk to
+ * is a Runtime inside this same test process, so a synchronous spawn would block the event loop that
+ * accepts the connection — the CLI would wait out its whole reply timeout against a pipe nobody was
+ * left to answer.
+ */
+function runCli(...args) {
+  return new Promise((settle, fail) => {
+    const child = spawn(process.execPath, [CLI, ...args]);
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', fail);
+    child.on('close', (code) => settle({ code, stdout, stderr }));
   });
 }
 
@@ -674,34 +1143,54 @@ function readOnce(socket) {
   });
 }
 
-test('一次提问经过真实管道得到回答，且与 renderAssessment 一致', { skip: NO_PIPES }, async (t) => {
+test('一次提问经过真实管道得到 grounded 回答，且与 renderAssessment 一致', { skip: NO_PIPES }, async (t) => {
   const assessment = assessmentFixture();
-  const { root } = await compose(t, { topic: 'desktop-state', assessment });
+  const { root } = await compose(t, {
+    script: [callsTo(toolCall('a', DESKTOP)), DONE],
+    assessment,
+  });
 
   const answer = await requestLanguageAsk(root, '光，你现在看到什么？');
 
   assert.equal(answer.kind, 'replied');
   assert.equal(answer.reply.outcome, 'answered');
-  const block = renderAssessment(assessment);
-  const start = answer.reply.lines.indexOf(block[0]);
-  assert.notEqual(start, -1);
-  assert.deepEqual(answer.reply.lines.slice(start, start + block.length), block);
+  assert.deepEqual(answer.reply.lines, renderAssessment(assessment));
 });
 
-test('同一个激活里的两次提问共享那一轮的上下文', { skip: NO_PIPES }, async (t) => {
-  const { root } = await compose(t, { topic: 'work-focus' });
+test('一次闲聊经过真实管道回来的是 chatted', { skip: NO_PIPES }, async (t) => {
+  const { root } = await compose(t, { script: [says('在的，有什么想问的？')] });
+
+  const answer = await requestLanguageAsk(root, 'ayobro');
+
+  assert.equal(answer.kind, 'replied');
+  assert.equal(answer.reply.outcome, 'chatted');
+  assert.deepEqual(answer.reply.lines, ['在的，有什么想问的？']);
+});
+
+test('同一个激活里的两次提问共享那一轮的 referent', { skip: NO_PIPES }, async (t) => {
+  const { root, connections, models } = await compose(t, {
+    script: [callsTo(toolCall('a', WORK)), DONE, callsTo(toolCall('b', WORK)), DONE],
+  });
 
   const first = await requestLanguageAsk(root, '我现在关注什么？');
   assert.equal(first.reply.outcome, 'answered');
-  assert.ok(!first.reply.lines.join('\n').includes('按上一轮'));
 
+  // A second `hikari ask` is a second process and shares nothing with the first; the referent that
+  // reaches this request is the resident activation's, which is the whole reason it exists.
   const second = await requestLanguageAsk(root, '那现在呢？');
   assert.equal(second.reply.outcome, 'answered');
-  assert.ok(second.reply.lines.join('\n').includes('work-focus'), '第二轮应带上上一轮的主题');
+
+  assert.equal(connections.length, 1, '同一个激活只有一个模型连接');
+  // `WORK` reaches a system message by exactly one road — the referent paragraph — so finding it in the
+  // second question's prompt is the shared turn, observed where it left the process.
+  assert.ok(
+    models[0].requests[2].messages[0].content.includes(WORK),
+    '第二次提问的提示词应带上第一次读到的 capability',
+  );
 });
 
 test('模型不可达时，管道里回来的是 failed 而不是 refused', { skip: NO_PIPES }, async (t) => {
-  const { root } = await compose(t, { throws: new Error('模型端点不可达') });
+  const { root } = await compose(t, { script: [] });
 
   const answer = await requestLanguageAsk(root, '你现在看到什么？');
 
@@ -719,9 +1208,28 @@ test('说不通这个协议的一行，得到的是 failed', { skip: NO_PIPES },
 
   const decoded = decodeLanguageReply(await readOnce(socket));
   assert.equal(decoded.kind, 'reply');
-  // Whoever is on the other end is not speaking this protocol, so there is no question to refuse.
-  // `failed` is the honest word: this build never received a question to have an opinion about.
   assert.equal(decoded.reply.outcome, 'failed');
+});
+
+test('hikari ask 的退出码跟着 outcome 走：chatted 是 0，refused 是 1', { skip: NO_PIPES }, async (t) => {
+  // The whole chain with only the model scripted: real runtime, real named pipe, and a real `hikari ask`
+  // process whose exit code a shell would read. `ask-command.ts` is the one place in this slice where a
+  // plugin's vocabulary becomes a process's exit status, and the mapping changed here — `chatted` used
+  // to map the way `refused` does. Checking it where a shell sees it, rather than by reading the mapping
+  // back out of the source, is what makes a silent return to the old behaviour fail something.
+  const { root } = await compose(t, { script: [says('在的。')] });
+
+  const chat = await runCli('ask', '--data-dir', root, 'ayobro');
+  assert.equal(chat.code, 0, 'chatted 是一次成功的回答，不是一次失败');
+  assert.equal(chat.stderr, '');
+  assert.deepEqual(chat.stdout.split('\n').slice(0, -1), ['在的。']);
+
+  const { root: refusingRoot } = await compose(t, { script: [says('')] });
+
+  const refused = await runCli('ask', '--data-dir', refusingRoot, '嗯');
+  assert.equal(refused.code, 1);
+  assert.equal(refused.stdout, '', 'refused 的话不上 stdout，脚本不能把它当成一句回答');
+  assert.ok(refused.stderr.length > 0, 'refused 的理由要有人看得到');
 });
 
 test('没有常驻时，提问得到的是 absent，而不是一个编出来的答案', { skip: NO_PIPES }, async (t) => {
@@ -770,9 +1278,6 @@ test('凭据只以变量名的形式出现在状态里，值本身不出现', { 
     );
 
     const status = host.status().join('\n');
-    // The name is shown, because an operator checking their own configuration needs to know which
-    // variable was pointed at. The value is not, and could not be: this file never held it — the plugin
-    // reads it at activation — so there is nothing here that could print it even by mistake.
     assert.ok(status.includes('HIKARI_LANGUAGE_TEST_SECRET'));
     assert.ok(!status.includes(canary));
     assert.ok(!USAGE.includes(canary));
@@ -781,14 +1286,6 @@ test('凭据只以变量名的形式出现在状态里，值本身不出现', { 
   }
 });
 
-// The other half of the same status line, and the half a resident prints in the ordinary case: no model
-// was configured, so no language plugin was loaded.
-//
-// This is the branch that carries the slice's promise not to invent a default. Without it, an operator
-// whose questions all come back "no language endpoint here" has only the *absence* of a `language` line
-// to interpret, and "the plugin did not load" and "the plugin was never configured" would read the
-// same. Asserted rather than left to the manual check that first covered it, because the manual check
-// is not something a later edit can fail.
 test('没有配置模型时，状态行说明语言插件未加载', { skip: NO_PIPES }, async () => {
   const { residentCommand } = await import('../dist/cli/resident.js');
 
@@ -813,26 +1310,13 @@ test('没有配置模型时，状态行说明语言插件未加载', { skip: NO_
 
   const status = host.status().join('\n');
   assert.ok(status.includes('语言插件未加载'), '应说明语言插件没有加载');
-  // It names the two flags that would have loaded it rather than an endpoint it chose for you, which is
-  // the whole difference between a surface that reports its own configuration and one that supplies a
-  // default: there is no endpoint this build would have gone to, so there is none to print.
   assert.ok(status.includes('--model-endpoint') && status.includes('--model'));
   assert.ok(!status.includes('http'), '未配置时不得指向任何端点');
 });
 
-// The three lines above are the only place in the status report that prints a string the operator
-// typed — everything else in it is the Runtime's own state or the composition's own plugin ids — so
-// this is where that is pinned.
-//
-// A status report is read to find out what a resident is doing, which makes "it cannot say something
-// the resident did not say" the one property it may not lose. Endpoint, model name and variable name
-// all arrive from a command line, so a line break in any of them would be printed verbatim and forge
-// a line of its own, and an `ESC [ 2 J` would clear the screen the report is being read on. Escaped
-// instead, the value keeps its own line and reads as what it is: a value with something odd in it.
 test('状态行里的端点、模型与变量名各占一行，值里的控制字符被转义', { skip: NO_PIPES }, async () => {
   const { residentCommand } = await import('../dist/cli/resident.js');
   const LF = String.fromCharCode(0x0a);
-  const ESC = String.fromCharCode(0x1b);
   const FORGERY = '判词：stable';
 
   let host;
@@ -865,14 +1349,9 @@ test('状态行里的端点、模型与变量名各占一行，值里的控制�
   const lines = host.status();
   const status = lines.join('\n');
 
-  // Three lines for three configured values, and no fourth: the forged text is on the line of the
-  // value it came in with rather than on a line that looks like the resident's own.
   assert.equal(lines.filter((line) => line.startsWith('语言插件')).length, 3);
   assert.ok(!lines.includes(FORGERY), '值里的换行不得另起一行');
   assert.ok(!lines.some((line) => line.includes(LF) || line.includes(ESC)), '一行里不得留裸控制字符');
-
-  // Escaped rather than dropped: the text is still there, written out as its code point. A status that
-  // silently removed it would hide a broken configuration instead of reporting it.
   assert.ok(status.includes('\\n'), '换行应写成它的码点');
   assert.ok(status.includes('\\u001b'), 'ESC 应写成它的码点');
   assert.ok(status.includes(FORGERY) && status.includes('模型：pwned'), '文本本身不被删掉');
