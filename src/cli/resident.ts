@@ -241,6 +241,7 @@ export function productionComposition(options: ResidentOptions): Composition {
                 endpoint: model.endpoint,
                 model: model.model,
                 credentialEnv: model.credentialEnv,
+                reasoningEffort: model.reasoningEffort,
               }),
           },
         ];
@@ -489,6 +490,15 @@ function renderStatus(
       model.credentialEnv === undefined
         ? '语言插件凭据：无（请求不带凭据）'
         : `语言插件凭据：来自环境变量 ${oneLine(model.credentialEnv)}`,
+    );
+    // Reported for the reason the two lines above are: this is what the resident will actually put on
+    // the wire, and the absence of the field is as much a fact about the request as the endpoint is —
+    // an operator who configured an effort and reads "不带" here has found their mistake without
+    // having to watch a request go out.
+    lines.push(
+      model.reasoningEffort === undefined
+        ? '语言插件 reasoning effort：不带（请求里没有这个字段）'
+        : `语言插件 reasoning effort：${oneLine(model.reasoningEffort)}`,
     );
   }
 

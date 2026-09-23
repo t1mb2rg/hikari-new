@@ -45,8 +45,8 @@
 //
 // Removing the first router is what this file makes possible, and it did not need anything added to do
 // it. A capability's name is already the thing the model needs to write, so the topic layer had nothing
-// left to translate: `work-focus` maps onto `work_focus.read`, both desktop topics map onto the single
-// `desktop_context.read`, and `current-context` turned out not to be a capability at all — it was "read
+// left to translate: `work-focus` maps onto `work_focus_read`, both desktop topics map onto the single
+// `desktop_context_read`, and `current-context` turned out not to be a capability at all — it was "read
 // everything", which is what a loop does by reading twice. Keeping both would have meant a model picking
 // a topic and then picking a capability inside it, with the second choice constrained by a word the
 // first one produced.

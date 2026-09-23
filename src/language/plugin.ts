@@ -74,25 +74,42 @@ import { listenLanguageEndpoint } from './endpoint.js';
 import { languageEndpointPath } from './endpoint-path.js';
 import { LanguageError } from './errors.js';
 import {
+  REASONING_EFFORTS,
   createHttpModel,
   readModelCredential,
   type LanguageModel,
   type LanguageModelConnection,
+  type ReasoningEffort,
 } from './model.js';
 import { createExposureReader } from './read.js';
 
 /**
- * What the composition must tell this plugin: where its endpoint goes and which model to ask.
+ * What the composition must tell this plugin: where its endpoint goes, which model to ask, and how much
+ * reasoning to ask it for.
  *
- * All four are required and none has a default. `credentialEnv` is a variable *name* and not a secret —
- * the value is read once in `setup` and lives in the model connection's closure, never in this config,
- * which is the object a test constructs and a status line could reach.
+ * Every field is required and none has a default, and two of them may be absent: a model served on this
+ * machine needs no credential, and an endpoint that has never heard of `reasoning_effort` needs no
+ * effort configured. Absence is spelled `undefined` rather than given a placeholder, because both of
+ * these mean "send nothing" and neither has a value that would say the same thing.
+ *
+ * `credentialEnv` is a variable *name* and not a secret — the value is read once in `setup` and lives in
+ * the model connection's closure, never in this config, which is the object a test constructs and a
+ * status line could reach.
  */
 export interface LanguagePluginConfig {
   readonly rootDir: string;
   readonly endpoint: string;
   readonly model: string;
   readonly credentialEnv: string | undefined;
+  /**
+   * Which reasoning effort to ask for, or `undefined` to ask for nothing.
+   *
+   * A configuration *value* rather than a provider choice made here: this plugin does not know which
+   * endpoint is on the other end and must not guess, so whether to send the field and what to put in it
+   * are the operator's sentence, carried through untouched. See `ReasoningEffort` for which values this
+   * build accepts and why the rest are refused here rather than forwarded.
+   */
+  readonly reasoningEffort: ReasoningEffort | undefined;
 }
 
 /**
@@ -136,7 +153,12 @@ export function createLanguagePlugin(
       // here, so a misconfigured credential is a plugin that refused to start rather than a resident
       // that answers questions unauthenticated.
       const credential = readModelCredential(config.credentialEnv);
-      const model = createModel({ endpoint: config.endpoint, model: config.model, credential });
+      const model = createModel({
+        endpoint: config.endpoint,
+        model: config.model,
+        credential,
+        reasoningEffort: config.reasoningEffort,
+      });
 
       // Registered before the endpoint, so the Runtime's LIFO teardown disposes the model *after* the
       // ingress is gone: a question already being answered keeps its connection until it is done, and
@@ -185,11 +207,12 @@ function readConfig(input: unknown): LanguagePluginConfig {
     throw new LanguageError('语言插件需要一个配置对象。');
   }
 
-  const { rootDir, endpoint, model, credentialEnv } = input as {
+  const { rootDir, endpoint, model, credentialEnv, reasoningEffort } = input as {
     rootDir?: unknown;
     endpoint?: unknown;
     model?: unknown;
     credentialEnv?: unknown;
+    reasoningEffort?: unknown;
   };
 
   if (typeof rootDir !== 'string' || !rootDir.trim()) {
@@ -204,12 +227,30 @@ function readConfig(input: unknown): LanguagePluginConfig {
   if (credentialEnv !== undefined && (typeof credentialEnv !== 'string' || !credentialEnv.trim())) {
     throw new LanguageError('语言插件的 credentialEnv 必须是非空字符串，或者省略。');
   }
+  // The closed set, checked at the one place an operator's string becomes a value. The two failures a
+  // typo would otherwise cause are both worse than a refusal here: an endpoint that does not recognise
+  // the value may reject the request, and this build deliberately never reads an error body, so the
+  // operator would see a status code and no reason; or it may ignore the value and answer normally,
+  // which is a request that quietly did not say what the operator believes it said.
+  //
+  // Membership is asked of the owner's table and the message is built from it, rather than the check
+  // naming a member and the message naming it again. `none` is therefore written once in `model.ts`,
+  // where the union is, and the day a second effort exists this branch is already correct.
+  if (
+    reasoningEffort !== undefined &&
+    (typeof reasoningEffort !== 'string' || !Object.hasOwn(REASONING_EFFORTS, reasoningEffort))
+  ) {
+    throw new LanguageError(
+      `语言插件的 reasoningEffort 只能是 ${Object.keys(REASONING_EFFORTS).join(' / ')}，或者省略。`,
+    );
+  }
 
   return Object.freeze({
     rootDir,
     endpoint,
     model,
     credentialEnv: credentialEnv as string | undefined,
+    reasoningEffort: reasoningEffort as ReasoningEffort | undefined,
   });
 }
 

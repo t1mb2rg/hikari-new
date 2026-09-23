@@ -179,8 +179,11 @@ export function longQuestionLines(limit: number): readonly string[] {
  * and is handled by `readStep`, which cannot produce a call without a name to look up.
  *
  * Deliberately not a token-budget framework, and deliberately not a retry: raising `MODEL_MAX_TOKENS`
- * would be guessing at a number, and asking again would be spending another round to get a second
- * partial sentence. If this turns out to be common the fix is a real one, made with evidence.
+ * without measuring would be guessing at a number, and asking again would be spending another round to
+ * get a second partial sentence. The ceiling has since been raised once, on a measurement rather than a
+ * guess — see its note in `model.ts` — and this line is unchanged by that on purpose: a truncation that
+ * survives the ceiling as it stands is still reported rather than retried, and the fix for one that turns
+ * out to be common is still a real one, made with evidence.
  */
 export function truncatedLines(): readonly string[] {
   return ['模型的话说到一半就到了长度上限，所以这句话不算说完，没有展示。'];

@@ -36,6 +36,45 @@
 import { LanguageError } from './errors.js';
 
 /**
+ * How much reasoning this build asks a model to do before it answers, as a closed set.
+ *
+ * `none` and `high` are the two members, and both are in the set for a reason this build can point at.
+ * `high` is the effort every real-endpoint measurement behind this loop was taken under, and it is
+ * usable at all because of the lifecycle described on `ModelStep.reasoningContent`: a mode that emits a
+ * chain of thought and then requires those exact bytes back on the following request can only be asked
+ * for by a loop that echoes them, and that echo is now part of the message plumbing. `none` stays
+ * because a deployment with no use for a chain of thought should not have one imposed on it, and its
+ * request is the one this build sent before the field existed.
+ *
+ * The members the experiments ran past are deliberately not here. A union that grows to hold every value
+ * somebody tried once is a configuration surface rather than a decision, and each member added is a
+ * promise that the lifecycle behind it works — so a member arrives when the product needs it, not on the
+ * chance that it might.
+ *
+ * The name is the OpenAI-compatible request field, not any one provider's spelling of it, because the
+ * body this transport sends *is* an OpenAI-compatible Chat Completions body. Nothing selects a value
+ * from the endpoint: an operator configures an effort or does not, and the request carries exactly that.
+ */
+export type ReasoningEffort = 'none' | 'high';
+
+/**
+ * The members of `ReasoningEffort`, written once and typed by the union they spell.
+ *
+ * Typed *by* the union rather than beside it, so a member added above does not compile until it is added
+ * here — which is the same table `options.ts` keeps for the work focus words, and it is here for the
+ * reason stated there: without it, the set would be written twice, once as a type and once inside a
+ * validation branch whose message would go on naming the members it used to have. A reader validates
+ * against this table and lists it in the message it throws, so adding an effort is one edit in one place.
+ *
+ * A frozen object and not an array, because what is needed from it is membership and a readable list of
+ * names, and an array would invite indexing and ordering questions it has no answers for.
+ */
+export const REASONING_EFFORTS: Readonly<Record<ReasoningEffort, true>> = Object.freeze({
+  none: true,
+  high: true,
+});
+
+/**
  * One configured endpoint, one model, and a credential that may not be needed.
  *
  * `credential` is a resolved value and not a variable name, and it is resolved once, in `setup`, so
@@ -47,6 +86,16 @@ export interface LanguageModelConnection {
   readonly endpoint: string;
   readonly model: string;
   readonly credential: string | undefined;
+  /**
+   * The reasoning effort to ask for, or `undefined` to send no such field at all.
+   *
+   * `undefined` is not "the default effort" and it is not zero: it is the *absence* of the field, byte
+   * for byte the request this build sent before the field existed. An endpoint that has never heard of
+   * `reasoning_effort` is therefore unaffected by it, which is what keeps one operator's choice from
+   * becoming every operator's 400. The distinction only holds if it is never spelled any other way, so
+   * the field is required and its absence is written down at every construction site.
+   */
+  readonly reasoningEffort: ReasoningEffort | undefined;
 }
 
 /** One tool the model is offered, in the exact shape an OpenAI-compatible endpoint expects. */
@@ -88,6 +137,23 @@ export interface ModelToolCall {
 export interface ModelStep {
   readonly content: string;
   readonly toolCalls: readonly ModelToolCall[];
+  /**
+   * The chain of thought the endpoint emitted beside this response, or `undefined` if it emitted none.
+   *
+   * This is protocol material and not a record. It is echoed back on the next request of the *same*
+   * interaction — see `ModelMessage` — and it is gone when that interaction ends. Nothing else in this
+   * plugin reads it: it is not shown to the human, not logged, not stored beside an answer, and not part
+   * of any fact this build keeps. The reason is that it is the model talking to itself, and a build that
+   * filed it would have invented a reasoning artifact it never decided to own.
+   *
+   * It is carried as an opaque string and never interpreted. The one question asked of it is whether it
+   * is there, because a thinking mode requires the exact bytes it produced to come back on the following
+   * turn; trimming, parsing, summarising or re-wrapping it would be this build editing a protocol message
+   * it does not own. An empty string is therefore a string and not an absence: `undefined` means the
+   * endpoint emitted nothing, and `''` means it emitted nothing *in particular* — a distinction the
+   * request can only preserve if it is made here.
+   */
+  readonly reasoningContent: string | undefined;
   readonly truncated: boolean;
 }
 
@@ -107,11 +173,24 @@ export interface ModelStep {
  * load-bearing and is asserted by the loop rather than here: every `tool_call_id` in an assistant
  * message must be answered by a tool message before the next request goes out, or the endpoint rejects
  * the request outright. `answer.ts` is structured so that cannot be got wrong.
+ *
+ * `reasoningContent` says what this assistant turn thought, and it rides on the same message as the calls
+ * because that is what the wire requires: a thinking mode pairs the chain of thought with the turn it
+ * belongs to, and a request that carries the calls without it — or carries somebody else's — is a request
+ * the endpoint cannot match to anything it said. Its whole lifecycle is one interaction. It is written by
+ * the step that produced it, read by the next request in the same answer, and dropped when that answer
+ * ends; nothing accumulates it, nothing writes it anywhere, and no other interaction can see it. That is
+ * why it is a field on a message this plugin builds per interaction rather than anything with a name of
+ * its own.
  */
 export type ModelMessage =
   | { readonly role: 'system'; readonly content: string }
   | { readonly role: 'user'; readonly content: string }
-  | { readonly role: 'assistant'; readonly toolCalls: readonly ModelToolCall[] }
+  | {
+      readonly role: 'assistant';
+      readonly toolCalls: readonly ModelToolCall[];
+      readonly reasoningContent: string | undefined;
+    }
   | { readonly role: 'tool'; readonly toolCallId: string; readonly content: string };
 
 /** One request: the conversation so far, and the tools that may be called next. */
@@ -140,15 +219,20 @@ export interface LanguageModel {
 // may make is `answer.ts`'s business, and the client's own bound is `cli/ask.ts`'s.
 export const MODEL_TIMEOUT_MS = 15_000;
 
-// Enough for a conversational reply, which is the only thing this ceiling has to fit now. It used to be
-// 16, because the old prompt asked for a single word and a larger number would only have let a model
-// that ignored the instruction run on; the loop changed what a model is allowed to produce, so the
-// number had to change with it. 512 is chosen as "a few short paragraphs" rather than derived from a
-// tokenizer, and it is deliberately not the start of a budget framework: if an endpoint reports
-// `finish_reason = length`, that is reported honestly (see `truncatedLines`) rather than retried or
-// resized. A capability's tool result is not bounded by this and could not be — the ceiling applies to
-// what the model generates, not to what it is shown.
-const MODEL_MAX_TOKENS = 512;
+// Enough for a conversational reply, and now also for the chain of thought that precedes one. The number
+// has moved with what the loop lets a model produce: 16 when the prompt asked for a single word, 512 when
+// a model was allowed to talk, and 4096 once a thinking mode could be configured. The last step was not
+// estimated. A thinking effort spends the same ceiling before it reaches a selection, and a single
+// variable comparison taken on the product's own endpoint saw `finish_reason = length` on three of
+// twenty-four first turns at 512 and on none of twenty-four at 4096 — the ceiling, not the prompt, was
+// what ran out.
+//
+// It is still not the start of a budget framework. There is no operator-facing knob, because no
+// deployment has asked to spend less than one sentence's worth of thinking; an endpoint that reports
+// `finish_reason = length` anyway has that reported honestly (see `truncatedLines`) rather than retried
+// or resized; and a capability's tool result is not bounded by this and could not be — the ceiling
+// applies to what the model generates, not to what it is shown.
+const MODEL_MAX_TOKENS = 4096;
 
 /**
  * The secret, read once from the environment variable the operator named.
@@ -270,6 +354,14 @@ async function send(
         // other implementation chose and could revisit.
         tool_choice: 'auto',
         temperature: 0,
+        // Added by spreading or not spreading, so that "no configured effort means no such key" is a
+        // property of how this object is built rather than of `JSON.stringify` dropping undefined
+        // values. The two agree today; the day a serializer disagrees, the request to an endpoint that
+        // never asked for this field is the one that changes silently, and that is the failure this
+        // build least wants to discover from a 400.
+        ...(connection.reasoningEffort === undefined
+          ? {}
+          : { reasoning_effort: connection.reasoningEffort }),
         max_tokens: MODEL_MAX_TOKENS,
       }),
       signal: AbortSignal.any([signal, AbortSignal.timeout(MODEL_TIMEOUT_MS)]),
@@ -300,6 +392,15 @@ function toWireMessage(message: ModelMessage): Record<string, unknown> {
           type: 'function',
           function: { name: call.name, arguments: call.arguments },
         })),
+        // Put back by spreading or not spreading, for the reason stated at `reasoning_effort` below: the
+        // day a serializer disagrees about `undefined`, the request that changes silently is the one to
+        // an endpoint that never emitted a chain of thought. What is spread is the string exactly as it
+        // arrived — not trimmed, not re-encoded, and not skipped when it is empty, because an empty
+        // string is one of the things the endpoint said and this build has no standing to shorten its
+        // own protocol message.
+        ...(message.reasoningContent === undefined
+          ? {}
+          : { reasoning_content: message.reasoningContent }),
       };
     case 'tool':
       return { role: 'tool', tool_call_id: message.toolCallId, content: message.content };
@@ -343,8 +444,27 @@ function readStep(payload: unknown): ModelStep {
   return Object.freeze({
     content: readContent(message),
     toolCalls: readToolCalls(message),
+    reasoningContent: readReasoningContent(message),
     truncated: readProperty(first, 'finish_reason') === 'length',
   });
+}
+
+// An absent key and `null` both read as `undefined`, which is what "this endpoint emitted no chain of
+// thought" is. An empty string is deliberately not one of those cases: it is a string the endpoint sent,
+// and folding it into absence would be this build deciding a protocol message said nothing when the wire
+// said it said nothing — a distinction nothing downstream could recover once it had been made. Any other
+// non-string is a shape this build does not know and is refused rather than coerced, exactly as `content`
+// is: a number or an array here means the endpoint speaks something else, and stringifying it would put
+// invented bytes into a request whose whole purpose is to return the endpoint's own.
+function readReasoningContent(message: object): string | undefined {
+  const reasoning = readProperty(message, 'reasoning_content');
+  if (reasoning === undefined || reasoning === null) return undefined;
+  if (typeof reasoning !== 'string') {
+    throw new LanguageError(
+      '模型端点的应答里 choices[0].message.reasoning_content 既不是字符串也不是 null。',
+    );
+  }
+  return reasoning;
 }
 
 // `null` is what the wire carries for "this message has no text" — an assistant turn that is nothing but

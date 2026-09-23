@@ -162,8 +162,17 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
           return { outcome: 'chatted', lines: renderChat(chat) };
         }
 
-        // Echoed back with no content, so the model is not told it said something no human saw.
-        messages.push({ role: 'assistant', toolCalls: step.toolCalls });
+        // Echoed back with no content, so the model is not told it said something no human saw. The chain
+        // of thought, if the endpoint produced one, goes back on this same message and only here: it is
+        // read off the step, spent on the next request, and left behind with this array when the answer
+        // ends. That the loop holds it for exactly as long as it holds the calls is the whole lifecycle —
+        // there is no second place it is written, which is what keeps it from becoming something this
+        // build keeps.
+        messages.push({
+          role: 'assistant',
+          toolCalls: step.toolCalls,
+          reasoningContent: step.reasoningContent,
+        });
 
         let stopped = false;
         for (const call of step.toolCalls) {

@@ -17,7 +17,7 @@ const TOOLS = Object.freeze([
   Object.freeze({
     type: 'function',
     function: Object.freeze({
-      name: 'desktop_context.read',
+      name: 'desktop_context_read',
       description: '读取桌面当前状态。',
       parameters: Object.freeze({
         type: 'object',
@@ -52,8 +52,8 @@ const TOOL_REQUEST = Object.freeze({
     Object.freeze({
       role: 'assistant',
       toolCalls: Object.freeze([
-        Object.freeze({ id: 'call_1', name: 'work_focus.read', arguments: '' }),
-        Object.freeze({ id: 'call_2', name: 'desktop_context.read', arguments: '{}' }),
+        Object.freeze({ id: 'call_1', name: 'work_focus_read', arguments: '' }),
+        Object.freeze({ id: 'call_2', name: 'desktop_context_read', arguments: '{}' }),
       ]),
     }),
     Object.freeze({ role: 'tool', toolCallId: 'call_1', content: '你当前明确关注：\n  hikari-new' }),
@@ -157,18 +157,58 @@ test('模型请求是一条 OpenAI 兼容的 chat completion，工具表原样�
   // Temperature zero because this is a lookup and not a piece of writing, exactly as it was when the
   // request asked for one word: the same question should read the same things.
   assert.equal(body.temperature, 0);
-  // A conversational reply is the only thing this ceiling has to fit. It was 16 when the reply was a
-  // single word from a closed set; a loop that lets a model talk needs room for a sentence or two, and
-  // a ceiling that cut conversations off mid-word would be a bug the operator sees and nobody owns.
-  assert.equal(body.max_tokens, 512);
+  // The ceiling is not decoration and this is its production request-shape guard. A conversational reply
+  // was the only thing it had to fit when it was 512; a configured thinking effort spends the same
+  // ceiling before it reaches a selection, and the number was raised to 4096 on a single-variable
+  // measurement taken against a real endpoint. Asserting the value rather than "some number" is the
+  // point: a build that quietly went back to 512 would re-truncate exactly the first turns that
+  // measurement was about, and this line is where that shows up without a live endpoint.
+  assert.equal(body.max_tokens, 4096);
   // The whole body, as a closed set. This is where a second protocol would show up — a `response_format`
   // asking for JSON, a legacy `functions` array, a marker the prompt expects the model to write — and
   // every one of those was refused rather than built. The transport speaks one dialect and this asserts
   // there is nothing else in the envelope.
+  //
+  // `reasoning_effort` is in that set by its absence, and the absence is the requirement rather than a
+  // coincidence of this connection not setting it: an unconfigured connection sends the request this
+  // build sent before the field existed, byte for byte, so an endpoint that has never heard of it
+  // cannot be affected by a field one operator added for a different endpoint. The assertion below
+  // states the same fact as the key list rather than a second one — it is spelled out so that a reader
+  // editing `send` can see which assertion is about this field, and so that the failure names it.
+  assert.equal('reasoning_effort' in body, false, '没有配置 effort 时请求里不应出现 reasoning_effort');
   assert.deepEqual(Object.keys(body).sort(), [
     'max_tokens',
     'messages',
     'model',
+    'temperature',
+    'tool_choice',
+    'tools',
+  ]);
+});
+
+test('配置了 reasoning effort 时，顶层多出的正是那一个字段', async (t) => {
+  const { endpoint, seen } = await startServer(t, ok);
+  const model = createHttpModel({
+    endpoint,
+    model: 'local-model',
+    credential: undefined,
+    reasoningEffort: 'none',
+  });
+  t.after(() => model.dispose());
+
+  await model.step(REQUEST);
+
+  const body = JSON.parse(seen[0].body);
+  assert.equal(body.reasoning_effort, 'none');
+  // The whole body again, and the point is what the two lists have in common: the difference between a
+  // configured and an unconfigured request is exactly one key, asserted as a closed set rather than as
+  // "the field is present". A `thinking`, a `reasoning_content`, or a provider-shaped field smuggled in
+  // beside it would be invisible to the weaker check and is the whole reason the strict one is here.
+  assert.deepEqual(Object.keys(body).sort(), [
+    'max_tokens',
+    'messages',
+    'model',
+    'reasoning_effort',
     'temperature',
     'tool_choice',
     'tools',
@@ -192,8 +232,8 @@ test('助手消息回到线上时带 tool_calls 且 content 是 null，工具结
       // would tell it a human saw something nobody did. `null` is true.
       content: null,
       tool_calls: [
-        { id: 'call_1', type: 'function', function: { name: 'work_focus.read', arguments: '' } },
-        { id: 'call_2', type: 'function', function: { name: 'desktop_context.read', arguments: '{}' } },
+        { id: 'call_1', type: 'function', function: { name: 'work_focus_read', arguments: '' } },
+        { id: 'call_2', type: 'function', function: { name: 'desktop_context_read', arguments: '{}' } },
       ],
     },
     { role: 'tool', tool_call_id: 'call_1', content: '你当前明确关注：\n  hikari-new' },
@@ -206,6 +246,109 @@ test('助手消息回到线上时带 tool_calls 且 content 是 null，工具结
   assert.deepEqual(answered, ['call_1', 'call_2']);
 });
 
+// The bytes a thinking endpoint produced, all the way around the loop and back. This is the one property
+// the whole feature rests on: a mode that wants its chain of thought returned is only usable if what goes
+// back is what came in, and a transport that trimmed, parsed or re-encoded it would break the second turn
+// of a grounded answer in a way no test of the first turn could see. The string here is chosen to be
+// damageable — leading and trailing whitespace, a tab, a newline — so that "unchanged" is an assertion
+// rather than a coincidence of the sample.
+test('reasoning_content 原样往返：读到的字节和发回去的字节相同', async (t) => {
+  const REASONING = ' 先读焦点，再读桌面。\n\t（首尾空白和制表符都不该被动过） ';
+  const { endpoint, seen } = await startServer(t, (_record, response) => {
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(
+      reply({
+        role: 'assistant',
+        content: null,
+        reasoning_content: REASONING,
+        tool_calls: [
+          { id: 'call_1', type: 'function', function: { name: 'work_focus_read', arguments: '' } },
+        ],
+      }),
+    );
+  });
+  const model = connected(t, endpoint, undefined);
+
+  const step = await model.step(REQUEST);
+  assert.equal(step.reasoningContent, REASONING);
+
+  await model.step({
+    messages: [
+      { role: 'system', content: '系统提示：你不知道这台机器上发生了什么。' },
+      { role: 'user', content: '我现在在干嘛？' },
+      { role: 'assistant', toolCalls: step.toolCalls, reasoningContent: step.reasoningContent },
+      { role: 'tool', toolCallId: 'call_1', content: '你当前明确关注：\n  hikari-new' },
+    ],
+    tools: TOOLS,
+  });
+
+  const body = JSON.parse(seen[1].body);
+  // Same bytes, and on the assistant message the calls are on rather than beside it: a thinking endpoint
+  // pairs the chain of thought with the turn it belongs to, and a request that carries the calls without
+  // it — or carries it anywhere else — is one the endpoint cannot match to anything it said.
+  assert.equal(body.messages[2].reasoning_content, REASONING);
+  assert.deepEqual(Object.keys(body.messages[2]).sort(), [
+    'content',
+    'reasoning_content',
+    'role',
+    'tool_calls',
+  ]);
+});
+
+test('reasoning_content 是空字符串时仍是字符串，不会被改写成缺席', async (t) => {
+  const { endpoint, seen } = await startServer(t, (_record, response) => {
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(
+      reply({
+        role: 'assistant',
+        content: null,
+        reasoning_content: '',
+        tool_calls: [
+          { id: 'call_1', type: 'function', function: { name: 'work_focus_read', arguments: '' } },
+        ],
+      }),
+    );
+  });
+  const model = connected(t, endpoint, undefined);
+
+  const step = await model.step(REQUEST);
+
+  // `''` and not `undefined`. The endpoint said something — that it thought nothing in particular — and
+  // normalising that to absence would be this build editing a protocol message it does not own. The
+  // difference is only recoverable here; once folded away, the request below could not tell the two apart.
+  assert.equal(step.reasoningContent, '');
+
+  await model.step({
+    messages: [
+      { role: 'system', content: '系统提示：你不知道这台机器上发生了什么。' },
+      { role: 'user', content: '我现在在干嘛？' },
+      { role: 'assistant', toolCalls: step.toolCalls, reasoningContent: step.reasoningContent },
+      { role: 'tool', toolCallId: 'call_1', content: '你当前明确关注：\n  hikari-new' },
+    ],
+    tools: TOOLS,
+  });
+
+  const body = JSON.parse(seen[1].body);
+  assert.equal('reasoning_content' in body.messages[2], true, '空字符串也要带上这个字段');
+  assert.equal(body.messages[2].reasoning_content, '');
+});
+
+test('回应里没有 reasoning_content 时，助手消息上不会多出这个字段', async (t) => {
+  // The non-thinking case, which is every deployment that configures no effort and every endpoint that
+  // has never heard of one. `undefined` means "the endpoint emitted no chain of thought", and the field
+  // is put on the wire by spreading or not spreading rather than by a serializer dropping undefined — so
+  // the byte-for-byte request this build sent before the field existed is the byte-for-byte request it
+  // sends now.
+  const { endpoint, seen } = await startServer(t, ok);
+  const model = connected(t, endpoint, undefined);
+
+  await model.step(TOOL_REQUEST);
+
+  const body = JSON.parse(seen[0].body);
+  assert.equal('reasoning_content' in body.messages[2], false);
+  assert.deepEqual(Object.keys(body.messages[2]).sort(), ['content', 'role', 'tool_calls']);
+});
+
 test('模型返回的 tool_calls 被解析出来，arguments 原样是字符串', async (t) => {
   const { endpoint } = await startServer(t, (_record, response) => {
     response.writeHead(200, { 'content-type': 'application/json' });
@@ -214,8 +357,8 @@ test('模型返回的 tool_calls 被解析出来，arguments 原样是字符串'
         role: 'assistant',
         content: null,
         tool_calls: [
-          { id: 'call_a', type: 'function', function: { name: 'work_focus.read', arguments: '' } },
-          { id: 'call_b', type: 'function', function: { name: 'desktop_context.read', arguments: '{"n":1}' } },
+          { id: 'call_a', type: 'function', function: { name: 'work_focus_read', arguments: '' } },
+          { id: 'call_b', type: 'function', function: { name: 'desktop_context_read', arguments: '{"n":1}' } },
         ],
       }),
     );
@@ -226,8 +369,8 @@ test('模型返回的 tool_calls 被解析出来，arguments 原样是字符串'
 
   assert.equal(step.content, '');
   assert.deepEqual(step.toolCalls, [
-    { id: 'call_a', name: 'work_focus.read', arguments: '' },
-    { id: 'call_b', name: 'desktop_context.read', arguments: '{"n":1}' },
+    { id: 'call_a', name: 'work_focus_read', arguments: '' },
+    { id: 'call_b', name: 'desktop_context_read', arguments: '{"n":1}' },
   ]);
   // The arguments are not parsed here, and that is the split this test pins: whether a string means a
   // legal call is a question about capabilities, and `tools.ts` owns it. A transport that parsed would
@@ -243,7 +386,7 @@ test('content 为 null 时读作「这次没有文字」，而不是失败', asy
       reply({
         role: 'assistant',
         content: null,
-        tool_calls: [{ id: 'call_a', type: 'function', function: { name: 'work_focus.read' } }],
+        tool_calls: [{ id: 'call_a', type: 'function', function: { name: 'work_focus_read' } }],
       }),
     );
   });
@@ -254,7 +397,9 @@ test('content 为 null 时读作「这次没有文字」，而不是失败', asy
   // An assistant turn that is nothing but tool calls genuinely has no text, so `null` is what the wire
   // carries for it. An omitted `arguments` is likewise read as the empty string.
   assert.equal(step.content, '');
-  assert.deepEqual(step.toolCalls, [{ id: 'call_a', name: 'work_focus.read', arguments: '' }]);
+  assert.deepEqual(step.toolCalls, [{ id: 'call_a', name: 'work_focus_read', arguments: '' }]);
+  // And no chain of thought, which is a different absence from an empty one — see the note on the field.
+  assert.equal(step.reasoningContent, undefined);
 });
 
 test('finish_reason = length 被记下来，而不是被解释', async (t) => {
@@ -346,6 +491,7 @@ test('应答形状不是这一种时是失败，而不是一个空回答', async
     '{"choices":[{"message":{"tool_calls":[{"id":"1","function":{}}]}}]}',
     '{"choices":[{"message":{"tool_calls":[{"id":"","function":{"name":"a"}}]}}]}',
     '{"choices":[{"message":{"tool_calls":[{"id":"1","function":{"name":"a","arguments":42}}]}}]}',
+    '{"choices":[{"message":{"reasoning_content":42}}]}',
     'null',
   ];
 
@@ -387,8 +533,8 @@ test('同一个批里出现重复的 tool_call id 是失败', async (t) => {
             message: {
               content: null,
               tool_calls: [
-                { id: 'call_1', type: 'function', function: { name: 'work_focus.read', arguments: '' } },
-                { id: 'call_1', type: 'function', function: { name: 'desktop_context.read', arguments: '' } },
+                { id: 'call_1', type: 'function', function: { name: 'work_focus_read', arguments: '' } },
+                { id: 'call_1', type: 'function', function: { name: 'desktop_context_read', arguments: '' } },
               ],
             },
             finish_reason: 'stop',

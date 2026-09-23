@@ -29,7 +29,7 @@ import {
   readArguments,
   toModelTools,
 } from '../dist/language/index.js';
-import { MODEL_TIMEOUT_MS } from '../dist/language/model.js';
+import { MODEL_TIMEOUT_MS, REASONING_EFFORTS } from '../dist/language/model.js';
 import { createExposureReader } from '../dist/language/read.js';
 import { oneLine } from '../dist/terminal-text/index.js';
 import { workFocusCurrentService, workFocusReadExposure } from '../dist/work-focus/index.js';
@@ -50,7 +50,7 @@ import { workFocusCurrentService, workFocusReadExposure } from '../dist/work-foc
 // review turned on exactly this. A scripted model proves *structure*: given that the model decided X,
 // the loop does Y. It cannot prove that a real model would decide X. "The model reads the desktop
 // because the user asked what is on screen" is a claim about a model's semantic selection, and a fake
-// who was told to emit `desktop_context.read` agrees with it by construction. The live-endpoint harness
+// who was told to emit `desktop_context_read` agrees with it by construction. The live-endpoint harness
 // that can make that claim is `language-semantic.live.test.mjs`, which is skipped unless an operator
 // points it at a real endpoint; nothing in this file is evidence for it.
 const NO_PIPES = process.platform === 'win32' ? false : '命名管道只在 Windows 上存在';
@@ -74,8 +74,8 @@ function hasTerminalControl(text) {
   return false;
 }
 
-const WORK = 'work_focus.read';
-const DESKTOP = 'desktop_context.read';
+const WORK = 'work_focus_read';
+const DESKTOP = 'desktop_context_read';
 
 // A sentence no renderer in this repository could produce. Every test that asserts "model text does not
 // reach the human" uses this one string, so a leak is a single substring search rather than a hunt.
@@ -125,13 +125,25 @@ function assessmentFixture(title = TARGET.title) {
 // ---------------------------------------------------------------------------------------------
 
 /** A step in which the model said something and called nothing. */
-function says(content) {
-  return { content, toolCalls: [], truncated: false };
+function says(content, reasoningContent = undefined) {
+  return { content, toolCalls: [], truncated: false, reasoningContent };
 }
 
 /** A step in which the model called tools, with no prose alongside. */
 function callsTo(...toolCalls) {
   return { content: '', toolCalls, truncated: false };
+}
+
+/**
+ * A step in which a thinking endpoint produced a chain of thought before calling.
+ *
+ * The reasoning is a fixture string and nothing in these tests reads it as anything but bytes: this
+ * repository is not allowed to interpret it, so a test that asserted a meaning would be asserting a
+ * behaviour the loop does not have. What is checked is which request it comes back on, on which message,
+ * and that it is never anywhere else.
+ */
+function thinks(reasoningContent, ...toolCalls) {
+  return { content: '', toolCalls, truncated: false, reasoningContent };
 }
 
 /** One tool call, as the transport would have parsed it. */
@@ -377,7 +389,7 @@ test('验收 A：打招呼 → chatted，零次 Service 读取', async () => {
   assert.equal(h.requests.length, 1, 'chatted 只走一次模型调用');
 });
 
-test('验收 B：问关注什么 → work_focus.read 一次 → answered', async () => {
+test('验收 B：问关注什么 → work_focus_read 一次 → answered', async () => {
   const h = harness({ script: [callsTo(toolCall('c1', WORK)), DONE] });
 
   const reply = await h.answerer.answer('我现在关注什么？');
@@ -389,7 +401,7 @@ test('验收 B：问关注什么 → work_focus.read 一次 → answered', async
   assert.equal(h.requests.length, 2);
 });
 
-test('验收 C：问看到什么 → desktop_context.read → answered', async () => {
+test('验收 C：问看到什么 → desktop_context_read → answered', async () => {
   const assessment = assessmentFixture();
   const h = harness({ script: [callsTo(toolCall('c1', DESKTOP)), DONE], assessment });
 
@@ -475,6 +487,21 @@ test('tools[] 完全由 owner 的 exposure 机械生成，没有第二份描述'
     properties: {},
     additionalProperties: false,
   });
+});
+
+test('每个 exposure 的名字都是 provider 接受的 function.name 形状', () => {
+  // Not a style rule and not this repository's idea of tidy. OpenAI-compatible function calling accepts
+  // `^[a-zA-Z0-9_-]+$` as `tools[*].function.name` and rejects the *entire request* with a 400
+  // otherwise, so a dotted name does not read as "no model picked this capability" — it reads as a
+  // request that never reached a model, and the caller waits out a 90-second timeout for an answer
+  // nobody was asked to give. The names belong to the owners, so the constraint is asserted against the
+  // list they actually exported; the next owner to reach for a dot learns it here rather than from a
+  // provider error at the far end of the wire.
+  const functionName = /^[a-zA-Z0-9_-]+$/;
+
+  for (const exposure of LANGUAGE_EXPOSURES) {
+    assert.match(exposure.name, functionName, `${exposure.name} 不是一个合法的 function.name`);
+  }
 });
 
 test('findExposure 只在当前字面 exposure 集合里查，模型字符串永远不是 Service key', () => {
@@ -627,6 +654,166 @@ test('模型调用的上界是 LANGUAGE_EXPOSURES 的大小推出来的，不是
   assert.deepEqual(h.performed, [WORK, DESKTOP], '两个 capability 各读一次');
   assert.equal(h.requests.length, LANGUAGE_EXPOSURES.length + 1);
   assert.equal(h.requests.length, 3, '第三次请求之后的重复调用没有消费任何新东西，loop 在这里结束');
+});
+
+// ---------------------------------------------------------------------------------------------
+// Thinking, and the one thing the loop does with it: hand it back.
+//
+// A thinking endpoint pairs a chain of thought with the assistant turn it produced, and requires that
+// turn — calls and reasoning together — to come back on the following request. The whole feature is that
+// message plumbing, so what is tested is the plumbing: which request carries which reasoning, on which
+// message, and where it is *not* allowed to go. Nothing here asserts a meaning for the text, because
+// nothing in this repository reads it as text.
+// ---------------------------------------------------------------------------------------------
+
+test('A：没有 thinking 的模型，回填的消息上不会凭空多出一个 reasoning_content', async () => {
+  // The behaviour every deployment that configures no effort already had, checked on the loop rather than
+  // on the transport: a script that never produces a chain of thought must produce requests where none
+  // appears — not an empty one, not a placeholder, nothing.
+  const h = harness({ script: [callsTo(toolCall('a', WORK)), DONE] });
+
+  const reply = await h.answerer.answer('我现在关注什么？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(reply.lines, renderFocus(['hikari-new']));
+  for (const [index, request] of h.requests.entries()) {
+    for (const message of request.messages) {
+      if (message.role !== 'assistant') continue;
+      assert.equal(message.reasoningContent, undefined, `第 ${index + 1} 次请求不该带上推理内容`);
+    }
+  }
+});
+
+test('B：第一轮 thinking + tool call，下一轮请求把 R1 和 tool_calls 一起带回', async () => {
+  const h = harness({ script: [thinks('R1', toolCall('a', WORK)), DONE] });
+
+  const reply = await h.answerer.answer('我现在关注什么？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.equal(h.requests.length, 2);
+
+  const { messages } = h.requests[1];
+  const at = messages.findIndex((message) => message.role === 'assistant');
+  // On the assistant message, beside the calls it belongs to — not on the tool result, not on a message
+  // of its own, and not merged into the content. A thinking endpoint matches the pair to the turn it
+  // produced; separated, the request is one it cannot answer about.
+  assert.equal(messages[at].reasoningContent, 'R1');
+  assert.deepEqual(messages[at].toolCalls, [toolCall('a', WORK)]);
+  // And the result of that call follows immediately, so the wire invariant is untouched by the echo.
+  assert.equal(messages[at + 1].role, 'tool');
+  assert.equal(messages[at + 1].toolCallId, 'a');
+  assertWireComplete(h.requests[1], '思考后的第二轮请求');
+  assert.ok(!reply.lines.join('\n').includes('R1'));
+});
+
+test('C：两轮 thinking 各自跟在自己的那一轮上，不交叉、不合并、不丢失', async () => {
+  // The case a live endpoint reaches whenever one question needs two reads. Each batch produces its own
+  // assistant turn with its own chain of thought, and the third request has to carry both turns intact:
+  // R1 still on the first, R2 on the second, and the first turn's tool result still between them.
+  const assessment = assessmentFixture();
+  const h = harness({
+    script: [
+      thinks('R1', toolCall('a', WORK)),
+      thinks('R2', toolCall('b', DESKTOP)),
+      DONE,
+    ],
+    assessment,
+  });
+
+  const reply = await h.answerer.answer('我现在在干嘛？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.equal(h.requests.length, 3);
+
+  const { messages } = h.requests[2];
+  const assistants = messages.filter((message) => message.role === 'assistant');
+  assert.equal(assistants.length, 2, '两轮 assistant 消息都要在，不得合并成一条');
+  assert.equal(assistants[0].reasoningContent, 'R1', '第一轮的推理不得被第二轮的覆盖');
+  assert.equal(assistants[1].reasoningContent, 'R2', '第二轮的推理不得丢失');
+  // The calls travel with their own reasoning rather than both with one: crossing them would send the
+  // endpoint a turn it never produced, which is a failure no first-turn test can see.
+  assert.deepEqual(assistants[0].toolCalls, [toolCall('a', WORK)]);
+  assert.deepEqual(assistants[1].toolCalls, [toolCall('b', DESKTOP)]);
+  assert.deepEqual(
+    messages.filter((message) => message.role === 'tool').map((message) => message.toolCallId),
+    ['a', 'b'],
+    '第一轮的 tool 结果不得被第二轮挤掉',
+  );
+  assertWireComplete(h.requests[2], '第三轮请求');
+
+  const printed = reply.lines.join('\n');
+  for (const text of ['R1', 'R2']) {
+    assert.ok(!printed.includes(text), `${text} 不得出现在回答里`);
+  }
+  assert.deepEqual(reply.lines, [...renderFocus(['hikari-new']), ...renderAssessment(assessment)]);
+});
+
+test('D：最后一轮的 thinking 不进回答、不进 detail，也不跨到下一个 interaction', async () => {
+  const FINAL = `${CONFABULATION}（最后一段推理）`;
+  const h = harness({
+    // The last step of a grounded answer: the model is done, and everything it wrote on that step is
+    // dropped. The reasoning goes with it — there is no following request in this interaction for it to
+    // come back on, which is where its lifecycle ends by construction rather than by cleanup.
+    script: [callsTo(toolCall('a', WORK)), says(CONFABULATION, FINAL), says('在的。')],
+  });
+
+  const reply = await h.answerer.answer('我现在关注什么？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(reply.lines, renderFocus(['hikari-new']));
+  assert.ok(!JSON.stringify(reply).includes(FINAL), '最后一轮的推理不得进入回答的任何字段');
+  assert.ok(!JSON.stringify(reply).includes(CONFABULATION));
+  assert.equal(h.requests.length, 2, '最后一轮没有 tool_calls，循环在那里结束');
+
+  // The next question is the real test of "not across interactions": same answerer, so the same Dialogue
+  // Context, and the request it builds must not carry one byte of the previous interaction's thinking.
+  const next = await h.answerer.answer('那现在呢？');
+  assert.equal(next.outcome, 'chatted');
+  for (const [index, request] of h.requests.entries()) {
+    for (const message of request.messages) {
+      const serialized = JSON.stringify(message);
+      assert.ok(!serialized.includes(FINAL), `第 ${index + 1} 次请求里出现了上一轮的推理`);
+      assert.ok(!serialized.includes(CONFABULATION), `第 ${index + 1} 次请求里出现了 model 的自由文本`);
+    }
+  }
+});
+
+test('E：chatted 路径上 thinking 不进回答，回答仍只有 model 的正文', async () => {
+  const FINAL = `${CONFABULATION}（闲聊时的一段推理）`;
+  const h = harness({ script: [says('在的。', FINAL)] });
+
+  const reply = await h.answerer.answer('ayobro');
+
+  // The chat branch returns the model's own content and nothing else. The reasoning rides on the same
+  // step and must not be added to the lines, appended after them, or used to explain them.
+  assert.equal(reply.outcome, 'chatted');
+  assert.deepEqual(reply.lines, ['在的。']);
+  assert.ok(!JSON.stringify(reply).includes(FINAL));
+  assert.equal(h.requests.length, 1);
+});
+
+test('F：thinking 不能让 grounded 回答绕过 deterministic renderer', async () => {
+  // The one-way door, with a thinking model on the other side of it: once a capability has been read, the
+  // answer is the owner's rendering of what was read — and a chain of thought is a model's prose like any
+  // other, so there is no route by which it becomes the answer. The final step carries the loudest version
+  // of the temptation: a confabulation in the content and a third chain of thought beside it.
+  const assessment = assessmentFixture();
+  const h = harness({
+    script: [
+      thinks('R1', toolCall('a', DESKTOP)),
+      thinks('R2', toolCall('b', WORK)),
+      says(CONFABULATION, 'R3'),
+    ],
+    assessment,
+  });
+
+  const reply = await h.answerer.answer('我现在在干嘛？');
+
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(reply.lines, [...renderAssessment(assessment), ...renderFocus(['hikari-new'])]);
+  for (const text of [CONFABULATION, 'R1', 'R2', 'R3']) {
+    assert.ok(!reply.lines.join('\n').includes(text), `${text} 不得出现在回答里`);
+  }
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -969,6 +1156,60 @@ test('Language 不依赖 Repository CI，因此 CI 缺席时它不会失败', ()
     assert.ok(!key.startsWith('github'), `${key} 不该来自 GitHub`);
   }
   assert.ok(!keys.includes('desktop-session-awareness.current@1'));
+});
+
+test('reasoningEffort 是一个闭集，插件在配置处拒绝别的值', () => {
+  const base = {
+    rootDir: `C:${'\\'}hikari-language-config`,
+    endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
+    model: 'test-model',
+    credentialEnv: undefined,
+  };
+
+  // Omitted stays omitted. That is a value in its own right rather than a default being filled in: an
+  // unconfigured connection sends no such field, which is what keeps every other OpenAI-compatible
+  // endpoint on exactly the request it was already getting.
+  assert.equal(languagePlugin.config.parse(base).reasoningEffort, undefined);
+
+  // Both members travel untouched, and `high` is here for the same reason `none` is: it is a value the
+  // product asks for, and the effort is the operator's sentence rather than anything this plugin derives
+  // from the endpoint. Nothing about where the request is going changes which of them is accepted.
+  for (const good of ['none', 'high']) {
+    assert.equal(
+      languagePlugin.config.parse({ ...base, reasoningEffort: good }).reasoningEffort,
+      good,
+      `${good} 应被接受并原样保留`,
+    );
+  }
+
+  // Everything else is refused here rather than forwarded to the endpoint. Both ways of forwarding it
+  // fail quietly: an endpoint that does not recognise the value may reject the whole request, and this
+  // transport deliberately never reads an error body, so the operator would see a status code with no
+  // reason; or it may ignore the value and answer normally, which is a request that did not say what
+  // the operator believes it said. Neither is something they can act on from the far end.
+  //
+  // `low` and `max` are in this list on purpose: they are values the experiments ran through, and being
+  // measured is not the same as being supported. A member arrives here when the product asks for it, not
+  // because a harness once sent it.
+  for (const bad of ['low', 'max', 'medium', 'None', 'HIGH', '', 0, null]) {
+    assert.throws(
+      () => languagePlugin.config.parse({ ...base, reasoningEffort: bad }),
+      new RegExp(`reasoningEffort 只能是 ${Object.keys(REASONING_EFFORTS).join(' / ')}`),
+      `${JSON.stringify(bad)} 不应被接受`,
+    );
+  }
+
+  // The refusal names the members it got from the owner's table rather than from a sentence somebody
+  // typed beside the check. Asserted through the table so the two cannot drift: the compile-time half of
+  // this — a member added to the union does not build until it is added to the table — cannot be a test,
+  // and this is the runtime half it leaves.
+  for (const member of Object.keys(REASONING_EFFORTS)) {
+    assert.throws(
+      () => languagePlugin.config.parse({ ...base, reasoningEffort: 'definitely-not-a-member' }),
+      new RegExp(member),
+      `拒绝的话里应列出 ${member}`,
+    );
+  }
 });
 
 test('Language 允许的 exposure 就是两个 owner 自己的导出，不是复制来的字符串', () => {
@@ -1328,6 +1569,7 @@ test('状态行里的端点、模型与变量名各占一行，值里的控制�
         endpoint: `http://127.0.0.1:9/v1${LF}${FORGERY}`,
         model: `m${ESC}[2J${ESC}[H模型：pwned`,
         credentialEnv: `HIKARI${LF}语言插件凭据：来自环境变量 ATTACKER`,
+        reasoningEffort: `none${LF}${FORGERY}`,
       },
     },
     {
@@ -1349,7 +1591,7 @@ test('状态行里的端点、模型与变量名各占一行，值里的控制�
   const lines = host.status();
   const status = lines.join('\n');
 
-  assert.equal(lines.filter((line) => line.startsWith('语言插件')).length, 3);
+  assert.equal(lines.filter((line) => line.startsWith('语言插件')).length, 4);
   assert.ok(!lines.includes(FORGERY), '值里的换行不得另起一行');
   assert.ok(!lines.some((line) => line.includes(LF) || line.includes(ESC)), '一行里不得留裸控制字符');
   assert.ok(status.includes('\\n'), '换行应写成它的码点');

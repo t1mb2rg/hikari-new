@@ -927,13 +927,31 @@ test('模型端点与模型只给一个是用法错误，并指出缺的是哪�
   assert.equal(onlyCredential.code, 2);
   assert.match(onlyCredential.stderr, /缺少：--model-endpoint、--model/);
 
+  // The reasoning effort is orphaned for the same reason and reported the same way: it is a field on a
+  // request, and a request that will never be sent cannot carry it. Refused rather than ignored,
+  // because an operator who typed it believes the model is being asked something.
+  const onlyEffort = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--model-reasoning-effort',
+    'none',
+  );
+  assert.equal(onlyEffort.code, 2);
+  assert.match(onlyEffort.stderr, /缺少：--model-endpoint、--model/);
+
   assert.deepEqual(readdirSync(root), []);
 });
 
 test('模型参数只属于 resident，没有拓宽别的命令', (t) => {
   const root = createRoot(t);
 
-  for (const argv of [['ask', '--data-dir', root, '--model', 'local-model', '你好']]) {
+  for (const argv of [
+    ['ask', '--data-dir', root, '--model', 'local-model', '你好'],
+    ['ask', '--data-dir', root, '--model-reasoning-effort', 'none', '你好'],
+  ]) {
     const result = runCli(...argv);
     assert.equal(result.code, 2, `${argv[0]} 不应接受模型配置`);
     assert.match(result.stderr, /未知参数/);

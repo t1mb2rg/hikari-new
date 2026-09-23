@@ -47,6 +47,18 @@ export interface ModelOptions {
   readonly endpoint: string;
   readonly model: string;
   readonly credentialEnv: string | undefined;
+  /**
+   * The reasoning effort to ask the model for, or `undefined` to send no such field.
+   *
+   * Carried as the operator's own token, like `--model`, and deliberately not checked against a set of
+   * legal values here — which efforts exist is the language plugin's question, asked at activation and
+   * answered by the plugin's own `config.parse`, for the reason the comment above `readModelPairing`
+   * gives. What this file knows is the one thing an argument *list* can know: whether a value was
+   * supplied at all. That is the difference this flag carries — absent means the request is exactly the
+   * one this build sent before the field existed, and no endpoint is told about a field it never asked
+   * for.
+   */
+  readonly reasoningEffort: string | undefined;
 }
 
 /**
@@ -144,7 +156,8 @@ export const USAGE = [
   '  hikari resident --data-dir <path> --desktop-awareness-delay-ms <integer>',
   '                  [--repository-root <path> --repository <owner/name>]',
   '                  [--model-endpoint <url> --model <name>',
-  '                   [--model-credential-env <ENV_NAME>]]',
+  '                   [--model-credential-env <ENV_NAME>]',
+  '                   [--model-reasoning-effort <none|high>]]',
   '  hikari status --data-dir <path>',
   '  hikari stop --data-dir <path>',
   '  hikari focus declare --data-dir <path> <designation>',
@@ -163,6 +176,7 @@ export const USAGE = [
   '  --model-endpoint <url>                   语言插件的模型端点，与 --model 成对出现，没有默认值',
   '  --model <name>                           语言插件请求的模型名，与 --model-endpoint 成对出现，没有默认值',
   '  --model-credential-env <ENV_NAME>        从该环境变量读取模型凭据；省略表示不带凭据',
+  '  --model-reasoning-effort <none|high>     请求里带的 reasoning_effort；省略表示不带这个字段',
   '',
   '说明：',
   '  hikari resident 同时给出 --model-endpoint 与 --model 时才会加载语言插件；',
@@ -173,6 +187,8 @@ export const USAGE = [
   '  端点必须支持 OpenAI 兼容的原生 tool calling（tools / tool_calls / tool 结果消息）；',
   '  不支持的端点会让这次交互失败，Hikari 不会退回另一套协议。',
   '  --model-credential-env 给的是环境变量的名字，不是凭据本身。',
+  '  --model-reasoning-effort 是写给端点的一个请求，Hikari 不判断端点认不认这个值；',
+  '  省略时请求里不会有这个字段，因此对不认识它的端点没有任何影响。',
   '',
 ].join('\n');
 
@@ -436,8 +452,16 @@ function readOptions(tokens: readonly string[]): CliOptions {
 }
 
 function readResidentOptions(tokens: readonly string[]): ResidentOptions {
-  const { dataDir, delayToken, repositoryRoot, repository, modelEndpoint, model, modelCredentialEnv } =
-    readOptionTokens(tokens, 'resident');
+  const {
+    dataDir,
+    delayToken,
+    repositoryRoot,
+    repository,
+    modelEndpoint,
+    model,
+    modelCredentialEnv,
+    modelReasoningEffort,
+  } = readOptionTokens(tokens, 'resident');
   if (delayToken === undefined) {
     throw new UsageError('缺少必填参数：--desktop-awareness-delay-ms');
   }
@@ -446,7 +470,7 @@ function readResidentOptions(tokens: readonly string[]): ResidentOptions {
   const repositoryCi = readRepositoryCiPairing(repositoryRoot, repository);
   const withRepository = repositoryCi === undefined ? delay : { ...delay, repositoryCi };
 
-  const language = readModelPairing(modelEndpoint, model, modelCredentialEnv);
+  const language = readModelPairing(modelEndpoint, model, modelCredentialEnv, modelReasoningEffort);
   return language === undefined ? withRepository : { ...withRepository, model: language };
 }
 
@@ -457,25 +481,36 @@ function readResidentOptions(tokens: readonly string[]): ResidentOptions {
 // and a model name with no endpoint means picking an endpoint — which, for a language model, is
 // choosing whose servers a human's words are sent to. Neither is a default this file may invent.
 //
-// The credential is the one member of the set that may be absent, and the difference is real rather
-// than a convenience: a model served on this machine needs no credential, so requiring one would make
-// the local case impossible to configure. What is *not* allowed is a credential for a model that was
-// never configured — that names a variable nothing will read, and an operator who typed it believes
-// something is being authenticated that is not.
+// Two members of the set may be absent, and the difference is real rather than a convenience. A model
+// served on this machine needs no credential, so requiring one would make the local case impossible to
+// configure; a model that reasons by default needs no effort configured, and the honest way to say
+// "send nothing" is to send nothing. What is *not* allowed is either one for a model that was never
+// configured: a credential names a variable nothing will read, and an effort is a field on a request
+// that will never be sent — in both cases an operator typed something believing it does work that
+// nothing does.
 //
 // No value is checked beyond being non-empty. Whether an endpoint is reachable, whether the name is a
-// model the endpoint serves, and whether the named variable holds anything are the plugin's own
-// questions, asked at activation where the answers can be acted on. A second copy of any of them here
-// would be a second answer to a question that already has one, and the two would eventually disagree.
+// model the endpoint serves, whether the named variable holds anything, and which efforts the endpoint
+// understands are the plugin's own questions, asked at activation where the answers can be acted on. A
+// second copy of any of them here would be a second answer to a question that already has one, and the
+// two would eventually disagree.
 function readModelPairing(
   endpoint: string | undefined,
   model: string | undefined,
   credentialEnv: string | undefined,
+  reasoningEffort: string | undefined,
 ): ModelOptions | undefined {
   if (endpoint === undefined && model === undefined) {
+    // Named one at a time rather than listed together, because the sentence an operator needs is
+    // "the flag you typed needs those two", and which flag it is, is the part they do not already know.
     if (credentialEnv !== undefined) {
       throw new UsageError(
         '--model-credential-env 需要与 --model-endpoint 和 --model 一起出现；缺少：--model-endpoint、--model',
+      );
+    }
+    if (reasoningEffort !== undefined) {
+      throw new UsageError(
+        '--model-reasoning-effort 需要与 --model-endpoint 和 --model 一起出现；缺少：--model-endpoint、--model',
       );
     }
     return undefined;
@@ -488,7 +523,7 @@ function readModelPairing(
     throw new UsageError('--model-endpoint 需要与 --model 成对出现；缺少：--model');
   }
 
-  return Object.freeze({ endpoint, model, credentialEnv });
+  return Object.freeze({ endpoint, model, credentialEnv, reasoningEffort });
 }
 
 // The two flags are one configuration or neither, and that is decided here rather than by the
@@ -526,6 +561,7 @@ interface OptionTokens {
   readonly modelEndpoint: string | undefined;
   readonly model: string | undefined;
   readonly modelCredentialEnv: string | undefined;
+  readonly modelReasoningEffort: string | undefined;
 }
 
 function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): OptionTokens {
@@ -536,6 +572,7 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
   let modelEndpoint: string | undefined;
   let model: string | undefined;
   let modelCredentialEnv: string | undefined;
+  let modelReasoningEffort: string | undefined;
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
@@ -638,9 +675,30 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
       continue;
     }
 
+    if (token === '--model-reasoning-effort' && grammar === 'resident') {
+      if (modelReasoningEffort !== undefined) throw new UsageError('--model-reasoning-effort 只能指定一次。');
+
+      const value = tokens[index + 1];
+      if (value === undefined) throw new UsageError('--model-reasoning-effort 需要一个值。');
+      if (!value.trim()) throw new UsageError('--model-reasoning-effort 不能是空值。');
+
+      modelReasoningEffort = value;
+      index += 1;
+      continue;
+    }
+
     throw new UsageError(`未知参数：${String(token)}`);
   }
 
   if (dataDir === undefined) throw new UsageError('缺少必填参数：--data-dir');
-  return { dataDir, delayToken, repositoryRoot, repository, modelEndpoint, model, modelCredentialEnv };
+  return {
+    dataDir,
+    delayToken,
+    repositoryRoot,
+    repository,
+    modelEndpoint,
+    model,
+    modelCredentialEnv,
+    modelReasoningEffort,
+  };
 }

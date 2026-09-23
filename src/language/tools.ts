@@ -81,7 +81,16 @@ export function toModelTools(): readonly ModelTool[] {
 }
 
 /**
- * One exposure as the wire shape, with the owner's description passed through untouched.
+ * One exposure as the wire shape, with the owner's name and description passed through untouched.
+ *
+ * The name is passed through for the same reason the description is, and it is the one field on this
+ * wire that a provider constrains rather than a reader. OpenAI-compatible function calling accepts
+ * `^[a-zA-Z0-9_-]+$` as `function.name` and answers anything else with a **400 on the entire request**,
+ * so a dotted name here is not a capability a model declined to pick — it is a request that never
+ * reached a model, and the caller sees a model that never spoke. Nothing can be checked here that the
+ * owners have not already promised, so the constraint is asserted against `LANGUAGE_EXPOSURES` in
+ * `test/language.test.mjs`: the next owner to reach for a dot learns it from a failing test rather than
+ * from a provider error at the far end of a 90-second timeout.
  *
  * `parameters` says "an object with no properties", which is the honest schema for a read that takes
  * nothing. It is not a placeholder for a real schema to be filled in later — when a capability needs
