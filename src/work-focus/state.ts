@@ -82,6 +82,29 @@ export function applyWorkFocusRequest(
   return { kind: 'ok', state: freeze(next) };
 }
 
+/**
+ * Whether two work focus states hold the same members.
+ *
+ * This is the whole of the state-equivalence question for this domain, and it is deliberately not a
+ * general one. `designations` never holds a duplicate — `declare` checks `includes` before appending
+ * and `replace` collapses repeats — so comparing lengths and then containment is exact rather than
+ * approximate, and neither side has to be sorted first.
+ *
+ * It is a claim about the set, not about the representation. Order is not part of this contract (see
+ * `WorkFocusState` above), so two states that differ only in the order they were written are the same
+ * state; and because nothing here looks at object identity, a `replace` that rebuilt an equal array
+ * is equal, and so is the very same object `status` handed back.
+ *
+ * The caller is the plugin, asking whether a request moved anything. That question is what decides
+ * whether there is an occurrence to admit, so the answer has to be about the domain rather than about
+ * whether some function happened to allocate.
+ */
+export function sameMembership(before: WorkFocusState, after: WorkFocusState): boolean {
+  const left = before.designations;
+  const right = after.designations;
+  return left.length === right.length && left.every((designation) => right.includes(designation));
+}
+
 const HEADER = '当前工作焦点：';
 const NONE = '（当前没有任何工作焦点。）';
 
