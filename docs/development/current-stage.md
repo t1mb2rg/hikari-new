@@ -36,7 +36,7 @@
 >
 > **本机实测（真实常驻、真实命名管道，`--desktop-awareness-delay-ms 20000`）**：连续三次 `hikari observe desktop-session status` 的 acquisition 时刻各不相同（`02:36:04.206` / `02:36:04.792` / `02:36:05.477`），而三次写出的 `上一次快照` **完全相同**（`2026-09-22T02:35:55.115Z`）；loop 周期走过之后，两次连续查询又同时落到**新的**同一个 `2026-09-22T02:36:36.169Z`（该轮还恰好读到一条真实 `changed`）。**重复 inspection 不移动 baseline，timeline 自己会移动它。**
 >
-> **边界说明（口径更新，Repository CI Relevance v1 收口后）：`repository-ci-awareness.current@1` 在默认组合中没有 production consumer，但在显式启用 Repository CI 的组合中【有】。** 该组合下 `repository-ci-relevance` 就是它的 production consumer：`src/repository-ci-relevance/plugin.ts` 的 `requires` 逐字包含 `repositoryCiAwarenessService`。**两种组合必须分开读**——默认组合（九个成员）里确实没有任何 module 读它，显式组合（十四个成员）里有。此前本节笼统写作「当前没有 production consumer」，在第二个组合下已不成立，故更正。
+> **边界说明（口径更新，Repository CI Relevance v1 收口后）：`repository-ci-awareness.current@1` 在默认组合中没有 production consumer，但在显式启用 Repository CI 的组合中【有】。** 该组合下 `repository-ci-relevance` 就是它的 production consumer：`src/repository-ci-relevance/plugin.ts` 的 `requires` 逐字包含 `repositoryCiAwarenessService`。**两种组合必须分开读**——默认组合（九个成员）里确实没有任何 module 读它，显式组合（十四个成员）里有。**（口径更新（JUDGEMENT REACHABILITY v0 之后）：repository scope 组合此后有两个——十四个成员（无 model）与十五个（有 model）；下列陈述对两者都成立。见 `judgement-reachability-v0.md`。）**此前本节笼统写作「当前没有 production consumer」，在第二个组合下已不成立，故更正。
 >
 > 它作为 public Service 成立的依据有两条，都来自 `plugin-design-spec.md` §16：§16.1 只要求**真实、已发生的跨模块交互语义**，不要求已经存在具体的 Consumer implementation；§16.2 的 Service 判据要求**真实的 callable need**，本轮的 callable need 由 P4-03 的人工裁决（选项 A）直接定义。**不是**「以后可能有人会用」——§16 正文写明：若主要理由是「以后可能有用」，默认不创建。这**不构成**无 consumer Service 的一般许可。
 >
@@ -54,7 +54,7 @@
 >
 > **它交付了 Hikari 的第一个 relevance judgement，也是第一个真实的、通过产品入口读到 human declaration 的 reader。** 判词规则在 v1 **冻结且刻意极窄**：**逐字相等**——某个 designation 与被观察到的 `snapshot.githubCi.observation.repository` **字符串完全相同**，且 `githubCi` facet 为 `available`、且存在至少一个 designation。**严格不做**：trim、大小写折叠、basename、owner/name 拆分、路径解析、remote URL 推断、repository identity 推断、fork 判定、模糊匹配、别名、模型匹配、embedding、语义相似度。输出**仅为** `relevant` / `unknown`（**没有 `unrelated`**）：`unknown` 表示判定**完成**但没有建立相等关系，不是失败。判定函数取的是 **snapshot 而不是 assessment**，因此 `commitComparison`（`same` / `different` / `indeterminate`）**在结构上无法影响** relevance 结论——Awareness 的判词与 relevance 的判词**正交**，`same` 不使任何东西变相关，`different` 也不使任何东西变不相关。
 >
-> **一处 Contract Gate 的重新裁决，而不是豁免：** `work-focus.current@1` **现在被提供**。此前 `work-focus` 的 `provides` 为空，并有测试要求「requires 它的插件永远 `waiting`」；该测试的依据是「不存在真实的 callable need」。**真实的 callable need 已经到达**——`repository-ci-relevance` 就是那个 consumer——因此该测试被**反转**（钉住「它确实被登记、且依赖它的插件 `active`」）而**不是被删除**。`repository-ci-relevance` **自己仍然不提供任何 Service**：它真实的 reader 是 CLI，经本地端点提问，为它发布 contract 等于为零个人发布。**没有创建任何新的通用 contract。**
+> **一处 Contract Gate 的重新裁决，而不是豁免：** `work-focus.current@1` **现在被提供**。此前 `work-focus` 的 `provides` 为空，并有测试要求「requires 它的插件永远 `waiting`」；该测试的依据是「不存在真实的 callable need」。**真实的 callable need 已经到达**——`repository-ci-relevance` 就是那个 consumer——因此该测试被**反转**（钉住「它确实被登记、且依赖它的插件 `active`」）而**不是被删除**。`repository-ci-relevance` **当时不提供任何 Service**：它真实的 reader 是 CLI，经本地端点提问，为它发布 contract 等于为零个人发布。**当时没有创建任何新的通用 contract。**（**口径更新（JUDGEMENT REACHABILITY v0 之后）：这一段已不再成立**——本轮它**提供了** `repository-ci-relevance.current@1`，因为组合内第一次出现了真实的 callable need：repository-aware Language variant。§16.2 的判据没有被放宽，被满足的是它。**见 `judgement-reachability-v0.md`。**）
 >
 > **一处 production composition 的条件化，且只有一条分支：** Repository CI capability 是**显式启用的领域能力**。默认常驻保持原有组合，**不需要 repository root、不需要 GitHub repository、不因缺少 Git / GitHub 配置而拒绝启动**。配置规则是**原子**的：`--repository-root <path>` 与 `--repository <owner/name>` **要么都给、要么都不给**；只给一个是**配置错误**，明确拒绝启动并指出缺的是哪一个。**没有默认值、没有 cwd → repository-root 推断、没有 git remote → GitHub repository 推断、没有自动发现。** v1 **只允许 0 或 1 个**显式 repository scope，**不设计多 repository 框架**。这个分支是**当前产品需求的一份局部实现**，**不是** Profile system / Capability registry / Dynamic plugin loader / OptionalPlugin framework / RepositoryScope registry —— 有源码扫描测试钉住这一点。
 >
@@ -72,7 +72,7 @@
 >
 > **`requires` 恰好是冻结的那两个**（`work-focus.current@1` 与 `desktop-session-awareness.peek@1`），`provides` 为空。**Repository CI 不在 v1 里，理由是结构性的**：Runtime 的 `requires` 是 `every`，缺一个契约的成员会停在 `waiting`、`isReady` 为假，而 `resident.ts` 会因此退出——所以「没有 CI 配置的机器上语言插件也要能起来」不是一句承诺，是依赖清单的形状决定的，有测试逐字钉住。它读桌面用的是 **`peek@1` 而不是 `current@1`**：提问**不推进** awareness 的 baseline，「inspection 不参与 judgement timeline」在这里同样成立、同样是**持有的能力的性质**而不是遵守的规则。
 >
-> **组合是四个合法组合里的一个分支。** 默认组合（九个成员）**不变**；只有 `--model-endpoint` 与 `--model` **同时**给出时，语言插件才作为**第十个**成员加载。**没有默认端点、没有默认模型、没有自动发现**；只给一半是**配置错误**，明确拒绝启动并指出缺的是哪一个（前例是 Repository CI 的同一对参数）。**没有模型时状态行说明「语言插件未加载」**，而不是让 `ask` 去猜一个不存在的出口。这个分支**不是** Profile system / Capability registry / Dynamic plugin loader / OptionalPlugin framework，有源码扫描测试钉住。
+> **组合是四个合法组合里的一个分支。** 默认组合（九个成员）**不变**；只有 `--model-endpoint` 与 `--model` **同时**给出时，语言插件才作为**第十个**成员加载。**（口径更新（JUDGEMENT REACHABILITY v0 之后）：一个常驻若**同时**给了 repository scope 与 model，语言成员是**第十五个**，且加载的是 repository-aware variant 而不是 base variant——合法组合因此从两条变成四条，见 `judgement-reachability-v0.md`。）****没有默认端点、没有默认模型、没有自动发现**；只给一半是**配置错误**，明确拒绝启动并指出缺的是哪一个（前例是 Repository CI 的同一对参数）。**没有模型时状态行说明「语言插件未加载」**，而不是让 `ask` 去猜一个不存在的出口。这个分支**不是** Profile system / Capability registry / Dynamic plugin loader / OptionalPlugin framework，有源码扫描测试钉住。
 >
 > **一处被实测撞出来的真泄漏，已修在值进入进程的那一处（本轮修正轮，对抗性评审发现）**：凭据的唯一去处是 `Authorization` 头，而 HTTP 层拒绝某些头值时会**把它拒绝的值原样引用进错误消息**。实测三种形状的答案并不相同——**开头或中间**的换行会抛出并带回完整 secret（经「细节」行打到 stderr）；**结尾**换行按头值空白规则被剥掉、能通；非 ASCII 被直接接受。因此「secret 不进 stderr」不可能是错误消息的性质，只能是**值的性质**：`readModelCredential` 现在拒绝整个补集（凭据只能是可打印 ASCII、不含空格），**比传输层实际拒绝的更严**，理由是守卫问的是「这是不是一个 bearer token」而不是「这个库今天拒绝什么」——按后者枚举，既会拒绝能用的、也会放过没测过的。拒绝只发生在启动处、**fail-closed**、只说变量名与规则，**不引用值、也不指认是哪一个字符**（会指认那个字节的诊断，本身就是它要报告的那次泄漏）。
 >
@@ -102,17 +102,17 @@
 >
 > **两条既有文件名册守卫因新增文件而触发，已同步更新名册内容并附注释说明该文件来自本轮而不是来自 loop。** 两条守卫的**断言机制逐字未动**（仍是精确 `deepEqual` 列举 + 未改的 import 白名单循环）——这是护卫兵按设计工作，**不是被放宽**。另：本轮做过一次只读对抗性评审，提出 6 条候选，逐条重新锚定到源码后**全部采纳**（4 条改代码、5 条改文档），其中一条是上面那次 barrel 导出撤回，一条是一处真实测试漏洞（四类引申只断言了两类，另两类删掉测试仍会全绿），另两条是文档叙述与实际失败路径不符。
 >
-> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`，P4-02.1 的实现与复盘见 `docs/development/phase-4-resident-control.md`；P4-03 supporting slice（Git Repository Perception v1）的实现与立项依据见 `docs/development/phase-4-git-repository-perception.md`，Repository CI World v1 的实现与立项依据见 `docs/development/phase-4-repository-ci-world.md`；第四阶段的架构评审文档见 `docs/architecture/phase-4-explicit-human-reference-review.md`（P4-03 Explicit Human Reference Frame Boundary Review，verdict **BLOCKED**，commit `87605c6`）与 `docs/architecture/phase-4-explicit-work-focus-review.md`（P4-03 Explicit Work Focus Vertical Slice Boundary Review，verdict **NARROW**）。
+> 长期原则以 `docs/architecture/principles.md` 为准；v0 架构边界以 `docs/architecture/core-architecture-v0.md` 为准；第一阶段实现与复盘见 `docs/development/phase-1-runtime.md` 与 `docs/architecture/phase-1-architecture-review.md`；第二阶段 P2-01 实现与复盘见 `docs/development/phase-2-continuity.md` 与 `docs/architecture/phase-2-continuity-architecture-review.md`；P2-02 实现与复盘见 `docs/development/phase-2-chronicle.md` 与 `docs/architecture/phase-2-chronicle-architecture-review.md`；P2-03 实现与复盘见 `docs/development/phase-2-cli.md` 与 `docs/architecture/phase-2-cli-architecture-review.md`；P2-04 实现与复盘见 `docs/development/phase-2-lifecycle.md` 与 `docs/architecture/phase-2-final-architecture-review.md`；第三阶段 P3-01 实现与复盘见 `docs/development/phase-3-foreground.md` 与 `docs/architecture/phase-3-foreground-architecture-review.md`；P3-02 实现与复盘见 `docs/development/phase-3-input-activity.md` 与 `docs/architecture/phase-3-input-activity-architecture-review.md`；P3-03 实现与复盘见 `docs/development/phase-3-desktop-session-world.md` 与 `docs/architecture/phase-3-desktop-session-world-architecture-review.md`；P3-04 实现与复盘见 `docs/development/phase-3-desktop-session-awareness.md` 与 `docs/architecture/phase-3-desktop-session-awareness-architecture-review.md`；P3-05 实现与复盘见 `docs/development/phase-3-vertical-slice.md` 与 `docs/architecture/phase-3-final-architecture-review.md`（后者同时是第三阶段的最终架构评审与收口文档）；第四阶段 P4-01 与 P4-01.1 的实现与复盘见 `docs/development/phase-4-desktop-session-awareness-loop.md`，P4-02 的实现与复盘见 `docs/development/phase-4-resident.md`，P4-02.1 的实现与复盘见 `docs/development/phase-4-resident-control.md`；P4-03 supporting slice（Git Repository Perception v1）的实现与立项依据见 `docs/development/phase-4-git-repository-perception.md`，Repository CI World v1 的实现与立项依据见 `docs/development/phase-4-repository-ci-world.md`，Judgement Reachability v0（工作标签，不占阶段编号）的实现与三条未来 guard 见 `docs/development/judgement-reachability-v0.md`；第四阶段的架构评审文档见 `docs/architecture/phase-4-explicit-human-reference-review.md`（P4-03 Explicit Human Reference Frame Boundary Review，verdict **BLOCKED**，commit `87605c6`）与 `docs/architecture/phase-4-explicit-work-focus-review.md`（P4-03 Explicit Work Focus Vertical Slice Boundary Review，verdict **NARROW**）。
 >
 > **Language Tool-use Loop v1 已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `38bf7cd`，CI Runtime Tests #35812104427 **success**：533 tests / 455 pass / 78 skipped / 0 fail；本机 533 / 531 pass / 2 skipped / 0 fail——本机被跳过的是环境门控的语义 live 测试与 POSIX SIGTERM 用例，CI 上另有 76 条依赖命名管道的用例被跳过），详见 `docs/development/language-tool-use-loop-v1.md`。它是**工作标签，不占用任何阶段编号**——**不是** P4-04，**不是** P4-03 的一部分。前置是 `Agent-callable Capability Surface v0`（commit `fdacd93`），本轮开工时 `HEAD` = `85dd4fe`。
 >
 > **它把 Language 内部的第一个 router 删掉了，因此第二个也没有了。** 改动前是 `Topic Router（LANGUAGE_TOPICS 四选一）→ Tool Router（topic → Service）→ Domain Plugin` 两级串联，而第二个 router 正是第一个存在的理由。现在模型直接写 capability 名字：`work-focus` → `work_focus.read`，两个 desktop topic → `desktop_context.read`，`current-context` 不是 capability 而是「都读一遍」，那正是 loop 读两次做的事。`src/language/topics.ts` 与 `src/language/understanding.ts` 已删除。**Topic Router 与 Tool Router 并存是明确禁止的中间态**——那会得到一个「先挑 topic、再在 topic 里挑 capability」的两级选择，第二级还受第一级产出的那个词约束。**Language 的 dialogue concern 没有退役**，它换了形状：`{topic, at}` → `{reads, at}`。
 >
-> **第一轮只有两个闭集：直接对话回复，或 capability 调用。** 非空 `content` 且 `tool_calls` 空 → `chatted`；`tool_calls` 非空 → `content` **整段丢弃**。后者是结构性的：`answer.ts` 读到非空 `toolCalls` 时根本不读 `content`，所以那段文本不是被过滤掉的，而是**从来没有进入过任何变量**——**模型不能一边调 tool 一边夹带一段用户可见的散文**。`tools[]` 由 `tools.ts` 从 `LANGUAGE_EXPOSURES` 机械 `map` 出来，`description` 是 owner 的字段按引用透传，**Language 里没有一句 capability 描述文本**；回程走 `findExposure` 对**同一个数组**线性查找，**模型字符串永远不能直接成为 Service key**。
+> **第一轮只有两个闭集：直接对话回复，或 capability 调用。** 非空 `content` 且 `tool_calls` 空 → `chatted`；`tool_calls` 非空 → `content` **整段丢弃**。后者是结构性的：`answer.ts` 读到非空 `toolCalls` 时根本不读 `content`，所以那段文本不是被过滤掉的，而是**从来没有进入过任何变量**——**模型不能一边调 tool 一边夹带一段用户可见的散文**。`tools[]` 由 `tools.ts` 从 `LANGUAGE_EXPOSURES` 机械 `map` 出来，`description` 是 owner 的字段按引用透传，**Language 里没有一句 capability 描述文本**；**（口径更新（JUDGEMENT REACHABILITY v0 之后）：`toModelTools` 现在接收列表作为参数，base variant 传 `LANGUAGE_EXPOSURES`、repository-aware variant 传 `LANGUAGE_REPOSITORY_EXPOSURES`——「机械 map、没有第二份描述」不变，变的只是列表由 variant 显式传入而不是模块级常量。见 `judgement-reachability-v0.md`。）**回程走 `findExposure` 对**同一个数组**线性查找，**模型字符串永远不能直接成为 Service key**。
 >
-> **循环终止是推出来的不变量，不是魔数。** 没有 `MAX_AGENT_STEPS`；不变量是「每一次能够继续的迭代必须消费一个此前没有读过的 exposure，否则终止」，因此 `LANGUAGE_EXPOSURES.length = 2` ⇒ 最多 2 次 Service 读、最多 3 次模型调用。同一个 capability 在一次交互中不会被读第二次，重复调用不产生第二次 Service 读并直接终止，未知名与非法参数不被执行。**一个永远重复同一调用的脚本模型因此确定性终止。** 一处由对抗性评审发现的真实缺口（同一个批里两条调用共用一个 `tool_call_id`）已显式拒绝——它可达，且放任它会让下一次请求被按 id 索引结果的端点拒绝，把一次本该成功的 grounded 回答变成 `failed`。
+> **循环终止是推出来的不变量，不是魔数。** 没有 `MAX_AGENT_STEPS`；不变量是「每一次能够继续的迭代必须消费一个此前没有读过的 exposure，否则终止」，因此 `LANGUAGE_EXPOSURES.length = 2` ⇒ 最多 2 次 Service 读、最多 3 次模型调用。**（口径更新（JUDGEMENT REACHABILITY v0 之后）：上界由 **variant 自己的** exposure 集合推导，不再是单一常量——base variant 仍是 2 读 / 3 调用，repository-aware variant 是 3 读 / 4 调用；`src/cli/ask.ts` 的等待上界取两者中较长的一个推导，不写死。见 `judgement-reachability-v0.md`。）**同一个 capability 在一次交互中不会被读第二次，重复调用不产生第二次 Service 读并直接终止，未知名与非法参数不被执行。**一个永远重复同一调用的脚本模型因此确定性终止。** 一处由对抗性评审发现的真实缺口（同一个批里两条调用共用一个 `tool_call_id`）已显式拒绝——它可达，且放任它会让下一次请求被按 id 索引结果的端点拒绝，把一次本该成功的 grounded 回答变成 `failed`。
 >
-> **tool result 没有 Universal Result Envelope**：模型看到的**就是**确定性的 grounded 人类可读块（`renderFocus` / `renderAssessment`），**不把 raw Service 结构整棵交给模型**，且**模型看到的内容与最终 grounded answer 使用的是同一份数组**。`read.ts` 在返回前对每一行做一次 `oneLine`，因为工作焦点是人打进去的文本。
+> **tool result 没有 Universal Result Envelope**：模型看到的**就是**确定性的 grounded 人类可读块（`renderFocus` / `renderAssessment`；**口径更新（JUDGEMENT REACHABILITY v0 之后）：现在是三个，第三个是 owner 自己的 `renderJudgement`**），**不把 raw Service 结构整棵交给模型**，且**模型看到的内容与最终 grounded answer 使用的是同一份数组**。`read.ts` 在返回前对每一行做一次 `oneLine`，因为工作焦点是人打进去的文本。
 >
 > **outcome 由三个变四个：新增 `chatted`（0 次 capability 读取）**，与 `answered`（≥1 次成功读取）**不合并**——只有后者有资格被当作关于这台机器的事实。grounded 状态下**没有**自由 prose 的出口：模型可以决定「还需要读什么」，不能决定「这些事实意味着什么」。**Grounded LLM Expression 明确不在本轮**，记录为后续独立 slice。
 >
@@ -125,6 +125,18 @@
 > **口径更新（non-thinking 模型调用语义冻结之后）：Language 的模型调用语义已由人类裁决冻结为 non-thinking，config 上多了一个最小的可选 `reasoningEffort`（闭集当前只有 `'none'`）。** 入口仍是既有的那一条：CLI `--model-reasoning-effort` → `LanguagePluginConfig.reasoningEffort` → `LanguageModelConnection.reasoningEffort`，live harness 用**同一个** connection 字段，没有第二套 request body。**未配置时请求体逐字与冻结前一致、不带 `reasoning_effort`**，所以其它 OpenAI-compatible endpoint 不受影响；配置为 `'none'` 时**顶层**加入 `reasoning_effort: "none"`，仅此一个字段。**没有**加入 `thinking`、`reasoning_content`、provider 判断、endpoint sniffing、DeepSeek 特判、Model Router、Provider Registry、generic `extra_body` 或 reasoning trace abstraction——**理由不是「某个 provider 默认打开 thinking」**（那是某一个 endpoint 的事实，写进代码就是 endpoint 特判），而是**本构建不拥有 reasoning trace 的生命周期**：不解析、不保存、不回放，而一个产出它又在下一轮要求回传的模式会让每一次 grounded 回答的第二轮失效。本块的其它结论（循环、终止不变量、四个 outcome、Speech Sovereignty、两个 Service contract、exposures 与 description）**一律未动**，`src/runtime/**` 同样一个字节未改。真实 endpoint 的两轮 tool calling 证据与「8×3 门禁在本机 NOT RUN」记录在 `docs/development/language-tool-use-loop-v1.md` §13.4。
 >
 > **口径更新（thinking tool loop 之后）：`reasoningEffort` 的闭集已由 `'none'` 扩为 `'none' | 'high'`，并且本构建在单次 interaction 内实现了 `reasoning_content` 的原样回放。** 上一条里「本构建不拥有 reasoning trace 的生命周期：不解析、不保存、不回放」作为**当时的理由**仍然成立，作为**现在的口径**已被取代：被取代的不是「不拥有」，而是「因此不能支持 thinking 模式」。生命周期仍然只有一个 interaction——它不进 Dialogue Context、不进 Chronicle、不进 Memory、不是 Judgement state、不跨 interaction 存活，也不是用户可见内容；变的是它可以在**同一次交互内**被原样带回，而这正是 thinking 端点做多轮 tool calling 的前提。同一轮里 `MODEL_MAX_TOKENS` 由 512 改为 **4096**，附真实端点单变量实测（high@512 有 3/24 次首轮 `finish_reason=length`，high@4096 为 0/24）。**没有**因此加入 ReasoningService / ReasoningTrace / shared reasoning contract / Runtime primitive / Provider Registry / Model Router / endpoint sniffing / DeepSeek 分支 / keyword routing；`src/runtime/**` 再次一个字节未改，两个 Service contract 未动，`LANGUAGE_EXPOSURES` 仍是两个字面条目。**真实 endpoint 的完整 8×3 thinking tool-loop 门禁 = PASS**（`deepseek-flash` / `reasoning_effort=high` / `max_tokens=4096`，8 句 × 3 次共 24 个 interaction，全部通过；forbidden 0 violation、meta-domain detour 0、`reasoning_content` 36/36、一次只读 over-read 按冻结 Read Policy 仅记录）。证据记在 `docs/development/language-tool-use-loop-v1.md` §15.8；本机 harness 仍然 NOT RUN（无 endpoint 与凭据）。
+>
+> **Judgement Reachability v0 已实现**（**工作标签，不占用阶段编号**），详见 `docs/development/judgement-reachability-v0.md`。本条目随实现落地；**Functional / Architecture Review 结论与 commit / CI 记录另起一条口径更新**（仓库惯例：结论先写、哈希与 CI run 随后追记）。它把此前只有 `hikari relevance` 能读到的 relevance 判定接到模型可达范围内：`repository-ci-relevance` **提供** `repository-ci-relevance.current@1`（Service 与端点走**同一条** `judge` 实现路径，不是两份逻辑），Language 因此有了**两个具名 variant**——base（2 exposures，逐字未变）与 repository-aware（3 exposures，多 require 一个 relevance Service）。**base Language 不依赖 Repository CI**；有没有 repository scope 是**组合决定的事**，不是插件自己评估的条件。合法组合因此从**两条变成四条**（9 / 10 / 14 / 15），Language 在「repository scope + model」里排在 CI 链**之后**。
+>
+> **一处刻意放弃的不变量，以及刻意保留的那一半：** 旧顺序下四个 roster 是**嵌套**的（每个都是下一个更大 roster 的字面前缀），新顺序下 `base + language` 不再是 `base + chain + language` 的前缀。**被放弃的只是嵌套**——默认九个成员仍然是四个组合**共同**的字面前缀、共有成员相对顺序不变，这两条仍被测试钉住。**没有为此修改 Runtime readiness 语义**：`src/runtime/**` 一个字节未改，排序本来就是 `src/cli/resident.ts` 的职责。
+>
+> **一处 Contract Gate 的重新裁决，而不是豁免：** §16.2「没有真实 callable need 就不建 Service」**没有被动过，被满足的正是它**——组合里第一次出现了会**主动调用**它的 consumer。§16.1 放宽的只是读法（不要求 Consumer implementation 已存在）。同一个 slice 里 **Service 与 exposure 必须同时落地**，单独一个 Service 不构成批准。
+>
+> **两条未来 guard 记入 `judgement-reachability-v0.md`：**（一）具名 variant 只对「base + repository-aware」这一种情形批准——出现**第二类**独立可选的 domain capability 时，答案不是加第三份清单或第三个工厂，而是做一次 Composition Boundary Review 重新审查「能力可达性是否应当在组合时决定」；（二）grounded presentation 没有被重新打开，第三个 capability 走的是同一条确定性 grounded 路径。
+>
+> **验证分层，且不得互相冒充：** 结构不变量（A–K 十条的机械证明、四个 roster、Service 与 exposure 的存在性）由自动化测试证明。**真实 endpoint 的语义验证在本机 NOT RUN**——这台机器无法访问真实模型端点，因此它不是 PASS 也不是 FAIL。可以断言的是 harness 的评判逻辑在本轮改动后仍有效且非平凡：五模式的本地假 endpoint 得到 4 种不同的失败断言 + 一次干净通过。
+>
+> **补了一处此前存在的覆盖缺口：** `src/language/**` 此前没有 slice 局部的 forbidden-structure 扫描，而 `src/` 全量扫描的模式里没有 `ServiceLocator` / tool registry / discovery——正是本轮点名要确认缺席的三类。已按仓库既有约定补上（只命名「若要引入必须新造」的复合标识符，不写裸名词，否则会在否定这些词的注释上变红）。
 
 ---
 
@@ -708,7 +720,7 @@ hikari resident  生产常驻组合
 
 **`start` 不是「旧版 resident」，resident 也不是「改版 start」**：前者回答「这套组合现在能不能起来」，后者回答「起得来之后，谁来一直持有这个进程」。
 
-**生产组合有两个，都是合法的，各自被测试单独钉住。** 默认组合（正好九个 Plugin，按加载顺序）：
+**生产组合有两个，都是合法的，各自被测试单独钉住。**（**口径更新（JUDGEMENT REACHABILITY v0 之后）：现在是四个，全部合法、全部被单独钉住**——上面两个之外，再加「repository scope + model」（十五个成员，语言成员是 repository-aware variant）与「model 而无 repository scope」（十个成员，语言成员是 base variant）。**四个 roster 共享同一个基础前缀且共有成员保持相对顺序**，由 `test/resident-cli.test.mjs` 的 `四个 roster 共享同一个基础前缀` 一条钉住；两个语言 roster 加载的是**不同**的 variant。见 `judgement-reachability-v0.md`。） 默认组合（正好九个 Plugin，按加载顺序）：
 
 ```text
 1  continuity
@@ -732,7 +744,9 @@ hikari resident  生产常驻组合
 14  repository-ci-relevance
 ```
 
-**「九个」不再是一个架构不变量，而是默认组合这一条可执行事实。** 它最初读作不变量，之后读作「默认组合恰好是这八个」，现在读作「恰好是这九个」。因此测试钉的是**两条合法组合各自**，而不是把九改成十四：把成员数当成不变量，会在下一次合法组合出现时逼出一次无意义的改数。
+**（口径更新（JUDGEMENT REACHABILITY v0 之后）：给了 model 时再追加第十五个 `language`，且它加载的是 repository-aware variant——它要求 `repository-ci-relevance.current@1`，因此必须排在第 14 个成员之后；没有 model 就没有这个成员。）**
+
+**「九个」不再是一个架构不变量，而是默认组合这一条可执行事实。** 它最初读作不变量，之后读作「默认组合恰好是这八个」，现在读作「恰好是这九个」。因此测试钉的是**每条合法组合各自**（现在是四条），而不是把九改成十四：把成员数当成不变量，会在下一次合法组合出现时逼出一次无意义的改数。
 
 `work-focus` 是 P4-03 Explicit Work Focus Local Ingress v1 加入的成员，也是唯一一个**供人写入、而不是供人读出**的 Plugin。**它现在提供 `work-focus.current@1`**（不变的是：不发 Event、不写 Chronicle、无持久化、公开面仍然只有它自己的本地端点）。这条 contract 的成立依据是 Repository CI Relevance v1 带来的真实 consumer，见文首 Contract Gate 重新裁决一段。放在最后是有意的而非追加的，理由见 `src/cli/resident.ts` 的 `productionComposition`。
 
@@ -1852,7 +1866,7 @@ P4-03 的交付路径由以下六个 supporting slice 构成。**它们是真实
 | 5 | Explicit Work Focus Local Ingress v1 | `work-focus` Plugin（本机端点） | human ingress，接收 explicit designation |
 | 6 | Repository CI Relevance v1 | `work-focus.current@1`（翻转创建）+ `repository-ci-relevance` Plugin + `hikari relevance repository-ci status` | 状态可读契约、判词与出口 |
 
-分层保持干净：`work-focus`（`requires: []` 叶子）→ 恰好一条边 → `repository-ci-relevance`（`provides: []`）→ 一条边 → `repository-ci-awareness` → `repository-ci-world` → 两个源。**没有插件越过自己的层。**
+分层保持干净：`work-focus`（`requires: []` 叶子）→ 恰好一条边 → `repository-ci-relevance`（`provides: []`）→ 一条边 → `repository-ci-awareness` → `repository-ci-world` → 两个源。**没有插件越过自己的层。**（**口径更新（JUDGEMENT REACHABILITY v0 之后）：`repository-ci-relevance` 现在 `provides: [repository-ci-relevance.current@1]`——分层不变、边数不变，增加的是一条**下游**边。见 `judgement-reachability-v0.md`。**）
 
 ### 三、Completion condition
 
@@ -1877,7 +1891,7 @@ P4-03 COMPLETE 的含义是：**Hikari 已能够**
 且该判词有一个真实 reader。
 ```
 
-四项均已满足：domain-local（判词留在插件内，`provides: []`）· 恰好一条边（`work-focus.current@1`）· 二值判词（`relevant | unknown`，元数由类型钉死）· 真实 reader（见下节）。
+四项均已满足：domain-local（判词留在插件内，`provides: []`）· 恰好一条边（`work-focus.current@1`）· 二值判词（`relevant | unknown`，元数由类型钉死）· 真实 reader（见下节）。**（口径更新（JUDGEMENT REACHABILITY v0 之后）：`provides: []` 这一项已不成立——它现在提供 `repository-ci-relevance.current@1`。判词本身仍然 domain-local，且 Service 与端点是**同一条实现路径**（一个 `judge` 闭包同时喂两边），没有第二份判定。见 `judgement-reachability-v0.md`。**）
 
 ### 四、真实人工 production evidence
 
