@@ -150,7 +150,7 @@
 >
 > **Chronicle 与状态仍然分离，两个方向都没有接。** append 失败不能撤销状态改变；**历史也不能恢复状态**——重启之后 Work Focus 仍然从空开始（state 在 activation 闭包里），而 `chronicle read()` 仍然读得到上一轮生命周期写下的事实。**这两者同时成立是本轮的正确行为**，不是待修的缺口，有一张测试同时钉住两半。Chronicle 仍然只保存**发生过什么**，它不解释**这意味着什么**；importance / salience / confidence / relation / memory 相关字段一个都没有。
 >
-> **一处同步 host 的最小异步化。** `WorkFocusHost.handle` 现在返回 Promise（应答可能要等一次 durable write）。**没有错误被抛进 socket 的 `data` 处理器**（`serve` 只框定与解码，`void answer(...)` 交接，`answer` 不可能 reject）、**Chronicle 失败不会杀死常驻**（在 session 内被折叠成降级 reply）、**客户端仍拿到确定性应答**。`IDLE_CONNECTION_MS` / `REPLY_TIMEOUT_MS` **没有被改动**，只被显式核对过（`append` 实测空 store 4.6 ms、25 000 条 322 ms，留两个数量级余量），并写明越界代价是**没有答案**、**永远不是错的答案**。**没有** queue / worker / retry subsystem。
+> **一处同步 host 的最小异步化。** `WorkFocusHost.handle` 现在返回 Promise（应答可能要等一次 durable write）。**没有错误被抛进 socket 的 `data` 处理器**（`serve` 只框定与解码，`void answer(...)` 交接，`answer` 不可能 reject）、**Chronicle 失败不会杀死常驻**（在 session 内被折叠成降级 reply）、**客户端仍拿到确定性应答**。`IDLE_CONNECTION_MS` / `REPLY_TIMEOUT_MS` **没有被改动**，只被显式核对过（`append` 实测空 store 约 3–5 ms；25 000 条事实时 5 次采样中位数 73.2 ms、最大 79.8 ms，5 000 ms 预算约为中位数的 68 倍；另一次约 322 ms 的未复现历史观测及其保守解释见 `durable-fact-admission-v0.md`，现有证据不支持调整超时），并写明越界代价是**没有答案**、**永远不是错的答案**。**没有** queue / worker / retry subsystem。
 >
 > **验证分层，且不得互相冒充。** 本机（Windows 真实命名管道）额外证明整条链路——CLI → 常驻 → 端点 → session → Chronicle 落盘，三条事实类型、顺序、载荷逐条对得上，且数据目录里没有多出第二个存储文件。CI（ubuntu，无命名管道）证明**承认规则本身**：`requires` 结构与 `waiting`、四类语义无操作一次 append 都不调用、每个真实转换恰好一条、owner 自述的事实形状与 source 声明、持久化未确认时的全部失败语义——**这一段没有任何 skip 门控**，它驱动的是 `plugin.ts` 亲手交给端点的同一个 session 对象（写成 `setup` 闭包的版本只能经管道到达，CI 会跳过，同 `judgement-reachability-v0.md` §7.3 记录的那类缺口）。本机计数：全量 **575 tests / 571 pass / 4 skipped / 0 fail**；`test/work-focus.test.mjs` 40 / 40 / 0 skipped。
 >
