@@ -17,6 +17,13 @@
 // block, which is not a coincidence to be tidied away later: it is the strongest available evidence
 // that neither is inventing anything.
 //
+// `renderSpokenOccurrence` at the end of this file is the same rule reaching a second kind of caller.
+// It is not an answer to a question — nobody asked — but the step it performs is this file's step:
+// take one owner's already-rendered material out of that owner's own renderer and lay it out for a
+// person. The occurrence's block is `renderOccurrence` from `repository-ci-attention`, called on the
+// value that module's judgement produced, so what a human is told about a CI failure is that module's
+// sentence and not this one's. Nothing between the two is paraphrased, reordered or summarized.
+//
 // It does not add. Every line is a fixed label and values taken from a contract verbatim, and the only
 // free text that reaches a line is text a human wrote (a work focus designation), text an owner already
 // rendered, or — in the one new case below — the model's own conversational reply, which is not a claim
@@ -35,6 +42,8 @@
 
 import type { DesktopSessionAwarenessAssessment } from '../desktop-session-awareness/index.js';
 import { renderAssessment } from '../desktop-session-observe/index.js';
+import { renderOccurrence } from '../repository-ci-attention/index.js';
+import type { RepositoryCiAttentionOccurrence } from '../repository-ci-attention/index.js';
 import { oneLine } from '../terminal-text/index.js';
 
 import type { DialogueTurn } from './dialogue.js';
@@ -94,6 +103,44 @@ export function renderAnswer(blocks: readonly GroundedBlock[], contextUsed: Dial
   // inherit the guarantee by accident. `oneLine` does not touch a backslash, so the second pass is a
   // no-op on lines that already went through the first.
   return lines.map(oneLine);
+}
+
+// The name the block below is read under. It is bookkeeping and never reaches a line — `GroundedBlock`
+// says so — but it is named after the module that formed the judgement rather than after the topic, for
+// the reason `advanceDialogue` records a list of capability names: a name that named a topic would be
+// this file having an opinion about what the failure was about.
+const REPOSITORY_CI_ATTENTION_BLOCK = 'repository-ci-attention';
+
+/**
+ * A CI failure Hikari noticed, said out loud.
+ *
+ * The one place in this build where Language speaks without being asked, and the reason it is a
+ * function rather than a sentence written here: the words are `renderOccurrence`'s, and this file only
+ * decides how a grounded block is laid out. Language is not entitled to judge whether a failure
+ * matters, whether a repository is relevant, or whether this occurrence has been said before — all
+ * three were decided before this value existed, by the module that owns them.
+ *
+ * It goes through `renderAnswer` rather than returning the owner's lines directly, and that is not
+ * ceremony. `renderAnswer` is where "one element is one line" becomes a property of the returned value
+ * rather than a hope about the lines that went into it, and a second exit from this file that skipped
+ * it would be a second answer to a question the first one already answers. `contextUsed` is `null`
+ * because there is no previous turn: nothing was asked, so there is no context this is understood
+ * against, and a context line under a proactive message would attribute it to a dialogue that never
+ * happened.
+ *
+ * Exported because on `ubuntu-latest` the plugin's own `setup` refuses before anything under it runs —
+ * the platform gate — so a rule reachable only through activation is a rule CI never checks. What the
+ * test reads is the same function `plugin.ts` hands the composition as `speak`, so "Language's
+ * expression of an occurrence is the owner's rendering, laid out as a grounded block" is a statement
+ * about the plugin rather than about a copy of it.
+ */
+export function renderSpokenOccurrence(
+  occurrence: RepositoryCiAttentionOccurrence,
+): readonly string[] {
+  return renderAnswer(
+    [{ name: REPOSITORY_CI_ATTENTION_BLOCK, lines: renderOccurrence(occurrence) }],
+    null,
+  );
 }
 
 /**
