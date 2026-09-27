@@ -83,16 +83,19 @@ export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttention
 
     // Activation-local, and deliberately nothing beyond this. A deactivation ends the closure and a
     // later reactivation begins from an empty set, so no token is needed to tell activations apart and
-    // a restart re-announces whatever is currently red. That is the v0 semantics the Repository CI
-    // Attention review settled on; cross-runtime memory would need a durable store and this plugin
-    // must not acquire one.
+    // a restart handles whatever is currently red all over again. That is the v0 semantics the
+    // Repository CI Attention review settled on; cross-runtime memory would need a durable store and
+    // this plugin must not acquire one.
     //
-    // What is stored is what was *said*, never what was *seen*. See `judgement.ts` for why that
-    // distinction is what makes the in-progress-to-failure transition fall out for free.
+    // What is stored is what was *handled*, never what was merely *seen* — and, just as deliberately,
+    // never a claim about what happened next. Membership records that this activation took a failure on
+    // and will not take it on again; it does not record that anyone received anything. See `judgement.ts`
+    // for why the see/handle distinction is what makes the in-progress-to-failure transition fall out
+    // for free, and the block below for why the delivery outcome does not enter here at all.
     let stopped = false;
     let pendingTimer: ReturnType<typeof setTimeout> | undefined;
     let inFlight: Promise<void> | undefined;
-    const announced = new Set<number>();
+    const handledFailures = new Set<number>();
 
     // The only thing that ever arms a cycle, and it arms exactly one. Because a cycle is scheduled from
     // the previous cycle's completion, a poll slower than `delayMs` cannot overlap the next one —
@@ -112,23 +115,30 @@ export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttention
         const observation = await ci.current();
 
         // Checked again on the far side of the await. An activation can end while a request is in
-        // flight, and an occurrence that arrives afterwards is one this activation must not announce —
+        // flight, and an occurrence that arrives afterwards is one this activation must not take on —
         // the work being already underway does not make the result its to speak.
         if (stopped) return;
 
-        const occurrence = detectNewFailure(observation, announced);
+        const occurrence = detectNewFailure(observation, handledFailures);
         if (occurrence === undefined) return;
 
         // Recorded before the two calls below, and that order is the whole of the delivery-failure
         // policy. The judgement has been made; delivery is a separate plane with its own answer, and
         // none of its three outcomes may roll this back. Recording afterwards would mean a transport
-        // that is down turns every cycle into a fresh announcement, which is a retry loop nobody
-        // wrote — and the ruling is explicit that this slice has no retry.
+        // that is down turns every cycle into a fresh attempt, which is a retry loop nobody wrote — and
+        // the ruling is explicit that this slice has no retry.
+        //
+        // What that means for this set is worth stating plainly, because it is what the name has to
+        // carry: an id lands here whether the transport said `delivered`, `unavailable` or `failed`, so
+        // `handled ≠ delivered ≠ human observed`. The set answers "has this activation already done its
+        // work on this failure", and it answers nothing about whether a human saw it. An earlier name
+        // said "announced" and quietly claimed the second and third of those on the strength of the
+        // first — a claim this plugin is in no position to make, since it discards the outcome.
         //
         // It is also why the outcome is awaited and then discarded rather than branched on. There is
         // nothing this plugin could do differently for `unavailable` than for `failed`, and inventing
         // a difference here would be this file deciding a transport question it does not own.
-        announced.add(occurrence.runId);
+        handledFailures.add(occurrence.runId);
 
         // The lines Language produces are the lines that go on the wire, unchanged. This is the one
         // discipline in the whole path that a type cannot enforce, which is why it is stated here and

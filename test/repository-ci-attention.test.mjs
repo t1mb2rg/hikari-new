@@ -21,7 +21,7 @@ import {
 // pipe stops being checked at all. That is not a hypothetical here: this repository has already lost a
 // rule that way, and the review that opened this slice said so.
 //
-// The cadence, the announced set and the delivery policy are the other half. They are exercised against
+// The cadence, the handled set and the delivery policy are the other half. They are exercised against
 // the real Runtime with three fake capability providers, so a test can choose exactly which observation
 // arrives on which cycle and read back what left through the transport. No pipe is involved in any of
 // it: the transport is a fake that answers `unavailable` or `failed` on command, which is what lets the
@@ -143,20 +143,20 @@ test('in_progress 从不会被记下，因此它变成 failure 时是一次 firs
   // The whole of the transition rule, and it is stated as a property of what the *caller* records
   // rather than as a state machine: `detectNewFailure` is handed the set the plugin owns, and the
   // plugin adds to it only when an occurrence was actually produced. A run seen in progress therefore
-  // leaves nothing behind, and the completion that follows is announced once.
-  const announced = new Set();
+  // leaves nothing behind, and the completion that follows is handled once.
+  const handledFailures = new Set();
 
   const inProgress = reported({ status: 'in_progress' });
-  assert.equal(detectNewFailure(inProgress, announced), undefined);
-  // Nothing was recorded, because nothing was said — see `judgement.ts`.
-  assert.equal(announced.size, 0);
+  assert.equal(detectNewFailure(inProgress, handledFailures), undefined);
+  // Nothing was recorded, because nothing was taken on — see `judgement.ts`.
+  assert.equal(handledFailures.size, 0);
 
-  const completed = detectNewFailure(failure(), announced);
+  const completed = detectNewFailure(failure(), handledFailures);
   assert.notEqual(completed, undefined, '同一个 run 从 in_progress 变成 failure 应当被看到一次');
   assert.equal(completed.runId, 41);
 
-  announced.add(completed.runId);
-  assert.equal(detectNewFailure(failure(), announced), undefined, '第二次就不该再说了');
+  handledFailures.add(completed.runId);
+  assert.equal(detectNewFailure(failure(), handledFailures), undefined, '第二次就不该再处理了');
 });
 
 test('candidate 的每个字段都是观察里的原话', () => {
@@ -338,7 +338,7 @@ test('没有新的通用机制跟着这次改动进来', () => {
 });
 
 // ---------------------------------------------------------------------------------------------
-// The cadence, the announced set and the delivery policy — against the real Runtime.
+// The cadence, the handled set and the delivery policy — against the real Runtime.
 // ---------------------------------------------------------------------------------------------
 
 // No injection seam: the plugin under test is the production one, and the three capabilities it
@@ -442,7 +442,7 @@ test('一个新的失败在一个激活里只说一次', async (t) => {
   const runtime = new Runtime();
   t.after(() => runtime.shutdown());
 
-  // Every cycle reports the same red run. Without the announced set this would be a message every poll —
+  // Every cycle reports the same red run. Without the handled set this would be a message every poll —
   // which is not "proactive", it is a stuck record, and it is the failure mode the activation-local set
   // exists to prevent.
   const ci = ciProvider(() => failure());
@@ -486,7 +486,7 @@ test('一次 in_progress → failure 的转变恰好产生一条播报', async (
   // The run is seen running for as many cycles as it takes and then reports completed/failure. The
   // phase is changed by the test rather than after a fixed number of calls, so "nothing was said while
   // it was running" is a claim about a window that really was open rather than one that happened to be
-  // narrow. The intermediate sightings must announce nothing and record nothing either, which is what
+  // narrow. The intermediate sightings must handle nothing and record nothing either, which is what
   // makes the completion a first sighting rather than a second one.
   let phase = 'running';
   const ci = ciProvider(() => (phase === 'running' ? reported({ status: 'in_progress' }) : failure()));
@@ -545,7 +545,7 @@ test('没人连着的时候，Hikari 照常注意到，也照常什么都不说'
 
   // Three separate facts, and the test is that they stay separate. The transport reported that nobody
   // was there; the decider's activation did not change because of it; and the failure it judged is not
-  // re-announced on the chance that a client is watching now.
+  // sent again on the chance that a client is watching now.
   assert.equal(state, 'active');
   assert.equal(runtime.getPluginState('repository-ci-attention'), 'active');
   assert.equal(delivery.delivered.length, 1, '没人连着不是重发的理由');
@@ -623,10 +623,11 @@ test('同一个组合里再激活一次，会重新播报当前红着的运行',
   const runtime = new Runtime();
   t.after(() => runtime.shutdown());
 
-  // The announced set is activation-local and there is deliberately nothing else: no token, no Chronicle
-  // reader, no durable queue. A restart therefore re-announces whatever is red right now, which is the
-  // v0 semantics the Repository CI Attention review settled on — and the reason this test exists is that
-  // the alternative reading, "a restart remembers", would require exactly the store this slice forbids.
+  // The handled set is activation-local and there is deliberately nothing else: no token, no Chronicle
+  // reader, no durable queue. A restart therefore handles whatever is red right now all over again, which
+  // is the v0 semantics the Repository CI Attention review settled on — and the reason this test exists is
+  // that the alternative reading, "a restart remembers", would require exactly the store this slice
+  // forbids.
   const ci = ciProvider(() => failure());
   const speaking = speakingProvider();
   const delivery = deliveryProvider();

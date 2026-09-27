@@ -7,7 +7,7 @@
 // a cadence lives in `plugin.ts`; nothing here holds state or reaches a Runtime.
 //
 // The two functions are the whole of what this module decides, and they are deliberately adjacent so
-// that "what is announced" and "what is said" can be read against each other. Neither of them is
+// that "what is handled" and "what is said" can be read against each other. Neither of them is
 // allowed to ask whether the failure *matters*: `relevant ≠ salient`, and the moment this file grew a
 // notion of importance it would have become the generic attention framework the ruling forbids.
 
@@ -31,12 +31,19 @@ import type { RepositoryCiAttentionOccurrence } from './types.js';
 const FAILURE_CONCLUSIONS: ReadonlySet<string> = new Set(['failure', 'timed_out', 'startup_failure']);
 
 /**
- * The failure to announce, or `undefined` if this observation is not one.
+ * The failure to handle, or `undefined` if this observation is not one.
  *
- * `announced` is this activation's own record of what it has already said, owned and closed over by
- * `plugin.ts`. Passing it in rather than holding it here is what keeps this function pure and what
- * makes the duplicate rule checkable without a clock: the caller supplies the set, so a test can write
- * down any history it likes.
+ * `handledFailures` is this activation's own record of what it has already taken on, owned and closed
+ * over by `plugin.ts`. Passing it in rather than holding it here is what keeps this function pure and
+ * what makes the duplicate rule checkable without a clock: the caller supplies the set, so a test can
+ * write down any history it likes.
+ *
+ * It is named for what it holds and not for what became of it. Membership means this activation has
+ * already run this failure through the handling path; it does **not** mean a human was told. Delivery
+ * reports `delivered`, `unavailable` or `failed`, and all three leave the id in the set, so
+ * `handled ≠ delivered ≠ human observed` — an earlier name said "announced", which claimed the last of
+ * those on the strength of the first. What the set is for is the duplicate rule, and the duplicate rule
+ * is about this activation not doing the same work twice, not about what the work achieved.
  *
  * The order of the checks is the order of the facts, cheapest and most decisive first, and each one is
  * a different reason not to speak:
@@ -45,13 +52,13 @@ const FAILURE_CONCLUSIONS: ReadonlySet<string> = new Set(['failure', 'timed_out'
  *   not completed       the run is still going — see the transition note below
  *   conclusion absent   GitHub reports a completed run with no conclusion while it settles
  *   not a failure       it finished, and it finished fine
- *   already announced   it failed, and this activation has already said so
+ *   already handled     it failed, and this activation has already taken it on
  *
  * The in-progress case is worth stating outright because it is the one that looks like a gap and is
- * not. A run seen `in_progress` is not announced and **not recorded**, so when the same run id comes
- * back `completed` with a failure conclusion it is a first sighting and is announced once. That is the
- * `in_progress → failure` transition, and it falls out of recording only what was actually said rather
- * than out of a state machine over run statuses.
+ * not. A run seen `in_progress` is not handled and **not recorded**, so when the same run id comes
+ * back `completed` with a failure conclusion it is a first sighting and is handled once. That is the
+ * `in_progress → failure` transition, and it falls out of recording only what was actually taken on
+ * rather than out of a state machine over run statuses.
  *
  * What this cannot see is a failure that is superseded before it is ever polled: `github-ci` reports
  * the *latest* run, so a red run replaced by a newer one between two cycles leaves no trace here. That
@@ -60,7 +67,7 @@ const FAILURE_CONCLUSIONS: ReadonlySet<string> = new Set(['failure', 'timed_out'
  */
 export function detectNewFailure(
   observation: GitHubCiObservation,
-  announced: ReadonlySet<number>,
+  handledFailures: ReadonlySet<number>,
 ): RepositoryCiAttentionOccurrence | undefined {
   const latest = observation.latestRun;
   if (latest.kind !== 'reported') return undefined;
@@ -69,7 +76,7 @@ export function detectNewFailure(
   if (run.status !== 'completed') return undefined;
   if (run.conclusion.kind !== 'reported') return undefined;
   if (!FAILURE_CONCLUSIONS.has(run.conclusion.value)) return undefined;
-  if (announced.has(run.id)) return undefined;
+  if (handledFailures.has(run.id)) return undefined;
 
   return Object.freeze({
     repository: observation.repository,

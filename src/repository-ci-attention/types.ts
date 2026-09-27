@@ -20,7 +20,7 @@
 // carried afterwards is GitHub's own word for it, verbatim.
 
 /**
- * One CI failure this activation had not announced before.
+ * One CI failure this activation had not handled before.
  *
  * Everything here is a field of the observation that carried it — `repository` and `observedAt` off the
  * observation, the rest off the run it reported — so rendering it is transcription and nothing else.
