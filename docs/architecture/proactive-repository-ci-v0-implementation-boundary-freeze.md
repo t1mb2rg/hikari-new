@@ -33,9 +33,14 @@
 
 ### 1.2 activation-local "new failure" identity
 
-- 身份是**本次 activation 的一个 `Set<number>`**（已通告过的 run id），闭包作用域，随 activation 消失。
-  deactivate 后再 activate 从空集开始 —— 沿用 awareness loop「no token is needed to tell activations apart」
-  的处理（`src/desktop-session-awareness-loop/plugin.ts:56-58`）。
+- 身份是**本次 activation 的一个 `Set<number>`**（已处理过的 run id，`handledFailures`），闭包作用域，
+  随 activation 消失。deactivate 后再 activate 从空集开始 —— 沿用 awareness loop「no token is needed to
+  tell activations apart」的处理（`src/desktop-session-awareness-loop/plugin.ts:56-58`）。
+- **集合名是 `handledFailures`，不是 `announced`。** 这个名字承载一层语义：id 一旦进入处理流程就落入集合，
+  **无论 delivery 是 `delivered`、`unavailable` 还是 `failed`**。所以
+  `handled ≠ delivered ≠ human observed` —— 集合回答的是「本 activation 是否已经对这次失败做过它该做的事」，
+  不回答「有没有人收到」。旧名 `announced` 用第一件事声称了第二、第三件事，而本 plugin 会把 delivery 结果
+  整个丢弃，根本没有立场做这个声称。
 - 候选条件（全部满足才算一次新的失败）：
 
   | 条件 | 依据 |
@@ -44,13 +49,14 @@
   | `run.status === 'completed'` | 只有跑完的 run 才有 conclusion |
   | `run.conclusion.kind === 'reported'` | `absent` 是「GitHub 没报」，不是失败 |
   | `FAILURE_CONCLUSIONS.has(run.conclusion.value)` | 本 plugin 的产品判断，见下 |
-  | `!announced.has(run.id)` | 本次 activation 还没说过 |
+  | `!handledFailures.has(run.id)` | 本次 activation 还没处理过 |
 
 - `FAILURE_CONCLUSIONS` 是**一处字面量**：`'failure'` / `'timed_out'` / `'startup_failure'`。
   `cancelled` / `skipped` / `neutral` / `action_required` 不在此列：取消通常是人类自己做的，
   `action_required` 是在等人批，都不是「CI 失败了」。值来自 GitHub 自己的词，不做映射表。
-- **通告后，无论 delivery 结果如何都加入 `announced`。** 依据 ruling §十：delivery 失败不回滚 Domain
-  judgement、不假装 occurrence 未发生、不无限 retry。不加入就等于每轮 poll 重投一次，那是没有写出来的 retry loop。
+- **进入处理流程后，无论 delivery 结果如何都加入 `handledFailures`。** 依据 ruling §十：delivery 失败不回滚
+  Domain judgement、不假装 occurrence 未发生、不无限 retry。不加入就等于每轮 poll 重投一次，那是没有写出来的
+  retry loop。
 - §九 的三条语义由同一集合自然满足：
   - 同一个 failed run 重复 poll → id 已在集合里 → 不重复；
   - 新的 run id 又失败 → 不在集合里 → 新候选（「同 run 从 in_progress → failure」也走这条：
@@ -245,3 +251,53 @@ Language 与 transport 互不知情。
 （`resident.ts:254-278`, `language/plugin.ts` 的 `readConfig`），因此 Attention 的 speaking 依赖
 把 model 配置带成了前提，尽管本 slice **不调用** model。这是
 `outbound-composition-v0-boundary-review.md` §16.3 已经记录过的耦合，本轮原样继承，不扩大 slice 去解它。
+
+## 6. 真实 E2E 验收证据
+
+2026-09-27，本 slice 在真实环境完成一次端到端验收：**运行中的 Hikari 在没有任何 Human request 的情况下，
+通过 long-lived `hikari subscribe` 向 Human 主动送达了一条 Repository CI attention。**
+
+### 6.1 红 run（可核对）
+
+| 项 | 值 |
+| --- | --- |
+| GitHub Actions run | `36327884462` |
+| workflow | Runtime Tests |
+| event | pull_request |
+| repository | `t1mb2rg/hikari-new` |
+| head branch | `test/proactive-ci-outbound` |
+| head sha | `6261c2a0b982755588cb75e3ba66e6a1615d6e13` |
+| conclusion | `failure` |
+| 失败的 step | `Build and test` |
+| PR | #1 `test: proactive CI outbound smoke check`（CLOSED） |
+
+run 由 PR #1 产生，而 PR #1 只加了**一个 6 行、故意失败**的 `test/proactive-ci-smoke.test.mjs`（+6/−0）。
+因此 `Build and test` 失败、run conclusion 为 `failure` —— 这正是 `github-ci` 读成 `completed` + `failure`
+的形状，也正是 Attention 候选条件要求的形状。PR 合并后分支已删除
+（`gh api repos/t1mb2rg/hikari-new/branches/test/proactive-ci-outbound` 现返回 404），
+核对以 run 本身与 PR #1 为准。
+
+### 6.2 Human 侧（由 Human 报告，本 Agent 未独立观测）
+
+- resident 以 `--proactive-ci-delay-ms` 加载第五种组合运行；
+- 一个 long-lived `hikari subscribe` 连着；
+- 全程没有 Human request；
+- Human 收到了那条 attention。
+
+这一半**不是**在本机复现出来的：没有那次 resident 的进程、日志或终端会话可查，因此不当作本 Agent 的观测报告。
+它与 6.1 可核对的 run 事实**分列**，不合并成一句「E2E 通过」。
+
+### 6.3 这一证据证明了什么，以及没有证明什么
+
+**证明了**：整条链在真实环境里成立过一次 —— CI 真失败 → Attention 真判定 → Language 真表述 →
+transport 真送达 → Human 真收到，且全程零 Human request。这是本 slice 第一次以真实 provider
+（真实 GitHub API、真实命名管道、真实 `hikari subscribe` 进程）走完整链，而不是 fake provider 对 fake transport。
+
+**没有证明**：
+
+- delivery 三值语义在真实进程边界上的分布 —— 本次观察到的是 `delivered`；真实发生的 `unavailable`
+  与 `failed` 未被此次覆盖，它们仍只有测试证据（Linux 可跑的那部分）与 Windows 上的真实管道测试证据。
+- activation-local 去重跨 restart 的真实表现（测试覆盖，未在真实 resident 上重启验证）。
+- §5 记录的 model 配置耦合在真实环境里的实际后果。
+
+本节**不修改** §1–§5 的任何决定，只补证据。
