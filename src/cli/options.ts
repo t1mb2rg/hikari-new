@@ -27,6 +27,23 @@ export interface ResidentOptions extends CliOptions {
    * would be this file choosing to send a human's words somewhere nobody named.
    */
   readonly model?: ModelOptions;
+  /**
+   * How often Hikari looks for a Repository CI failure to tell the human about, or absent because
+   * nobody asked it to.
+   *
+   * Absent is the default resident in every composition, and it is the whole point of this being a flag
+   * rather than a consequence of the two configurations it sits beside. A resident with a repository
+   * scope and a model already watches CI and already has a Language, and it is still silent: a human
+   * configured a model in order to *ask* Hikari things, and turning that into "and therefore Hikari may
+   * start talking to you" would be this file deciding that a configuration grants a permission. It does
+   * not. Speaking first is a separate act by the person who runs this, made in the same place they made
+   * every other decision about this resident, and a number here is that act.
+   *
+   * A number rather than an object, unlike the two options above, because there is exactly one value to
+   * carry. Growing it into a bag "for symmetry" would be inventing room for the second value before
+   * anyone has asked for one.
+   */
+  readonly proactiveCiDelayMs?: number;
 }
 
 /**
@@ -104,6 +121,7 @@ export type CliCommand =
   | 'resident'
   | 'status'
   | 'stop'
+  | 'subscribe'
   | 'focus'
   | 'relevance'
   | 'observe'
@@ -132,9 +150,26 @@ export type CliCommand =
 // The model is the resident's, decided when the resident started; a client that could name an endpoint
 // would be a second way to send a human's words somewhere, and the configuration belongs to the thing
 // that holds the connection.
+//
+// `subscribe` is in the first arm, and it is the one command there whose obligation is not a question.
+// It carries a data directory and nothing else, which is what that arm is for; what distinguishes it is
+// the direction — it does not ask the resident anything, it waits to be told something. That is still
+// not a reason for an arm of its own: an arm exists to carry something the data directory cannot, and
+// this command has nothing to carry. What it must *not* acquire is a way to configure the cadence, the
+// repository or the model. A client that could turn on proactive delivery would be a second composition
+// root, and the whole point of `--proactive-ci-delay-ms` living on `resident` is that speaking first is
+// the resident's operator's decision rather than any listener's.
 export type ParsedCommandLine =
   | {
-      readonly command: 'init' | 'chronicle-init' | 'start' | 'status' | 'stop' | 'relevance' | 'observe';
+      readonly command:
+        | 'init'
+        | 'chronicle-init'
+        | 'start'
+        | 'status'
+        | 'stop'
+        | 'subscribe'
+        | 'relevance'
+        | 'observe';
       readonly options: CliOptions;
     }
   | { readonly command: 'resident'; readonly options: ResidentOptions }
@@ -158,8 +193,10 @@ export const USAGE = [
   '                  [--model-endpoint <url> --model <name>',
   '                   [--model-credential-env <ENV_NAME>]',
   '                   [--model-reasoning-effort <none|high>]]',
+  '                  [--proactive-ci-delay-ms <integer>]',
   '  hikari status --data-dir <path>',
   '  hikari stop --data-dir <path>',
+  '  hikari subscribe --data-dir <path>',
   '  hikari focus declare --data-dir <path> <designation>',
   '  hikari focus replace --data-dir <path> <designation> [<designation> ...]',
   '  hikari focus clear --data-dir <path>',
@@ -177,6 +214,8 @@ export const USAGE = [
   '  --model <name>                           语言插件请求的模型名，与 --model-endpoint 成对出现，没有默认值',
   '  --model-credential-env <ENV_NAME>        从该环境变量读取模型凭据；省略表示不带凭据',
   '  --model-reasoning-effort <none|high>     请求里带的 reasoning_effort；省略表示不带这个字段',
+  '  --proactive-ci-delay-ms <integer>        Hikari 主动播报 Repository CI 失败的节奏；',
+  '                                           省略表示不主动说话',
   '',
   '说明：',
   '  hikari resident 同时给出 --model-endpoint 与 --model 时才会加载语言插件；',
@@ -189,6 +228,9 @@ export const USAGE = [
   '  --model-credential-env 给的是环境变量的名字，不是凭据本身。',
   '  --model-reasoning-effort 是写给端点的一个请求，Hikari 不判断端点认不认这个值；',
   '  省略时请求里不会有这个字段，因此对不认识它的端点没有任何影响。',
+  '  --proactive-ci-delay-ms 让 Hikari 主动把 Repository CI 的失败播报给你，',
+  '  它需要仓库范围与语言插件一起出现，因为要看的失败来自仓库、要说的话由语言插件来说。',
+  '  播报只在 hikari subscribe 连着的时候送得出去；没连着时 Hikari 什么也不说，也不补发。',
   '',
 ].join('\n');
 
@@ -249,6 +291,7 @@ function readCommand(head: string | undefined, rest: readonly string[]): Command
   if (head === 'resident') return { command: 'resident', tokens: rest };
   if (head === 'status') return { command: 'status', tokens: rest };
   if (head === 'stop') return { command: 'stop', tokens: rest };
+  if (head === 'subscribe') return { command: 'subscribe', tokens: rest };
   if (head === 'chronicle') return readChronicleCommand(rest);
   throw new UsageError(head === undefined ? '缺少命令。' : `未知命令：${head}`);
 }
@@ -461,6 +504,7 @@ function readResidentOptions(tokens: readonly string[]): ResidentOptions {
     model,
     modelCredentialEnv,
     modelReasoningEffort,
+    proactiveDelayToken,
   } = readOptionTokens(tokens, 'resident');
   if (delayToken === undefined) {
     throw new UsageError('缺少必填参数：--desktop-awareness-delay-ms');
@@ -471,7 +515,51 @@ function readResidentOptions(tokens: readonly string[]): ResidentOptions {
   const withRepository = repositoryCi === undefined ? delay : { ...delay, repositoryCi };
 
   const language = readModelPairing(modelEndpoint, model, modelCredentialEnv, modelReasoningEffort);
-  return language === undefined ? withRepository : { ...withRepository, model: language };
+  const withLanguage = language === undefined ? withRepository : { ...withRepository, model: language };
+
+  const proactive = readProactivePairing(proactiveDelayToken, repositoryCi, language);
+  return proactive === undefined ? withLanguage : { ...withLanguage, proactiveCiDelayMs: proactive };
+}
+
+// The third pairing rule in this file, and the widest: this flag names something that needs two other
+// configurations before it names anything at all.
+//
+// Refused here rather than left to the composition, and the reason is the one the other two pairings
+// give, in a stronger form. A resident started with `--proactive-ci-delay-ms` and no repository scope
+// does not degrade — it does not come up. The plugin that would do the watching requires a repository
+// observation and a Language, and a requirement it cannot satisfy makes it `waiting`, which makes the
+// resident refuse readiness and exit. That is the right behaviour for the Runtime, and a terrible way
+// to learn that a flag needs two others: the operator would get a roster and an exit code rather than
+// the sentence naming what is missing.
+//
+// Both halves are named rather than one, because they are two separate things to add — a repository
+// scope and a model — and an operator who supplied neither has two edits to make. Naming only the first
+// would send them round the loop twice.
+//
+// What is deliberately *not* checked: the number itself. `readOptionTokens` has already established
+// that it is a numeric literal, which is the one thing an argument list can know; whether it is a
+// cadence a timer can carry is the attention plugin's own question, asked in its `config.parse` where
+// the answer can be acted on. A second copy of that bound here would be a second answer to a question
+// that already has one.
+function readProactivePairing(
+  delayToken: string | undefined,
+  repositoryCi: RepositoryCiOptions | undefined,
+  model: ModelOptions | undefined,
+): number | undefined {
+  if (delayToken === undefined) return undefined;
+
+  if (repositoryCi === undefined) {
+    throw new UsageError(
+      '--proactive-ci-delay-ms 需要一个仓库范围；缺少：--repository-root、--repository',
+    );
+  }
+  if (model === undefined) {
+    throw new UsageError(
+      '--proactive-ci-delay-ms 需要语言插件；缺少：--model-endpoint、--model',
+    );
+  }
+
+  return Number(delayToken);
 }
 
 // The endpoint and the model are one configuration or neither, decided here rather than by the plugin
@@ -562,6 +650,7 @@ interface OptionTokens {
   readonly model: string | undefined;
   readonly modelCredentialEnv: string | undefined;
   readonly modelReasoningEffort: string | undefined;
+  readonly proactiveDelayToken: string | undefined;
 }
 
 function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): OptionTokens {
@@ -573,6 +662,7 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
   let model: string | undefined;
   let modelCredentialEnv: string | undefined;
   let modelReasoningEffort: string | undefined;
+  let proactiveDelayToken: string | undefined;
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
@@ -687,6 +777,28 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
       continue;
     }
 
+    // Read exactly like the cadence above and checked exactly as little: is this token a number. What
+    // range it may fall in is the attention plugin's question, for the reason `NUMBER_LITERAL` records.
+    // The value is carried as the token and converted once, by the pairing rule, so there is one place
+    // where text becomes a number rather than two that could round differently.
+    if (token === '--proactive-ci-delay-ms' && grammar === 'resident') {
+      if (proactiveDelayToken !== undefined) {
+        throw new UsageError('--proactive-ci-delay-ms 只能指定一次。');
+      }
+
+      const value = tokens[index + 1];
+      if (value === undefined) {
+        throw new UsageError('--proactive-ci-delay-ms 需要一个整数。');
+      }
+      if (!NUMBER_LITERAL.test(value)) {
+        throw new UsageError(`--proactive-ci-delay-ms 需要一个数字，收到：${value}`);
+      }
+
+      proactiveDelayToken = value;
+      index += 1;
+      continue;
+    }
+
     throw new UsageError(`未知参数：${String(token)}`);
   }
 
@@ -700,5 +812,6 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
     model,
     modelCredentialEnv,
     modelReasoningEffort,
+    proactiveDelayToken,
   };
 }

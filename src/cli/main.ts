@@ -17,6 +17,7 @@ import {
 } from './options.js';
 import { residentCommand } from './resident.js';
 import { startCommand } from './start.js';
+import { subscribeCommand } from './subscribe-command.js';
 
 process.exitCode = await runCommandLine(process.argv.slice(2));
 
@@ -43,6 +44,7 @@ function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOut
   if (parsed.command === 'resident') return residentCommand(parsed.options);
   if (parsed.command === 'status') return statusCommand(parsed.options);
   if (parsed.command === 'stop') return stopCommand(parsed.options);
+  if (parsed.command === 'subscribe') return subscribeCommand(parsed.options);
   if (parsed.command === 'focus') return focusCommand(parsed.options);
   if (parsed.command === 'relevance') return relevanceCommand(parsed.options);
   if (parsed.command === 'observe') return observeCommand(parsed.options);
