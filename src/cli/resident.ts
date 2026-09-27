@@ -33,11 +33,13 @@ import { desktopSessionWorldPlugin } from '../desktop-session-world/index.js';
 import { foregroundPlugin } from '../foreground/index.js';
 import { gitHubCiPlugin } from '../github-ci/index.js';
 import { gitRepositoryPlugin } from '../git-repository/index.js';
+import { humanDeliveryPlugin } from '../human-delivery/index.js';
 import { inputActivityPlugin } from '../input-activity/index.js';
 import { languagePlugin, repositoryLanguagePlugin } from '../language/index.js';
 import type { LanguagePluginConfig } from '../language/index.js';
 import { Runtime } from '../index.js';
 import type { PluginDefinition, PluginState } from '../index.js';
+import { repositoryCiAttentionPlugin } from '../repository-ci-attention/index.js';
 import { repositoryCiAwarenessPlugin } from '../repository-ci-awareness/index.js';
 import { repositoryCiRelevancePlugin } from '../repository-ci-relevance/index.js';
 import { repositoryCiWorldPlugin } from '../repository-ci-world/index.js';
@@ -114,17 +116,24 @@ interface LoadedMember {
 // are already satisfied by the time it is loaded, so what cannot run is left `waiting` rather than
 // shuffled around, and the states read back here are the states an operator is shown.
 //
-// There are four legal compositions, and they are two independent branches:
+// There are five legal compositions, and they are two independent branches plus one extension:
 //
 //   base                       the nine members below
 //   base + language            when --model-endpoint and --model were both given
 //   base + Repository CI chain when --repository-root and --repository were both given
 //   base + chain + language    when all four were given — Language last, and repository-aware
+//   base + chain + language + delivery + attention
+//                              when --proactive-ci-delay-ms was also given
 //
 // Each is loaded if and only if its own pair was given, and neither given is the ordinary case: a
 // resident with neither has no repository scope, needs no Git, no GitHub and no model, and starts
 // normally. A half-given pair never reaches here at all, because `options.ts` refuses it as a
-// configuration error rather than letting this function guess the other half.
+// configuration error rather than letting this function guess the other half. The fifth is the same
+// rule one level deeper: `--proactive-ci-delay-ms` names something that needs both of the other two
+// configurations, so `options.ts` refuses it when either is absent and this function never sees it
+// alone. That refusal is not tidiness — without it this branch would build a roster whose two new
+// members could not activate, and the operator would learn that their flag needed two others from a
+// list of `waiting` states and a non-zero exit rather than from a sentence.
 //
 // The fourth is where the two branches meet, and the only one whose shape could not be guessed from the
 // other three: when a repository scope exists, the Language this file loads is not the same plugin the
@@ -318,9 +327,56 @@ export function productionComposition(options: ResidentOptions): Composition {
   // cannot be configured without an endpoint and a model. Loading one anyway would not be the wrong
   // variant — in this composition both variants' requirements are satisfied, so either would come up
   // `active` — it would be a plugin with nothing to ask.
-  return model === undefined
-    ? [...base, ...chain]
-    : [...base, ...chain, languageMember(repositoryLanguagePlugin, model)];
+  if (model === undefined) return [...base, ...chain];
+
+  const language = languageMember(repositoryLanguagePlugin, model);
+
+  // The fifth composition, and the only one of the five this file did not have before the joint slice.
+  // It is reached by one flag, and everything about the flag is in `options.ts`; what belongs here is
+  // what the three new members are and why there are exactly three.
+  //
+  // `human-delivery` is the transport. It requires nothing and provides one Service, so it activates on
+  // its own the moment it is loaded — in particular it activates with no client connected, which is the
+  // distinction the ruling states as `authorized ≠ connected`. Nothing here observes a socket, and this
+  // file could not: a resident whose readiness turned on whether a human had opened a subscriber would
+  // be a resident that failed to start because nobody was listening, which is the opposite of what
+  // proactive delivery is for.
+  //
+  // `repository-ci-attention` is the decider, and it is the only member of any composition here that
+  // reaches for three Services at once. Which three is its own statement, in its own `requires`; this
+  // file's job is only to have loaded all three before it. That is why it comes last, and why the
+  // ordering rule that already put Language after the chain now has a second instance rather than an
+  // exception.
+  //
+  // Both members are loaded together or not at all, and that is the whole of what this file has to say
+  // about "authorization". A transport with no decider would be a pipe nothing writes to — a plugin
+  // whose `provides` has no consumer, which is the cosmetic shape the design spec's MUST forbids. A
+  // decider with no transport would be a plugin that cannot activate. The composition is where a
+  // human's explicit act lands, and the act is one flag, so the two arrive as one thing.
+  //
+  // What this file still does not do, and the reason it is safe to add a member that speaks unprompted:
+  // it still does not add a subscriber of its own, and it still does not route anything. Attention
+  // reaches Language and the transport through Services it declared, and `desktop-session-awareness-loop.
+  // assessed` still has zero subscribers in production. A `provides`/`requires` pair between two named
+  // members is not a routing graph — no member chooses a destination, and there is nothing here that
+  // could be told to deliver somewhere else.
+  const proactiveDelayMs = options.proactiveCiDelayMs;
+  if (proactiveDelayMs === undefined) return [...base, ...chain, language];
+
+  return [
+    ...base,
+    ...chain,
+    language,
+    {
+      id: humanDeliveryPlugin.id,
+      load: (runtime) => runtime.loadPlugin(humanDeliveryPlugin, { rootDir: options.dataDir }),
+    },
+    {
+      id: repositoryCiAttentionPlugin.id,
+      load: (runtime) =>
+        runtime.loadPlugin(repositoryCiAttentionPlugin, { delayMs: proactiveDelayMs }),
+    },
+  ];
 }
 
 export interface ResidentIo {

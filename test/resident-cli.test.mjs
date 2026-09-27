@@ -113,6 +113,17 @@ const MODEL_OPTIONS = {
 
 const REPOSITORY_CI_OPTIONS = { rootDir: 'C:\\work\\hikari-new', repository: 't1mb2rg/hikari-new' };
 
+// The delay that requests proactive delivery, and the two members it brings with it. Named here for the
+// same reason `MODEL_OPTIONS` is: the cross-roster test builds all five rosters, and a bare `2000` at
+// five call sites would make a failure about which number was typed rather than about what it selects.
+const PROACTIVE_OPTIONS = {
+  repositoryCi: REPOSITORY_CI_OPTIONS,
+  model: MODEL_OPTIONS,
+  proactiveCiDelayMs: 5000,
+};
+
+const PROACTIVE_MEMBER_IDS = ['human-delivery', 'repository-ci-attention'];
+
 // Verified before this test existed: deleting `work-focus` from `productionComposition` left the
 // entire suite green on both platforms. The tests that would have noticed end to end are the ones
 // that need a named pipe, and CI runs on a host that has none — so the member that only exists to
@@ -149,7 +160,7 @@ test('显式配置 Repository CI 后，生产组合是这九个加上那五个',
 // The language member, and the one composition decision a reader could get wrong without any test going
 // red: *where* in the list it goes.
 //
-// Four rosters, and the ordering rule changed when the repository-aware variant landed. It used to be
+// Five rosters, and the ordering rule changed when the repository-aware variant landed. It used to be
 // that every roster was `base + something`, so the language member sat directly after the base and the
 // default composition was a prefix of all of them. That is now false of the fourth roster and the change
 // is deliberate: a repository-aware Language requires `repository-ci-relevance.current@1`, the Runtime
@@ -157,7 +168,7 @@ test('显式配置 Repository CI 后，生产组合是这九个加上那五个',
 // thing it requires is recorded `waiting` — which for a resident means it does not come up at all.
 //
 // So order is now decided by dependency semantics rather than by list shape, and what survives is the
-// weaker but true set of relations asserted below: the base is a common prefix of all four, members
+// weaker but true set of relations asserted below: the base is a common prefix of all five, members
 // shared by two rosters keep their relative order, and the repository-aware language member follows the
 // whole chain it depends on. `不要修改 Runtime readiness semantics 来人为保存旧 invariant` — the
 // invariant was given up instead, and this file is where that is written down rather than assumed.
@@ -218,12 +229,51 @@ test('Repository CI 与语言入口可以同时在场，且语言在 CI 链之�
   ]);
 });
 
+test('请求主动投递之后，生产组合在那十一个之后再加投递与决定者', () => {
+  const composition = productionComposition({
+    dataDir: ROSTER_DATA_DIR,
+    desktopAwarenessDelayMs: 1000,
+    ...PROACTIVE_OPTIONS,
+  });
+
+  // A literal, for the reason the four tests above give. The ordering is the claim: the decider reaches
+  // for three Services, `language.speaking@1` is one of them, and the only reason the transport may come
+  // after Language is that Language does not require it — the two are independent of each other and both
+  // are prerequisites of the member that follows.
+  assert.deepEqual(composition.map((member) => member.id), [
+    ...BASE_MEMBER_IDS,
+    'git-repository',
+    'github-ci',
+    'repository-ci-world',
+    'repository-ci-awareness',
+    'repository-ci-relevance',
+    'language',
+    ...PROACTIVE_MEMBER_IDS,
+  ]);
+
+  // Both or neither, and this is the assertion that makes "neither" real rather than a comment: the
+  // transport on its own is a pipe nothing writes to, which is the cosmetic `provides` the design spec's
+  // MUST forbids, and a decider on its own cannot activate at all.
+  for (const absent of ['proactiveCiDelayMs', 'model', 'repositoryCi']) {
+    const options = { dataDir: ROSTER_DATA_DIR, desktopAwarenessDelayMs: 1000, ...PROACTIVE_OPTIONS };
+    delete options[absent];
+    const ids = productionComposition(options).map((member) => member.id);
+    for (const member of PROACTIVE_MEMBER_IDS) {
+      assert.equal(
+        ids.includes(member),
+        false,
+        `少了 ${absent} 时不得出现 ${member}，否则一个空壳就被留在了组合里`,
+      );
+    }
+  }
+});
+
 // The relations that survive the reordering, asserted as relations rather than as three more literals.
 //
-// These are what make the four rosters one composition system rather than four lists that happen to
+// These are what make the five rosters one composition system rather than five lists that happen to
 // work: a member that moved between them, or a base that stopped being common, would be a resident whose
 // behaviour depended on which capabilities were configured rather than on what it was configured with.
-test('四个 roster 共享同一个基础前缀，且共有成员保持相对顺序', async () => {
+test('五个 roster 共享同一个基础前缀，且共有成员保持相对顺序', async () => {
   const rosters = {
     base: productionComposition({ dataDir: ROSTER_DATA_DIR, desktopAwarenessDelayMs: 1000 }),
     language: productionComposition({
@@ -241,6 +291,11 @@ test('四个 roster 共享同一个基础前缀，且共有成员保持相对顺
       desktopAwarenessDelayMs: 1000,
       repositoryCi: REPOSITORY_CI_OPTIONS,
       model: MODEL_OPTIONS,
+    }),
+    proactive: productionComposition({
+      dataDir: ROSTER_DATA_DIR,
+      desktopAwarenessDelayMs: 1000,
+      ...PROACTIVE_OPTIONS,
     }),
   };
 
@@ -266,6 +321,18 @@ test('四个 roster 共享同一个基础前缀，且共有成员保持相对顺
   );
   assert.equal(both.at(-1), 'language', 'language 是唯一被依赖决定位置而排到最后的成员');
   assert.equal(rosters.repositoryCi.map((member) => member.id).at(-1), 'repository-ci-relevance');
+
+  // The fifth roster, where the pair at the end is a different relation. `human-delivery` is not moved
+  // by anything — it requires nothing — so its position after Language is a choice about reading order
+  // rather than a consequence, and what is actually load-bearing is that both of them follow the
+  // `language.speaking` the decider requires. A reader who reordered these two would be changing
+  // nothing; a reader who moved the decider before Language would break the resident.
+  const proactive = rosters.proactive.map((member) => member.id);
+  assert.deepEqual(proactive.slice(-2), PROACTIVE_MEMBER_IDS);
+  assert.ok(
+    proactive.indexOf('language') < proactive.indexOf('repository-ci-attention'),
+    'decider 要求 language.speaking，必须排在 language 之后',
+  );
 
   // Which *variant* the language member holds, which no comparison above can see. Both definitions carry
   // the id `language` — deliberately, so a resident's status line does not change with the variant — so
@@ -1048,6 +1115,137 @@ test('模型端点与模型只给一个是用法错误，并指出缺的是哪�
   assert.match(onlyEffort.stderr, /缺少：--model-endpoint、--model/);
 
   assert.deepEqual(readdirSync(root), []);
+});
+
+// The third pairing rule, and the first one that names a flag requiring *two* other configurations
+// rather than one. Both halves are named in the refusal rather than the first one found, because an
+// operator who supplied neither has two edits to make and naming only one sends them round the loop
+// twice — which is the difference between this test and the two above it.
+test('主动投递要仓库范围与语言插件一起出现，缺哪一半就说哪一半', (t) => {
+  const root = createRoot(t);
+
+  const withNeither = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--proactive-ci-delay-ms',
+    '5000',
+  );
+  assert.equal(withNeither.code, 2);
+  assert.match(withNeither.stderr, /需要仓库范围/);
+  assert.match(withNeither.stderr, /缺少：--repository-root、--repository/);
+  assert.match(withNeither.stderr, /用法：/);
+
+  // The repository scope alone, which is the case a one-at-a-time check would report as the model
+  // rather than as the repository scope being present and the language plugin missing.
+  const withRepositoryOnly = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository-root',
+    'C:\\work\\hikari-new',
+    '--repository',
+    't1mb2rg/hikari-new',
+    '--proactive-ci-delay-ms',
+    '5000',
+  );
+  assert.equal(withRepositoryOnly.code, 2);
+  assert.match(withRepositoryOnly.stderr, /需要语言插件/);
+  assert.match(withRepositoryOnly.stderr, /缺少：--model-endpoint、--model/);
+
+  // Refused rather than run half-configured, for the reason the two pairings above give in a stronger
+  // form: this is not a resident that degrades. The decider's requirements would be unsatisfiable, it
+  // would be recorded `waiting`, and the resident would refuse readiness and exit — an operator would
+  // learn what the flag needs from a roster and an exit code instead of from this sentence.
+  assert.deepEqual(readdirSync(root), []);
+});
+
+// The number itself is deliberately not checked here. `readOptionTokens` establishes that it is a
+// numeric literal, which is all an argument list can know; whether it is a cadence a timer can carry is
+// the attention plugin's own question, asked in its `config.parse`. What is checked is that the CLI has
+// no second opinion about the shape — including that it does not silently accept a token that is not a
+// number, which would then reach the plugin as `NaN`.
+test('主动投递的节奏只由参数列表确认是数字，合法与否交给插件', (t) => {
+  const root = createRoot(t);
+
+  const notANumber = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository-root',
+    'C:\\work\\hikari-new',
+    '--repository',
+    't1mb2rg/hikari-new',
+    '--model-endpoint',
+    'http://127.0.0.1:11434/v1/chat/completions',
+    '--model',
+    'local-model',
+    '--proactive-ci-delay-ms',
+    'soon',
+  );
+  assert.equal(notANumber.code, 2);
+  assert.match(notANumber.stderr, /需要一个数字/);
+  assert.match(notANumber.stderr, /soon/);
+
+  const twice = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository-root',
+    'C:\\work\\hikari-new',
+    '--repository',
+    't1mb2rg/hikari-new',
+    '--model-endpoint',
+    'http://127.0.0.1:11434/v1/chat/completions',
+    '--model',
+    'local-model',
+    '--proactive-ci-delay-ms',
+    '5000',
+    '--proactive-ci-delay-ms',
+    '6000',
+  );
+  assert.equal(twice.code, 2);
+  assert.match(twice.stderr, /只能指定一次/);
+});
+
+test('主动投递的参数只属于 resident，没有拓宽别的命令', (t) => {
+  const root = createRoot(t);
+
+  // Including `subscribe`, which is the client of the very transport this flag turns on. A client that
+  // could enable the capability by asking for its output would be a second composition root — the same
+  // refusal `relevance 是客户端` asserts for a question.
+  for (const argv of [
+    ['start', '--data-dir', root, '--proactive-ci-delay-ms', '5000'],
+    ['ask', '--data-dir', root, '--proactive-ci-delay-ms', '5000', '你好'],
+    ['subscribe', '--data-dir', root, '--proactive-ci-delay-ms', '5000'],
+  ]) {
+    const result = runCli(...argv);
+    assert.equal(result.code, 2, `${argv[0]} 不应接受主动投递的配置`);
+    assert.match(result.stderr, /未知参数/);
+  }
+});
+
+test('subscribe 只接受 --data-dir，别的都在用法层被拒绝', (t) => {
+  const root = createRoot(t);
+
+  // The client sends nothing, so there is nothing else for it to be configured with. Tested here rather
+  // than only through the command's behaviour because the refusal is the whole of its argument surface.
+  for (const argv of [
+    ['subscribe', '--data-dir', root, 'extra'],
+    ['subscribe'],
+  ]) {
+    const result = runCli(...argv);
+    assert.equal(result.code, 2, `${argv.join(' ')} 应是用法错误`);
+    assert.match(result.stderr, /用法：/);
+  }
 });
 
 test('模型参数只属于 resident，没有拓宽别的命令', (t) => {
