@@ -26,6 +26,7 @@ import { MessageChannel } from 'node:worker_threads';
 
 import { ChronicleNotInitializedError, chroniclePlugin } from '../chronicle/index.js';
 import { NotInitializedError, continuityPlugin } from '../continuity/index.js';
+import { desktopReturnAttentionPlugin } from '../desktop-return-attention/index.js';
 import { desktopSessionAwarenessPlugin } from '../desktop-session-awareness/index.js';
 import { desktopSessionAwarenessLoopPlugin } from '../desktop-session-awareness-loop/index.js';
 import { desktopSessionObservePlugin } from '../desktop-session-observe/index.js';
@@ -116,30 +117,41 @@ interface LoadedMember {
 // are already satisfied by the time it is loaded, so what cannot run is left `waiting` rather than
 // shuffled around, and the states read back here are the states an operator is shown.
 //
-// There are five legal compositions, and they are two independent branches plus one extension:
+// The legal compositions are a product and not a list, with two independent axes. The first is a
+// *scope* — which of base, base + language, base + chain, or base + chain + language the two option
+// pairs produce. The second is a *mandate* — whether any proactive member is loaded at all, and which
+// deciders are among them.
 //
-//   base                       the nine members below
-//   base + language            when --model-endpoint and --model were both given
-//   base + Repository CI chain when --repository-root and --repository were both given
-//   base + chain + language    when all four were given — Language last, and repository-aware
-//   base + chain + language + delivery + attention
-//                              when --proactive-ci-delay-ms was also given
+// Not every cell of that product is reachable, and the unreachable ones are exactly what `options.ts`
+// refuses by name. A decider reaches Language through a Service, so no mandate exists without a model;
+// the CI decider additionally requires the chain, because what it reports on is a repository. The
+// rosters this function can produce are therefore:
 //
-// Each is loaded if and only if its own pair was given, and neither given is the ordinary case: a
-// resident with neither has no repository scope, needs no Git, no GitHub and no model, and starts
-// normally. A half-given pair never reaches here at all, because `options.ts` refuses it as a
-// configuration error rather than letting this function guess the other half. The fifth is the same
-// rule one level deeper: `--proactive-ci-delay-ms` names something that needs both of the other two
-// configurations, so `options.ts` refuses it when either is absent and this function never sees it
-// alone. That refusal is not tidiness — without it this branch would build a roster whose two new
-// members could not activate, and the operator would learn that their flag needed two others from a
-// list of `waiting` states and a non-zero exit rather than from a sentence.
+//   base                                nothing given
+//   base + language                     a model, and no mandate
+//   base + language + delivery + return a model and a return mandate — the roster this slice added
+//   base + chain                        a repository scope, and no model
+//   base + chain + language             both scopes, and no mandate
+//   base + chain + language + delivery + { ci | return | both }
+//                                       both scopes, and one or both mandates
 //
-// The fourth is where the two branches meet, and the only one whose shape could not be guessed from the
-// other three: when a repository scope exists, the Language this file loads is not the same plugin the
-// second composition loads. It is the same id, the same version and the same code with one more
-// requirement and one more exposure, and selecting it is the whole of what this file decides about the
-// variant.
+// Each member is loaded if and only if its own configuration was given, and given nothing is the
+// ordinary case: a resident with no scope, no model and no mandate needs no Git and no GitHub, and
+// starts normally. A half-given pair never reaches here at all,
+// because `options.ts` refuses it as a configuration error rather than letting this function guess the
+// other half — and the two proactive flags are that same rule one level deeper. Each names something
+// that needs a configuration this function cannot invent: both need the model pair, and the CI
+// threshold needs the repository pair as well. `options.ts` refuses each when what it needs is absent,
+// so this function never sees a decider whose requirements nothing satisfies. That refusal is not
+// tidiness — without it this branch would build a roster whose new members could not activate, and the
+// operator would learn that a flag needed others from a list of `waiting` states and a non-zero exit
+// rather than from a sentence.
+//
+// The rosters that carry a repository scope are where the two axes meet, and they are the ones whose
+// shape could not be guessed from the rest: when a repository scope exists, the Language this file
+// loads is not the same plugin the scope without one loads. It is the same id, the same version and the
+// same code with one more requirement and one more exposure, and selecting it is the whole of what this
+// file decides about the variant.
 //
 // Language is added *after* the chain when both are configured, and that is a change from the order this
 // function used to have. The old order put Language directly after the base and the chain last, which
@@ -152,8 +164,8 @@ interface LoadedMember {
 // so placing Language first would not merely be untidy, it would make the resident refuse to start. The
 // nesting is therefore given up deliberately, and for the reason it was worth keeping at all: a real
 // dependency now decides the order. What is *not* given up, and is the part that was doing the work, is
-// the property the nesting was a strong form of — the base nine are still the common prefix of all four
-// compositions and keep their relative order in every one of them, which is to say the default roster is
+// the property the nesting was a strong form of — the base nine are still the common prefix of every
+// composition and keep their relative order in all of them, which is to say the default roster is
 // still a literal prefix of every larger one. What changes is only where the optional repository-aware
 // reader sits: no longer directly after the base, but after the thing it reads.
 //
@@ -281,10 +293,100 @@ export function productionComposition(options: ResidentOptions): Composition {
       }),
   });
 
+  // The proactive members, and the whole of what this file has to say about "authorization" for them.
+  //
+  // There are two deciders now and still one transport, and the shape of that is the point. A decider is
+  // a plugin that speaks without having been asked; the transport is the pipe its lines go down. Each
+  // decider is here because an operator named its subject — `--proactive-ci-delay-ms` for a repository
+  // CI failure, `--proactive-return-delay-ms` with `--proactive-return-after-ms` for a return to this
+  // machine — and neither flag is read as authorizing the other. A resident may therefore load one, the
+  // other, both, or neither, and each of those four is a composition this function can produce rather
+  // than one it has to choose between.
+  //
+  // `human-delivery` is loaded *once*, however many deciders are present, and it has to be: it provides
+  // one Service, and a second copy would be a second provider of the same contract. It is also the
+  // honest arrangement. Delivery is one pipe to one human's subscriber and not a per-decider facility,
+  // and nothing in it knows which subject a given message is about — so the same member serving both is
+  // the evidence the ruling asked for, that a second consumer genuinely shares the mechanism rather than
+  // needing one of its own. The mechanism did not change to acquire its second consumer; only this
+  // list did.
+  //
+  // `human-delivery` requires nothing and provides one Service, so it activates on its own the moment it
+  // is loaded — in particular it activates with no client connected, which is the distinction the ruling
+  // states as `authorized ≠ connected`. Nothing here observes a socket, and this file could not: a
+  // resident whose readiness turned on whether a human had opened a subscriber would be a resident that
+  // failed to start because nobody was listening, which is the opposite of what proactive delivery is
+  // for.
+  //
+  // The transport is present when, and only when, at least one decider is — and that pairing is per
+  // composition rather than per flag. A decider with no transport would be a plugin that cannot
+  // activate; a transport with no decider would be a pipe nothing writes to, a plugin whose `provides`
+  // has no consumer, which is the cosmetic shape the design spec's MUST forbids.
+  //
+  // What this file still does not do, and the reason it is safe to add a plugin that speaks unprompted:
+  // it still does not add a subscriber of its own, and it still does not route anything. Each decider
+  // reaches Language and the transport through Services it declared, and `desktop-session-awareness-loop.
+  // assessed` still has zero subscribers in production. A `provides`/`requires` pair between two named
+  // members is not a routing graph — no member chooses a destination, and there is nothing here that
+  // could be told to deliver somewhere else.
+  const proactiveCiDelayMs = options.proactiveCiDelayMs;
+  const proactiveReturn = options.proactiveReturn;
+
+  const proactiveDeciders: Composition = [
+    ...(proactiveCiDelayMs === undefined
+      ? []
+      : [
+          {
+            id: repositoryCiAttentionPlugin.id,
+            load: (runtime: Runtime) =>
+              runtime.loadPlugin(repositoryCiAttentionPlugin, { delayMs: proactiveCiDelayMs }),
+          },
+        ]),
+    ...(proactiveReturn === undefined
+      ? []
+      : [
+          {
+            id: desktopReturnAttentionPlugin.id,
+            load: (runtime: Runtime) =>
+              runtime.loadPlugin(desktopReturnAttentionPlugin, {
+                delayMs: proactiveReturn.delayMs,
+                afterMs: proactiveReturn.afterMs,
+              }),
+          },
+        ]),
+  ];
+
+  // The transport first, because both deciders require it; then the deciders in the order the two flags
+  // are documented in. Both deciders come after Language, which is why this list is appended in each
+  // branch below rather than here: the return decider needs the base (Input Activity and Work Focus) and
+  // Language, and the CI decider additionally needs the chain, so a list spliced at the end of whichever
+  // branch applies is the only placement that is correct for both.
+  const proactive: Composition =
+    proactiveDeciders.length === 0
+      ? []
+      : [
+          {
+            id: humanDeliveryPlugin.id,
+            load: (runtime) =>
+              runtime.loadPlugin(humanDeliveryPlugin, { rootDir: options.dataDir }),
+          },
+          ...proactiveDeciders,
+        ];
+
   if (repositoryCi === undefined) {
     // No repository scope, so no chain and no repository-aware Language. This is the composition every
-    // build before this slice produced, unchanged.
-    return model === undefined ? base : [...base, languageMember(languagePlugin, model)];
+    // build before this slice produced, unchanged, plus whichever proactive members the operator asked
+    // for — and the return mandate is reachable here, which is deliberate: watching this machine's input
+    // has nothing to do with any repository, so it is not made to depend on a scope it does not use.
+    //
+    // A resident that reached this branch with a return mandate and no model cannot be built by
+    // `options.ts`, which refuses the threshold without `--model-endpoint` and `--model`. The roster
+    // below still carries whatever was asked for rather than editing it to fit: an inconsistent set of
+    // options becomes a resident that refuses readiness and says which contracts are missing, which is a
+    // better answer than a composition that quietly dropped a member and came up silent.
+    return model === undefined
+      ? [...base, ...proactive]
+      : [...base, languageMember(languagePlugin, model), ...proactive];
   }
 
   // The other branch. The two source plugins are configured with the two values that were given
@@ -331,52 +433,11 @@ export function productionComposition(options: ResidentOptions): Composition {
 
   const language = languageMember(repositoryLanguagePlugin, model);
 
-  // The fifth composition, and the only one of the five this file did not have before the joint slice.
-  // It is reached by one flag, and everything about the flag is in `options.ts`; what belongs here is
-  // what the three new members are and why there are exactly three.
-  //
-  // `human-delivery` is the transport. It requires nothing and provides one Service, so it activates on
-  // its own the moment it is loaded — in particular it activates with no client connected, which is the
-  // distinction the ruling states as `authorized ≠ connected`. Nothing here observes a socket, and this
-  // file could not: a resident whose readiness turned on whether a human had opened a subscriber would
-  // be a resident that failed to start because nobody was listening, which is the opposite of what
-  // proactive delivery is for.
-  //
-  // `repository-ci-attention` is the decider, and it is the only member of any composition here that
-  // reaches for three Services at once. Which three is its own statement, in its own `requires`; this
-  // file's job is only to have loaded all three before it. That is why it comes last, and why the
-  // ordering rule that already put Language after the chain now has a second instance rather than an
-  // exception.
-  //
-  // Both members are loaded together or not at all, and that is the whole of what this file has to say
-  // about "authorization". A transport with no decider would be a pipe nothing writes to — a plugin
-  // whose `provides` has no consumer, which is the cosmetic shape the design spec's MUST forbids. A
-  // decider with no transport would be a plugin that cannot activate. The composition is where a
-  // human's explicit act lands, and the act is one flag, so the two arrive as one thing.
-  //
-  // What this file still does not do, and the reason it is safe to add a member that speaks unprompted:
-  // it still does not add a subscriber of its own, and it still does not route anything. Attention
-  // reaches Language and the transport through Services it declared, and `desktop-session-awareness-loop.
-  // assessed` still has zero subscribers in production. A `provides`/`requires` pair between two named
-  // members is not a routing graph — no member chooses a destination, and there is nothing here that
-  // could be told to deliver somewhere else.
-  const proactiveDelayMs = options.proactiveCiDelayMs;
-  if (proactiveDelayMs === undefined) return [...base, ...chain, language];
-
-  return [
-    ...base,
-    ...chain,
-    language,
-    {
-      id: humanDeliveryPlugin.id,
-      load: (runtime) => runtime.loadPlugin(humanDeliveryPlugin, { rootDir: options.dataDir }),
-    },
-    {
-      id: repositoryCiAttentionPlugin.id,
-      load: (runtime) =>
-        runtime.loadPlugin(repositoryCiAttentionPlugin, { delayMs: proactiveDelayMs }),
-    },
-  ];
+  // The widest composition: the chain, Language, and whichever proactive members the operator asked
+  // for. `proactive` is empty for every resident that named no mandate, and in that case this list is
+  // exactly what the build before the proactive slices produced — the mandates are appended here, they
+  // do not rearrange anything already in the list.
+  return [...base, ...chain, language, ...proactive];
 }
 
 export interface ResidentIo {

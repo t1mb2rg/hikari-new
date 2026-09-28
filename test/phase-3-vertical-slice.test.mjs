@@ -95,8 +95,10 @@ function foregroundObservation(target, observedAt = OBSERVED_AT) {
   return Object.freeze({ observedAt, source: 'foreground.windows', foreground: target });
 }
 
-function inputActivityObservation(lastInputTick, observedAt = OBSERVED_AT) {
-  return Object.freeze({ observedAt, source: 'input-activity.windows', lastInputTick });
+// Both ticks, with the second defaulting to the first: this file's fixtures are about what the vertical
+// slice carries, not about elapsed time, so the silence they depict is zero.
+function inputActivityObservation(lastInputTick, observedAt = OBSERVED_AT, observedTick = lastInputTick) {
+  return Object.freeze({ observedAt, source: 'input-activity.windows', lastInputTick, observedTick });
 }
 
 function presentTarget(fields = {}) {

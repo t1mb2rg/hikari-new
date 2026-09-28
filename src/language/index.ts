@@ -35,13 +35,16 @@
 // question and reading the lines that came back. `renderFocus` is exported from its own module because
 // `read.ts` calls it, which is a caller inside this package and not a public entry point.
 //
-// `renderSpokenOccurrence` is the one exception, and it is the shape of the exception that makes the
-// rule. Every renderer above is reached by a test through a question, because production reaches them
-// that way too. This one is not reachable through a question at all — it is reached by a composition
-// member calling `language.speaking@1` — and its own activation gate refuses on Linux before anything
-// under it runs, so "the path a test takes" and "the path production takes" have to meet somewhere. It
-// is the same function the plugin hands the composition as `speak`, so the test is reading the
-// production path rather than a copy of it.
+// The two `renderSpoken*` functions are the exceptions, and it is the shape of the exception that makes
+// the rule. Every renderer above is reached by a test through a question, because production reaches
+// them that way too. Neither of these is reachable through a question at all — they are reached by
+// composition members calling `language.speaking@1` and `language.desktop-return-speaking@1` — and this
+// plugin's activation gate refuses on Linux before anything under it runs, so "the path a test takes"
+// and "the path production takes" have to meet somewhere. Each is the same function the plugin hands
+// the composition as `speak`, so the test is reading the production path rather than a copy of it.
+//
+// Two exports and not one, because they are two production paths that meet two different tests. A
+// single exported function taking either occurrence would be the union that `contracts.ts` refuses.
 //
 // There are two plugin exports now rather than one, and the difference between them is a requirement
 // rather than a mode. `languagePlugin` is the base variant every model-bearing resident loads;
@@ -49,23 +52,28 @@
 // judgement as a third read. Only ever one of the two is loaded, and which one is the composition's
 // decision — see `cli/resident.ts`.
 //
-// There is one Service, and it arrives with the first consumer. Offering a capability to a model and
+// There are two Services, and each arrived with a consumer. Offering a capability to a model and
 // providing one to the composition are still opposite directions, and this plugin now does both: the
-// exposures are what a model may ask for, and `language.speaking@1` is what a composition member may
-// ask *of* Language. The second had nothing to justify it until `repository-ci-attention` existed —
+// exposures are what a model may ask for, and the two speaking contracts are what composition members
+// may ask *of* Language. The first had nothing to justify it until `repository-ci-attention` existed —
 // "nothing in the composition asks this plugin for anything: the one thing that does is a person,
 // arriving over the endpoint" was true when it was written, and a consumer is what made it stop being
-// true. What the Service is and, more importantly, what it is not — it is not a permission, and it does
-// not make a decider authorized to speak — is argued in `contracts.ts`. See `plugin.ts` for why it sits
-// in the shared `provides` rather than on a variant.
+// true — and the second arrived the same way, when `desktop-return-attention` needed to say something
+// and had no way to. Neither was built ahead of its caller. What the Services are and, more
+// importantly, what they are not — they are not permissions, and they do not make a decider authorized
+// to speak — is argued in `contracts.ts`, along with why there are two rather than one. See `plugin.ts`
+// for why both sit in the shared `provides` rather than on a variant.
 
 export { createAnswerer } from './answer.js';
 export type { Answerer, LanguageDependencies } from './answer.js';
-export { languageSpeakingService } from './contracts.js';
-export type { LanguageSpeakingService } from './contracts.js';
+export { languageDesktopReturnSpeakingService, languageSpeakingService } from './contracts.js';
+export type {
+  LanguageDesktopReturnSpeakingService,
+  LanguageSpeakingService,
+} from './contracts.js';
 export { languageEndpointPath } from './endpoint-path.js';
 export { LanguageError } from './errors.js';
-export { renderSpokenOccurrence } from './express.js';
+export { renderSpokenOccurrence, renderSpokenReturn } from './express.js';
 // The transport's own per-call bound, for the reason the endpoint derivation is exported: a client
 // asking a question has to wait longer than the server can legitimately take, and `cli/ask.ts` cannot
 // size its wait against a number it would otherwise have to copy. It is the owner's number, so it

@@ -41,9 +41,42 @@ export interface ResidentOptions extends CliOptions {
    *
    * A number rather than an object, unlike the two options above, because there is exactly one value to
    * carry. Growing it into a bag "for symmetry" would be inventing room for the second value before
-   * anyone has asked for one.
+   * anyone has asked for one — and someone has now asked, for a different subject, which is why the
+   * answer was a second option below rather than a field in this one. A bag holding "the CI cadence"
+   * and "the return cadence" would be one type for two capabilities that share nothing but the word
+   * proactive, and every reader of it would have to know which half applies where.
    */
   readonly proactiveCiDelayMs?: number;
+  /**
+   * How long an input-free span must be, and how often Hikari looks, before a return is announced —
+   * or absent because nobody asked it to.
+   *
+   * Absent is the default resident in every composition, and this is a second act of that same kind
+   * rather than a variation on the first: a repository CI failure and a return to this machine are two
+   * different subjects, and configuring one has never been a reason to watch the other. A resident may
+   * therefore be authorized to speak about either, both, or neither, and each combination is a
+   * composition this file can express rather than one it has to choose between.
+   */
+  readonly proactiveReturn?: ProactiveReturnOptions;
+}
+
+/**
+ * One explicit proactive return mandate: how long a silence must be, and how often to sample it.
+ *
+ * A pair, refused in halves, for the reason the pairs below are — and for one reason they are not: the
+ * threshold *is* the authorization here. There is deliberately no enable boolean beside it. A switch
+ * next to a number would be a second way of saying the same thing, and the two could disagree, which
+ * is the failure this whole file is arranged to prevent: `--proactive-return-after-ms 60000` with the
+ * switch off is an operator who configured something nothing reads. Giving the threshold is the act;
+ * not giving it is the default resident, which stays silent.
+ *
+ * The cadence is not a courtesy value carried for completeness. It has no second use, so a resident
+ * given the cadence alone would hold a number that changes nothing about what Hikari does, and it is
+ * refused on its own for exactly the reason `--model-credential-env` without a model is refused.
+ */
+export interface ProactiveReturnOptions {
+  readonly delayMs: number;
+  readonly afterMs: number;
 }
 
 /**
@@ -194,6 +227,8 @@ export const USAGE = [
   '                   [--model-credential-env <ENV_NAME>]',
   '                   [--model-reasoning-effort <none|high>]]',
   '                  [--proactive-ci-delay-ms <integer>]',
+  '                  [--proactive-return-delay-ms <integer>',
+  '                   --proactive-return-after-ms <integer>]',
   '  hikari status --data-dir <path>',
   '  hikari stop --data-dir <path>',
   '  hikari subscribe --data-dir <path>',
@@ -215,7 +250,10 @@ export const USAGE = [
   '  --model-credential-env <ENV_NAME>        从该环境变量读取模型凭据；省略表示不带凭据',
   '  --model-reasoning-effort <none|high>     请求里带的 reasoning_effort；省略表示不带这个字段',
   '  --proactive-ci-delay-ms <integer>        Hikari 主动播报 Repository CI 失败的节奏；',
-  '                                           省略表示不主动说话',
+  '                                           省略表示不主动播报 CI',
+  '  --proactive-return-delay-ms <integer>    观察输入活动的节奏，与 --proactive-return-after-ms 成对出现',
+  '  --proactive-return-after-ms <integer>    多久没有输入之后又出现输入才算一次「回来」；',
+  '                                           给出它就是授权 Hikari 主动说话，省略表示不主动说话',
   '',
   '说明：',
   '  hikari resident 同时给出 --model-endpoint 与 --model 时才会加载语言插件；',
@@ -231,6 +269,12 @@ export const USAGE = [
   '  --proactive-ci-delay-ms 让 Hikari 主动把 Repository CI 的失败播报给你，',
   '  它需要仓库范围与语言插件一起出现，因为要看的失败来自仓库、要说的话由语言插件来说。',
   '  播报只在 hikari subscribe 连着的时候送得出去；没连着时 Hikari 什么也不说，也不补发。',
+  '  --proactive-return-after-ms 让 Hikari 在你长时间没有输入之后又出现输入时，主动把那一刻',
+  '  你明确关注的声明提醒给你；它需要语言插件一起出现，因为要说的话由语言插件来说。',
+  '  它说的是「观察到足够长的无新输入区间之后，又观察到了新的输入活动」这件事本身，',
+  '  不声称你离开过或回来过。没有声明关注对象时它不说；声明集为空的那次不会形成播报。',
+  '  --proactive-return-delay-ms 单独出现是用法错误：它只是采样节奏，',
+  '  不给出阈值时它没有任何东西可以影响。两个主动播报开关互不推导，各自独立授权。',
   '',
 ].join('\n');
 
@@ -505,6 +549,8 @@ function readResidentOptions(tokens: readonly string[]): ResidentOptions {
     modelCredentialEnv,
     modelReasoningEffort,
     proactiveDelayToken,
+    proactiveReturnDelayToken,
+    proactiveReturnAfterToken,
   } = readOptionTokens(tokens, 'resident');
   if (delayToken === undefined) {
     throw new UsageError('缺少必填参数：--desktop-awareness-delay-ms');
@@ -518,7 +564,56 @@ function readResidentOptions(tokens: readonly string[]): ResidentOptions {
   const withLanguage = language === undefined ? withRepository : { ...withRepository, model: language };
 
   const proactive = readProactivePairing(proactiveDelayToken, repositoryCi, language);
-  return proactive === undefined ? withLanguage : { ...withLanguage, proactiveCiDelayMs: proactive };
+  const withProactive = proactive === undefined ? withLanguage : { ...withLanguage, proactiveCiDelayMs: proactive };
+
+  // Independent of the pairing above, and of the repository scope: this mandate names a subject that
+  // is not a repository, so it is read from the model and its own two tokens and from nothing else.
+  const proactiveReturn = readProactiveReturnPairing(proactiveReturnAfterToken, proactiveReturnDelayToken, language);
+  return proactiveReturn === undefined ? withProactive : { ...withProactive, proactiveReturn };
+}
+
+// The fourth pairing rule, and the only one where the *threshold* is the act of authorization. The
+// enable is the number, so there is no boolean that could disagree with it (see `ProactiveReturnOptions`).
+//
+// Refused here rather than left to the composition, for the reason the CI pairing gives: a resident
+// started with a threshold and no Language would come up with a plugin that requires a Service nobody
+// provides, which makes it `waiting`, which makes the resident refuse readiness and exit. The operator
+// would get a roster and an exit code instead of the sentence naming what is missing.
+//
+// Every missing item is named in the one message, rather than one flag per attempt. The CI pairing
+// names both of its halves together for the same reason, and the reason applies here in a form the
+// CI one does not have: the two things that can be missing — the cadence flag and the model — are
+// independent omissions, so an operator who supplied neither has two unrelated edits to make and
+// should not have to discover the second one by starting again.
+//
+// What is deliberately *not* checked: the two numbers. `readOptionTokens` has established that each is
+// a numeric literal, which is the one thing an argument list can know; whether the cadence fits a
+// timer and whether the threshold fits the counter it will be compared against are the attention
+// plugin's own questions, asked in its `config.parse`. A second copy of either bound here would be a
+// second answer to a question that already has one.
+function readProactiveReturnPairing(
+  afterToken: string | undefined,
+  delayToken: string | undefined,
+  model: ModelOptions | undefined,
+): ProactiveReturnOptions | undefined {
+  if (afterToken === undefined) {
+    // The cadence on its own is a usage error and not a silently ignored value: nothing else reads it.
+    if (delayToken !== undefined) {
+      throw new UsageError(
+        '--proactive-return-delay-ms 需要一个空闲阈值；缺少：--proactive-return-after-ms',
+      );
+    }
+    return undefined;
+  }
+
+  const missing: string[] = [];
+  if (delayToken === undefined) missing.push('--proactive-return-delay-ms');
+  if (model === undefined) missing.push('--model-endpoint', '--model');
+  if (missing.length > 0) {
+    throw new UsageError(`--proactive-return-after-ms 还需要：${missing.join('、')}`);
+  }
+
+  return Object.freeze({ delayMs: Number(delayToken), afterMs: Number(afterToken) });
 }
 
 // The third pairing rule in this file, and the widest: this flag names something that needs two other
@@ -651,6 +746,8 @@ interface OptionTokens {
   readonly modelCredentialEnv: string | undefined;
   readonly modelReasoningEffort: string | undefined;
   readonly proactiveDelayToken: string | undefined;
+  readonly proactiveReturnDelayToken: string | undefined;
+  readonly proactiveReturnAfterToken: string | undefined;
 }
 
 function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): OptionTokens {
@@ -663,6 +760,8 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
   let modelCredentialEnv: string | undefined;
   let modelReasoningEffort: string | undefined;
   let proactiveDelayToken: string | undefined;
+  let proactiveReturnDelayToken: string | undefined;
+  let proactiveReturnAfterToken: string | undefined;
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
@@ -799,6 +898,45 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
       continue;
     }
 
+    // Both of the return flags are read exactly like the cadence above, and checked exactly as little:
+    // is this token a number. Their ranges, and the fact that one of them is useless without the other,
+    // are the attention plugin's and the pairing rule's questions respectively.
+    if (token === '--proactive-return-delay-ms' && grammar === 'resident') {
+      if (proactiveReturnDelayToken !== undefined) {
+        throw new UsageError('--proactive-return-delay-ms 只能指定一次。');
+      }
+
+      const value = tokens[index + 1];
+      if (value === undefined) {
+        throw new UsageError('--proactive-return-delay-ms 需要一个整数。');
+      }
+      if (!NUMBER_LITERAL.test(value)) {
+        throw new UsageError(`--proactive-return-delay-ms 需要一个数字，收到：${value}`);
+      }
+
+      proactiveReturnDelayToken = value;
+      index += 1;
+      continue;
+    }
+
+    if (token === '--proactive-return-after-ms' && grammar === 'resident') {
+      if (proactiveReturnAfterToken !== undefined) {
+        throw new UsageError('--proactive-return-after-ms 只能指定一次。');
+      }
+
+      const value = tokens[index + 1];
+      if (value === undefined) {
+        throw new UsageError('--proactive-return-after-ms 需要一个整数。');
+      }
+      if (!NUMBER_LITERAL.test(value)) {
+        throw new UsageError(`--proactive-return-after-ms 需要一个数字，收到：${value}`);
+      }
+
+      proactiveReturnAfterToken = value;
+      index += 1;
+      continue;
+    }
+
     throw new UsageError(`未知参数：${String(token)}`);
   }
 
@@ -813,5 +951,7 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
     modelCredentialEnv,
     modelReasoningEffort,
     proactiveDelayToken,
+    proactiveReturnDelayToken,
+    proactiveReturnAfterToken,
   };
 }

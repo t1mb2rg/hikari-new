@@ -3,8 +3,10 @@
 > **本轮只设计。不实现。不修改 Runtime。**
 > 本文是一份边界评审，不是一份实现计划，也不是一份冻结文件。文中的「建议」不因写在这里而成立。
 >
-> **后续指针（2026-09-28 回填）**：本轮的 **BLOCKED 判词已被取代**。`HIKARI ARCHITECTURE GOVERNANCE REVIEW v1`（`docs/architecture/hikari-architecture-governance-review-v1.md` §5）把它**重新分类为 `eligible for local contract evolution`**——理由：本节 §一 第一环撞的那条冻结（`:1434`，重基后 **`:1436`**）**两半可切分**：六个导出量不得进入 Perception 是**有归宿的 MUST**（`principles.md:57`，**继续有效**），而兜底子句「以及任何阈值比较」**缺主语**、按 `plugin-design-spec.md` §18.2 最高只能是 SHOULD，**不构成 L3 阻断**。该口径修正已经落地（`docs/development/current-stage.md:1437`）。
+> **后续指针（2026-09-28 回填）**：本轮的 **BLOCKED 判词已被取代**。`HIKARI ARCHITECTURE GOVERNANCE REVIEW v1`（`docs/architecture/hikari-architecture-governance-review-v1.md` §5）把它**重新分类为 `eligible for local contract evolution`**——理由：本节 §一 第一环撞的那条冻结（`:1434`，重基后为 **`:1444`**；行号随 `docs/development/current-stage.md` 的后续修订漂移，**以该文件「Input Activity 的在场解读」那一条为准**，不以行号为准）**两半可切分**：六个导出量不得进入 Perception 是**有归宿的 MUST**（`principles.md:57`，**继续有效**），而兜底子句「以及任何阈值比较」**缺主语**、按 `plugin-design-spec.md` §18.2 最高只能是 SHOULD，**不构成 L3 阻断**。该口径修正已经落地（`docs/development/current-stage.md` 中紧接该条之后的「口径修正（ARCHITECTURE GOVERNANCE REVIEW v1 之后）」，Desktop Return Attention v0 收尾时为 `:1445`）。
 > **下方 §17 的 BLOCKED 结论与四条解锁条件原样保留、不修改**，以便追溯本文当时究竟说过什么。
+>
+> **实施指针（2026-09-28 回填）**：该 slice 已按 **Level 2 — Local Contract Evolution** 实施，冻结与本轮实际决定逐条记在 `docs/architecture/desktop-return-attention-v0-implementation-boundary-freeze.md`（§1 选定的输入时间语义、§2 源契约变更、§9 判定规则表、§10 明确不做、§11 「无 Level 3 trigger」结论）。本文件与冻结文件的指向是**双向**的：本文记录「评审当时说了什么、为什么当时判 BLOCKED」，冻结文件记录「按修正后的口径落地了什么」。两者不互相覆盖。
 
 | 项 | 值 |
 | --- | --- |

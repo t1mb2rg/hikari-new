@@ -321,7 +321,9 @@ P3-01 有三条冻结语义，其中两条的形状在 P3-02 必须改变：
 
 代价是诚实的，且被记入限制：本模块**无法**区分「自启动以来没有输入」与「tick 恰好很小」。这个区别被留给后续阶段，不在这里凭空发明。
 
-**`lastInputTick` 是 raw uint32 semantic**：它不与 `observedAt` 同轴，实现不做任何对齐、换算或比较。observation 里**没有**「当前 tick」——这一点是刻意的，见 §17.2。
+**`lastInputTick` 是 raw uint32 semantic**：它不与 `observedAt` 同轴，实现不做任何对齐、换算或比较。
+
+> **修订（2026-09-28，Desktop Return Attention v0）。** 本行原文的下一句是「observation 里**没有**「当前 tick」——这一点是刻意的，见 §17.2」，该边界已被后续 slice 改变：observation 现在**含**「当前 tick」（`observedTick`），与 `lastInputTick` **同一次 acquisition、同一个 32 位计数器**读出。契约版本保持 `@1`。改变的依据是 `docs/architecture/desktop-return-attention-v0-implementation-boundary-freeze.md` §2，理由与代价记在 §17.2 的对应修订里。原文的其余部分（不与 `observedAt` 同轴、不做对齐换算比较）仍然成立，且是这次新增字段的正确性前提。
 
 **PASS。**
 
@@ -443,7 +445,11 @@ P3-01 因独立需求解冻
 ## 17. 已知限制
 
 1. **单次调用成本高，且两个感知并列时翻倍。** 每次 `current()` 启动一次 PowerShell 并执行 `Add-Type`，本轮实测约 **523 ms**（对照 `loadPlugin` ≈ 1 ms），与 P3-01 的 370–455 ms 同带。两个感知**同时**被使用时，一次「前台 + 输入」观测是**两次独立子进程**，没有摊薄、没有预热、没有常驻。这是 v1 已知的实现限制，本轮刻意不优化，也没有设定性能 SLA。它意味着 Input Activity 与 Foreground 一样，目前只能被**显式调用**，不能作为高频采样源。
-2. **单次 observation 本身不提供 idle duration。** `lastInputTick` 是启动相对的 tick，而 observation **不含**当前 tick，所以一次调用无法算出「距上次输入多久」。**这不是缺陷，是冻结边界**：把当前 tick 一起报出来，就是在一个声明不做解释的模块里做解释的第一步。需要时长的消费者应自行取两次 observation，并自行承担时钟语义。
+2. **~~单次 observation 本身不提供 idle duration。~~（已被后续 slice 修订，见下）** 原文：「`lastInputTick` 是启动相对的 tick，而 observation **不含**当前 tick，所以一次调用无法算出「距上次输入多久」。**这不是缺陷，是冻结边界**：把当前 tick 一起报出来，就是在一个声明不做解释的模块里做解释的第一步。需要时长的消费者应自行取两次 observation，并自行承担时钟语义。」
+
+   **修订（2026-09-28，Desktop Return Attention v0）。** observation 现在含 `observedTick`，与 `lastInputTick` 同一次 acquisition、同一个 32 位计数器读出，两者之差因此是一次调用内可得的时长。契约版本保持 `@1`；改变的依据是 `docs/architecture/desktop-return-attention-v0-implementation-boundary-freeze.md` §1–§2。
+
+   原文担心的那一步（「在一个声明不做解释的模块里做解释的第一步」）**没有被迈出**，且这是这次改动成立的条件而不是辩解：`observedTick` 和 `lastInputTick` 一样是原始计数器读数，模块既不比较它们、也不得出时长，`observedAt` 仍然不与任何一个 tick 同轴。时长的计算、阈值比较、以及「算不算一次回来」全部发生在 `desktop-return-attention` 里，那是这个判定的 owner。本模块仍然不做任何解释——它现在只是把同一个计数器在两个**同一时刻**的读数都报出来，而这两个读数各自的意义与改动前完全相同。
 3. **`dwTime = 0` 不被附加更高层解释。** 见 §13。`0` 被当作合法 tick 原样报告；本模块不声称它意味着「自启动以来没有输入」。
 4. **parser rejection branches 不在 `npm test` 回归套件内。** 见 §15.1。这是 §9 那条取舍的直接代价，现在涉及两个模块。
 5. **stderr / CLIXML 不作为稳定机器契约解析。** 实测失败时 stderr 为 PowerShell 序列化错误流（`#< CLIXML …`），其中的本地化错误文本在非 UTF-8 控制台下呈现乱码。实现**从不解析 stderr**，失败分类只用 `killed` / `code`，因此这不影响契约；仅记录为诊断可读性上的限制。

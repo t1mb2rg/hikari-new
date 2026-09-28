@@ -66,17 +66,26 @@
 // follows — there is no code path here that could advance the baseline, so no test has to prove one
 // does not.
 //
-// One Service is provided by both variants, and the argument for it is the one this file used to say
-// did not exist. Until this slice, nothing in the composition asked this plugin for anything: the one
-// thing that did was a person, arriving over the endpoint below, and the Contract Creation Gate has no
-// row for "a person". What changed is not this plugin's ambition but the arrival of its first real
-// consumer — `repository-ci-attention`, a decider that has something to say and no way to say it. That
-// is a named, already-happening cross-module interaction, which is exactly the evidence the gate asks
-// for, so `language.speaking@1` is offered from the shared `provides` both variants carry. It is not a
-// variant's capability and must not become one: it is about how Language expresses, not about what it
-// can read, and a variant axis for it would be the `2^n` cross-product `exposure.ts` refuses. The
-// distinction the contract file draws at length is that providing this says Language *can* express
-// something and says nothing about who may speak — a provider does not decide its consumers.
+// Two Services are provided by both variants, and the argument for each is the one this file used to
+// say did not exist. Until the first of them, nothing in the composition asked this plugin for
+// anything: the one thing that did was a person, arriving over the endpoint below, and the Contract
+// Creation Gate has no row for "a person". What changed is not this plugin's ambition but the arrival
+// of real consumers — `repository-ci-attention` and then `desktop-return-attention`, deciders that have
+// something to say and no way to say it. Each is a named, already-happening cross-module interaction,
+// which is exactly the evidence the gate asks for, so `language.speaking@1` and
+// `language.desktop-return-speaking@1` are offered from the shared `provides` both variants carry.
+// Neither is a variant's capability and neither must become one: they are about how Language expresses,
+// not about what it can read, and a variant axis for them would be the `2^n` cross-product
+// `exposure.ts` refuses. The distinction the contract file draws at length is that providing these says
+// Language *can* express something and says nothing about who may speak — a provider does not decide
+// its consumers.
+//
+// They are two Services rather than one, and `contracts.ts` argues that at length: a caller holding
+// one entry point must not thereby be able to speak for the other owner, and that has to be a property
+// of what the caller was handed rather than a rule it is asked to keep. The cost is a naming
+// asymmetry — `language.speaking@1` is the Repository CI one and does not say so — and it is recorded
+// rather than repaired, because renaming a contract that is already being served is churn charged to a
+// consumer that did nothing wrong.
 //
 // What is *not* provided is anything about a subject. This Service takes an occurrence and returns
 // lines; it does not expose what Language can read, does not let a caller ask it to say something, and
@@ -103,13 +112,13 @@ import { repositoryCiRelevanceService } from '../repository-ci-relevance/index.j
 import { workFocusCurrentService } from '../work-focus/index.js';
 
 import { createAnswerer } from './answer.js';
-import { languageSpeakingService } from './contracts.js';
+import { languageDesktopReturnSpeakingService, languageSpeakingService } from './contracts.js';
 import { listenLanguageEndpoint } from './endpoint.js';
 import { languageEndpointPath } from './endpoint-path.js';
 import { LanguageError } from './errors.js';
 import { LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES } from './exposure.js';
 import type { LanguageExposure } from './exposure.js';
-import { renderSpokenOccurrence } from './express.js';
+import { renderSpokenOccurrence, renderSpokenReturn } from './express.js';
 import {
   REASONING_EFFORTS,
   createHttpModel,
@@ -199,11 +208,12 @@ function buildLanguagePlugin(
     // The variant's own list and nothing else. What is *absent* from both variants is the argument: no
     // Memory, no Chronicle, no Runtime service that would make this a place other plugins reach in.
     requires: variant.requires,
-    // Outside the variant, and this is the only entry either variant has. A reader checking that the
-    // two agree reads `variant.requires` against `variant.exposures` and never has to account for this
-    // one, because speaking is not a read: nothing here is offered to a model, and no exposure points
-    // at it. See the file header for why a variant axis for it would be the cross-product refused there.
-    provides: [languageSpeakingService],
+    // Outside the variant, and these are the only entries either variant has. A reader checking that
+    // the two agree reads `variant.requires` against `variant.exposures` and never has to account for
+    // either of these, because speaking is not a read: nothing here is offered to a model, and no
+    // exposure points at it. See the file header for why a variant axis for them would be the
+    // cross-product refused there.
+    provides: [languageSpeakingService, languageDesktopReturnSpeakingService],
     config: {
       parse(input: unknown): LanguagePluginConfig {
         return readConfig(input);
@@ -262,17 +272,24 @@ function buildLanguagePlugin(
       context.defer(() => endpoint.close());
 
       // Offered last, once this activation is otherwise complete, and that position is the only thing
-      // this file decides about it. Nothing below can fail, so there is no window in which the
+      // this file decides about them. Nothing below can fail, so there is no window in which a
       // capability is visible from a plugin that is about to be `failed` — which matters because the
-      // consumer of this Service is a decider that would otherwise reach `speak` through a Runtime that
-      // has already given up on the provider. (The Runtime does roll a failed activation's scope back,
-      // so this is belt and braces rather than the guarantee. The guarantee is that one.)
+      // consumers of these Services are deciders that would otherwise reach `speak` through a Runtime
+      // that has already given up on the provider. (The Runtime does roll a failed activation's scope
+      // back, so this is belt and braces rather than the guarantee. The guarantee is that one.)
       //
-      // The method is `renderSpokenOccurrence` itself, not a lambda that calls it. `speak` is a pure
-      // function of its argument and this file adds nothing to it — not a timestamp, not a prefix, not
-      // a translation — so naming the function directly is the honest statement of that and leaves no
+      // The two entries are separate statements and neither is derived from the other: this activation
+      // offers both or it does not come up. There is no flag, no list to extend and no place where a
+      // third could be added without writing a third line here and a third contract in `contracts.ts`,
+      // which is deliberate — the pair is a fact about which owners Language can express for, and it is
+      // written where a reader can count it.
+      //
+      // Each method is the renderer itself, not a lambda that calls it. `speak` is a pure function of
+      // its argument and this file adds nothing to it — not a timestamp, not a prefix, not a
+      // translation — so naming the function directly is the honest statement of that and leaves no
       // closure for a later edit to grow a decision in.
       context.services.provide(languageSpeakingService, { speak: renderSpokenOccurrence });
+      context.services.provide(languageDesktopReturnSpeakingService, { speak: renderSpokenReturn });
     },
   };
 }

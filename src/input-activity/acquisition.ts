@@ -3,6 +3,7 @@ import type { InputActivityObservation, InputActivitySource } from './types.js';
 export interface InputActivityAcquisition {
   readonly observedAt: string;
   readonly lastInputTick: number;
+  readonly observedTick: number;
 }
 
 export interface InputActivityAcquirer {
@@ -17,5 +18,6 @@ export function toObservation(acquisition: InputActivityAcquisition): InputActiv
     observedAt: acquisition.observedAt,
     source: OBSERVATION_SOURCE,
     lastInputTick: acquisition.lastInputTick,
+    observedTick: acquisition.observedTick,
   });
 }

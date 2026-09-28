@@ -50,8 +50,12 @@ function acquirerFrom(acquire) {
   return { acquirer, counts };
 }
 
-function acquisition(lastInputTick, observedAt = ACQUIRED_AT) {
-  return { observedAt, lastInputTick };
+// `observedTick` defaults to the input tick rather than to something arbitrary, so a fixture that says
+// nothing about time depicts a silence of zero — which is what every test above wants. It is a real
+// parameter because the two ticks are two readings of one counter, and a fixture that made them
+// unrelated would be describing an acquisition the platform cannot produce.
+function acquisition(lastInputTick, observedAt = ACQUIRED_AT, observedTick = lastInputTick) {
+  return { observedAt, lastInputTick, observedTick };
 }
 
 async function observeInputActivity(runtime, acquirer) {
@@ -164,6 +168,26 @@ test('lastInputTick is passed through unchanged at the uint32 boundaries', async
 
     await runtime.shutdown();
   }
+});
+
+// The two ticks are two readings of one counter, taken in the same acquisition, and this is the test
+// that keeps them two. They are carried through independently: neither one is recomputed from the
+// other, neither is clamped to the other's order here (a later input after a smaller tick is reported
+// as such by the test below, and a last-input tick ahead of the observation's own reading is not this
+// module's to correct), and a fixture whose two readings differ comes back with both differences
+// intact.
+//
+// It exists because the field it covers has no other deterministic coverage: the only other assertion
+// that `observedTick` reaches the observation at all is the key-set check in the Windows smoke file,
+// and that file skips itself on every other host. Dropping the field from `toObservation` would
+// therefore leave the whole suite green on Linux while the real acquisition path kept producing it.
+test('the observation carries both readings of the acquisition', async (t) => {
+  const { observed } = await observeOnce(t, () => acquisition(123_456, ACQUIRED_AT, 124_000));
+
+  const observation = await observed.service.current();
+
+  assert.equal(observation.lastInputTick, 123_456);
+  assert.equal(observation.observedTick, 124_000);
 });
 
 test('a smaller tick after a larger one is reported as observed, not corrected', async (t) => {

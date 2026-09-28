@@ -55,8 +55,15 @@ function foregroundObservation(target = { kind: 'absent' }, observedAt = OBSERVE
   return Object.freeze({ observedAt, source: 'foreground.windows', foreground: target });
 }
 
-function inputActivityObservation(lastInputTick = 123456, observedAt = OBSERVED_AT) {
-  return Object.freeze({ observedAt, source: 'input-activity.windows', lastInputTick });
+// Both ticks, and the second defaults to the first: nothing in this file is about elapsed time, so the
+// silence a fixture depicts is zero. The observation's shape carries both because the source reports
+// both in one snapshot — see `input-activity/types.ts`.
+function inputActivityObservation(
+  lastInputTick = 123456,
+  observedAt = OBSERVED_AT,
+  observedTick = lastInputTick,
+) {
+  return Object.freeze({ observedAt, source: 'input-activity.windows', lastInputTick, observedTick });
 }
 
 function observerDefinition(observed) {

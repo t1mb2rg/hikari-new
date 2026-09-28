@@ -103,8 +103,8 @@ const REPOSITORY_CI_MEMBER_IDS = [
 const ROSTER_DATA_DIR = join(tmpdir(), 'hikari-resident-roster');
 
 // The two optional capabilities, as the options that request them. Named once because the cross-roster
-// test below builds all four rosters, and four copies of an endpoint string would make that test's
-// failures about a typo rather than about the ordering it exists to pin.
+// test below builds every roster that holds a model, and a copy of an endpoint string per roster would
+// make that test's failures about a typo rather than about the ordering it exists to pin.
 const MODEL_OPTIONS = {
   endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
   model: 'local-model',
@@ -114,8 +114,9 @@ const MODEL_OPTIONS = {
 const REPOSITORY_CI_OPTIONS = { rootDir: 'C:\\work\\hikari-new', repository: 't1mb2rg/hikari-new' };
 
 // The delay that requests proactive delivery, and the two members it brings with it. Named here for the
-// same reason `MODEL_OPTIONS` is: the cross-roster test builds all five rosters, and a bare `2000` at
-// five call sites would make a failure about which number was typed rather than about what it selects.
+// same reason `MODEL_OPTIONS` is: the cross-roster test builds this configuration at several call sites,
+// and a bare `5000` at each of them would make a failure about which number was typed rather than about
+// what it selects.
 const PROACTIVE_OPTIONS = {
   repositoryCi: REPOSITORY_CI_OPTIONS,
   model: MODEL_OPTIONS,
@@ -123,6 +124,17 @@ const PROACTIVE_OPTIONS = {
 };
 
 const PROACTIVE_MEMBER_IDS = ['human-delivery', 'repository-ci-attention'];
+
+// The second proactive mandate, and the one thing about it that is not like the first: it names a subject
+// that is not a repository, so it is reachable with no repository scope at all. Named here for the reason
+// `PROACTIVE_OPTIONS` is — the cross-roster test builds all six rosters, and six copies of a threshold
+// would make a failure about which number was typed rather than about what it selects.
+const RETURN_OPTIONS = {
+  model: MODEL_OPTIONS,
+  proactiveReturn: { delayMs: 500, afterMs: 60_000 },
+};
+
+const RETURN_MEMBER_IDS = ['human-delivery', 'desktop-return-attention'];
 
 // Verified before this test existed: deleting `work-focus` from `productionComposition` left the
 // entire suite green on both platforms. The tests that would have noticed end to end are the ones
@@ -160,7 +172,7 @@ test('显式配置 Repository CI 后，生产组合是这九个加上那五个',
 // The language member, and the one composition decision a reader could get wrong without any test going
 // red: *where* in the list it goes.
 //
-// Five rosters, and the ordering rule changed when the repository-aware variant landed. It used to be
+// Six rosters, and the ordering rule changed when the repository-aware variant landed. It used to be
 // that every roster was `base + something`, so the language member sat directly after the base and the
 // default composition was a prefix of all of them. That is now false of the fourth roster and the change
 // is deliberate: a repository-aware Language requires `repository-ci-relevance.current@1`, the Runtime
@@ -168,7 +180,7 @@ test('显式配置 Repository CI 后，生产组合是这九个加上那五个',
 // thing it requires is recorded `waiting` — which for a resident means it does not come up at all.
 //
 // So order is now decided by dependency semantics rather than by list shape, and what survives is the
-// weaker but true set of relations asserted below: the base is a common prefix of all five, members
+// weaker but true set of relations asserted below: the base is a common prefix of all six, members
 // shared by two rosters keep their relative order, and the repository-aware language member follows the
 // whole chain it depends on. `不要修改 Runtime readiness semantics 来人为保存旧 invariant` — the
 // invariant was given up instead, and this file is where that is written down rather than assumed.
@@ -229,51 +241,68 @@ test('Repository CI 与语言入口可以同时在场，且语言在 CI 链之�
   ]);
 });
 
-test('请求主动投递之后，生产组合在那十一个之后再加投递与决定者', () => {
-  const composition = productionComposition({
-    dataDir: ROSTER_DATA_DIR,
-    desktopAwarenessDelayMs: 1000,
-    ...PROACTIVE_OPTIONS,
-  });
+test('两个主动授权各自带来自己的决定者，投递在两种授权同时存在时只加载一次', () => {
+  const at = (extra) =>
+    productionComposition({
+      dataDir: ROSTER_DATA_DIR,
+      desktopAwarenessDelayMs: 1000,
+      ...extra,
+    }).map((member) => member.id);
 
-  // A literal, for the reason the four tests above give. The ordering is the claim: the decider reaches
-  // for three Services, `language.speaking@1` is one of them, and the only reason the transport may come
-  // after Language is that Language does not require it — the two are independent of each other and both
-  // are prerequisites of the member that follows.
-  assert.deepEqual(composition.map((member) => member.id), [
+  const ciOnly = at(PROACTIVE_OPTIONS);
+  const returnOnly = at(RETURN_OPTIONS);
+  const both = at({ ...PROACTIVE_OPTIONS, ...RETURN_OPTIONS });
+  const neither = at({ model: MODEL_OPTIONS });
+
+  // Literals, for the reason the four tests above give. The ordering is part of the claim: each decider
+  // reaches for `language.speaking`-shaped Services, and the only reason the transport may come after
+  // Language is that Language does not require it — the two are independent of each other and both are
+  // prerequisites of the member that follows.
+  assert.deepEqual(ciOnly, [
     ...BASE_MEMBER_IDS,
-    'git-repository',
-    'github-ci',
-    'repository-ci-world',
-    'repository-ci-awareness',
-    'repository-ci-relevance',
+    ...REPOSITORY_CI_MEMBER_IDS,
     'language',
     ...PROACTIVE_MEMBER_IDS,
   ]);
 
-  // Both or neither, and this is the assertion that makes "neither" real rather than a comment: the
-  // transport on its own is a pipe nothing writes to, which is the cosmetic `provides` the design spec's
-  // MUST forbids, and a decider on its own cannot activate at all.
-  for (const absent of ['proactiveCiDelayMs', 'model', 'repositoryCi']) {
-    const options = { dataDir: ROSTER_DATA_DIR, desktopAwarenessDelayMs: 1000, ...PROACTIVE_OPTIONS };
-    delete options[absent];
-    const ids = productionComposition(options).map((member) => member.id);
-    for (const member of PROACTIVE_MEMBER_IDS) {
-      assert.equal(
-        ids.includes(member),
-        false,
-        `少了 ${absent} 时不得出现 ${member}，否则一个空壳就被留在了组合里`,
-      );
-    }
+  // The roster this slice added, and the reason it is not a variation on the one above: watching this
+  // machine's input has nothing to do with any repository, so the return mandate is reachable with no
+  // repository scope at all — and a resident in that configuration gets the decider and nothing else.
+  // The CI decider's absence here is as much of the claim as the return decider's presence.
+  assert.deepEqual(returnOnly, [...BASE_MEMBER_IDS, 'language', ...RETURN_MEMBER_IDS]);
+
+  // Both, and the transport is in there exactly once. That is the assertion this test exists for: it
+  // provides one Service, and a second copy would be a second provider of the same contract — which the
+  // Runtime refuses, as a resident that never comes up. The old shape could not have got this wrong, since
+  // it built the transport at the one site that had a decider beside it; the new shape can, because the
+  // transport is now spliced in front of however many deciders are present.
+  assert.deepEqual(both, [
+    ...BASE_MEMBER_IDS,
+    ...REPOSITORY_CI_MEMBER_IDS,
+    'language',
+    'human-delivery',
+    'repository-ci-attention',
+    'desktop-return-attention',
+  ]);
+  assert.equal(both.filter((id) => id === 'human-delivery').length, 1);
+
+  // Neither mandate, neither member — including the transport, which on its own is a pipe nothing writes
+  // to: the cosmetic `provides` the design spec's MUST forbids.
+  for (const absent of [...PROACTIVE_MEMBER_IDS, ...RETURN_MEMBER_IDS]) {
+    assert.equal(
+      neither.includes(absent),
+      false,
+      `没有主动授权时不得出现 ${absent}，否则一个空壳就被留在了组合里`,
+    );
   }
 });
 
 // The relations that survive the reordering, asserted as relations rather than as three more literals.
 //
-// These are what make the five rosters one composition system rather than five lists that happen to
-// work: a member that moved between them, or a base that stopped being common, would be a resident whose
+// These are what make the six rosters one composition system rather than six lists that happen to work:
+// a member that moved between them, or a base that stopped being common, would be a resident whose
 // behaviour depended on which capabilities were configured rather than on what it was configured with.
-test('五个 roster 共享同一个基础前缀，且共有成员保持相对顺序', async () => {
+test('六个 roster 共享同一个基础前缀，且共有成员保持相对顺序', async () => {
   const rosters = {
     base: productionComposition({ dataDir: ROSTER_DATA_DIR, desktopAwarenessDelayMs: 1000 }),
     language: productionComposition({
@@ -296,6 +325,11 @@ test('五个 roster 共享同一个基础前缀，且共有成员保持相对顺
       dataDir: ROSTER_DATA_DIR,
       desktopAwarenessDelayMs: 1000,
       ...PROACTIVE_OPTIONS,
+    }),
+    proactiveReturn: productionComposition({
+      dataDir: ROSTER_DATA_DIR,
+      desktopAwarenessDelayMs: 1000,
+      ...RETURN_OPTIONS,
     }),
   };
 
@@ -333,6 +367,23 @@ test('五个 roster 共享同一个基础前缀，且共有成员保持相对顺
     proactive.indexOf('language') < proactive.indexOf('repository-ci-attention'),
     'decider 要求 language.speaking，必须排在 language 之后',
   );
+
+  // The sixth roster, whose tail is a different pair and whose body is shorter. The same relation holds
+  // for the same reason, and the claim worth making separately is what is *not* in it: this decider's
+  // requirements are the base plus Language, so the mandate must not drag in a chain it does not use.
+  const proactiveReturn = rosters.proactiveReturn.map((member) => member.id);
+  assert.deepEqual(proactiveReturn.slice(-2), RETURN_MEMBER_IDS);
+  assert.ok(
+    proactiveReturn.indexOf('language') < proactiveReturn.indexOf('desktop-return-attention'),
+    'decider 要求 language.desktop-return-speaking，必须排在 language 之后',
+  );
+  for (const id of REPOSITORY_CI_MEMBER_IDS) {
+    assert.equal(
+      proactiveReturn.includes(id),
+      false,
+      `主动播报 return 与仓库无关，不得带上 ${id}`,
+    );
+  }
 
   // Which *variant* the language member holds, which no comparison above can see. Both definitions carry
   // the id `language` — deliberately, so a resident's status line does not change with the variant — so

@@ -72,11 +72,19 @@ function foregroundFacet(target) {
   };
 }
 
+// `observedTick` is the same reading as the input tick, because this file's subject is what the
+// presentation transcribes and not what any duration is. It is carried at all so the fixture is the shape
+// the source reports; `presentation.ts` names `lastInputTick` and does not render this field.
 function inputActivityFacet(tick) {
   if (tick === UNAVAILABLE) return { kind: 'unavailable' };
   return {
     kind: 'available',
-    observation: { observedAt: OBSERVED_AT, source: 'input-activity.windows', lastInputTick: tick },
+    observation: {
+      observedAt: OBSERVED_AT,
+      source: 'input-activity.windows',
+      lastInputTick: tick,
+      observedTick: tick,
+    },
   };
 }
 

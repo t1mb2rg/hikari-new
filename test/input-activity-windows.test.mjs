@@ -9,10 +9,38 @@ import {
 } from '../dist/input-activity/index.js';
 
 const UTC_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-const OBSERVATION_KEYS = ['lastInputTick', 'observedAt', 'source'];
+const OBSERVATION_KEYS = ['lastInputTick', 'observedAt', 'observedTick', 'source'];
 const UINT32_MAX = 0xffffffff;
 
 const onWindows = process.platform === 'win32';
+
+// Both ticks, each a uint32, plus the one relation between them the acquisition guarantees.
+//
+// They are two readings of the same 32-bit millisecond counter, and the acquisition reads the last
+// input's before the observation's own, so the second can never be smaller than the first. That is
+// the whole of why subtracting one from the other is a duration, and it is the premise the return
+// rule's arithmetic rests on, so it is checked against a real host rather than assumed from the
+// shape of the script. What is still *not* checked is any bound relating two separate acquisitions:
+// `dwTime` is the tick of the most recent input, which can predate the window by an unbounded
+// amount, so no such bound is true. See the note before the second test.
+function assertTicksAreWellFormed(observation) {
+  const ticks = [
+    ['lastInputTick', observation.lastInputTick],
+    ['observedTick', observation.observedTick],
+  ];
+
+  for (const [name, tick] of ticks) {
+    assert.equal(typeof tick, 'number', `${name} is not a number`);
+    assert.equal(Number.isInteger(tick), true, `${name} is not an integer`);
+    assert.ok(tick >= 0, `${name} ${tick} is below the uint32 floor`);
+    assert.ok(tick <= UINT32_MAX, `${name} ${tick} is above the uint32 ceiling`);
+  }
+
+  assert.ok(
+    observation.lastInputTick <= observation.observedTick,
+    `last input tick ${observation.lastInputTick} is after the observation's own reading ${observation.observedTick}`,
+  );
+}
 
 test(
   'the real Windows acquisition path produces one well-formed observation',
@@ -48,11 +76,7 @@ test(
     assert.equal(new Date(observation.observedAt).toISOString(), observation.observedAt);
     assert.equal(observation.source, 'input-activity.windows');
 
-    const { lastInputTick } = observation;
-    assert.equal(typeof lastInputTick, 'number');
-    assert.equal(Number.isInteger(lastInputTick), true);
-    assert.ok(lastInputTick >= 0, `tick ${lastInputTick} is below the uint32 floor`);
-    assert.ok(lastInputTick <= UINT32_MAX, `tick ${lastInputTick} is above the uint32 ceiling`);
+    assertTicksAreWellFormed(observation);
 
     t.diagnostic(`real observation: ${JSON.stringify(observation)}`);
     t.diagnostic(`wall clock: loadPlugin ${loadDuration}ms, current() ${acquisitionDuration}ms`);
@@ -105,11 +129,7 @@ test(
       assert.equal(new Date(observation.observedAt).toISOString(), observation.observedAt);
       assert.equal(observation.source, 'input-activity.windows');
 
-      const { lastInputTick } = observation;
-      assert.equal(typeof lastInputTick, 'number');
-      assert.equal(Number.isInteger(lastInputTick), true);
-      assert.ok(lastInputTick >= 0, `tick ${lastInputTick} is below the uint32 floor`);
-      assert.ok(lastInputTick <= UINT32_MAX, `tick ${lastInputTick} is above the uint32 ceiling`);
+      assertTicksAreWellFormed(observation);
     }
 
     // The point of the second call is that it resolved at all. Nothing is claimed about how the two

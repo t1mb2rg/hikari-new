@@ -17,12 +17,14 @@
 // block, which is not a coincidence to be tidied away later: it is the strongest available evidence
 // that neither is inventing anything.
 //
-// `renderSpokenOccurrence` at the end of this file is the same rule reaching a second kind of caller.
-// It is not an answer to a question — nobody asked — but the step it performs is this file's step:
-// take one owner's already-rendered material out of that owner's own renderer and lay it out for a
-// person. The occurrence's block is `renderOccurrence` from `repository-ci-attention`, called on the
-// value that module's judgement produced, so what a human is told about a CI failure is that module's
-// sentence and not this one's. Nothing between the two is paraphrased, reordered or summarized.
+// The two `renderSpoken*` functions at the end of this file are the same rule reaching a different
+// kind of caller. They are not answers to a question — nobody asked — but the step each performs is
+// this file's step: take one owner's already-rendered material out of that owner's own renderer and
+// lay it out for a person. Each block is the owning module's `renderOccurrence` called on the value
+// that module's judgement produced, so what a human is told about a CI failure is
+// `repository-ci-attention`'s sentence and not this one's, and what they are told about a return is
+// `desktop-return-attention`'s. Nothing between any of the two is paraphrased, reordered or
+// summarized, and neither owner's material is expressed through the other's function.
 //
 // It does not add. Every line is a fixed label and values taken from a contract verbatim, and the only
 // free text that reaches a line is text a human wrote (a work focus designation), text an owner already
@@ -40,6 +42,11 @@
 // tissue at all, because a sentence joining them would be this file composing a claim out of two facts
 // it is not allowed to have an opinion about.
 
+// Two owners export a `renderOccurrence`, so the second is imported under the name of the module it
+// belongs to. The first keeps the bare name it has always had, for the reason `contracts.ts` records
+// about the service ids: a live name is not renamed to make a pair of names read evenly.
+import { renderOccurrence as renderDesktopReturnOccurrence } from '../desktop-return-attention/index.js';
+import type { DesktopReturnOccurrence } from '../desktop-return-attention/index.js';
 import type { DesktopSessionAwarenessAssessment } from '../desktop-session-awareness/index.js';
 import { renderAssessment } from '../desktop-session-observe/index.js';
 import { renderOccurrence } from '../repository-ci-attention/index.js';
@@ -139,6 +146,35 @@ export function renderSpokenOccurrence(
 ): readonly string[] {
   return renderAnswer(
     [{ name: REPOSITORY_CI_ATTENTION_BLOCK, lines: renderOccurrence(occurrence) }],
+    null,
+  );
+}
+
+// The second owner's name, and it is a different literal rather than a shared one for the reason the
+// two contracts are two: the block a human reads is attributed to the module that formed the
+// judgement, and a single name covering both would be this file claiming the two are one thing.
+const DESKTOP_RETURN_ATTENTION_BLOCK = 'desktop-return-attention';
+
+/**
+ * A return Hikari noticed, said out loud.
+ *
+ * Every argument the comment above makes about `renderSpokenOccurrence` applies here unchanged — the
+ * owner's words and not this file's, through `renderAnswer` rather than beside it, `contextUsed` null
+ * because nothing was asked — so the only thing worth stating separately is what is *not* shared. The
+ * two functions do not call each other, neither can be reached with the other's occurrence, and there
+ * is no parameter here that would let a caller pick which owner's block to build. That is the whole
+ * point of there being two: a caller holding one entry point must not be able to speak for the other
+ * owner, and that is a property of this file rather than a rule the caller is asked to keep.
+ *
+ * The focus the human had declared is not printed here. It is a field of the occurrence — the owner
+ * read it at the moment of the judgement, which is what makes it the focus *at return time* rather
+ * than the focus as of whenever someone got round to rendering — and the owner's own renderer decides
+ * whether and where it appears. This file has no opinion about whether a return is worth mentioning
+ * and does not gain one by reading the designations.
+ */
+export function renderSpokenReturn(occurrence: DesktopReturnOccurrence): readonly string[] {
+  return renderAnswer(
+    [{ name: DESKTOP_RETURN_ATTENTION_BLOCK, lines: renderDesktopReturnOccurrence(occurrence) }],
     null,
   );
 }

@@ -766,6 +766,12 @@ hikari resident  生产常驻组合
 
 **「九个」不再是一个架构不变量，而是默认组合这一条可执行事实。** 它最初读作不变量，之后读作「默认组合恰好是这八个」，现在读作「恰好是这九个」。因此测试钉的是**每条合法组合各自**（现在是四条），而不是把九改成十四：把成员数当成不变量，会在下一次合法组合出现时逼出一次无意义的改数。
 
+> **口径更新（PROACTIVE slice 与 DESKTOP RETURN ATTENTION v0 之后）：上面两段仍然成立，但「四条」这个计数已不再准确。** 合法组合现在是**两条相互独立的轴之积**，而不是一份列表：**scope 轴**（base / +language / +chain / +chain+language）与 **mandate 轴**（无主动授权 / CI / return / 两者）。可达的 roster 因此是：`base`；`base+language`；`base+language+delivery+return`；`base+chain`；`base+chain+language`；`base+chain+language+delivery+{ci | return | both}`。
+>
+> **不是这个乘积里的每一格都可达，而不可达的那些正是 `options.ts` 按名字拒绝的**：每个 decider 都要经过 Language 说话，因此**没有 model 就没有任何 mandate**；CI decider 还要一条链，因为它报告的对象是一个 repository。`--proactive-return-delay-ms` / `--proactive-return-after-ms` 因此**不要求 repository scope**——看这台机器的输入与任何 repository 都无关，不让它依赖一个它用不到的 scope 是刻意的（`src/cli/resident.ts` 的注释记录了这一点）。
+>
+> **测试钉的是「六个有代表性的 roster」而不是全部八个**：两个轴各自被钉住、`human-delivery` 在任何组合里都只加载一次、inactive 的成员不出现。**因此上面那句「把成员数当成不变量会在下一次逼出改数」依然是对的方向。**本轮实际改了两处措辞，各自解决自己的问题：`src/cli/resident.ts` 的组合注释从「五个合法组合」的枚举改成乘法式表述（列的是两条轴与不可达格，这样再加一条 mandate 轴时它不必重写）；`test/resident-cli.test.mjs` 的注释与测试名则只是把「五个 roster」改成「六个 roster」——**测试钉的仍然是每条具体 roster 的逐字成员表**（例如 `[...BASE_MEMBER_IDS, 'language', ...RETURN_MEMBER_IDS]`），不是乘积本身，这也正是上面那句警告的适用对象。
+
 `work-focus` 是 P4-03 Explicit Work Focus Local Ingress v1 加入的成员，也是唯一一个**供人写入、而不是供人读出**的 Plugin。**它现在提供 `work-focus.current@1`**（不变的是：不发 Event、没有自己的存储、公开面仍然只有它自己的本地端点）。（**口径更新（Durable Fact Admission v0 之后）：本句里的「不写 Chronicle」已不成立**——它现在承认自己的 durable fact，`requires` 也因此是逐字 `[chronicleService]`；「没有自己的存储」仍然成立，且写入前后数据目录里仍然只有那两个文件，有测试钉住。见文首 Durable Fact Admission v0 一段。）这条 contract 的成立依据是 Repository CI Relevance v1 带来的真实 consumer，见文首 Contract Gate 重新裁决一段。放在最后是有意的而非追加的，理由见 `src/cli/resident.ts` 的 `productionComposition`。
 
 `desktop-session-observe` 是 Desktop Observation Surface v1 加入的第八个成员，也是**第一个供人读出**的感知出口：它把 Awareness 交回来的 assessment **原样转述**成人可读的行。它 `requires` 只有 Awareness 契约——Desktop Inspection Semantics v1 之后是 `desktop-session-awareness.peek@1`，**不是** `...current@1`，而这个区别就是它与 judgement timeline 的全部关系（见文首该条）——、`provides` 为空（reader 是 CLI），**不**读取 World、**不**直接读取任何来源、**不**新增任何判词、**不**持久化。它被排在 Awareness Loop 之后，是因为它读的是那条环链的产物。
@@ -1186,6 +1192,8 @@ A 脚本往返 2 + B 调用顺序 3 + C readAcquisition 6 + D describeFailure 3 
 传输外壳与 P3-01 重复 68 行逐字相同的非平凡行，本轮刻意不抽公共 helper
 ```
 
+> **口径更新（DESKTOP RETURN ATTENTION v0 之后）：上表第三条已不再成立。** 该 slice 在 observation 上新增了第四个原始字段 `observedTick`（与 `lastInputTick` 同一次采集、同一个 Windows 计数器读数），因此**单次 observation 已经可以算出「距上次输入多久」**：`(observedTick − lastInputTick) >>> 0`。契约版本仍是 `@1`，`lastInputTick` 与 `observedAt` 的语义一个字未改。这是一次有意的**能力增长**而非 jurisdiction 扩张——Input Activity 仍然只报告源报了什么，仍然不比较这两个 tick、不算时长、不认识阈值；算与判定都在 consumer（`desktop-return-attention`）那一侧。本条**原样保留**，因为「Input Activity 自己不做解释」这条边界今天仍然成立（见 `docs/development/phase-3-input-activity.md` §4 / §14.2 与 `docs/architecture/desktop-return-attention-v0-implementation-boundary-freeze.md` §1–§2）。
+
 重复的理由是架构性的：两个实例不足以判定「稳定共享机制」与「各自 acquisition semantics」的边界在哪里，且错误的抽象比重复更难撤销——它一旦被两个已交付模块依赖，就获得事实上的冻结地位。重新评估触发条件是客观的：**出现第三个同型 Windows Perception，或 P3-01 因独立需求解冻**。
 
 P3-02 已完成、已提交、已 push（commit `9495f7c`），CI 已跑过并通过（run `35200893510`）。
@@ -1435,6 +1443,7 @@ P4-03 supporting slice（Repository CI Relevance v1）：**已满足**——Func
   **口径更新（P4-03 收口后）**：P4-03 已 COMPLETE，但**本段列举的每一项仍然未进入**，且**不因为 P4-03 收口而变成已做**。特别注意三个等式**都不成立**：`relevant ≠ important`、`relevant ≠ salient`、`relevant ≠ should notify`。P4-03 的完整非目标清单见「P4-03 收口」§五；
 - **Input Activity 的在场解读**——`lastInputAt` / `idleForMs` / `idleSeconds` / `isActive` / `isIdle` / `userPresent`，以及 **Input Activity 内部**对这些量的任何阈值比较。`lastInputTick` 是 source fact，不是结论；
   **口径修正（ARCHITECTURE GOVERNANCE REVIEW v1 之后）**：原文兜底子句写作「以及任何阈值比较」，**缺主语**，曾被下游读成「任何人不许对 Input Activity 导出的量做阈值比较」。此处**只补回主语**——本条约束的是 **Input Activity 自己**，依据 `phase-3-input-activity-architecture-review.md:139-150`（「Perception records what the source says, not what Hikari concludes from it」）。**六个导出量不得进入 Perception 这一条未改动**（`principles.md:57`）；**consumer 侧对 wall-clock 的比较不在本条外延内**。
+  **口径更新（DESKTOP RETURN ATTENTION v0 之后）**：上面补回的主语现在有一个**真实 consumer 在做阈值比较**了——`desktop-return-attention` 计算 `(observedTick − lastInputTick) >>> 0` 并与操作者配置的 `--proactive-return-after-ms` 比较。它落在本条的**外延之外**，理由与上面那条修正逐字相同：本条约束的是 Input Activity，不是它的 consumer；Input Activity 仍然不比较这两个 tick、不算时长、不认识任何阈值（本轮 `src/input-activity/` 的 diff 只有一条透传与一条校验；该目录里唯一的比较是 `isUint32` 的取值域检查 `0 ≤ v ≤ 4294967295`，没有任何针对时长的比较——这是逐字读该目录得到的，**没有**源码扫描测试钉住它）。**同时不得把它读大**：该 consumer 交付的**不是在场解读**——它不产生 `isIdle` / `isAway` / `userPresent` / `idleForMs` 中的任何一个，不判断显著性、不判断「该不该现在说」、不做 Salience / Importance，也不读 Chronicle / Memory；它只回答「在配置的空闲阈值之后，是否刚刚发生了新的输入活动」。**禁止项里唯一被触碰的是「是否允许 consumer 对 source fact 做比较」这一问，而这个问题在 v1 的口径下从来就不是禁止项。**另外，跨时钟域的减法**仍然禁止**：`observedAt − lastInputTick` 本轮零实现，且新增的 `observedTick` 存在的全部意义就是让这个减法**不需要**发生（`docs/architecture/desktop-return-attention-v0-implementation-boundary-freeze.md` §1）。
 - **感知结果的过滤**——过滤 Explorer / 任务栏 / 自身进程，或任何「这不像正常用户程序」的启发式；
 - **感知自身的后台化**——watcher、`changed` Event、感知层内的轮询、订阅、缓存、保活、队列、速率限制、去重。
   **口径**：P4-01 的 Loop 是一个**周期性 caller**，它没有把任何感知变成后台推送者——两个感知 provider 仍然是 pull-only，加载 / 空闲 / 卸载期间仍然零观测；

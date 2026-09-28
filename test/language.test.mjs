@@ -31,6 +31,7 @@ import {
   decodeLanguageReply,
   decodeLanguageRequest,
   findExposure,
+  languageDesktopReturnSpeakingService,
   languageEndpointPath,
   languagePlugin,
   languageSpeakingService,
@@ -185,6 +186,7 @@ function assessmentFixture(title = TARGET.title) {
           observedAt: SNAPSHOT_AT,
           source: 'input-activity.windows',
           lastInputTick: 12345,
+          observedTick: 12345,
         },
       },
     },
@@ -1351,7 +1353,7 @@ test('CLI 的等待上界高于 loop 合法能花掉的时间', () => {
 // The boundary, stated as a type and as a roster.
 // ---------------------------------------------------------------------------------------------
 
-test('Language 的 requires 恰好是冻结的那两个，provides 是说话那一个', () => {
+test('Language 的 requires 恰好是冻结的那两个，provides 恰好是两个发言入口', () => {
   assert.equal(languagePlugin.id, 'language');
   assert.equal(languagePlugin.version, '1.0.0');
 
@@ -1365,17 +1367,24 @@ test('Language 的 requires 恰好是冻结的那两个，provides 是说话那�
     desktopSessionAwarenessPeekService,
   ]);
 
-  // `provides` was empty until a composition member needed to speak unprompted. It is asserted as an
-  // exact list rather than a `some(...)`, because the claim that matters is not "it offers speaking" but
-  // "it offers speaking and nothing else" — the Contract Creation Gate admits a capability for an
-  // interaction that is already happening, and a second entry here would be one that is not.
-  assert.deepEqual(languagePlugin.provides, [languageSpeakingService]);
+  // `provides` was empty until a composition member needed to speak unprompted, and it now holds two.
+  // Both are asserted as an exact list rather than a `some(...)`, and the claim the exactness makes has
+  // grown rather than loosened: not "it offers speaking", but "it offers exactly the two speaking
+  // capabilities two named owners asked for, and nothing else". The Contract Creation Gate admits a
+  // capability for an interaction that is already happening, so each entry is one that is; a third would
+  // have to be one that is not. Why there are two rather than one — and what was refused instead — is
+  // argued in `contracts.ts`. What this test asserts is that the argument did not leak into Language
+  // gaining anything else along the way.
+  assert.deepEqual(languagePlugin.provides, [
+    languageSpeakingService,
+    languageDesktopReturnSpeakingService,
+  ]);
 
   const keys = languagePlugin.requires.map((contract) => `${contract.id}@${contract.version}`);
   assert.deepEqual(keys, ['work-focus.current@1', 'desktop-session-awareness.peek@1']);
 
   const provided = languagePlugin.provides.map((c) => `${c.id}@${c.version}`);
-  assert.deepEqual(provided, ['language.speaking@1']);
+  assert.deepEqual(provided, ['language.speaking@1', 'language.desktop-return-speaking@1']);
 });
 
 test('Language 不依赖 Repository CI，因此 CI 缺席时它不会失败', () => {
@@ -1580,11 +1589,15 @@ test('repository-aware Language 的 requires 是 base 那两个加上 relevance 
     desktopSessionAwarenessPeekService,
     repositoryCiRelevanceService,
   ]);
-  // The same one, and not a variant-specific addition: speaking is not a way of *reading*, so it does
-  // not belong on the axis the two variants differ along. A variant that offered it while the other did
-  // not would be a cross product between "what this deployment can read" and "whether it can talk",
-  // which is the shape `exposure.ts` exists to refuse.
-  assert.deepEqual(repositoryLanguagePlugin.provides, [languageSpeakingService]);
+  // The same two, and not variant-specific additions: speaking is not a way of *reading*, so neither
+  // belongs on the axis the two variants differ along. A variant that offered one while the other did not
+  // would be a cross product between "what this deployment can read" and "whether it can talk", which is
+  // the shape `exposure.ts` exists to refuse. The second line is the whole claim in one step — a variant's
+  // `provides` is not derived from the base's, and the equality is checked rather than assumed.
+  assert.deepEqual(repositoryLanguagePlugin.provides, [
+    languageSpeakingService,
+    languageDesktopReturnSpeakingService,
+  ]);
   assert.deepEqual(repositoryLanguagePlugin.provides, [...languagePlugin.provides]);
 
   const keys = repositoryLanguagePlugin.requires.map(

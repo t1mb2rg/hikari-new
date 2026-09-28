@@ -55,8 +55,12 @@ function foregroundObservation(target, observedAt = OBSERVED_AT) {
   return Object.freeze({ observedAt, source: 'foreground.windows', foreground: target });
 }
 
-function inputActivityObservation(lastInputTick, observedAt = OBSERVED_AT) {
-  return Object.freeze({ observedAt, source: 'input-activity.windows', lastInputTick });
+// The second tick defaults to the first, so a fixture that says nothing about time depicts a silence of
+// zero. The awareness facet is compared on `lastInputTick` alone — see `plugin.ts`, which names that
+// field rather than comparing observations — so this parameter exists to keep the fixture the shape the
+// source actually reports, not to change what is compared.
+function inputActivityObservation(lastInputTick, observedAt = OBSERVED_AT, observedTick = lastInputTick) {
+  return Object.freeze({ observedAt, source: 'input-activity.windows', lastInputTick, observedTick });
 }
 
 function available(observation) {

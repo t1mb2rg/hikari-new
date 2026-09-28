@@ -63,7 +63,7 @@ export { InputActivityError, InputActivityObservationError } from './errors.js';
 
 `acquisition.ts` 与 `windows.ts` **不在** 公开面上。`createInputActivityPlugin` 也不在公开面上——它只服务于内部实现与测试。
 
-比 P3-01 少一个符号，是结构差异而非疏漏：Foreground 需要公开 `ForegroundTarget` 联合类型（`absent` / `present` 两态各有自己的形状），而 Input Activity 的 observation 是三个原始字段，没有需要公开的嵌套类型。`InputActivitySource` 与 `ForegroundSource` 一样**不导出**——它是观测值的内部标签，不是调用方需要拼写的类型。
+比 P3-01 少一个符号，是结构差异而非疏漏：Foreground 需要公开 `ForegroundTarget` 联合类型（`absent` / `present` 两态各有自己的形状），而 Input Activity 的 observation 是四个原始字段（第四个 `observedTick` 为 2026-09-28 新增，见 §4），没有需要公开的嵌套类型。`InputActivitySource` 与 `ForegroundSource` 一样**不导出**——它是观测值的内部标签，不是调用方需要拼写的类型。
 
 ## 4. Observation 语义
 
@@ -74,8 +74,11 @@ export interface InputActivityObservation {
   readonly observedAt: string;
   readonly source: InputActivitySource;
   readonly lastInputTick: number;
+  readonly observedTick: number;
 }
 ```
+
+> **修订（2026-09-28，Desktop Return Attention v0）**：`observedTick` 是本轮新增的第四个字段，`lastInputTick` 与 `observedAt` 的语义一个字未改，契约版本保持 `@1`。它是**同一个计数器在同一个快照里的另一个读数**，仍然是一个原始事实——本模块依旧不比较这两个 tick、不计算时长、不做任何解释。改变的依据：`docs/architecture/desktop-return-attention-v0-implementation-boundary-freeze.md` §1–§2。
 
 三条语义在实现中的落点：
 
@@ -104,7 +107,9 @@ export interface InputActivityObservation {
 
 ### lastInputTick
 
-`lastInputTick` 是 user32 的 32 位 tick 计数，原样透传。它**不是**时间戳，不与 `observedAt` 同轴，二者的关系不被本模块解释。Runtime 侧的消费者可以直接看到这一点：observation 里没有「当前 tick」，因此**单次 observation 无法推出 idle 时长**（见 §14）。
+`lastInputTick` 是 user32 的 32 位 tick 计数，原样透传。它**不是**时间戳，不与 `observedAt` 同轴，二者的关系不被本模块解释。
+
+> **修订（2026-09-28）**：原文此处接着说「observation 里没有『当前 tick』，因此**单次 observation 无法推出 idle 时长**」。前半句已不成立（`observedTick` 即当前 tick），后半句**仍然成立**：本模块不推出 idle 时长，也不把它作为观察值的一部分。`observedTick − lastInputTick` 是消费者在自己那一侧做的事，且只有在消费者自己声明了时钟语义的前提下才成立（见 §14）。
 
 ### source 的独立性
 
@@ -167,7 +172,7 @@ v1 采用 **异步 PowerShell 子进程 + 直接 Win32 P/Invoke**。不使用 `s
 
 失败描述函数 `describeFailure` 先判 `error.killed`（Node 在被 `timeout` 杀死时 `error.code` 为 `0`，只看 code 会把超时误判成「exited with code 0」，读起来像成功），再判数字 `code`，最后归为「无法启动」。
 
-`readAcquisition` 对 stdout 做严格校验：非法 JSON、非对象、`observedAt` 不匹配 UTC 毫秒格式、`lastInputTick` 不是合法 uint32 一律抛 `InputActivityObservationError`。与 P3-01 不同，这里**没有**「降级省略」的分支——observation 只有三个字段，没有哪个字段缺失之后观测仍然成立。多出来的键被丢弃，不进入结果。
+`readAcquisition` 对 stdout 做严格校验：非法 JSON、非对象、`observedAt` 不匹配 UTC 毫秒格式、`lastInputTick` 不是合法 uint32 一律抛 `InputActivityObservationError`。与 P3-01 不同，这里**没有**「降级省略」的分支——observation 的四个字段（`observedAt`、`source`、`lastInputTick`、`observedTick`；第四个为 2026-09-28 新增，见 §4）没有哪个缺失之后观测仍然成立。多出来的键被丢弃，不进入结果。
 
 ### Marshal::SizeOf 的 PowerShell 5.1 陷阱
 
@@ -232,9 +237,15 @@ import { createInputActivityPlugin } from '../dist/input-activity/plugin.js';
 
 `npx tsc -p tsconfig.json --noEmit` 干净。
 
+> **修订（2026-09-28）**：上表是 P3-02 交付当时的数字。本轮新增 `observedTick` 时补了 1 条确定性测试，`test/input-activity.test.mjs` 因此是 **17 条**（全量数字见 `current-stage.md` 的当轮记录）。新增的这条不是凑数：`observedTick` 此前**只有** Windows smoke 文件的 key-set 断言覆盖，而该文件在非 win32 宿主上自我 skip——也就是说，把 `toObservation` 里的 `observedTick` 删掉，在 Linux 上整套测试仍然全绿。已按本仓库的变异纪律实测确认：删掉该字段后**只有这一条**变红（详见 §10 末），补测后转绿。
+
 确定性测试覆盖：`requires: []` 与 `provides input-activity.current@1`、依赖图可达、每次 `current()` 都重新获取、加载/空闲/卸载期零后台观测、setup 不做观测、uint32 两端边界值原样透传、tick 回退（`123456` → `123400`）被如实报告而不被修正、source 正确、`observedAt` 透传不重打、frozen、失败 reject、意外错误同样 reject、无 Continuity/Chronicle/Foreground 也能收敛、观测不修改领域存储、**两个感知并存且互不干扰**、生产 Plugin 可用性与宿主平台一致。
 
 最后一条是本阶段的架构主张所在：Foreground 与 Input Activity 都不 `requires` 对方，各自只 `provides` 自己的契约，两者同时加载时都能 `active`，任何一个失败都不会干扰另一个。
+
+**（2026-09-28 追加）** 上面这份清单是本条契约第一次交付时的覆盖。新增 `observedTick` 后另加一条：**两个读数各自独立透传**（fixture 给 `lastInputTick = 123456`、`observedTick = 124000`，观测必须带回两个不同的值，谁也不是从谁算出来的）。
+
+它的覆盖价值由一次定向变异实测确认，而不是由「跑通了」推断：临时从编译产物里删掉 `toObservation` 的 `observedTick` 赋值后，`node --test test/input-activity.test.mjs` **只有新增的这一条变红**，其余 16 条全绿。这正是它存在的理由——在此之前，`observedTick` 是否真的到达 observation，唯一的断言在 `test/input-activity-windows.test.mjs:74`，而那条测试在非 win32 宿主上自我 skip，因此这个字段在 Linux 上**没有**任何有效覆盖。变异验证后已重建 `dist/`，未保留任何修改。
 
 ## 11. 真实 Windows smoke
 
@@ -247,6 +258,19 @@ import { createInputActivityPlugin } from '../dist/input-activity/plugin.js';
   "lastInputTick": 650025625
 }
 ```
+
+> **修订（2026-09-28）**：以上是 2026-09-17 那次 smoke 的真实输出，未改动；当时契约里还没有第四个字段。加入 `observedTick` 后，同一条路径本机实测的样子如下（2026-09-28T15:37:56.580Z 的一次真实采集）：
+
+```json
+{
+  "observedAt": "2026-09-28T15:37:56.580Z",
+  "source": "input-activity.windows",
+  "lastInputTick": 267032343,
+  "observedTick": 267072906
+}
+```
+
+两 tick 相差 40563 ms，只是**这一次采样恰好落在一段无输入期之后**；两者相等（采样这一刻没有新输入）同样是合法观测。这里没有默认值，也没有典型值。
 
 `npm test` 的 diagnostic 输出（同一轮）：
 
@@ -276,6 +300,8 @@ teardown rejection: Input activity observation failed: the acquirer was disposed
 - 没有公开 PowerShell / Win32 / tick 语义；
 - 没有为 P3-02 引入任何依赖（`package.json` 仍无 `dependencies` 字段）。
 
+> **修订（2026-09-28）**：以上是 P3-02 交付时的清单，逐条对**本模块**仍然成立——本模块仍然不做 idle duration 计算、不设阈值、不判断在场离场（第 3 条），也仍然不公开脚本与进程细节（第 9 条）。唯一需要补充口径的是第 9 条中「tick 语义」一词：本轮新增 `observedTick` 后，**两个 tick 同域、因此可以相减**这件事成了契约的一部分（冻结文档 §1），这是有意的能力增长。仍然不公开的是脚本、PowerShell、`dwTime` 的字段名与任何解释结果。
+
 ## 13. 边界验证（探针）
 
 除仓库测试外，另用一次性探针（不进入仓库）对冻结边界做了对抗式验证，共 **21 组、142 条断言全绿**。探针的意义在于它们验证的是 **dist 中的真实生产常量**，而不是手写副本。
@@ -304,7 +330,10 @@ teardown rejection: Input activity observation failed: the acquirer was disposed
 ## 14. 已知限制（P3-02 v1）
 
 1. **单次调用成本高，且本阶段翻倍。** 每次 `current()` 启动一次 PowerShell 并执行 `Add-Type`，实测本轮 `current()` 约 **523 ms**（对照 `loadPlugin` 约 1 ms），与 P3-01 的 370–455 ms 同带。两个感知同时被使用时，一次「前台 + 输入」观测是两次独立子进程，没有摊薄、没有预热、没有常驻。这是 v1 已知的实现限制，本轮刻意不优化。
-2. **单次 observation 推不出 idle 时长。** `lastInputTick` 是启动相对的 tick，而 observation **不含**当前 tick，所以一次调用无法算出「距上次输入多久」。这不是缺口——把当前 tick 一起报出来，就是在一个声明不做解释的模块里偷偷做解释的第一步。需要时长的消费者应自行取两次 observation，并自行承担时钟语义。
+2. ~~**单次 observation 推不出 idle 时长。** `lastInputTick` 是启动相对的 tick，而 observation **不含**当前 tick，所以一次调用无法算出「距上次输入多久」。这不是缺口——把当前 tick 一起报出来，就是在一个声明不做解释的模块里偷偷做解释的第一步。需要时长的消费者应自行取两次 observation，并自行承担时钟语义。~~
+   **修订（2026-09-28）：本条已被取代。** 本轮按 `desktop-return-attention-v0-implementation-boundary-freeze.md` §1–§2 在 observation 上新增了 `observedTick`，因此**单次 observation 现在可以算出「距上次输入多久」**：`(observedTick − lastInputTick) >>> 0`，两个读数同一计数器、同一次快照、同一单位。
+   原文剩下仍成立的部分是**所有权**：怎样算、算出来算不算数，仍然是消费者的事。本模块不比较两个 tick、不计算时长、不认识阈值、不判定「回来了」，§15 的「witness 不是 interpreter」一个字未改。
+   原文对「两次独立 observation」的推荐已被本轮放弃，理由是它**更弱**：两次采集可以跨越一次重启，而两次采集都不携带启动标识，配对结果无法察觉；同一次快照里读同一个计数器反而更诚实。该取舍记录在冻结文档 §1「为什么不是 A」。
 3. **传输外壳与 P3-01 真实重复：68 行逐字相同的非平凡行。** 该数字由 `src/foreground/windows.ts` 与 `src/input-activity/windows.ts` 逐行求交集测得（含 2 条 import、5 个常量、`ENCODED_*_SCRIPT` 构造、平台检查、`runAcquisition` 主体、`terminate`、`describeFailure` 以及脚本首尾的固定管道行）。并非全部可抽取——两边的 parser 收尾与 acquisition schema 不同，共享脚本只有首尾的固定部分。本轮**不抽取**共享模块，因为抽取需要修改已冻结的 `src/foreground/`。触发条件已记录：出现第三个 Windows 感知，或 P3-01 解冻（见 §15）。
 4. **输出解析的拒绝分支不在仓库测试套件内。** 非法 JSON / 时间戳不可用 / tick 不可用 / 非零退出 / 超时这些分支位于 `windows.ts` 内部，而具名内部 import 被冻结为恰好一处，因此改由探针覆盖（§13），不进入 `npm test`。这是刻意的取舍：不为补这些断言扩大生产契约或增加第二处内部 import。P3-01 已有同样的取舍，本轮**沿用**而未加剧——但覆盖缺口现在涉及两个模块。
 5. **`dwTime = 0` 的语义不被区分。** 见 §4。`0` 被当作合法 tick 原样报告；本模块不声称它意味着「自启动以来没有输入」。

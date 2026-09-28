@@ -342,7 +342,12 @@ function assessmentFixture() {
       },
       inputActivity: {
         kind: 'available',
-        observation: { observedAt: at, source: 'input-activity.windows', lastInputTick: 1 },
+        observation: {
+          observedAt: at,
+          source: 'input-activity.windows',
+          lastInputTick: 1,
+          observedTick: 1,
+        },
       },
     },
   };

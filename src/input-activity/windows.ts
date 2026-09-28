@@ -22,6 +22,8 @@ public struct LASTINPUTINFO {
 }
 [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
 public static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+[System.Runtime.InteropServices.DllImport("kernel32.dll")]
+public static extern uint GetTickCount();
 '@
 
 $info = New-Object Hikari.Input+LASTINPUTINFO
@@ -30,8 +32,13 @@ if (-not [Hikari.Input]::GetLastInputInfo([ref]$info)) { throw 'GetLastInputInfo
 
 $observedAt = [System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ss.fff') + 'Z'
 $lastInputTick = [uint32]$info.dwTime
+# The same counter dwTime is measured in, read after the call above rather than before it, so
+# lastInputTick can never exceed it. Environment::TickCount is deliberately not used: it is the
+# signed half of this same counter and wraps at 2^31 rather than 2^32, which would put the two ticks
+# in different modular domains and make their difference wrong every 24.8 days instead of every 49.7.
+$observedTick = [uint32][Hikari.Input]::GetTickCount()
 
-$result = [ordered]@{ observedAt = $observedAt; lastInputTick = $lastInputTick }
+$result = [ordered]@{ observedAt = $observedAt; lastInputTick = $lastInputTick; observedTick = $observedTick }
 $json = $result | ConvertTo-Json -Compress
 $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
 $output = [System.Console]::OpenStandardOutput()
@@ -119,15 +126,22 @@ function readAcquisition(stdout: string): InputActivityAcquisition {
     throw new InputActivityObservationError('the acquisition process produced no readable result');
   }
 
-  const { observedAt, lastInputTick } = parsed as { observedAt?: unknown; lastInputTick?: unknown };
+  const { observedAt, lastInputTick, observedTick } = parsed as {
+    observedAt?: unknown;
+    lastInputTick?: unknown;
+    observedTick?: unknown;
+  };
   if (typeof observedAt !== 'string' || !UTC_TIMESTAMP.test(observedAt)) {
     throw new InputActivityObservationError('the acquisition process produced no usable timestamp');
   }
   if (!isUint32(lastInputTick)) {
     throw new InputActivityObservationError('the acquisition process produced no usable input tick');
   }
+  if (!isUint32(observedTick)) {
+    throw new InputActivityObservationError('the acquisition process produced no usable counter reading');
+  }
 
-  return Object.freeze({ observedAt, lastInputTick });
+  return Object.freeze({ observedAt, lastInputTick, observedTick });
 }
 
 function isUint32(value: unknown): value is number {
