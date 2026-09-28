@@ -142,7 +142,7 @@ EXPLICIT WORK FOCUS VERTICAL SLICE: NARROW
 14. **restart 后为空。**
 15. **occurrence 不公开成 Event。**
 16. **不写 Chronicle。**
-17. **不创建 work-focus Service。**
+17. **不创建 work-focus Service。**（**修订指针**：本条已被取代——`work-focus.current@1` 今天已 provides，见下方「本轮严禁创建」清单后的注记。）
 18. **Repository CI Relevance 仍 blocked**（§12）。
 19. **`relevant` 的唯一未来合法规则目前是：designation 逐字等于 GitHub canonical `owner/name`**（§13）。
 20. **`unrelated` 仍无合法依据**（§14）。
@@ -214,6 +214,10 @@ Goal / Planner / Memory     salience / importance / notification / action
 ```
 
 `CLAUDE.md` 与 `core-architecture-v0.md` §11 的既有禁止清单**同时生效**，本清单是它的本轮投影，不是替代。
+
+> **修订指针（后续 slice 回填，2026-09-28）**：上方「本轮严禁创建」清单中的 **`work-focus.current@1` 一条已被取代**。触发它的是一次真实的 callable need：`repository-ci-relevance` 必须读工作焦点集合。该 Contract Gate 因此被**重新裁决，而不是豁免**（`docs/development/current-stage.md` 的「Contract Gate」一条），今天 `work-focus.current@1` **已经 provides**（`src/work-focus/contracts.ts:30`、`src/work-focus/plugin.ts:56`；守卫的替换见 `test/work-focus.test.mjs`）。
+>
+> **本注记的效力**：清单**其余条目**、以及**本文件其余正文原样保留、不修改**，以便追溯本文当时究竟说了什么（同 `outbound-composition-v0-boundary-review.md:20` 的处置方式）。
 
 ---
 

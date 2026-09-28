@@ -1399,6 +1399,8 @@ P4-03 supporting slice（Repository CI Relevance v1）：**已满足**——Func
 
 ## 当前明确仍不做
 
+> **本节的性质**：这是一张 **citation surface（引用面）**，**不是法源**。其中每一条的规范力来自它**转写自**的文档（`principles.md` / `core-architecture-v0.md` / `plugin-design-spec.md` / 各 phase architecture review），而不是来自它写在这里。转写时**必须保留主语**——一条主语被省略的规则不可读，应当被**重写**，而不是被遵守。分类与升级规则见 `docs/architecture/governance-rules-v1.md`。
+
 - 跨 Runtime 通信；
 - 节点网络协议；
 - 远程 Provider；
@@ -1431,7 +1433,8 @@ P4-03 supporting slice（Repository CI Relevance v1）：**已满足**——Func
   **口径更新（Repository CI Awareness v1 收口后）**：P3-04 仍然**只**做同一 facet 的跨时间比较（相邻两个 World snapshot 的 payload 变化）；**P4-03 supporting slice 第一次实现了 cross-source Awareness**。但它的判词**仍然是比较，不是推断**——当前唯一落地的 cross-source judgement 是「local Git HEAD commit 与 GitHub CI latest run head SHA 是否相同」，输出**仅为** `same` / `different` / `indeterminate`，**不**把两条事实合起来推出任何新结论。它**不是** repository identity、**不是** importance、**不是** salience、**不是** action；**不得**从 `same` 推导「同一个 repository」，**不得**从 `different` 推导「不是同一个 repository」。
   **口径更新（Repository CI Relevance v1 收口后）**：**repository identity 仍未进入**；**repository-level relevance 已经进入**，但只有一条已冻结的极窄 v1 规则——human designation 与 `snapshot.githubCi.observation.repository` **逐字相等**即 `relevant`，否则 `unknown`，**没有** `unrelated`；**禁止** trim / 大小写折叠 / basename / owner 拆分 / 路径解析 / remote URL 推断 / repository identity 推断 / fork 检测 / 模糊匹配 / alias / 模型匹配 / embedding / 语义相似度。它与 Awareness 的 `same` / `different` / `indeterminate` **正交**，**不是** importance / salience / action，也**不产生**任何 significance 或 action 语义；
   **口径更新（P4-03 收口后）**：P4-03 已 COMPLETE，但**本段列举的每一项仍然未进入**，且**不因为 P4-03 收口而变成已做**。特别注意三个等式**都不成立**：`relevant ≠ important`、`relevant ≠ salient`、`relevant ≠ should notify`。P4-03 的完整非目标清单见「P4-03 收口」§五；
-- **Input Activity 的在场解读**——`lastInputAt` / `idleForMs` / `idleSeconds` / `isActive` / `isIdle` / `userPresent`，以及任何阈值比较。`lastInputTick` 是 source fact，不是结论；
+- **Input Activity 的在场解读**——`lastInputAt` / `idleForMs` / `idleSeconds` / `isActive` / `isIdle` / `userPresent`，以及 **Input Activity 内部**对这些量的任何阈值比较。`lastInputTick` 是 source fact，不是结论；
+  **口径修正（ARCHITECTURE GOVERNANCE REVIEW v1 之后）**：原文兜底子句写作「以及任何阈值比较」，**缺主语**，曾被下游读成「任何人不许对 Input Activity 导出的量做阈值比较」。此处**只补回主语**——本条约束的是 **Input Activity 自己**，依据 `phase-3-input-activity-architecture-review.md:139-150`（「Perception records what the source says, not what Hikari concludes from it」）。**六个导出量不得进入 Perception 这一条未改动**（`principles.md:57`）；**consumer 侧对 wall-clock 的比较不在本条外延内**。
 - **感知结果的过滤**——过滤 Explorer / 任务栏 / 自身进程，或任何「这不像正常用户程序」的启发式；
 - **感知自身的后台化**——watcher、`changed` Event、感知层内的轮询、订阅、缓存、保活、队列、速率限制、去重。
   **口径**：P4-01 的 Loop 是一个**周期性 caller**，它没有把任何感知变成后台推送者——两个感知 provider 仍然是 pull-only，加载 / 空闲 / 卸载期间仍然零观测；
@@ -1452,7 +1455,7 @@ P4-03 supporting slice（Repository CI Relevance v1）：**已满足**——Func
 - 音视频流式资源框架；
 - 旧 Hikari 大规模迁移。
 
-这些问题继续服从冻结规则：没有真实实现问题，不提前增加抽象。
+这些问题继续服从冻结规则：没有真实实现问题，不提前增加抽象。本表条目按 `docs/architecture/governance-rules-v1.md` R2 分为 **MUST / SHOULD / NOT-YET** 三类；**未标类别的条目按 NOT-YET 处理**（真实实现问题出现即条件消失），需要按 MUST 引用时**必须引到它转写自的源文档**。
 
 ---
 
