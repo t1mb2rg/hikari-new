@@ -32,6 +32,7 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { oneLine } from '../terminal-text/index.js';
 import { requestControl, type ControlOutcome } from './control.js';
 import { launchArguments, launchProfilePath, readLaunchProfile, renderLaunchArguments, type LaunchProfile } from './launch-profile.js';
 import type { CommandOutcome, ConsoleOptions } from './options.js';
@@ -57,6 +58,97 @@ const CLEAR_LINE = '\x1b[K';
 // indefinitely, because the poll loop redraws that same short frame every two seconds and nothing
 // ever clears them. A stale status line shown as current is exactly what §5.3 exists to forbid.
 const ERASE_BELOW = '\x1b[J';
+
+// ---------------------------------------------------------------------------------------------
+// Presentation: decoration, plus exactly one colour that the protocol itself decides
+// ---------------------------------------------------------------------------------------------
+
+// Every one of these is closed by `SGR_RESET` at the end of the span it wraps, and that is not a
+// style choice. The frame appends `\x1b[K` to every line, and erase-to-end-of-line paints with the
+// attributes in effect where it starts — so a span left open does not merely run on into the next
+// line, it also decides what that line is *erased* with.
+//
+// Which span would actually show, stated precisely so the rule is not over-read: `\x1b[K` uses the
+// background attributes, so the foreground-only spans (2/31/32/33/36) would erase in the terminal's
+// default background and leave nothing visible. The one that would paint a bar to the right edge is
+// SGR 7 — the inverse video on the key bar. The rule is still "close every span", because the span
+// where the mistake shows is one of the five, and which five changes whenever a style is added.
+const SGR_RESET = '\x1b[0m';
+const SGR_BOLD = '\x1b[1m';
+const SGR_DIM = '\x1b[2m';
+const SGR_RED = '\x1b[31m';
+const SGR_GREEN = '\x1b[32m';
+const SGR_YELLOW = '\x1b[33m';
+const SGR_CYAN = '\x1b[36m';
+const SGR_INVERSE = '\x1b[7m';
+
+const RULE_CHAR = '─';
+
+/**
+ * How a frame is drawn. Both members are arguments rather than environment reads inside the render
+ * functions, and that is what keeps the screen a pure function of what it was handed: the same state
+ * renders the same bytes anywhere, and a test can pin the coloured and the uncoloured frame without
+ * owning a terminal.
+ */
+export interface ConsoleRenderOptions {
+  readonly columns: number;
+  readonly color: boolean;
+}
+
+const DEFAULT_RENDER: ConsoleRenderOptions = { columns: 72, color: true };
+
+type Styler = (text: string, ...codes: readonly string[]) => string;
+
+function styler(color: boolean): Styler {
+  return (text, ...codes) => (color && codes.length > 0 ? `${codes.join('')}${text}${SGR_RESET}` : text);
+}
+
+/**
+ * The one thing on this screen allowed to vary with state, and the line it must not cross.
+ *
+ * §5.3 forbids the console interpreting the resident's status lines. They are sentences written for a
+ * person and carry no promise of structure, so a colour derived from their contents — red for a line
+ * containing "failed" — would be this file parsing text it was told to carry whole, and it would break
+ * silently the first time the resident reworded one of those sentences. The tone below reads
+ * `ControlOutcome` and nothing else: a field the control protocol defines, the resident sets, and the
+ * console already branches on to choose the words it prints.
+ *
+ * `toneColor`/`toneDot` below are the other half of that decision and were, at first, untested: the
+ * tests pinned what this function returns and left the mapping to the screen unconstrained, so
+ * swapping green and red for `ok`/`failed` — an ordinary resident drawn in the failure colour — went
+ * through the whole suite. That gap is the reason the tests now assert on the rendered frame's
+ * escapes rather than on this return value alone.
+ */
+export type ResidentTone = 'ok' | 'failed' | 'idle' | 'broken' | 'pending';
+
+export function residentTone(view: ConsoleView): ResidentTone {
+  if (view.launching || !view.polled || view.answer === undefined) return 'pending';
+  if (view.answer.kind === 'answered') return view.answer.outcome === 'ok' ? 'ok' : 'failed';
+  return view.answer.kind === 'absent' ? 'idle' : 'broken';
+}
+
+function toneColor(tone: ResidentTone): readonly string[] {
+  if (tone === 'ok') return [SGR_GREEN];
+  if (tone === 'failed') return [SGR_RED];
+  if (tone === 'broken') return [SGR_YELLOW];
+  return [SGR_DIM];
+}
+
+// A mark that says the same thing as the words beside it, so it is never the only carrier of a state —
+// which is what it would be if those words were ever dropped for being long.
+//
+// Filled means "something is running" and hollow means "nothing is", and `broken` deliberately gets
+// neither. `unavailable` is the control channel not answering, which is not evidence either way about
+// a resident: `absent` has already taken the cases that prove nothing is there (ENOENT, ECONNREFUSED),
+// so what is left is a state this console cannot see into. A filled mark there would be the screen
+// asserting something it does not know — and it would assert it on every frame, on every platform
+// without named pipes, where `unavailable` is not an edge case but the permanent answer.
+function toneDot(tone: ResidentTone): string {
+  if (tone === 'idle') return '○';
+  if (tone === 'pending') return '◌';
+  if (tone === 'broken') return '?';
+  return '●';
+}
 
 /**
  * What the console is currently looking at: a directory it is watching, or the question it asks when
@@ -136,7 +228,21 @@ function runConsole(initialDataDir: string | undefined): Promise<CommandOutcome>
     });
 
     const draw = (): void => {
-      process.stdout.write(renderFrame(screen, view));
+      // Read per frame rather than once: a terminal can be resized while this loop is running, and the
+      // horizontal rule is the one part of the frame whose correct length depends on how wide it is.
+      //
+      // `NO_COLOR` is the usual convention for a terminal the operator has asked not to be coloured.
+      // The convention is "present and not empty", so the check is on the value: `NO_COLOR= hikari` in a
+      // shell that exports every assignment it is given is an operator who has not said anything about
+      // colour, and reading that as a request for a plain screen would take colour away from them on
+      // the strength of an empty string.
+      const noColor = process.env.NO_COLOR;
+      process.stdout.write(
+        renderFrame(screen, view, {
+          columns: process.stdout.columns ?? DEFAULT_RENDER.columns,
+          color: noColor === undefined || noColor === '',
+        }),
+      );
     };
 
     // Every asynchronous step goes through here, and it is one rule rather than an error-handling
@@ -416,17 +522,66 @@ function describeControlFailure(answer: Exclude<ControlOutcome, { readonly kind:
  * "a frame leaves nothing of the previous frame behind" is a claim about this function, and it is
  * the half of the redraw that a test could otherwise never reach.
  */
-export function renderFrame(screen: ConsoleScreen, view: ConsoleView): string {
-  return HOME + renderConsole(screen, view).map((line) => `${line}${CLEAR_LINE}`).join('\n') + ERASE_BELOW;
+export function renderFrame(
+  screen: ConsoleScreen,
+  view: ConsoleView,
+  render: ConsoleRenderOptions = DEFAULT_RENDER,
+): string {
+  return (
+    HOME +
+    renderConsole(screen, view, render)
+      .map((line) => `${line}${CLEAR_LINE}`)
+      .join('\n') +
+    ERASE_BELOW
+  );
 }
 
 // Exported, and deliberately pure: it takes the state and returns the lines, with no terminal
 // anywhere in it. That is what makes §5.3 of the freeze testable — "the resident's lines are shown
 // whole and in order" is a claim about this function, and it can be checked without a TTY.
-export function renderConsole(screen: ConsoleScreen, view: ConsoleView): readonly string[] {
-  if (screen.kind === 'asking') return renderAsking(screen);
+//
+// "One element is one line" is part of that contract, and `oneLine` is what keeps it. `renderFrame`
+// appends `\x1b[K` to each element, so an element carrying a line break is two physical rows of which
+// only the second is erased — the first keeps whatever the previous frame left to its right, which is
+// the same residue the frame's `\x1b[J` exists to prevent. The values escaped below are the ones that
+// arrive from outside this file: the data directory (argv is checked for emptiness and nothing else),
+// a notice (which may carry a profile's parse reason or the control channel's own detail), and the
+// command line read out of the profile. It is applied to those values and not to the whole rendered
+// line because the whole line already contains this file's own SGR escapes, which `oneLine` would
+// spell out as text.
+//
+// The resident's status lines are deliberately *not* passed through it here. §5.3 says they are
+// carried whole, and the resident escapes them on its own side before they reach the wire — escaping
+// them again would be this file editing text it was told to pass through.
+export function renderConsole(
+  screen: ConsoleScreen,
+  view: ConsoleView,
+  render: ConsoleRenderOptions = DEFAULT_RENDER,
+): readonly string[] {
+  const s = styler(render.color);
+  // The rule is as wide as the terminal, and never narrower than one column. The floor is one and not
+  // a "minimum sensible width" because the only hard failure available to this line is wrapping: a rule
+  // longer than the window is pushed onto a second row and shifts the whole screen down. A floor of 20
+  // would have been that failure in miniature — a 10-column window getting a 20-column rule — which is
+  // exactly backwards, since a cramped window is where the rule most needs to not grow.
+  //
+  // This is the one line in the frame whose length is a hard constraint rather than a preference, so
+  // it carries an assumption worth naming: `─` is East Asian Width *Ambiguous*, and a terminal set to
+  // render ambiguous characters double-width would wrap a `columns`-long rule onto a second row and
+  // shift everything below it. That has not been observed on the platform this is built for, where
+  // box drawing renders narrow, and it is the first thing to look at if the screen ever comes up
+  // crooked. The fix is this one character, which is why it is a constant.
+  const rule = s(RULE_CHAR.repeat(Math.max(1, render.columns)), SGR_DIM);
 
-  const lines: string[] = [`Hikari 操作台    ${screen.dataDir}`, '', `常驻：${describeResident(screen.dataDir, view)}`];
+  if (screen.kind === 'asking') return renderAsking(screen, rule, s);
+
+  const tone = residentTone(view);
+  const lines: string[] = [
+    `${s('Hikari 操作台', SGR_BOLD)}  ${s(oneLine(screen.dataDir), SGR_DIM)}`,
+    rule,
+    '',
+    `${s('常驻', SGR_DIM)}  ${s(`${toneDot(tone)} ${describeResident(screen.dataDir, view)}`, ...toneColor(tone))}`,
+  ];
 
   // Stated from the moment of launch rather than after some wait, because there is no threshold here
   // that this file is entitled to pick. The situation it describes is already true when the launch is
@@ -440,37 +595,50 @@ export function renderConsole(screen: ConsoleScreen, view: ConsoleView): readonl
   if (view.launching) {
     lines.push(
       '',
-      '如果它一直不应答，它多半在启动时就失败了。操作台看不到它的输出——常驻不是它持有的进程。',
-      '要看到原因，请在终端里直接运行下面那条等价命令。',
+      s('如果它一直不应答，它多半在启动时就失败了。操作台看不到它的输出——常驻不是它持有的进程。', SGR_YELLOW),
+      s('要看到原因，请在终端里直接运行下面那条等价命令。', SGR_YELLOW),
     );
   }
 
-  if (view.answer?.kind === 'answered') {
-    lines.push('');
-    // Verbatim, in the order the resident sent them, with nothing added and nothing sorted.
-    lines.push(...view.answer.lines);
+  if (view.answer?.kind === 'answered' && view.answer.lines.length > 0) {
+    // The rules above and below are the only decoration this block gets. The lines themselves are
+    // pushed exactly as they arrived: not indented, not coloured, not sorted, not counted. A rule
+    // drawn around a quotation is still a quotation; a rule drawn *through* it would be this file
+    // editing text it was told to carry whole.
+    //
+    // The length check is not a guard against bad data — `lines: []` is a shape the protocol allows
+    // and the resident may quite legitimately send when it has nothing to report. It is here because
+    // framing nothing produces two rules with no gap between them, which does not read as an empty
+    // block; it reads as a rule that came out doubled. Nothing is hidden by skipping it: an answered
+    // outcome with no lines still shows in the resident line above, in the colour the protocol chose.
+    lines.push('', rule, ...view.answer.lines, rule);
   }
 
   if (view.notice) {
-    lines.push('', view.notice);
+    lines.push('', s(oneLine(view.notice), SGR_YELLOW));
   }
 
-  lines.push('', ...renderProfile(screen.dataDir), '', '[s] 启动   [x] 停止   [r] 刷新   [q] 退出');
+  lines.push('', ...renderProfile(screen.dataDir, s), '', s('[s] 启动   [x] 停止   [r] 刷新   [q] 退出', SGR_INVERSE));
   return lines;
 }
 
-function renderAsking(screen: { readonly typed: string; readonly notice: string }): readonly string[] {
+function renderAsking(
+  screen: { readonly typed: string; readonly notice: string },
+  rule: string,
+  s: Styler,
+): readonly string[] {
   const lines = [
-    'Hikari 操作台',
+    s('Hikari 操作台', SGR_BOLD),
+    rule,
     '',
-    '数据目录：',
+    s('数据目录：', SGR_DIM),
     '',
-    `  ${screen.typed}_`,
+    `  ${s(screen.typed, SGR_CYAN)}${s('_', SGR_DIM)}`,
     '',
-    '输入一个数据目录后按 Enter；Esc 退出。',
-    '没有默认目录，也没有记住的上一次——这里问的就是你在跟哪一个 Hikari 说话。',
+    s('输入一个数据目录后按 Enter；Esc 退出。', SGR_DIM),
+    s('没有默认目录，也没有记住的上一次——这里问的就是你在跟哪一个 Hikari 说话。', SGR_DIM),
   ];
-  if (screen.notice) lines.push('', screen.notice);
+  if (screen.notice) lines.push('', s(screen.notice, SGR_YELLOW));
   return lines;
 }
 
@@ -486,17 +654,25 @@ function describeResident(dataDir: string, view: ConsoleView): string {
       ? '没有运行。'
       : `没有运行，而且这个数据目录不存在：先运行 hikari init --data-dir <path>。`;
   }
-  return `无法访问控制通道：${answer.detail}`;
+  return `无法访问控制通道：${oneLine(answer.detail)}`;
 }
 
-function renderProfile(dataDir: string): readonly string[] {
+function renderProfile(dataDir: string, s: Styler): readonly string[] {
+  const label = s('启动配置', SGR_DIM);
   const read = readLaunchProfile(dataDir);
-  if (read.kind === 'none') return ['启动配置：没有。按 [s] 之前请先运行 hikari profile set。'];
-  if (read.kind === 'unreadable') return [`启动配置无法读取：${read.reason}`];
+  if (read.kind === 'none') return [`${label}  没有。按 [s] 之前请先运行 hikari profile set。`];
+  if (read.kind === 'unreadable') return [`${label}  无法读取：${oneLine(read.reason)}`];
 
   const profile: LaunchProfile = read.profile;
+  // The command is the one line on this screen meant to be copied out by eye, so it is the one line
+  // given a colour of its own rather than being left to sit in the body text.
+  //
+  // The path and the command line are escaped here rather than at `renderConsole`'s entry because this
+  // is the last point at which they are still text: `renderLaunchArguments` is a command line meant to
+  // be read and retyped, and a value carrying a line break would otherwise be the one thing on screen
+  // that splits a frame element into two physical rows.
   return [
-    `启动配置：${launchProfilePath(dataDir)}`,
-    `  ${renderLaunchArguments(launchArguments(dataDir, profile))}`,
+    `${label}  ${s(oneLine(launchProfilePath(dataDir)), SGR_DIM)}`,
+    `  ${s(oneLine(renderLaunchArguments(launchArguments(dataDir, profile))), SGR_CYAN)}`,
   ];
 }

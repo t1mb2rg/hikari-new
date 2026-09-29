@@ -11,6 +11,7 @@ import {
   readAskingChunk,
   renderConsole,
   renderFrame,
+  residentTone,
   spawnDetached,
   watchingAction,
 } from '../dist/cli/console.js';
@@ -18,6 +19,39 @@ import { requestControl } from '../dist/cli/control.js';
 import { launchArguments, writeLaunchProfile } from '../dist/cli/launch-profile.js';
 
 const CLI = join(import.meta.dirname, '..', 'dist', 'cli', 'main.js');
+
+// Every escape these tests strip is an SGR (colour) sequence, which is `\x1b[…m`. The frame's other
+// escapes — home, clear-line, erase-below — are not `m` and are deliberately left alone: they are the
+// redraw mechanism, not decoration, so a test that stripped them would be hiding the thing it is
+// supposed to be checking.
+const stripSgr = (text) => text.replace(/\x1b\[[0-9;]*m/g, '');
+
+// Whether a line ends with a style still open. The frame appends `\x1b[K` to every line, so a colour
+// left open at the end of a line is the colour that line gets erased in.
+function styleLeftOpen(line) {
+  let open = false;
+  for (const match of line.matchAll(/\x1b\[([0-9;]*)m/g)) open = match[1] !== '0';
+  return open;
+}
+
+// The escape that opens the resident verdict, read off the *rendered frame* rather than off
+// `residentTone`. The difference is the point: the tone mapping is what an operator actually sees, and
+// a test that stops at the return value lets the mapping be inverted without noticing. This returns the
+// opening escape only, never the words after it, so two frames whose residents say different things can
+// still be compared on their tone.
+//
+// It is also a shape assertion in passing: if the label stops being dimmed, or the verdict stops being
+// wrapped in exactly one escape, this stops matching and the tests below fail rather than silently
+// comparing two empty strings.
+const TONE_SPAN = /^\x1b\[2m常驻\x1b\[0m  (\x1b\[[0-9;]*m)/;
+
+function toneSpanPrefix(frame) {
+  for (const line of frame.split('\n')) {
+    const match = TONE_SPAN.exec(line);
+    if (match) return match[1];
+  }
+  assert.fail(`帧里找不到上色的常驻那一行：\n${frame.replace(/\x1b/g, '\\e')}`);
+}
 
 // The console's launch path ends at a named pipe, so the end-to-end half of this file is Windows-only
 // for the same reason `resident-control.test.mjs` is. What is left ungated below is the refusal, which
@@ -128,13 +162,18 @@ test('status 行原样显示：不解析、不排序、不摘要、不加一个�
     cursor = at;
   }
 
-  // The console does not summarise. A resident that reported `failed` and a resident that reported all
-  // `active` differ on screen only in the lines the resident itself sent.
+  // The console does not summarise, and this is the assertion that keeps it that way. A resident that
+  // reported `failed` gets the failure sentence and the lines it sent; nothing is counted, ranked, or
+  // rewritten. What the console adds is a tone, and that tone comes from the protocol's `outcome`
+  // field — never from reading these lines. The test below holds that line; this one holds the words.
   const failing = renderConsole(
     { kind: 'watching', dataDir: root },
     { answer: { kind: 'answered', outcome: 'failed', lines: STATUS_LINES }, launching: false, notice: '', polled: true },
   );
-  assert.match(failing.join('\n'), /常驻：正在运行，但它报告了失败。/);
+  const failingText = stripSgr(failing.join('\n'));
+  assert.match(failingText, /常驻  ● 正在运行，但它报告了失败。/);
+  // And every line still arrives whole, even though the frame around them is now coloured.
+  for (const line of STATUS_LINES) assert.equal(failingText.includes(line), true, `colour ate a line: ${line}`);
 });
 
 test('一个陌生的状态行不会被当成未知而丢掉', (t) => {
@@ -277,6 +316,210 @@ test('帧的内容就是 renderConsole 的那些行，一字不改', (t) => {
 const ABSENT = { answer: { kind: 'absent' }, launching: false, notice: '', polled: true };
 const RUNNING = { answer: { kind: 'answered', outcome: 'ok', lines: [] }, launching: false, notice: '', polled: true };
 const UNREACHABLE = { answer: { kind: 'unavailable', detail: '管道不见了' }, launching: false, notice: '', polled: true };
+
+// ---------------------------------------------------------------------------------------------
+// Presentation: the tone is the protocol's, and colour is only ever *around* the text
+// ---------------------------------------------------------------------------------------------
+
+test('颜色只看协议的 outcome，一个字都不看 status 行里写了什么', () => {
+  // This is the line §5.3 draws, stated as something that can fail. The resident's status lines are
+  // sentences written for a person and carry no promise of structure, so a tone derived from their
+  // contents -- red because some line happens to contain "failed" -- would be this file parsing text
+  // it was told to carry whole. It would also be wrong rather than merely impure: it would go bad
+  // silently the first time the resident reworded one of those sentences.
+  const tone = (lines, outcome) =>
+    residentTone({ answer: { kind: 'answered', outcome, lines }, launching: false, notice: '', polled: true });
+
+  const alarming = ['某个插件 状态：failed', '状态：failed', '灾难，一切都完蛋了'];
+  const bland = ['某个插件 状态：active', '一切正常', '状态：ok'];
+
+  // Every alarming line under an `ok` outcome still reads as ok, and every reassuring line under a
+  // `failed` outcome still reads as failed. The lines had no vote in either direction.
+  assert.equal(tone(alarming, 'ok'), 'ok');
+  assert.equal(tone(bland, 'failed'), 'failed');
+
+  // Stated the other way round, which is the form a regression would have to break: same outcome,
+  // lines differing in every character, identical tone.
+  assert.equal(tone(alarming, 'ok'), tone(bland, 'ok'));
+  assert.equal(tone(alarming, 'failed'), tone(bland, 'failed'));
+
+  // And no lines at all is an ordinary answer, not a case to fall over on.
+  assert.equal(tone([], 'ok'), 'ok');
+});
+
+test('五种状态各有各的语气，「还没问过」不是「正在运行」', () => {
+  // The same states `watchingAction` refuses to conflate, plus the one that has no answer at all.
+  assert.equal(residentTone({ answer: undefined, launching: false, notice: '', polled: false }), 'pending');
+  assert.equal(residentTone({ ...ABSENT, launching: true }), 'pending');
+  assert.equal(residentTone(ABSENT), 'idle');
+  assert.equal(residentTone(RUNNING), 'ok');
+  assert.equal(residentTone(UNREACHABLE), 'broken');
+  assert.equal(residentTone({ ...RUNNING, answer: { kind: 'answered', outcome: 'failed', lines: [] } }), 'failed');
+});
+
+test('哪一种结局配哪一种颜色，钉在屏幕上而不是只钉在返回的 tone 上', () => {
+  // This test is here because of a gap found by breaking the code on purpose. The mapping from tone to
+  // colour used to be held only by `residentTone`'s return value, and nothing pinned what the screen did
+  // with it: swapping green and red for `ok`/`failed` — every healthy resident drawn in the failure
+  // colour — passed the entire suite, and so did dropping the colour from that line altogether. The
+  // claim §5.8 makes is about the screen, so the assertions read the screen.
+  const screen = { kind: 'watching', dataDir: tmpdir() };
+  const toneOf = (view) => toneSpanPrefix(renderFrame(screen, view, { columns: 80, color: true }));
+
+  assert.equal(toneOf(RUNNING), '\x1b[32m', 'ok 不是绿的');
+  assert.equal(toneOf({ ...RUNNING, answer: { kind: 'answered', outcome: 'failed', lines: [] } }), '\x1b[31m', 'failed 不是红的');
+  assert.equal(toneOf(ABSENT), '\x1b[2m', '没有运行不是暗的');
+  assert.equal(toneOf(UNREACHABLE), '\x1b[33m', '看不见控制通道不是黄的');
+  assert.equal(toneOf({ ...ABSENT, launching: true }), '\x1b[2m', '等应答不是暗的');
+  assert.equal(toneOf({ answer: undefined, launching: false, notice: '', polled: false }), '\x1b[2m', '还没问过不是暗的');
+
+  // And §5.3 is held at the screen as well as at the return value: same outcome, status lines differing
+  // in every character, identical escape opening the verdict. A colour read off the text would have to
+  // differ here, and this is the assertion that would catch it if it were.
+  const alarming = { answer: { kind: 'answered', outcome: 'ok', lines: ['状态：failed', '灾难，一切都完蛋了'] }, launching: false, notice: '', polled: true };
+  const bland = { answer: { kind: 'answered', outcome: 'ok', lines: ['状态：active', '一切正常'] }, launching: false, notice: '', polled: true };
+  assert.notEqual(alarming.answer.lines.join(), bland.answer.lines.join(), '两个 view 的行内容不该相同');
+  assert.equal(toneOf(alarming), toneOf(bland));
+});
+
+test('看不见的常驻不画实心点：那是在断言它自己也不知道的事', () => {
+  // The mark carries the same claim as the colour, so it is held to the same rule. Filled means
+  // something is running and hollow means nothing is; `unavailable` is the control channel not
+  // answering, which is not evidence either way — `absent` has already taken the cases that prove
+  // nothing is there (ENOENT, ECONNREFUSED). A filled mark there would be the screen asserting what it
+  // cannot see, and it would do so on every frame on a platform without named pipes, where
+  // `unavailable` is permanent rather than exceptional.
+  const screen = { kind: 'watching', dataDir: tmpdir() };
+  const mark = (view) => {
+    const line = renderConsole(screen, view, { columns: 80, color: false }).find((l) => l.startsWith('常驻'));
+    assert.notEqual(line, undefined, '屏幕上没有常驻那一行');
+    return line.slice('常驻  '.length, '常驻  '.length + 1);
+  };
+
+  assert.equal(mark(RUNNING), '●');
+  assert.equal(mark({ ...RUNNING, answer: { kind: 'answered', outcome: 'failed', lines: [] } }), '●');
+  assert.equal(mark(UNREACHABLE), '?');
+  assert.equal(mark(ABSENT), '○');
+  assert.equal(mark({ ...ABSENT, launching: true }), '◌');
+  assert.equal(mark({ answer: undefined, launching: false, notice: '', polled: false }), '◌');
+});
+
+test('一个空的状态块不画成两条紧挨着的分隔线', () => {
+  // `lines: []` is a shape the control protocol allows, and the console is not entitled to call it bad
+  // data. But framing nothing puts two rules against each other with no gap, which reads as one rule
+  // rendered twice rather than as an empty block. Nothing is hidden by leaving it out: the outcome is
+  // still on screen, in the resident line above.
+  const screen = { kind: 'watching', dataDir: tmpdir() };
+  const empty = renderConsole(screen, RUNNING, { columns: 80, color: false });
+  const adjacentRules = empty.some((line, i) => /^─+$/.test(line) && /^─+$/.test(empty[i + 1] ?? ''));
+  assert.equal(adjacentRules, false, `空状态块画出了紧挨的两条分隔线：\n${empty.join('\n')}`);
+
+  // And the outcome it was told about is still on screen, so skipping the block hides nothing.
+  assert.equal(empty.some((line) => line.startsWith('常驻  ● 正在运行。')), true);
+});
+
+test('颜色只是套在文字外面的转义：关掉颜色，屏上的字一个不差', () => {
+  const screen = { kind: 'watching', dataDir: tmpdir() };
+  const view = { answer: { kind: 'answered', outcome: 'ok', lines: STATUS_LINES }, launching: false, notice: '', polled: true };
+
+  const colored = renderFrame(screen, view, { columns: 80, color: true });
+  const plain = renderFrame(screen, view, { columns: 80, color: false });
+
+  // Two claims, and both matter. A colour that changed the characters would be decoration making a
+  // claim of its own. And the plain frame is the whole screen an operator under NO_COLOR gets, not a
+  // stripped one, so it has to stand on its own rather than being a degraded leftover.
+  assert.equal(stripSgr(colored), plain);
+  assert.equal(/\x1b\[[0-9;]*m/.test(plain), false, '关掉颜色之后仍然有颜色转义');
+
+  // The redraw mechanism is not decoration and must survive NO_COLOR: a screen that stopped erasing
+  // its tail would leave the previous frame's lines under this one.
+  assert.equal(plain.endsWith('\x1b[J'), true, '关掉颜色把擦屏也一起关掉了');
+
+  // And the resident's lines sit inside the coloured frame byte for byte, with no escape in them.
+  for (const line of STATUS_LINES) assert.equal(colored.includes(line), true, `没有原样出现：${line}`);
+});
+
+test('从彩色帧里切出来的状态块，逐字节等于常驻发来的那些行', () => {
+  // Stronger than "the frame contains each line", and the difference is the point: `includes` would
+  // still pass if a decoration had been inserted *between* two of the resident's lines, or if the two
+  // had swapped places. Comparing the slice whole does not.
+  const view = { answer: { kind: 'answered', outcome: 'ok', lines: STATUS_LINES }, launching: false, notice: '', polled: true };
+  const frame = renderFrame({ kind: 'watching', dataDir: tmpdir() }, view, { columns: 80, color: true });
+
+  // Every line carries the frame's `\x1b[K`. That is the redraw mechanism rather than decoration, so
+  // it comes off first — but explicitly, so it cannot also hide a difference.
+  const lines = frame.split('\n').map((l) => (l.endsWith('\x1b[K') ? l.slice(0, -'\x1b[K'.length) : l));
+
+  const at = lines.indexOf(STATUS_LINES[0]);
+  assert.notEqual(at, -1, '状态块没有原样出现');
+  const block = lines.slice(at, at + STATUS_LINES.length);
+  assert.deepEqual(block, STATUS_LINES);
+
+  // Nothing of this file's leaked inside: no colour, no escape of any kind.
+  for (const line of block) assert.equal(/\x1b/.test(line), false, `块里混进了转义：${JSON.stringify(line)}`);
+
+  // And the decoration is where §5.8 says it is: immediately above and below the block, as a rule.
+  const isRule = (line) => /^\x1b\[2m─+\x1b\[0m$/.test(line);
+  assert.equal(isRule(lines[at - 1]), true, `状态块上面不是分隔线：${JSON.stringify(lines[at - 1])}`);
+  assert.equal(isRule(lines[at + STATUS_LINES.length]), true, `状态块下面不是分隔线：${JSON.stringify(lines[at + STATUS_LINES.length])}`);
+});
+
+test('每一行都在擦除之前收好了颜色，否则擦行会拿那行的颜色当底色', () => {
+  const view = { answer: { kind: 'answered', outcome: 'failed', lines: STATUS_LINES }, launching: false, notice: '一条提示', polled: true };
+  const frame = renderFrame({ kind: 'watching', dataDir: tmpdir() }, view, { columns: 60, color: true });
+
+  let styled = 0;
+  for (const line of frame.split('\n')) {
+    const beforeErase = line.endsWith('\x1b[K') ? line.slice(0, -'\x1b[K'.length) : line;
+    assert.equal(styleLeftOpen(beforeErase), false, `这一行在擦除时颜色还开着：${beforeErase}`);
+    if (/\x1b\[[0-9;]*m/.test(beforeErase)) styled += 1;
+  }
+  // Without this the assertion above is vacuous in exactly the way a colour regression would be: every
+  // span silently dropped, and every line still "closed".
+  assert.ok(styled >= 4, `这一帧几乎没有上色（只有 ${styled} 行），上面那条断言等于没测`);
+});
+
+test('带换行的数据目录不会把一帧里的一行劈成两行', () => {
+  // `oneLine`'s documented contract, which this file now leans on: one element of a renderer's result
+  // is one line. The frame appends `\x1b[K` per *element*, so an element carrying a line break becomes
+  // two physical rows of which only the second one is erased -- the first keeps whatever the previous
+  // frame left to the right of it. That is the same residue §5.6 第四条 fixed, reached through the
+  // other door, and `--data-dir` is checked for emptiness and nothing else, so a path can carry one.
+  const view = { answer: { kind: 'absent' }, launching: false, notice: '出了点问题：\n第二行', polled: true };
+  const frame = renderFrame({ kind: 'watching', dataDir: 'D:/a\nb' }, view, { columns: 80, color: true });
+
+  // The frame ends with `\x1b[J` after the last element rather than a newline, so that comes off first.
+  const body = frame.endsWith('\x1b[J') ? frame.slice(0, -'\x1b[J'.length) : frame;
+  for (const line of body.split('\n')) {
+    assert.equal(line.endsWith('\x1b[K'), true, `这一行不是帧元素、也就不会被擦除：${JSON.stringify(line)}`);
+  }
+
+  // And the break is *spelled out* rather than dropped, so the operator still reads the path they gave.
+  // Refusing to print it would be this file deciding the operator may not see their own argument.
+  assert.equal(frame.includes('D:/a\\nb'), true, '数据目录里的换行没有被写成可见的两个字符');
+  assert.equal(frame.includes('出了点问题：\\n第二行'), true, '提示里的换行没有被写成可见的两个字符');
+});
+
+test('分隔线跟着终端宽度走，窄窗口拿到的是更短的分隔线而不是更长的', () => {
+  const screen = { kind: 'watching', dataDir: tmpdir() };
+  const view = { answer: { kind: 'absent' }, launching: false, notice: '', polled: true };
+  const at = (columns) => renderFrame(screen, view, { columns, color: false });
+  // Every rule in the frame, by length, with duplicates collapsed -- all of them should agree.
+  const ruleWidths = (text) => [...new Set((text.match(/─+/g) ?? []).map((r) => r.length))];
+
+  assert.deepEqual(ruleWidths(at(100)), [100]);
+
+  // The width is followed *down*, and that is the whole assertion. There is exactly one hard failure
+  // available to this line and it is wrapping: a rule wider than the window is pushed onto a second row
+  // and shifts everything below it down. A floor of "20 columns looks more sensible than 4" would have
+  // been that failure in miniature, on precisely the terminals least able to absorb it.
+  assert.deepEqual(ruleWidths(at(4)), [4]);
+  assert.deepEqual(ruleWidths(at(1)), [1]);
+
+  // The floor that does remain is one, for a terminal that reports a width it cannot be drawn in.
+  // Not zero: a zero-length rule with a `\x1b[K` after it still erases a stale rule off the screen.
+  assert.deepEqual(ruleWidths(at(0)), [1]);
+});
 
 test('数据目录可以是中文路径：挡的是控制字符，不是非 ASCII', () => {
   // The rule here used to be printable ASCII, and on the platform this is built for that made
