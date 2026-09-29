@@ -4,6 +4,24 @@ export interface CliOptions {
   readonly dataDir: string;
 }
 
+/**
+ * The console's options: a data directory, or the absence of one.
+ *
+ * This is the only place in this file where `dataDir` is optional, and it is optional for a reason
+ * that does not generalise. Every other command reaches a store that is already there, so a data
+ * directory is what it must be told; the console is the thing that asks, and an operator who ran
+ * `hikari` with nothing has expressed no directory rather than a wrong one.
+ *
+ * What the absence may *not* become is a default. There is no built-in path, no environment variable,
+ * no search, and no remembered "last used" — the directory a human means is a choice about which
+ * Hikari they are addressing, and the same reasoning that refuses to invent a model endpoint
+ * (`--model-endpoint` … "a default model would be this file choosing to send a human's words
+ * somewhere nobody named") refuses to invent this one. Absent means the console asks.
+ */
+export interface ConsoleOptions {
+  readonly dataDir: string | undefined;
+}
+
 // `resident` takes options the one-shot commands do not, and none of them has a default: a resident
 // that chose its own cadence would be deciding how often Hikari looks at the desktop, and one that
 // chose its own repository scope would be deciding what Hikari looks at.
@@ -158,7 +176,11 @@ export type CliCommand =
   | 'focus'
   | 'relevance'
   | 'observe'
-  | 'ask';
+  | 'ask'
+  | 'profile-set'
+  | 'profile-show'
+  | 'profile-clear'
+  | 'console';
 
 // Only `resident` carries a parsed configuration, and the union is what keeps that obligation in the
 // type rather than in a comment: the other commands cannot be handed a cadence or a repository scope
@@ -207,7 +229,17 @@ export type ParsedCommandLine =
     }
   | { readonly command: 'resident'; readonly options: ResidentOptions }
   | { readonly command: 'focus'; readonly options: FocusOptions }
-  | { readonly command: 'ask'; readonly options: AskOptions };
+  | { readonly command: 'ask'; readonly options: AskOptions }
+  // `profile set` carries the *resident's* options, and that is the whole of what it is: the flag
+  // surface an operator would have typed to start a resident once, kept. Giving it a reader of its own
+  // would be giving the profile format a second opinion about which combinations are legal, and the
+  // first one is already here.
+  | { readonly command: 'profile-set'; readonly options: ResidentOptions }
+  | { readonly command: 'profile-show' | 'profile-clear'; readonly options: CliOptions }
+  // `console` carries the one optional data directory in this file, and for the reason `ConsoleOptions`
+  // gives. It reaches no store and asks no question: what it needs is a directory to look at, and it
+  // is the only command that may be run without one.
+  | { readonly command: 'console'; readonly options: ConsoleOptions };
 
 export class UsageError extends Error {}
 
@@ -239,9 +271,14 @@ export const USAGE = [
   '  hikari relevance repository-ci status --data-dir <path>',
   '  hikari observe desktop-session status --data-dir <path>',
   '  hikari ask --data-dir <path> "<text>"',
+  '  hikari profile set --data-dir <path> [与 hikari resident 相同的选项]',
+  '  hikari profile show --data-dir <path>',
+  '  hikari profile clear --data-dir <path>',
+  '  hikari                                  打开操作台；没有 --data-dir 时在操作台里询问',
+  '  hikari --data-dir <path>                打开操作台',
   '',
   '选项：',
-  '  --data-dir <path>                        数据根目录，必填，没有默认值',
+  '  --data-dir <path>                        数据根目录；除操作台外必填，没有默认值',
   '  --desktop-awareness-delay-ms <integer>   resident 的采集节奏，必填，没有默认值',
   '  --repository-root <path>                 Repository CI 的仓库根目录，与 --repository 成对出现',
   '  --repository <owner/name>                Repository CI 的 GitHub 仓库，与 --repository-root 成对出现',
@@ -275,6 +312,14 @@ export const USAGE = [
   '  不声称你离开过或回来过。没有声明关注对象时它不说；声明集为空的那次不会形成播报。',
   '  --proactive-return-delay-ms 单独出现是用法错误：它只是采样节奏，',
   '  不给出阈值时它没有任何东西可以影响。两个主动播报开关互不推导，各自独立授权。',
+  '  hikari 不带命令时打开操作台：它显示常驻在不在、把常驻说的话原样显示出来，',
+  '  并且可以启动或停止常驻。它是另一个进程，通过常驻自己的本地控制通道说话，',
+  '  不是常驻的持有者——退出操作台不会停止常驻。',
+  '  操作台里不聊天：要和 Hikari 说话请用 Human Surface 或 hikari ask。',
+  '  hikari profile set 把一次 hikari resident 的选项原样记在这个数据目录里，',
+  '  操作台启动常驻时用的就是它。它只被操作台读取，hikari resident 本身不读它；',
+  '  没有记过启动配置时，操作台会说明该先运行哪一条命令。',
+  '  启动配置住在数据目录里，没有用户级配置文件、没有搜索路径、没有默认数据目录。',
   '',
 ].join('\n');
 
@@ -315,6 +360,17 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   // for `readCommand`: a sentence is not a token any table can enumerate.
   if (head === 'ask') return readAskCommand(rest);
 
+  // `profile` resolves here for the reason `chronicle` does: it is one word of sub-grammar before any
+  // options are read, and which sub-word it is decides what the rest of the line means.
+  if (head === 'profile') return readProfileCommand(rest);
+
+  // No command word at all, or the beginning of a line that never named one. Both are the console,
+  // and the test is on the *shape* of the first token rather than on a list of flags the console
+  // knows: its grammar is "a data directory, or nothing", so a first token that is not a command word
+  // is not a command this build has — and `readConsoleCommand` refuses it by name rather than letting
+  // a typo open a window.
+  if (head === undefined || head.startsWith('-')) return readConsoleCommand(argv);
+
   const { command, tokens } = readCommand(head, rest);
   if (command === 'resident') return { command, options: readResidentOptions(tokens) };
   return { command, options: readOptions(tokens) };
@@ -325,7 +381,10 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
 // before this reader is reached. Saying so in the type is what keeps the token list below from being
 // handed a command that has no token list to give.
 interface CommandTokens {
-  readonly command: Exclude<CliCommand, 'focus' | 'relevance' | 'observe' | 'ask'>;
+  readonly command: Exclude<
+    CliCommand,
+    'focus' | 'relevance' | 'observe' | 'ask' | 'profile-set' | 'profile-show' | 'profile-clear' | 'console'
+  >;
   readonly tokens: readonly string[];
 }
 
@@ -525,6 +584,55 @@ function readChronicleCommand(rest: readonly string[]): CommandTokens {
     throw new UsageError(`chronicle 只支持 init，收到：${sub ?? '(缺失)'}`);
   }
   return { command: 'chronicle-init', tokens };
+}
+
+// Three words, and unlike `focus` there is no union to type the table by: these words are this
+// file's own grammar rather than a plugin's vocabulary, so there is nothing for a table to stay in
+// step with and three literal comparisons say it more plainly than a record of three keys would.
+//
+// `set` reaches `readResidentOptions` rather than a reader of its own, and that is the load-bearing
+// line. The profile's flag surface *is* the resident's flag surface, decided by the same function
+// that decides it for `hikari resident`, so the two cannot drift into disagreeing about what a legal
+// configuration is — and an illegal one is refused here, at the moment it is written down, by the
+// sentence the operator would have seen had they typed it at a resident instead.
+function readProfileCommand(rest: readonly string[]): ParsedCommandLine {
+  const [word, ...tokens] = rest;
+
+  if (word === 'set') return { command: 'profile-set', options: readResidentOptions(tokens) };
+  if (word === 'show') return { command: 'profile-show', options: readOptions(tokens) };
+  if (word === 'clear') return { command: 'profile-clear', options: readOptions(tokens) };
+
+  throw new UsageError(`profile 只支持 set / show / clear，收到：${word ?? '(缺失)'}`);
+}
+
+// The console's whole grammar, and it is deliberately not `readOptionTokens` with a looser rule about
+// the required parameter. That reader's contract is that a data directory is what every command is
+// for, and relaxing it in place would relax it for `start`, `status` and the rest at the same time.
+// Here the option is optional because the command is the one that asks, and the loop is short enough
+// that sharing a code path with a reader built on the opposite assumption would cost more than it
+// saves.
+function readConsoleCommand(argv: readonly string[]): ParsedCommandLine {
+  let dataDir: string | undefined;
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+
+    if (token === '--data-dir') {
+      if (dataDir !== undefined) throw new UsageError('--data-dir 只能指定一次。');
+
+      const value = argv[index + 1];
+      if (value === undefined) throw new UsageError('--data-dir 需要一个路径。');
+      if (!value.trim()) throw new UsageError('--data-dir 不能是空路径。');
+
+      dataDir = value;
+      index += 1;
+      continue;
+    }
+
+    throw new UsageError(`未知参数：${String(token)}`);
+  }
+
+  return { command: 'console', options: { dataDir } };
 }
 
 // One reader for both grammars, because the difference between them is a set of flags: a command

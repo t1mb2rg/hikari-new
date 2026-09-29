@@ -2,7 +2,10 @@
 //
 // This is not a transport layer and it is not shared infrastructure. The only modules that import it
 // are the Resident's own: `resident.ts` (which hands it to the endpoint), `control-endpoint.ts` (the
-// listening half), and `control-command.ts` (the asking half). No plugin imports it, no
+// listening half), `control-command.ts` (the asking half), and `console.ts` (which asks the same
+// question on a loop and redraws the answer). The console is a fourth client, not a fourth kind of
+// thing: it is in `src/cli/` with the rest of the Resident's command line, it speaks the same two
+// words, and it adds no word of its own. No plugin imports it, no
 // module routes through it, and there is no registry behind it. The vocabulary below is closed, and
 // it is closed because both of its words are the Resident's own: process lifetime (`stop`) and what
 // an operator is told (`status`). A kind whose semantics belonged to another module would have to

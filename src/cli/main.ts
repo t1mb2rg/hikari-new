@@ -2,10 +2,12 @@
 import { NotInitializedError } from '../continuity/index.js';
 import { askCommand } from './ask-command.js';
 import { chronicleInitCommand } from './chronicle-init.js';
+import { consoleCommand } from './console.js';
 import { statusCommand, stopCommand } from './control-command.js';
 import { focusCommand } from './focus-command.js';
 import { initCommand } from './init.js';
 import { observeCommand } from './observe-command.js';
+import { profileClearCommand, profileSetCommand, profileShowCommand } from './profile-command.js';
 import { relevanceCommand } from './relevance-command.js';
 import {
   INIT_HINT,
@@ -49,6 +51,14 @@ function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOut
   if (parsed.command === 'relevance') return relevanceCommand(parsed.options);
   if (parsed.command === 'observe') return observeCommand(parsed.options);
   if (parsed.command === 'ask') return askCommand(parsed.options);
+  if (parsed.command === 'profile-set') return profileSetCommand(parsed.options);
+  if (parsed.command === 'profile-show') return profileShowCommand(parsed.options);
+  if (parsed.command === 'profile-clear') return profileClearCommand(parsed.options);
+  // The console draws to the terminal itself — raw mode, an alternate screen buffer, a redraw loop —
+  // so it returns an outcome with nothing in it and hands the empty strings back to be written over
+  // an already-restored screen. A failure to get a terminal at all is the one thing it does return for
+  // the ordinary path to print.
+  if (parsed.command === 'console') return consoleCommand(parsed.options);
   return startCommand(parsed.options);
 }
 
