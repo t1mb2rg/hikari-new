@@ -3,6 +3,11 @@ dist/
 coverage/
 *.log
 
+# Build output of the Windows surface (`apps/human-surface`), which is built with the .NET SDK rather
+# than npm and so produces neither `dist/` nor `node_modules/`.
+bin/
+obj/
+
 # Local AI development tooling
 .claude/
 .serena/

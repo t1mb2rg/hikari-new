@@ -22,3 +22,51 @@ jobs:
 
       - name: Build and test
         run: npm test
+
+      # The surface's C# is split so that only the window needs Windows: `HumanSurface.Core` and its
+      # tests target the neutral framework and touch neither a window nor a registry key, so they run
+      # here. The cases that genuinely need Windows say so and skip themselves with a reason, and the
+      # conformance cases reach the built `dist/` from the step above — which is why this runs after
+      # the npm build rather than beside it.
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Surface core tests
+        run: dotnet run --project apps/human-surface/HumanSurface.Tests/HumanSurface.Tests.csproj
+
+  # The WinForms shell cannot be built anywhere but Windows, and a build that only ever happened on the
+  # author's machine is not a build that is known to work. This job is what makes "the surface compiles"
+  # a claim CI checks rather than a claim the repository asserts, and it is also where the Windows-only
+  # cases — kernel32, named pipes, the real TypeScript decoder — stop skipping and actually run.
+  surface:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm install
+
+      # Only the build, and not `npm test`: the TypeScript suite already ran in the job above, and
+      # running it twice would spend the billable Windows minutes on tests that do not need them. What
+      # the surface's tests need from Node is `dist/`, so this step produces exactly that.
+      - name: Build the runtime
+        run: npm run build
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build the shell
+        run: dotnet build apps/human-surface/HumanSurface/HumanSurface.csproj
+
+      - name: Surface tests
+        run: dotnet run --project apps/human-surface/HumanSurface.Tests/HumanSurface.Tests.csproj

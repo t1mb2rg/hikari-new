@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The decisions live here, not in the WinForms shell. Everything in this project is reachable from
+    a plain console test runner, so the connection state machine, the framing, and the endpoint
+    derivation are all testable without a message loop or a visible window.
+
+    No WinForms reference on purpose: if this project could not build without a desktop framework,
+    "the state machine is separable from the UI" would be a claim rather than a build artifact.
+
+    And a neutral target framework, not `net8.0-windows`, for the same reason one step further out.
+    Nothing here touches a window, a tray, or a registry key — the pipe client and the JSON decoding
+    are in the base class library — so this project and its tests build and run on the Linux runner
+    the repository already has. Only `HumanSurface` itself needs Windows, and only it says so.
+
+    No PackageReference. The repository this belongs to has no `dependencies` key at all; a GUI
+    surface that dragged NuGet packages in would be the first and only place where a supply chain
+    entered the project.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>HumanSurface.Core</RootNamespace>
+    <AssemblyName>HumanSurface.Core</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12.0</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>

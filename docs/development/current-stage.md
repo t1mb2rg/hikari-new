@@ -156,6 +156,34 @@
 >
 > **15 条定向变异 14 条 RED，第 15 条存活并被记录。** 存活的是「删掉 `facts.ts` 里的 `status` 排除」——原因是真实的结构事实：`status` 永远不移动集合，session 的变化判定在那之前就拒绝为无操作请求构造 draft，因此那条子句**经 session 不可观测**。处理**不是删除它**（它是这个家族在说「词汇表里没有『问一句』这一类事实」，那是关于 owner 词汇的主张，不是关于某条请求路径的主张），而是**在它真正住着的边界上直接断言**并同时断言另外三个 type 确实产出；补测后同一变异变红，把判定反转则**编译期即被拒绝**。另记一次**观测到但未复现**的失败（`test/language-model.test.mjs:554`，不涉及本 slice，14 次重跑未再现，机制未确定）——它被写成「未复现的观测」，不是 PASS，也不是已修的缺陷。
 
+> **HUMAN SURFACE v0 已实现**（**工作标签，不占用阶段编号**——**不是** P4-04，**不是** P4-03 的一部分），边界冻结、真机 E2E 记录、Functional Review 与 Architecture Sanity Check 全部在 `docs/architecture/human-surface-v0-implementation-boundary-freeze.md`。VERDICT 是 **L2 — LOCAL CONTRACT EVOLUTION（无 L3 trigger）→ 直接实现**：它命中 R5 的「给既有 contract 加 consumer」一条（Surface 是投递管道这一既有边界的**新 consumer**），R4 四问全否。
+>
+> **它交付的是一句话的实现：Human 不再需要开一个 PowerShell 窗口等 Hikari 说话。** 此前 Hikari 已经会主动开口（Desktop Return Attention v0 / Repository CI 播报），但**唯一能听见的地方是一个前台终端里的 `hikari subscribe`**——人必须守在它前面。现在有了一个常驻在 Windows 上的窗口与托盘，它自己找得到人。**这是出口，不是新的认知层**：感知链、Awareness、Language 在本轮之前就都已存在并在运行。
+>
+> **技术栈：.NET 8 WinForms，framework-dependent，零 NuGet 包，三个工程。** `HumanSurface`（`net8.0-windows` 的 WinExe，唯一需要 Windows 的一个）／`HumanSurface.Core`（**中性 `net8.0`**，不碰窗口、不碰托盘、不碰注册表）／`HumanSurface.Tests`（自带的控制台运行器，无测试框架包）。中性目标不是随手写的：它让 Core 与它的测试**能在仓库已有的 Linux runner 上跑**，这正是 CI 双 job 成立的前提。没有 `PackageReference`——这个仓库 `package.json` 连 `dependencies` 键都没有，一个 GUI 表面拖进 NuGet 会是供应链第一次进入这个项目。
+>
+> **Surface 是独立进程，不是 Plugin，`src/` 本轮 0 diff。** 含 `src/runtime/`、`src/human-delivery/`、`src/language/` 与全部 domain plugin。它是**管道的第二个外部 client**，与 `hikari subscribe` 同类；常驻甚至不知道它在——`src/cli/subscribe.ts` 逐字写着这个模式已经成立（「the resident never knows who is listening」）。把 Surface 做成 Plugin 会让 Runtime 拥有 GUI 的生命周期，方向与 Human Delivery 自己拒绝客户端依赖的理由相反。
+>
+> **连接的字节一个没改**：沿用既有 Windows 命名管道，端点仍由数据目录推导（`\\.\pipe\hikari-human-delivery-<sha256(canonical(rootDir).toLowerCase())[0..16]>`），线格式仍是「一行一个 JSON 字符串数组」，上限仍是 64 KiB，三个结局仍是 `ended` / `absent` / `unavailable`，**单订阅者语义按字面不变**。`Human Delivery` **没有**为它加 queue / history / retry / multi-subscriber。
+>
+> **重连是本地状态机，且 reconnect ≠ message retry。** `Disconnected ⇄ Connected`，节奏 1→2→4→8→10 s，连上即重置；`absent` / `ended` / `unavailable` 三者**都**回到 Disconnected 并重试，Surface 不退出。断线期间的消息**不补投、不伪造**——重连恢复的是「听下一条」的能力，不是一次投递保证。
+>
+> **消息逐字不被改写。** 真机上把两侧的原始字符取出来比对过：窗口里的正文与 `hikari subscribe` 抓到的 payload **逐行逐字相同**，差异只有两处 Surface 自己的 chrome——一行 `收到 HH:mm:ss`（明确标注是**本进程收到它的时间**，不冒充 occurrence 时间，后者本来就在 Language 的正文里），以及行分隔符。这个程序被允许断言的每一个字都集中在 `SurfaceChrome` 一个文件里，且全部是**接口状态词**，没有一句是关于世界的。
+>
+> **一条实机撞出来、不是读出来的缺陷：LF 在那个控件里不是换行。** 窗口把整段 transcript 渲染成一整段没有换行的文字，而源码看上去完全正确。用 `EM_GETLINECOUNT` 对同一段三行文本实测：`\n`→**1**、`\r\n`→**3**、`\r`→**1**——Windows 的 edit control 只在 `\r` / `\r\n` 处断行。治法落在构建该控件文本的那一处（`SurfaceChrome.Transcript`），因为**行分隔符是这个控件的要求，不是消息的性质**。
+>
+> **它没有能力持久化任何东西。** 全源码扫描：整个 surface 里只有**一处** IO，就是那根管道——没有 `File`、没有注册表、没有环境变量读取、不 spawn 进程、没有 HTTP 客户端。消息列表 200 条封顶、随进程死亡，`transcript` 每次从快照整体重建而不追加。**这比「它选择不持久化」强**：后者是一条要记得遵守的规则。不进 Chronicle、不叫 Memory、不叫 Conversation History、不建数据库。
+>
+> **两个生命周期互不拥有。** 「退出」只调 `ExitThread()`，源码里没有任何通往 `hikari stop` / Runtime 的路径。真机十二步 E2E 里：`hikari stop` 之后 Surface 进程存活并如实显示 `未连接 · 正在等待 Hikari…`；新 resident 起来后约 **1407 ms** 恢复 `已连接`；点「退出」之后 resident **仍在运行**，13 个插件仍 `active`。托盘菜单恰三项：状态行（禁用）/ `打开` / `退出`。
+>
+> **一个好消息，值得单独写：desktop-return 的正文不是模型产出，整个 E2E 没有连过任何外部服务。** 假模型端点的请求日志是 **0 字节**，而消息完整抵达——`desktop-return-speaking@1` 由 `renderSpokenReturn` 确定性渲染。配置上必须给 `--model-endpoint`，但这一轮一次都没有用到它。
+>
+> **诚实的反面同样要写下来三处。** （一）**balloon 是否真的被渲染、是否被人看见，本进程无法观测**——与 Toast 同一个结构性限制，因此只写「平台收下了」，不写「Human 看到了」；可见提示里**确定性**的那一半是托盘 tooltip 与窗口未读行，它不依赖通知有没有被渲染。（二）**C# 侧确实是投递协议的第二个实现**，这不是能靠措辞变成免费的东西——`protocol.ts` 自己就写着「the second one is the copy nobody re-reads when the first changes」。对策是让它成为**被检查的副本**：conformance 测试用真实 Node `encodeDelivery` 产出的字节喂 C# 解码器、反向差分 15 条接受/拒绝判定、端点推导 6 种拼写逐字比对。**残余风险照实记录**：C# 只实现读的一半（Surface 从不写管道），且用例表是**有限枚举**，TS 侧若改变 framing 且新行为落在枚举之外，这些测试不会红——**这一条没有对症的治法**，它是记录在案的残余风险，不是已修项。（三）**GitNexus 对本轮不可答，且不得假装答过**：`apps/human-surface/**` 不在图内（索引是 TS 仓库，实测 `context({name:"TrayApplication"})` 返回 `Symbol not found`），而 `src/` 的 diff 是 **0**，没有任何 TS symbol 被改动、没有可做 upstream impact 的对象。**这不是「跑了但结果为空」，是「工具对这块改动没有可说的」**——两者必须分开写。本轮的验证由另一条路径承担：C# 侧 38 用例、Node 侧 655 用例、十二步真机 E2E、源码级结构证明。
+>
+> **验证分层，且不互相冒充。** 本机 Windows：C# **38 passed / 0 failed / 0 skipped**；Node 全量 **655 tests / 651 pass / 0 fail / 4 skipped**（三个 `*.live.test.mjs` 需要真实模型端点）。Linux（WSL，.NET 8.0.425，暂存副本**实跑**而非假设）：**28 passed / 0 failed / 10 skipped**，每个 skip 都带书面理由。CI 由单 job 改为双 job：`ubuntu-latest` 跑核心测试，`windows-latest` 构建 WinForms shell 并跑全部用例——**「CI 不跑 Surface」不是完成状态**，而一个只在作者机器上发生过的构建不算已知能工作的构建。
+>
+> **没有进入的东西，且未被预埋：** Human → Hikari 方向的对话（v0 只有 Hikari → Human）、salience / importance / 该不该通知的判断、Memory / Presence / Chronicle reader、对 Language 输出的任何改写、repository / input activity / Work Focus 的读取、模型调用。也**不做** installer / MSIX / AUMID / auto-start / release channel / self-update——手工起一个 exe 就是全部，零 NuGet。**加了一个 C# 项目不是 L3 trigger**，本轮不因此自动升级 Architecture Review。
+
 ---
 
 ## 当前结论

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A window on the desktop, and nothing else. This is the only project in the Surface that needs
+    Windows, and the only one that touches WinForms — everything it decides is delegated to
+    HumanSurface.Core, so the shell is small enough to read in one sitting.
+
+    Framework-dependent and package-free, like its siblings: `Microsoft.WindowsDesktop.App` is present
+    on any Windows machine with a .NET 8 desktop runtime, so the output is a directory with an exe in
+    it that runs. No installer, no MSIX, no release channel — the v0 delivery is "run this", and the
+    absence of a packaging story is a decision rather than a gap.
+
+    ReadyToRun and trimming are deliberately off. Both would trade build complexity for a startup time
+    difference measured in milliseconds.
+  -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>HumanSurface</RootNamespace>
+    <AssemblyName>HumanSurface</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12.0</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HumanSurface.Core\HumanSurface.Core.csproj" />
+  </ItemGroup>
+
+</Project>

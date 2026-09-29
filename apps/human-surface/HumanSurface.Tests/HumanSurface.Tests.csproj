@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A console runner rather than xunit/nunit/MSTest, for the same reason the Surface itself takes no
+    packages: this repository has no dependency graph, and a test framework would be the first entry
+    in one. The surface is small enough that an assertion helper is twenty lines, and what a framework
+    would add on top of that — discovery, fixtures, parallel collection — is machinery for a suite
+    this size.
+
+    Targets the neutral framework, so it runs on the Linux runner the repository already has. The
+    cases that genuinely need Windows (kernel32, named pipes) say so and skip themselves elsewhere;
+    the conformance cases need Node, and check for it rather than assuming it.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>HumanSurface.Tests</RootNamespace>
+    <AssemblyName>HumanSurface.Tests</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12.0</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HumanSurface.Core\HumanSurface.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    The two Node helpers are copied beside the test assembly so the runner finds them by a path
+    relative to itself, with no knowledge of where the repository root happens to be.
+  -->
+  <ItemGroup>
+    <None Include="node-helpers\*.mjs" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
