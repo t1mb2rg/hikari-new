@@ -211,9 +211,11 @@ bound      = 有界（最近的 N 条，超出丢最旧）
 
 | 进程 | PID | 启动方式 |
 | --- | --- | --- |
-| Hikari 常驻 | 38292 | `hikari start` |
-| Human Surface | 31068 | 手工双击/命令行起 `HumanSurface.exe --data-dir …` |
+| Hikari 常驻 | 38292 | `hikari resident --data-dir … --desktop-awareness-delay-ms …` 加主动播报参数（起之前先跑一次 `hikari start` 做 init 预检） |
+| Human Surface | 31068 | 手工起 `HumanSurface.exe --data-dir …` |
 | (假模型端点) | 46072 | 本机 loopback，仅因 `--proactive-return-after-ms` 强制要求 `--model-endpoint` 而存在 |
+
+> **一处容易写错的用法，记下来**：`hikari start` **不是**启动常驻——它只做 init / chronicle 预检，且**不接受** `--desktop-awareness-delay-ms` 一类的组合参数。常驻是 `hikari resident`。把它写成 `hikari start` 会得到一个「未知参数」的用法错误，而那个错误看起来像配置问题。
 
 Surface **不被常驻启动、不被常驻感知、不被常驻终止**。常驻侧没有任何一行代码知道它在。
 
@@ -292,21 +294,6 @@ Windows 的 edit control **只在 `\r` / `\r\n` 处断行**，裸 `\n` 被当作
 
 ---
 
-## 附：本轮实测到的、写进本文的事实
-
-| 事实 | 怎么来的 |
-| --- | --- |
-| `package.json` 没有 `dependencies` 键；`node_modules` 只有 3 个条目 | 直接读 |
-| 零 NuGet 的 WinForms 工程能构建（~5s） | 本机跑了一次 hello-world 探针 |
-| `Microsoft.WindowsDesktop.App 8.0.28` 已安装 | `dotnet --list-runtimes` |
-| C# 端点推导与 Node 在 6 种拼写下逐字相同 | 两侧各跑一次 probe 并对比输出 |
-| 第二个 subscriber 会被服务端当场销毁 | 读 `endpoint.ts`（`if (client !== undefined) socket.destroy()`） |
-| `write` 在无人连接时返回 `unavailable`，无队列 | 读 `endpoint.ts` |
-| CI 是 `ubuntu-latest`，当前完全不含 Windows runner | 读 `.github/workflows/runtime-tests.yml`（**本轮已改**，见 §16） |
-| edit control 只在 `\r` / `\r\n` 断行 | `EM_GETLINECOUNT`：`\n`→1、`\r\n`→3、`\r`→1 |
-| `GetWindowTextW` **无法**跨进程读 edit control（返回空串），static 可以 | 探针两种控件各读一次，对照 |
-| desktop-return 的正文不是模型产出 | 假端点 `model-requests.jsonl` 0 字节，而消息完整到达 |
-
 ## 16. CI（§23）
 
 `.github/workflows/runtime-tests.yml` 由单 job 改为双 job：
@@ -316,15 +303,19 @@ Windows 的 edit control **只在 `\r` / `\r\n` 处断行**，裸 `\n` 被当作
 
 **「CI 不跑 Surface」不是完成状态**，因此第二点不是可选：至少有一种可重复验证 Surface 构建的方式，而现在有两种（CI 的 windows job，与本机跑**同一条**命令）。
 
-两条命令在本机与 Linux 上都实跑过，不是照抄：
+两条命令在本机与 Linux 上都实跑过，不是照抄。**两次 CI 实跑的读数也在表里**——CI 是这个 workflow 真正的执行者，它的数字比本机复现更有分量：
 
 | 环境 | 结果 |
 | --- | --- |
-| 本机 Windows | **38 passed / 0 failed / 0 skipped** |
+| **CI `surface`（windows-latest）**，run `36518505311` | `Build succeeded.` + **38 passed / 0 failed / 0 skipped** |
+| **CI `test`（ubuntu-latest）**，同一 run | Node 侧 655 tests / 563 pass / **0 fail** / **92 skipped**；C# 侧 **28 passed / 0 failed / 10 skipped** |
+| 本机 Windows | **38 passed / 0 failed / 0 skipped**（与 CI 逐字相同） |
 | Linux（WSL，.NET 8.0.425，暂存副本实跑） | **28 passed / 0 failed / 10 skipped**（每个 skip 带书面理由） |
 | 本机 Node 侧 `npm test` | 655 tests / 651 pass / **0 fail** / 4 skipped（三个 `*.live.test.mjs`，需真实模型端点） |
 
-Linux 侧被跳过的是真的需要 Windows 的东西——命名管道端点的四个 live 用例、端点推导的路径用例——它们**说得出自己为什么被跳过**，而不是静默消失。
+**同一份 Node 套件在两处跳过的数量不同（本机 4，CI Linux 92），这不是不一致，是同一套 skip 规则在两个平台上各自生效**：那 88 个差额是命名管道相关的用例——它们在本机真的跑，在 Linux 上 skip 并写明理由。`pass` 数随之从 651 降到 563，而 `fail` 两边都是 **0**。
+
+Linux 侧被跳过的是真的需要 Windows 的东西——命名管道端点的四个 live 用例、端点推导的路径用例——它们**说得出自己为什么被跳过**，而不是静默消失。CI 的 `surface` job 正是这些用例**停止 self-skip 并真正执行**的地方，所以它与 `test` job 不是重复劳动：两个 job 合起来才是「38 个全部真的跑过」，其中任何一个单独都不足以这么说。
 
 ## 17. Functional Review（§21）
 
@@ -333,7 +324,7 @@ Linux 侧被跳过的是真的需要 Windows 的东西——命名管道端点�
 | # | 判据 | 结论 | 证据 |
 | --- | --- | --- | --- |
 | 1 | 人类不再需要 PowerShell `subscribe` | **通过** | §15.2 步骤 8：整个 E2E 期间**没有任何** `hikari subscribe` 在跑，消息仍然完整抵达窗口。单订阅者语义下这本身就是证明——管道只有一个订阅位，消息出现在 Surface 上就说明占据它的是 Surface。 |
-| 2 | Surface 独立长期运行 | **通过（有量程）** | Surface 全程独立于任何终端窗口存活，跨过一次 resident 停止与重启。**量程要说清楚**：§15 那一次连续跑了约 6 分钟，之后的 soak 另计（见 §17.1）。 |
+| 2 | Surface 独立长期运行 | **通过（有量程，不夸大）** | 全程独立于任何终端窗口存活，跨过 resident 的停止与重启。**量程分两段报**：§15 的 E2E 连续跑约 6 分钟；soak 另计（§17.1）——连续驻留约 **14 分钟**，其中含 **12 次** resident 停/起重连循环，**12/12 次 Surface 均未退出**，句柄在预热后走平。**不把 6 分钟说成长期，也不把 14 分钟说成长期**：本条的强度来自**重复压力下的行为**，不来自时长。 |
 | 3 | Resident / Surface 生命周期独立 | **通过** | 步骤 9：`hikari stop` 之后 Surface **进程存活**；步骤 12：Surface 退出之后 resident **仍在运行**，13 个插件仍 `active`。「退出」只调 `ExitThread()`，源码里**没有**任何通往 `hikari stop` / Runtime 的路径（`TrayApplication.Quit`）。 |
 | 4 | 重连可用 | **通过** | 步骤 10：新 resident 进程起来到 Surface 报 `已连接 · 2 条未读` 约 **1407 ms**。节奏 1→2→4→8→10s 有单元测试逐级钉住。 |
 | 5 | 消息不被改写 | **通过** | §15.3 的逐字比对。附加的只有一行 `收到 HH:mm:ss` 与行分隔符，正文零改动。`SurfaceChrome` 这个文件存在的唯一目的就是让「这个程序被允许断言的每一个字」可以被一眼读完。 |
@@ -342,7 +333,48 @@ Linux 侧被跳过的是真的需要 Windows 的东西——命名管道端点�
 
 ### 17.1 关于「长期运行」，与 soak
 
-**不把 6 分钟说成「长期」。** 因此本轮另起了一次 soak（`soak-start.ps1`）并让它自己跑：resident 带 `--proactive-return-after-ms 20000`、Surface 进程 `3288`、启动于 `2026-09-29T11:40:18+08:00`。收口时读回结果记入本文件。**结构上**它是无界的：消息列表 200 条封顶（`MessageLimit`），transcript 每次从快照整体重建（不追加、不累积），重连循环每次迭代只做一次连接尝试再加一个上限 10s 的等待。**「结构上有界」与「实测跑了多久」是两件事，本节不混写。**
+**不把 6 分钟说成「长期」。** 因此本轮另起了一次 soak（`soak-start.ps1`）并让它自己跑：Surface 进程 `3288`、启动于 `2026-09-29T11:40:18+08:00`、停止于约 `11:54`，**连续驻留约 14 分钟**；resident 带 `--proactive-return-after-ms 20000`，另有一个后台采样器每 30s 记一次驻留资源（共 14 个样本）。
+
+**结构上**它是无界的：消息列表 200 条封顶（`MessageLimit`），transcript 每次从快照整体重建（不追加、不累积），重连循环每次迭代只做一次连接尝试再加一个上限 10s 的等待。**「结构上有界」与「实测跑了多久」是两件事，本节不混写。**
+
+#### 光坐着不够，因此加了重连循环
+
+只待在「已连接」稳态的 soak 测不到最该测的东西：**重连路径才是句柄、定时器、socket 会累积的地方**，也正是人每次重启 Hikari 都会走的路径。因此本轮额外做了 **12 次「停掉 resident → 7 秒后重启」循环**（`soak-cycle.ps1`，只按**这一轮自己起的确切 PID** 停止，绝不用名称或通配匹配）。
+
+| 循环 | Surface 状态 | 内存 (MB) | handles | threads |
+| --- | --- | --- | --- | --- |
+| 起 | UP | 55.8 | 360 | 10 |
+| 1–4 次重连后 | UP ×4 | 56.4 → 59.6 | 371 → 379 | 13–14 |
+| 5–12 次重连后 | UP ×8 | 56.6 → 60.6（震荡） | **375 → 379（走平）** | 13–17 |
+
+**结论有两条，第二条比第一条重要：**
+
+1. **12/12 次循环 Surface 从未退出。** 每次 resident 消失它都如实显示未连接，每次新 resident 起来它都自己爬回已连接。这是「两个生命周期互不拥有」在**重复**压力下而不只是一次之下的读数。
+2. **前 4 次的 handle 增长（360→379，约 +4.75/次）是预热，不是泄漏**——第 5 到第 12 次循环里它在 **375–379 之间震荡、不再单调上升**，内存同样从「爬升」变成「在 56.6–60.6 MB 之间震荡」。**如果当时只看前 4 个样本就下结论，得到的是相反的答案。** 这正是 soak 存在的理由，也说明为什么 4 个样本不足以宣称趋势。
+
+**但本节不宣称「没有泄漏」，因为 14 分钟不够。** 稳态采样那 14 个样本的 handle 序列是 `351 → 357 → 357 → 357 → 371 → 360 → 360 → 360 → 378 → 378 → 378 → 375 → 370 → 402`：**全程在 351–402 之间震荡，没有单调上升**，但 402 这个末值是采样里最高的一个，且它出现在我跑过几次 UIA 探针之后（跨进程 UI Automation 查询本身会在目标进程里产生窗口消息与句柄）。**「12 次重连不累积」是测出来的；「长时间绝不泄漏」不是。** 后者需要一个以小时计的 soak，本轮没有做，也不假装做过。
+
+**顺带钉住的一条**：12 次重连之后未读数仍然是 **2**——**重连没有重放任何消息**。resident 每次是全新进程，未读没有翻倍，`reconnect ≠ message retry` 在重复压力下依然成立。整个 soak 期间假模型端点**仍然是 0 字节**。
+
+那两条消息本身也值得看，因为它们把「重连不重放」从计数变成了内容。soak 结束时从窗口里读出的 transcript（UIA `TextPattern`，逐字）：
+
+```text
+收到 11:45:06
+Desktop return attention：
+  观察时间：2026-09-29T03:45:06.360Z
+  已观测到的无输入时长（下界）：296406 ms
+  触发时的关注对象：
+    hikari-new
+
+收到 11:47:56
+Desktop return attention：
+  观察时间：2026-09-29T03:47:56.037Z
+  已观测到的无输入时长（下界）：163219 ms
+  触发时的关注对象：
+    hikari-new
+```
+
+**两条不是同一条的重放**：下界一个是 296406 ms、一个是 163219 ms，是两次真实的独立观测。第二条落在 soak 开始后约 **7.6 分钟**，不是启动瞬间的产物。**这些字符也顺带在 soak 里第二次验证了 §15.4 的 LF/CRLF 修复**——窗口里是断行正常的四行正文，不是一整段。正文与 `SurfaceChrome` 之外的东西**一个字都没被改过**。
 
 ### 17.2 「无持久化」的结构证明
 
@@ -390,28 +422,81 @@ HumanSurface.Core/PipeDeliveryConnector.cs:1:  using System.IO.Pipes;
 
 **残余风险照实说**：(a) C# 只实现了**读**的一半，因为 Surface 从不写管道——一条没人调用的编码器是穿着对称外衣的死代码；(b) conformance 的用例表是**有限枚举**，TS 侧若改变 framing 且新行为落在枚举之外，这些测试不会红。**第 (b) 条没有对症的治法**（治法会是「让 C# 去读 TS 的测试用例表」，那本身就是一条新的跨语言构建依赖），因此它是记录在案的残余风险，不是已修项。
 
-### 18.2 GitNexus 对本轮**不可答**，且不得假装答过
+### 18.2 GitNexus：一次**自己的**误判，与更正后的真实读数
 
-**本轮没有可运行的 GitNexus impact，也没有可运行的 detect_changes，理由是结构性的：**
+**本节初稿写错过一次，原样留下更正，因为它正好是仓库纪律警告的那种错误。**
 
-- `apps/human-surface/**` **不在图内**——索引覆盖的是 TS 仓库，`apps/` 是一个未被索引的新目录。实测：`context({name: "TrayApplication"})` 返回 `Symbol 'TrayApplication' not found`。
-- `src/` 本轮的 diff 是 **0**，因此**没有任何 TS symbol 被改动**，没有可做 upstream impact 的对象。
+初稿写的是：「`apps/human-surface/**` 不在图内——索引覆盖的是 TS 仓库，`apps/` 是一个未被索引的新目录。实测 `context({name: "TrayApplication"})` 返回 `Symbol 'TrayApplication' not found`」，并据此断定 GitNexus 对本轮**不可答**。
 
-**这不是「跑了但结果为空」，是「工具对这块改动没有可说的」**——两者必须分开写，因为前者是证据、后者是空白。本轮对 `apps/` 的验证由**另一条路径**承担：C# 侧 38 个用例 + Node 侧 655 个用例 + §15 的十二步真机 E2E + §17.2 的源码级结构证明。**用这些冒充 GitNexus 证据是不允许的**，它们只是各自成立的不同证据。
-
-实际跑到的输出，原样记下（`partial` / `truncated` 均**未**置位，即这是一次干净运行，不是降级）：
+**那条推断是错的。** 真正的原因是**索引自 `494de2b` 之后就没再重建过**，而 `apps/human-surface/**` 是那之后才出现的目录——它不是「图看不见 C#」，是「图还没被要求看」。`analyze --index-only` 重建之后（`added=29`）：
 
 ```text
-detect_changes({scope: "all"})
-  changed_count: 2   affected_count: 0   changed_files: 3   risk_level: low
-  changed_symbols: 全部是 docs/development/current-stage.md 的两个 Section
-  affected_processes: []
-
-impact({target: "encodeDelivery", direction: "upstream", includeTests: true})
-  impactedCount: 1   risk: LOW   epistemic: "exact"
-  唯一 caller：src/human-delivery/endpoint.ts 的 write
+context({name: "TrayApplication", repo: "hikari-new"})
+  status: "found"
+  uid: Class:apps/human-surface/HumanSurface/TrayApplication.cs:TrayApplication
+  epistemic: "exact"
 ```
 
-两条输出合起来说的事：**本轮没有任何 TS 符号被改动**，因此没有可做 impact 的对象；`encodeDelivery` 在仓库内只有一个 caller（`write`），而 C# 那一侧**根本没被这张图看到**。GitNexus 对本轮的「0」是**看不到**，不是**没影响**——按仓库既有纪律，这个区别必须写出来。
+**把这处错误记下来的价值大于抹掉它**：CLAUDE.md 的纪律是「空结果不是证据」，而这次错的正是我自己——把一个**过期索引的静默**读成了**工具的结论**，再在上面盖了一条结构性判断。这和「`risk: UNKNOWN` 不许当成安全」是同一条纪律的两种写法。
 
-> 追踪项：把 `apps/human-surface` 纳入索引需要 GitNexus 支持 C#，那是 GitNexus 的能力问题，**不因为本轮引入**，也不在本轮解决。
+更正后，索引覆盖 `apps/human-surface` 全部 **32 条路径**（每个 `.cs`、两个 `.csproj`、两个 `.mjs` helper），共 **245 个 symbol**。于是 §22 的边界主张第一次**有图可查**：
+
+**查法一：两个方向都查跨目录边。** 之所以两个方向都查，是因为只查一个方向时「空」可能只是「查反了」：
+
+```text
+MATCH (a)-[r]->(b) WHERE a.filePath STARTS WITH 'apps/human-surface'
+                      AND b.filePath STARTS WITH 'src/'      → []
+
+MATCH (a)-[r]->(b) WHERE a.filePath STARTS WITH 'src/'
+                      AND b.filePath STARTS WITH 'apps/'      → []
+```
+
+**这个「空」是非空洞的**：apps 那一侧有 245 个 symbol 垫底，不是「没有节点所以没有边」。图里**两个方向都没有任何一条边**跨过 `apps/ ↔ src/`。
+
+**查法二：`Quit` 的 upstream。** §22 第 3 条说「退出没有通往 `hikari stop` 的路径」，这可以直接查：
+
+```text
+impact({target: "Quit", file_path: "…/TrayApplication.cs", direction: "upstream", includeTests: true})
+  impactedCount: 2   risk: LOW   epistemic: "exact"
+  d1: TrayApplication 构造函数
+  d2: Program.Main
+  affected_processes: [Main]
+  affected_modules:   [HumanSurface.Tests] （indirect）
+```
+
+**`Quit` 的全部上游都在 `apps/` 内部**，两步就到顶（构造函数 → `Main`），没有任何一条走出去。这是图对「Surface 关不掉常驻」这条架构主张的直接支持，而不是本文件的自述。
+
+**图到此为止，剩下的它查不到，必须说清楚。** 图看见的是 calls / imports。而 Surface 与 Runtime 之间**真实的耦合是一根命名管道的路径字符串**——一个 .NET 进程 `new NamedPipeClientStream` 到某个拼出来的名字。**这种耦合静态图本来就看不见**，所以「0 条边」支持的是「没有代码级耦合」，**不能**独自支持「没有运行期耦合」。后者由另外两条证据承担：§17.2 的源码级结构证明（整个 surface 只有一处 IO），以及 §15 的十二步真机 E2E（常驻停了、Surface 不知道）。**三条证据各管一段，不互相冒充。**
+
+`detect_changes({scope: "all"})`（`partial` / `truncated` 均**未**置位，即干净运行）：
+
+```text
+changed_count: 12   affected_count: 0   changed_files: 2   risk_level: low
+changed_symbols: 全部是 Section —— human-surface-v0-…-freeze.md 与 current-stage.md
+affected_processes: []
+```
+
+这一次它看到的是**文档**，changed symbol **全是 markdown Section，没有一个是代码 symbol**。（`changed_count` 就是本文件自己的 Section 数，因此它随本文件的编辑而变——这也是为什么这里只写它的**性质**，不把某个具体数字当成稳定事实。）`apps/` 的源码此时已经干净地落在 `8e143fe` 里，所以不出现在 diff 中是**对的**，不是又一次「看不到」——**同一次运行里既验证了「看得到」也验证了「这次确实没有代码改动」**。
+
+---
+
+## 附录：本轮实测到的、写进本文的事实
+
+本文里每一句「实测」都可以在这张表里找到它的来源。**没进这张表的东西，就是没测过的东西**——不靠措辞补。
+
+| 事实 | 怎么来的 |
+| --- | --- |
+| `package.json` 没有 `dependencies` 键；`node_modules` 只有 3 个条目 | 直接读 |
+| 零 NuGet 的 WinForms 工程能构建（~5s） | 本机跑了一次 hello-world 探针 |
+| `Microsoft.WindowsDesktop.App 8.0.28` 已安装 | `dotnet --list-runtimes` |
+| C# 端点推导与 Node 在 6 种拼写下逐字相同 | 两侧各跑一次 probe 并对比输出 |
+| 第二个 subscriber 会被服务端当场销毁 | 读 `endpoint.ts`（`if (client !== undefined) socket.destroy()`） |
+| `write` 在无人连接时返回 `unavailable`，无队列 | 读 `endpoint.ts` |
+| CI 曾完全是 `ubuntu-latest`、不含 Windows runner | 读 `.github/workflows/runtime-tests.yml`（**本轮已改为双 job**，见 §16） |
+| edit control 只在 `\r` / `\r\n` 断行 | `EM_GETLINECOUNT`：`\n`→1、`\r\n`→3、`\r`→1 |
+| `GetWindowTextW` **无法**跨进程读 edit control（返回空串），static 可以 | 探针两种控件各读一次，对照 |
+| desktop-return 的正文不是模型产出 | 假端点 `model-requests.jsonl` 0 字节，而消息完整到达 |
+| `apps/human-surface` 的 **32 条路径 / 245 个 symbol** 在图里 | `analyze --index-only` 后查图（§18.2） |
+| `apps/ ↔ src/` **两个方向都没有边** | 两个方向的 `MATCH (a)-[r]->(b) … STARTS WITH …` 均为 `[]` |
+| 12 次重连循环句柄走平（375–379） | `soak-cycle.ps1` 逐次采样，**前 4 个样本给的答案与后 8 个相反** |
+| soak 里两条消息不是重放 | 从窗口 UIA 读出正文，两次「无输入时长下界」不同（§17.1） |
