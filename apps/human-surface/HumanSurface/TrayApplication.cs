@@ -57,6 +57,7 @@ internal sealed class TrayApplication : ApplicationContext
 
         _session.Changed += OnSessionChanged;
         _session.MessageReceived += OnMessageReceived;
+        _window.AskRequested += OnAskRequested;
 
         Render();
 
@@ -78,6 +79,7 @@ internal sealed class TrayApplication : ApplicationContext
         _window.Show();
         if (_window.WindowState == FormWindowState.Minimized) _window.WindowState = FormWindowState.Normal;
         _window.Activate();
+        _window.FocusInput();
     }
 
     private void Quit()
@@ -103,6 +105,15 @@ internal sealed class TrayApplication : ApplicationContext
     }
 
     private void OnSessionChanged() => OnUi(Render);
+
+    /// <summary>
+    /// Starts a question. Deliberately not awaited here: this runs on the UI thread, and the whole
+    /// point of the ask being asynchronous is that the window keeps working while it is outstanding.
+    /// The session reports everything that happens through <see cref="Changed"/> — the person's own
+    /// line, the answer, and the end of the wait — so there is nothing for this method to do with the
+    /// result, and it cannot throw.
+    /// </summary>
+    private void OnAskRequested(string text) => _ = _session.AskAsync(text, _cancellation.Token);
 
     private void OnMessageReceived(SurfaceMessage message) => OnUi(() =>
     {
@@ -136,6 +147,7 @@ internal sealed class TrayApplication : ApplicationContext
         {
             _session.Changed -= OnSessionChanged;
             _session.MessageReceived -= OnMessageReceived;
+            _window.AskRequested -= OnAskRequested;
             _cancellation.Dispose();
             _tray.Dispose();
             _window.Dispose();

@@ -20,8 +20,12 @@ internal static class Program
         DeliveryFramingTests.Register(run);
         ReconnectScheduleTests.Register(run);
         SurfaceSessionTests.Register(run);
+        AskSessionTests.Register(run);
+        LanguageFramingTests.Register(run);
         await DeliveryEndpointPathTests.RegisterAsync(run);
+        await LanguageConformanceTests.RegisterAsync(run);
         await LivePipeTests.RegisterAsync(run);
+        await LiveLanguageTests.RegisterAsync(run);
 
         return await run.ExecuteAsync();
     }

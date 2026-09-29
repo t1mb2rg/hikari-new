@@ -3,15 +3,15 @@ using HumanSurface.Core;
 namespace HumanSurface;
 
 /// <summary>
-/// Starts the Surface: work out which pipe to listen to, then hand the process to the tray.
+/// Starts the Surface: work out which pipes to use, then hand the process to the tray.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The data directory is required and has no default, because the pipe name is derived from it and two
-/// Surfaces pointed at different directories are pointed at different Hikaris. Guessing would produce
-/// a window that is silently connected to nothing, which is the one failure this program cannot report
-/// — a process that is running and listening looks exactly like one that is connected to a resident
-/// that has nothing to say.
+/// The data directory is required and has no default, because both pipe names are derived from it and
+/// two Surfaces pointed at different directories are pointed at different Hikaris. Guessing would
+/// produce a window that is silently connected to nothing, which is the one failure this program cannot
+/// report — a process that is running and listening looks exactly like one that is connected to a
+/// resident that has nothing to say.
 /// </para>
 /// <para>
 /// The directory is not required to exist. A client may connect before anything has created the data
@@ -25,12 +25,13 @@ internal static class Program
 
     private static readonly string Usage =
         $"""
-         {SurfaceChrome.Title} — 在 Windows 上接收 Hikari 的主动消息。
+         {SurfaceChrome.Title} — 在 Windows 上与 Hikari 对话，并接收它的主动消息。
 
          用法：
            HumanSurface.exe {DataDirOption} <数据目录>
 
-         数据目录与 hikari 命令行使用的一致；管道名由它推导，两侧必须相同。
+         数据目录与 hikari 命令行使用的一致；两个管道名都由它推导，两侧必须相同。
+         输入框里的一句话会送到该目录的语言入口，与 hikari ask 走的是同一个入口。
          """;
 
     [STAThread]
@@ -45,8 +46,14 @@ internal static class Program
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
-        var endpointPath = DeliveryEndpointPath.For(dataDir);
-        var session = new SurfaceSession(endpointPath, new PipeDeliveryConnector());
+        // Two pipes, one data directory, and no third name to configure: the surface asks the language
+        // plugin and listens to the delivery transport, and both derivations come from the directory
+        // the person already gave the resident.
+        var session = new SurfaceSession(
+            DeliveryEndpointPath.For(dataDir),
+            new PipeDeliveryConnector(),
+            LanguageEndpointPath.For(dataDir),
+            new PipeLanguageAsker());
 
         using var application = new TrayApplication(session);
         Application.Run(application);

@@ -175,6 +175,10 @@ bound      = 有界（最近的 N 条，超出丢最旧）
 - 不建 installer / identity / release infrastructure。
 - 不为 GUI 建第二套 delivery protocol。
 
+**其中一条已被取代（2026-09-29）**：上面第一条「不做 Human → Hikari 对话（v0 只有 Hikari → Human）」在 **HUMAN SURFACE LANGUAGE CLIENT v0** 中被解除——Human 现在可以在 Surface 的输入框里打一句话，送往既有 Language-owned endpoint，答复回到同一个 Surface。依据是该轮的两条 Human 裁决（YES：Surface 就是 Human 主动说话的入口；形状 A：Surface 直接成为既有 Language endpoint 的 client），取代它的记录是 `docs/architecture/human-surface-language-client-v0-implementation-boundary-freeze.md`。
+
+**本条原文按 `governance-rules-v1.md` R7.2 保留不改**——该条只要求「源冻结处留一条指向取代它的那份记录的指针」，即本段；不要求改写源冻结的正文。**其余各条仍然逐条成立**：Surface 仍不判断显著性 / 重要性 / 该不该通知，仍不改写 Language 输出，仍不理解任何 domain semantics，仍不是 judgement owner。
+
 ## 13. 为什么是 Level 1 / Level 2
 
 按 R4 四问（`governance-rules-v1.md`）：Q1 新问题？**否**。Q2 在备选之间选择？**否**。Q3 需要解释未封闭词表并升成全局语义？**否**。Q4 决定人类与 source 都没给出的事？**否**。

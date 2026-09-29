@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <!--
-    The two Node helpers are copied beside the test assembly so the runner finds them by a path
+    The Node helpers are copied beside the test assembly so the runner finds them by a path
     relative to itself, with no knowledge of where the repository root happens to be.
   -->
   <ItemGroup>

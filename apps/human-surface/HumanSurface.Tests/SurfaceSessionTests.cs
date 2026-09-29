@@ -6,39 +6,20 @@ internal static class SurfaceSessionTests
 {
     private const string AnyPath = @"\\.\pipe\hikari-human-delivery-0000000000000000";
 
+    /// <summary>A path the tests never dial: these cases are about the listening loop.</summary>
+    private const string AnyLanguagePath = @"\\.\pipe\hikari-language-0000000000000000";
+
     private static TimeSpan S(double seconds) => TimeSpan.FromSeconds(seconds);
 
     private static SurfaceSession Session(FakeDeliveryConnector connector,
-        Func<TimeSpan, CancellationToken, Task>? delay = null) => new(AnyPath, connector, delay);
+        Func<TimeSpan, CancellationToken, Task>? delay = null) =>
+        new(AnyPath, connector, AnyLanguagePath, new FakeLanguageAsker(), delay);
 
-    /// <summary>
-    /// Resolves when the session reports the given connection state, driven by its own event rather
-    /// than by polling — so a test that waits for a state change is not also asserting a speed.
-    /// </summary>
     private static Task AwaitConnection(SurfaceSession session, SurfaceConnection wanted) =>
-        Await(session, () => session.Snapshot().Connection == wanted);
+        SessionAwait.Connection(session, wanted);
 
-    private static async Task Await(SurfaceSession session, Func<bool> condition)
-    {
-        var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        void Handler()
-        {
-            if (condition()) reached.TrySetResult();
-        }
-
-        session.Changed += Handler;
-        Handler();
-
-        try
-        {
-            await reached.Task.WaitAsync(S(10)).ConfigureAwait(false);
-        }
-        finally
-        {
-            session.Changed -= Handler;
-        }
-    }
+    private static Task Await(SurfaceSession session, Func<bool> condition) =>
+        SessionAwait.Until(session, condition);
 
     public static void Register(TestRun run)
     {
