@@ -5,20 +5,20 @@ export interface CliOptions {
 }
 
 /**
- * The console's options: a data directory, or the absence of one.
+ * The TUI's options: a data directory, or the absence of one.
  *
  * This is the only place in this file where `dataDir` is optional, and it is optional for a reason
  * that does not generalise. Every other command reaches a store that is already there, so a data
- * directory is what it must be told; the console is the thing that asks, and an operator who ran
+ * directory is what it must be told; the TUI is the thing that asks, and an operator who ran
  * `hikari` with nothing has expressed no directory rather than a wrong one.
  *
  * What the absence may *not* become is a default. There is no built-in path, no environment variable,
  * no search, and no remembered "last used" — the directory a human means is a choice about which
  * Hikari they are addressing, and the same reasoning that refuses to invent a model endpoint
  * (`--model-endpoint` … "a default model would be this file choosing to send a human's words
- * somewhere nobody named") refuses to invent this one. Absent means the console asks.
+ * somewhere nobody named") refuses to invent this one. Absent means the TUI asks.
  */
-export interface ConsoleOptions {
+export interface TuiOptions {
   readonly dataDir: string | undefined;
 }
 
@@ -180,7 +180,7 @@ export type CliCommand =
   | 'profile-set'
   | 'profile-show'
   | 'profile-clear'
-  | 'console';
+  | 'tui';
 
 // Only `resident` carries a parsed configuration, and the union is what keeps that obligation in the
 // type rather than in a comment: the other commands cannot be handed a cadence or a repository scope
@@ -236,10 +236,14 @@ export type ParsedCommandLine =
   // first one is already here.
   | { readonly command: 'profile-set'; readonly options: ResidentOptions }
   | { readonly command: 'profile-show' | 'profile-clear'; readonly options: CliOptions }
-  // `console` carries the one optional data directory in this file, and for the reason `ConsoleOptions`
+  // `tui` carries the one optional data directory in this file, and for the reason `TuiOptions`
   // gives. It reaches no store and asks no question: what it needs is a directory to look at, and it
   // is the only command that may be run without one.
-  | { readonly command: 'console'; readonly options: ConsoleOptions };
+  //
+  // The name is this file's own and not a word anyone types. `hikari` with no command word resolves
+  // here (`parseCommandLine` below), and `hikari tui` is refused by name — the surface is reached by
+  // being the default, and a second spelling of it would be a second thing to document.
+  | { readonly command: 'tui'; readonly options: TuiOptions };
 
 export class UsageError extends Error {}
 
@@ -274,11 +278,11 @@ export const USAGE = [
   '  hikari profile set --data-dir <path> [与 hikari resident 相同的选项]',
   '  hikari profile show --data-dir <path>',
   '  hikari profile clear --data-dir <path>',
-  '  hikari                                  打开操作台；没有 --data-dir 时在操作台里询问',
-  '  hikari --data-dir <path>                打开操作台',
+  '  hikari                                  打开 TUI；没有 --data-dir 时在 TUI 里询问',
+  '  hikari --data-dir <path>                打开 TUI',
   '',
   '选项：',
-  '  --data-dir <path>                        数据根目录；除操作台外必填，没有默认值',
+  '  --data-dir <path>                        数据根目录；除 TUI 外必填，没有默认值',
   '  --desktop-awareness-delay-ms <integer>   resident 的采集节奏，必填，没有默认值',
   '  --repository-root <path>                 Repository CI 的仓库根目录，与 --repository 成对出现',
   '  --repository <owner/name>                Repository CI 的 GitHub 仓库，与 --repository-root 成对出现',
@@ -312,13 +316,16 @@ export const USAGE = [
   '  不声称你离开过或回来过。没有声明关注对象时它不说；声明集为空的那次不会形成播报。',
   '  --proactive-return-delay-ms 单独出现是用法错误：它只是采样节奏，',
   '  不给出阈值时它没有任何东西可以影响。两个主动播报开关互不推导，各自独立授权。',
-  '  hikari 不带命令时打开操作台：它显示常驻在不在、把常驻说的话原样显示出来，',
-  '  并且可以启动或停止常驻。它是另一个进程，通过常驻自己的本地控制通道说话，',
-  '  不是常驻的持有者——退出操作台不会停止常驻。',
-  '  操作台里不聊天：要和 Hikari 说话请用 Human Surface 或 hikari ask。',
+  '  hikari 不带命令时打开 TUI，这是日常待着的那个窗口：默认是 Chat，按 Tab 切到 System 与 Profile。',
+  '  Chat 把你输入的文字原样交给常驻的语言入口，把它的回答原样显示回来——TUI 不判断你的意思，',
+  '  也不改写它说的话。System 显示常驻的状态并可以启动 / 停止 / 重启；',
+  '  Profile 显示这个数据目录记着的那份启动配置。',
+  '  TUI 是另一个进程，通过常驻自己的本地控制通道说话，不是常驻的持有者——退出 TUI 不会停止常驻。',
+  '  TUI 窗口里显示过的东西只活在这个进程里：常驻重启之后屏幕上的对话还在，但 Hikari 并不记得它。',
+  '  要和 Hikari 说话也仍然可以用 hikari ask 或 Human Surface；它们都还在，没有替代谁。',
   '  hikari profile set 把一次 hikari resident 的选项原样记在这个数据目录里，',
-  '  操作台启动常驻时用的就是它。它只被操作台读取，hikari resident 本身不读它；',
-  '  没有记过启动配置时，操作台会说明该先运行哪一条命令。',
+  '  TUI 启动常驻时用的就是它。它只被 TUI 读取，hikari resident 本身不读它；',
+  '  没有记过启动配置时，TUI 会说明该先运行哪一条命令。',
   '  启动配置住在数据目录里，没有用户级配置文件、没有搜索路径、没有默认数据目录。',
   '',
 ].join('\n');
@@ -364,12 +371,12 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   // options are read, and which sub-word it is decides what the rest of the line means.
   if (head === 'profile') return readProfileCommand(rest);
 
-  // No command word at all, or the beginning of a line that never named one. Both are the console,
-  // and the test is on the *shape* of the first token rather than on a list of flags the console
+  // No command word at all, or the beginning of a line that never named one. Both are the TUI,
+  // and the test is on the *shape* of the first token rather than on a list of flags the TUI
   // knows: its grammar is "a data directory, or nothing", so a first token that is not a command word
-  // is not a command this build has — and `readConsoleCommand` refuses it by name rather than letting
+  // is not a command this build has — and `readTuiCommand` refuses it by name rather than letting
   // a typo open a window.
-  if (head === undefined || head.startsWith('-')) return readConsoleCommand(argv);
+  if (head === undefined || head.startsWith('-')) return readTuiCommand(argv);
 
   const { command, tokens } = readCommand(head, rest);
   if (command === 'resident') return { command, options: readResidentOptions(tokens) };
@@ -383,7 +390,7 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
 interface CommandTokens {
   readonly command: Exclude<
     CliCommand,
-    'focus' | 'relevance' | 'observe' | 'ask' | 'profile-set' | 'profile-show' | 'profile-clear' | 'console'
+    'focus' | 'relevance' | 'observe' | 'ask' | 'profile-set' | 'profile-show' | 'profile-clear' | 'tui'
   >;
   readonly tokens: readonly string[];
 }
@@ -605,13 +612,13 @@ function readProfileCommand(rest: readonly string[]): ParsedCommandLine {
   throw new UsageError(`profile 只支持 set / show / clear，收到：${word ?? '(缺失)'}`);
 }
 
-// The console's whole grammar, and it is deliberately not `readOptionTokens` with a looser rule about
+// The TUI's whole grammar, and it is deliberately not `readOptionTokens` with a looser rule about
 // the required parameter. That reader's contract is that a data directory is what every command is
 // for, and relaxing it in place would relax it for `start`, `status` and the rest at the same time.
 // Here the option is optional because the command is the one that asks, and the loop is short enough
 // that sharing a code path with a reader built on the opposite assumption would cost more than it
 // saves.
-function readConsoleCommand(argv: readonly string[]): ParsedCommandLine {
+function readTuiCommand(argv: readonly string[]): ParsedCommandLine {
   let dataDir: string | undefined;
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -632,7 +639,7 @@ function readConsoleCommand(argv: readonly string[]): ParsedCommandLine {
     throw new UsageError(`未知参数：${String(token)}`);
   }
 
-  return { command: 'console', options: { dataDir } };
+  return { command: 'tui', options: { dataDir } };
 }
 
 // One reader for both grammars, because the difference between them is a set of flags: a command
