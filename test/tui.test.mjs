@@ -9,7 +9,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { requestControl } from '../dist/cli/control.js';
 import { launchArguments, launchProfilePath, writeLaunchProfile } from '../dist/cli/launch-profile.js';
 import { parseCommandLine } from '../dist/cli/options.js';
-import { readProfileView, spawnDetached } from '../dist/cli/tui.js';
+import { HELP_LINES, readProfileView, spawnDetached } from '../dist/cli/tui.js';
 import { EMPTY_EDIT, editLine, isInterrupt, parseSlashCommand, readTuiKey } from '../dist/cli/tui-input.js';
 import {
   ENTER_SCREEN,
@@ -939,6 +939,96 @@ test('notice 是 TUI 自己的声音，和 Hikari 说的话不是同一种东西
   // Every notice line carries the dim code, so the frame's own voice is visually distinct from a reply
   // — and no notice is ever labelled as Hikari, which is the property `toneLabel` exists to keep.
   for (const part of lines[1]) assert.deepEqual(part.codes, ['\x1b[2m']);
+});
+
+// ---------------------------------------------------------------------------------------------
+// §13 / §7: /help is many lines, and it stays many lines all the way to the screen
+// ---------------------------------------------------------------------------------------------
+
+// A notice is one string, and `oneLine` replaces every break in a string with the two characters `\n`.
+// Escaping *before* splitting therefore left nothing to split on: `/help` arrived as a single line with
+// `\n` written into it. These four tests hold the four claims that were broken or could break again —
+// the lines are real lines, the frame never shows a literal `\n`, a narrow window still behaves the way
+// this renderer behaves, and the arms that were not touched did not change.
+
+test('/help 的每一行都真的是屏幕上的一行，帧里没有字面量 \\n', () => {
+  // `HELP_LINES` is the copy the window hands over, so what is rendered here is the help an operator
+  // actually reads rather than a copy of it written out again beside the real one.
+  const text = HELP_LINES.join('\n');
+  const lines = transcriptLines([notice(text)]);
+
+  // The stamp, then one line per command: same count, same order, no line merged into another.
+  assert.equal(lines.length, HELP_LINES.length + 1);
+  assert.deepEqual(
+    lines.slice(1).map((line) => line.map((part) => part.text).join('')),
+    [...HELP_LINES],
+  );
+
+  const frame = frameLines(renderFrame(chat([notice(text)]), PLAIN)).join('\n');
+  assert.equal(frame.includes('\\n'), false, '帧里不得出现字面量 \\n');
+  for (const command of HELP_LINES.map((line) => line.split(' ')[0])) {
+    assert.ok(frame.includes(command), `${command} 应当出现在帧里`);
+  }
+});
+
+test('窄终端里 /help 仍按窗口宽度收，帧既不被撑宽也不被撑高', () => {
+  const text = HELP_LINES.join('\n');
+  const columns = 24;
+  const size = { columns, rows: 24, color: true };
+  const screen = renderScreen(chat([notice(text)]), size);
+
+  // A line this renderer cannot fit is clipped, not wrapped — a row the terminal wraps pushes the input
+  // row off the bottom of the window, which is the failure the width accounting exists to prevent. So
+  // the line count comes from the transcript rather than the frame: eleven lines, each clipped on its
+  // own. What must not happen at 24 columns is the help collapsing back into one line.
+  assert.equal(transcriptLines([notice(text)]).length, HELP_LINES.length + 1);
+  assert.equal(screen.length, size.rows);
+  for (const line of screen) {
+    assert.ok(displayWidth(strip(line)) <= columns, `${displayWidth(strip(line))} 列：${strip(line)}`);
+  }
+
+  const joined = screen.map(strip).join('\n');
+  assert.ok(joined.includes('·  10:00:03'), '每条 notice 的本地时间戳仍在');
+  assert.ok(joined.includes('/help'), '命令词在窄窗口里仍应看得见');
+  assert.equal(joined.includes('\\n'), false);
+});
+
+test('帮助比窗口长时可以往回翻，翻到的是前面那些行', () => {
+  const text = HELP_LINES.join('\n');
+  // 12 rows leaves a 5-row body, so the ten commands do not fit and the live bottom shows the last of
+  // them. Both halves matter: the first command is genuinely off-screen, and scrolling is what brings it
+  // back. Asserting only the second would pass on a frame that showed everything at once.
+  const size = { columns: 60, rows: 12, color: false };
+  const screen = renderScreen(chat([notice(text)]), size);
+  // A transcript longer than the window still fills exactly the window: the body is sliced and padded to
+  // `bodyRows`, so eleven lines of help move the input row no more than one line of it did.
+  assert.equal(screen.length, size.rows);
+  const live = screen.map(strip).join('\n');
+  assert.equal(live.includes('/help 显示这份列表'), false, '最新的 5 行里没有第一行');
+  assert.ok(live.includes('/quit'));
+
+  const back = renderScreen(chat([notice(text)], { scroll: 20 }), size).map(strip).join('\n');
+  assert.ok(back.includes('/help 显示这份列表'), '往回翻应当看见第一行');
+});
+
+test('普通 Chat 与主动投递不回归：一行仍是一行，控制字符仍进不来', () => {
+  // Only the notice arm changed. A human's sentence is still one line, a reply's lines are still the
+  // resident's own escaped lines pushed through untouched, and a proactive delivery is still its own
+  // lines — none of them gained a split they did not have.
+  const state = chat([human('在吗'), reply('answered', ['第一行', '第二行']), proactive(['先说话', '再说一句'])]);
+  const frame = frameLines(renderFrame(state, PLAIN)).join('\n');
+  for (const text of ['在吗', '第一行', '第二行', '先说话', '再说一句']) {
+    assert.ok(frame.includes(text), `${text} 应当出现在帧里`);
+  }
+
+  // And the split did not cost the escape it was moved in front of: a break this renderer does *not*
+  // split on, and an escape sequence, both still arrive as text rather than as instructions. The
+  // vertical tab is the interesting one — it is a line break to a terminal and not one here, so it stays
+  // inside its line and is spelled out.
+  const lines = transcriptLines([notice('第一行\x1b[31m红色\x07\v第二行')]);
+  assert.equal(lines.length, 2, '一个都没有被当成换行');
+  assert.equal(lines[1][0].text, '第一行\\u001b[31m红色\\u0007\\v第二行');
+  assert.equal(transcriptLines([notice('第一行\n第二行')]).length, 3, '真正的换行才断行');
 });
 
 // ---------------------------------------------------------------------------------------------

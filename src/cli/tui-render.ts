@@ -375,8 +375,16 @@ export function transcriptLines(entries: readonly TranscriptEntry[]): readonly L
     }
 
     if (entry.kind === 'notice') {
+      // Split first, escape each line after — the order is the whole of this arm.
+      //
+      // `oneLine` is the *last* thing done to a line, not the first. It replaces every break a string
+      // carries with the two characters `\n`, in place, precisely so that no text this screen renders can
+      // put a real newline into the grid. Asking it to do that and *then* splitting on `\n` looks for a
+      // break that has already been turned into text: the split finds nothing, and a notice written as
+      // several lines is emitted as one, with `\n` visible in it. `express.ts` splits and then escapes
+      // for the same reason; this arm had the two the wrong way round.
       lines.push([span(`·  ${entry.at}`, SGR_DIM)]);
-      lines.push(...oneLine(entry.text).split('\n').map((text) => [span(text, SGR_DIM)]));
+      lines.push(...entry.text.split(/\r\n|\r|\n/).map((text): Line => [span(oneLine(text), SGR_DIM)]));
       continue;
     }
 

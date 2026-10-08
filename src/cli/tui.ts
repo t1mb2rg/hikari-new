@@ -113,6 +113,28 @@ const RESTART_WAIT_MS = 15_000;
 const RESTART_POLL_MS = 250;
 
 /**
+ * What `/help` says, one command to a line.
+ *
+ * The lines are kept apart here and joined only where they are handed over, because the shape of this
+ * text is a claim the window has to keep and a joined string cannot be asked about without rendering it
+ * first. `pushNotice` carries one string, and the transcript splits it back into lines; the regression
+ * test holds *these* lines and renders them through the same path, so what it checks is the copy an
+ * operator actually reads rather than a copy written out again beside it.
+ */
+export const HELP_LINES: readonly string[] = [
+  '/help 显示这份列表',
+  '/clear 清空这个窗口（不影响 Hikari 记住的东西）',
+  '/status 切到 System 并刷新常驻状态',
+  '/start 按启动配置启动常驻',
+  '/stop 请求常驻停止',
+  '/restart 停止常驻，等它退出后重新启动',
+  '/profile 切到 Profile，显示这个数据目录记住的启动配置',
+  '/quit 退出（不停止常驻）',
+  'Tab 切换视图，PgUp/PgDn 翻看对话，Ctrl+Q 退出。',
+  '其他任何文字都会原样交给 Hikari。',
+];
+
+/**
  * The one sentence a console with no terminal gets, and the only place that sentence is written.
  *
  * `tuiCommand` asks it because a window with no terminal is not a window, and `bootstrapCommand`
@@ -563,20 +585,7 @@ function runTui(initialDataDir: string | undefined): Promise<CommandOutcome> {
         return;
       }
       if (kind === 'help') {
-        pushNotice(
-          [
-            '/help 显示这份列表',
-            '/clear 清空这个窗口（不影响 Hikari 记住的东西）',
-            '/status 切到 System 并刷新常驻状态',
-            '/start 按启动配置启动常驻',
-            '/stop 请求常驻停止',
-            '/restart 停止常驻，等它退出后重新启动',
-            '/profile 切到 Profile，显示这个数据目录记住的启动配置',
-            '/quit 退出（不停止常驻）',
-            'Tab 切换视图，PgUp/PgDn 翻看对话，Ctrl+Q 退出。',
-            '其他任何文字都会原样交给 Hikari。',
-          ].join('\n'),
-        );
+        pushNotice(HELP_LINES.join('\n'));
         return;
       }
       if (kind === 'status') return setView('system');
