@@ -25,7 +25,13 @@
 | 持久化落点 | **3** |
 | 主动投递点 | **2** |
 | Duplication Chronicle 的生产写入者 | **1**（`work-focus`） |
-| `chronicleService.read()` / `get()` 的生产调用者 | **0** |
+| ~~`chronicleService.read()`~~ / `get()` 的生产调用者 | ~~**0**~~ → `read()` **1**，`get()` 仍 **0** |
+
+> **注（2026-10-08）：本行的 `read()` 计数已变，原值 0 不再成立，其余各行未变动。**
+> 新增的唯一生产调用者是 `repository-ci-attention`（`src/repository-ci-attention/plugin.ts` 的
+> history restore），它读回的是**它自己的私有 fact 家族**，不是通用历史查询。
+> 见 `docs/architecture/repository-ci-attention-delivery-history-v0-boundary-freeze.md`；
+> §1.4「读侧为零」同条另有指针。
 
 三个持久化落点：`<dataDir>/continuity/origin.json`、`<dataDir>/chronicle/chronicle.jsonl`、
 `<dataDir>/launch.json`。
@@ -68,6 +74,15 @@ means. Chronicle stores what happened. It does not explain what it means.
 
 > **Chronicle 是一条只写不读的追加日志。写入侧的 doctrine 已经建立并有测试看守；
 > 读侧从未被使用过。**
+
+> **注（2026-10-08）：本节（§1.4「读侧为零」）的结论已在后续 slice 中失效，正文不改写。**
+> 上面两处「零命中 / 从未被使用过」是本次研究当时的实测事实，现在**不再成立**：
+> `src/repository-ci-attention/plugin.ts` 每个 activation 会 `read()` 一次，读回它自己的历史。
+> 取代者：`docs/architecture/repository-ci-attention-delivery-history-v0-boundary-freeze.md`。
+> **未变的是本节的用途**——它记录的「写入侧有 doctrine、读侧没有」这一**不对称**在当时成立；
+> 今天的读侧使用是 owner-local 的（一个 owner 读自己的 fact 家族），而不是 §1.4 意义上的
+> 通用读侧能力：仍然没有 query / 索引 / 跨 owner 的历史查询，`memory-reactivation` 的
+> BLOCKED 结论不受影响。
 
 ### 1.5 唯一的「把过去放进当前 prompt」
 

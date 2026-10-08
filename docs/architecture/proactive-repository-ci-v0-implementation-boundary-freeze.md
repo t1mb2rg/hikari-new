@@ -61,8 +61,17 @@
   - 同一个 failed run 重复 poll → id 已在集合里 → 不重复；
   - 新的 run id 又失败 → 不在集合里 → 新候选（「同 run 从 in_progress → failure」也走这条：
     `in_progress` 时不是候选、不入集合，后来 completed+failure 首次入集）；
-  - restart → 集合随 activation 消失，沿用此前 Repository CI Attention review 已裁定的 v0 语义。
-- **不读 Chronicle / Memory / 通知历史 / durable queue**（ruling §九）。跨 Runtime 去重不在本 slice。
+  - restart → 集合随 activation 消失。~~沿用此前 Repository CI Attention review 已裁定的 v0 语义。~~
+    **注（2026-10-08）**：这条「沿用」的说法当时就不准确——review 裁定的是 restart **全静默**
+    （`repository-ci-attention-v0-boundary-review.md:241,246,709`），而本 freeze 的形状与随之交付的
+    实现是 **全部重报**。该分歧已由 Human 裁决（N2-01 §1）一次解决，方向与 review 一致但不相同：
+    **已成功投递过的静默，从未投递过的仍然说**。见
+    `repository-ci-attention-delivery-history-v0-boundary-freeze.md` §1.4。
+- ~~**不读 Chronicle / Memory / 通知历史 / durable queue**（ruling §九）。跨 Runtime 去重不在本 slice。~~
+  **注（2026-10-08）：本条目已由 Human 裁决取代（N2-01）。** 取代者：
+  `repository-ci-attention-delivery-history-v0-boundary-freeze.md`。解除的是这条 **NOT-YET 的范围**
+  （「不在本 slice」），**不是**它背后的理由——本插件**没有取得自己的 durable store**，
+  该文件 §1.3 逐条说明。旧守卫被替换，不是被删掉。
 
 ### 1.3 Attention → Language 的 material shape（本 freeze 的核心决定）
 
@@ -240,7 +249,11 @@ Language 与 transport 互不知情。
   `relevant ≠ salient` 继续成立。
 - 不建 `SpeakMaterial` / `GenericGrounding` / `EpistemicPayload` / `UniversalMessage` / generic prompt envelope。
 - 不为 connection state 建 Language variant（ruling §三）。
-- 不读 Chronicle / Memory / 通知历史 / durable queue；不做跨 Runtime 去重。
+- ~~不读 Chronicle / Memory / 通知历史 / durable queue；不做跨 Runtime 去重。~~
+  **注（2026-10-08）：已由 Human 裁决取代（N2-01）。** 指针见 §1.2 同条注。
+  取代者 `repository-ci-attention-delivery-history-v0-boundary-freeze.md` 做完的是**其中一件**：
+  读回**本插件自己**成功投递过的事实。**Memory / durable queue / generic 历史查询仍然不做**，
+  本行其余部分继续有效。
 - 不做 queue / retry / history / guaranteed delivery / 多平台抽象 / Windows Toast / installer / AUMID。
 - 不建 Authority framework；不改 Runtime；不建 Service Locator / capability registry / optional requires。
 - 不重开 Grounded LLM Expression；第一 slice 不调用 model。

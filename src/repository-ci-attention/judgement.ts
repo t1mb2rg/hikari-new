@@ -14,6 +14,7 @@
 import type { GitHubCiObservation } from '../github-ci/index.js';
 import { oneLine } from '../terminal-text/index.js';
 
+import { failureKey } from './facts.js';
 import type { RepositoryCiAttentionOccurrence } from './types.js';
 
 // The conclusions that mean a run ran and failed.
@@ -33,17 +34,30 @@ const FAILURE_CONCLUSIONS: ReadonlySet<string> = new Set(['failure', 'timed_out'
 /**
  * The failure to handle, or `undefined` if this observation is not one.
  *
- * `handledFailures` is this activation's own record of what it has already taken on, owned and closed
- * over by `plugin.ts`. Passing it in rather than holding it here is what keeps this function pure and
- * what makes the duplicate rule checkable without a clock: the caller supplies the set, so a test can
- * write down any history it likes.
+ * Two sets come in, and they are not the same question. Both are owned and closed over by `plugin.ts`;
+ * passing them in rather than holding them here is what keeps this function pure and what makes the
+ * duplicate rule checkable without a clock, a disk or a Runtime: the caller supplies the history, so a
+ * test can write down any history it likes.
  *
- * It is named for what it holds and not for what became of it. Membership means this activation has
- * already run this failure through the handling path; it does **not** mean a human was told. Delivery
- * reports `delivered`, `unavailable` or `failed`, and all three leave the id in the set, so
+ * `handledFailures` is **this activation's** own record of what it has already taken on. It is named
+ * for what it holds and not for what became of it. Membership means this activation has already run
+ * this failure through the handling path; it does **not** mean a human was told. Delivery reports
+ * `delivered`, `unavailable` or `failed`, and all three leave the key in the set, so
  * `handled ≠ delivered ≠ human observed` — an earlier name said "announced", which claimed the last of
  * those on the strength of the first. What the set is for is the duplicate rule, and the duplicate rule
  * is about this activation not doing the same work twice, not about what the work achieved.
+ *
+ * `deliveredFailures` is what this owner has already **succeeded in announcing, in any activation**,
+ * restored from its own Chronicle history by `plugin.ts` and reduced to keys by `readDeliveredFailures`.
+ * It is the crossing of an activation boundary, and it is a strictly stronger fact than the one above:
+ * an entry here means the bytes were written, not merely that a delivery was attempted. That is why it
+ * can silence a failure a restart would otherwise re-announce, and why `unavailable` and `failed` never
+ * put anything in it — a transport that was down must not be able to buy silence with a failed attempt.
+ *
+ * The two are separate sets rather than one because collapsing them would answer "did I already tell
+ * someone" with "did I already try", and that is precisely the claim `delivered ≠ human observed`
+ * exists to keep out. Within one activation the first set already covers the second's cases, so the
+ * new check only ever fires at the moment an activation begins with history.
  *
  * The order of the checks is the order of the facts, cheapest and most decisive first, and each one is
  * a different reason not to speak:
@@ -53,12 +67,14 @@ const FAILURE_CONCLUSIONS: ReadonlySet<string> = new Set(['failure', 'timed_out'
  *   conclusion absent   GitHub reports a completed run with no conclusion while it settles
  *   not a failure       it finished, and it finished fine
  *   already handled     it failed, and this activation has already taken it on
+ *   already delivered   it failed, and a previous activation already got the word out
  *
  * The in-progress case is worth stating outright because it is the one that looks like a gap and is
  * not. A run seen `in_progress` is not handled and **not recorded**, so when the same run id comes
  * back `completed` with a failure conclusion it is a first sighting and is handled once. That is the
  * `in_progress → failure` transition, and it falls out of recording only what was actually taken on
- * rather than out of a state machine over run statuses.
+ * rather than out of a state machine over run statuses. The new check does not disturb it: nothing is
+ * ever written to the delivered history for a run that has not been delivered.
  *
  * What this cannot see is a failure that is superseded before it is ever polled: `github-ci` reports
  * the *latest* run, so a red run replaced by a newer one between two cycles leaves no trace here. That
@@ -67,7 +83,8 @@ const FAILURE_CONCLUSIONS: ReadonlySet<string> = new Set(['failure', 'timed_out'
  */
 export function detectNewFailure(
   observation: GitHubCiObservation,
-  handledFailures: ReadonlySet<number>,
+  handledFailures: ReadonlySet<string>,
+  deliveredFailures: ReadonlySet<string>,
 ): RepositoryCiAttentionOccurrence | undefined {
   const latest = observation.latestRun;
   if (latest.kind !== 'reported') return undefined;
@@ -76,7 +93,10 @@ export function detectNewFailure(
   if (run.status !== 'completed') return undefined;
   if (run.conclusion.kind !== 'reported') return undefined;
   if (!FAILURE_CONCLUSIONS.has(run.conclusion.value)) return undefined;
-  if (handledFailures.has(run.id)) return undefined;
+
+  const key = failureKey(observation.repository, run.id);
+  if (handledFailures.has(key)) return undefined;
+  if (deliveredFailures.has(key)) return undefined;
 
   return Object.freeze({
     repository: observation.repository,

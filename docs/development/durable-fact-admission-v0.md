@@ -13,6 +13,14 @@ VERDICT = NARROW → READY / AUTHORIZED FOR IMPLEMENTATION
 NARROW 的含义是本轮**只**批准 `work-focus` 这一个 owner 承认它自己的那一条事实——**不是**借此机会让
 Plugin 普遍获得写 Chronicle 的权利，**不是**引入 Memory，也**不是**给 Runtime 增加任何机制。
 
+> **注（2026-10-08）：本文的 NARROW 范围已被一次后续 Human 裁决局部取代，正文不改写。**
+> 取代者：`docs/architecture/repository-ci-attention-delivery-history-v0-boundary-freeze.md`。
+> 取代的是「**只**批准 work-focus 这一个 owner」这一条**范围**；**没有被取代的是**它防的东西——
+> 「Plugin 普遍获得写 Chronicle 的权利」仍然不成立，Memory 仍然没有被引入，Runtime 仍然没有增加机制。
+> 新增的第二个写入者是 `repository-ci-attention`，写的是**它自己的**那一条命题
+> （「我成功投递过这条 CI failure 的提醒」），即本文 §2 那条 owner-admission doctrine 的直接应用，
+> 而不是对它的松绑。本文 §10 同条另有指针。
+
 ---
 
 ## 0. 本轮回答的问题
@@ -347,10 +355,20 @@ throwaway loopback HTTP server，不加载任何 Plugin，也不经过 work-focu
 
 ## 10. 明确不做（本轮冻结）
 
-- 不批准除 `work-focus` 之外的任何 Plugin 写 Chronicle；**不**把它读成「所有 Plugin 都应该写 Chronicle」。
+- ~~不批准除 `work-focus` 之外的任何 Plugin 写 Chronicle~~；**不**把它读成「所有 Plugin 都应该写 Chronicle」。
+  > **注（2026-10-08）：本条目已由 Human 裁决局部取代。** 指针见本文开头同条注；取代者
+  > `docs/architecture/repository-ci-attention-delivery-history-v0-boundary-freeze.md`
+  > （其 §1.3 / §2D 逐条说明解除的是**范围**还是**理由**）。**未被取代**的是后半句：
+  > 「所有 Plugin 都应该写 Chronicle」仍然不成立——第二个写入者只有一个，且写的是它自己的命题。
 - 不创建 Work Focus Event、recorder Plugin、Retired Plugin、通用 recorder、retry queue。
 - 不让 Runtime 写事实、不让 Resident 写事实、不让 Language 写事实。
 - 不建立 Chronicle → state 的恢复；不做 state restoration。
+  > **注（2026-10-08）**：本条在后续 slice 中**没有被解除**，但需要一次精确划界，以免被读得比原意更宽。
+  > 本条针对的是**可修订的状态**（work-focus 的 baseline）：把 logs 折回成一个会被覆盖的当前值。
+  > 后续 slice 里 `repository-ci-attention` 从自己的历史折出的**不是 state**，而是一个**只增不变的
+  > 成员集合**（`(repository, runId)` 是否成功投递过）——没有「恢复成旧值」这件事，也没有与任何
+  > 当前状态需要保持一致的量。见 `repository-ci-attention-delivery-history-v0-boundary-freeze.md` §5.1；
+  > 该 slice 同样**不**建立 Memory，**不**做 reactivation，**不**存 baseline。
 - 不做 Memory / recall / association / reactivation / revision / confidence / salience / 语义搜索 /
   embedding / vector DB / 通用保留策略。
 - 不给判定加 importance / salience / confidence / relation / 通用认识论 schema。

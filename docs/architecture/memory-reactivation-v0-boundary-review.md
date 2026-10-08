@@ -136,10 +136,20 @@ export const chronicleService = defineService<ChronicleService>('chronicle', 1);
 
 **`chronicleService.read()` 在生产代码里零调用者。**
 
+> **注（2026-10-08）：这一条「单一事实」已被一次后续改动证伪，本文的 BLOCKED 裁定不受影响，正文不改写。**
+> `read()` 现在有 **1** 个生产调用者：`repository-ci-attention` 每个 activation 读回**它自己的**
+> 历史（`repository-ci-attention.delivered` 家族），用来避免重启后重报同一条已投递的 CI failure。
+> 取代者：`docs/architecture/repository-ci-attention-delivery-history-v0-boundary-freeze.md`。
+> **为什么 §16 的 BLOCKED 不因此解除**：本裁定的 blocker 是「没有真实的 **Memory/reactivation**
+> consumer」——本次的读者既不做关联、不做召回、不做 salience，也不把过去重新送进 cognition，
+> 它只是 owner 自己的一次成员集合查询。§8 逐条否决的五个候选一个都没有复活。
+> 下文 `work-focus/index.ts:16-21` 的引文仍逐字有效：**work-focus 的 facts 至今无人读回**，
+> 本次新增的读者只认自己那一个 fact type（`type` 校验有测试看守）。
+
 第一手取证（`Grep` over `src/**/*.ts`，pattern `chronicleService|chronicle/index|\.read\(\)`）：
 
 - `chronicleService` 只出现在：它自己的定义（`chronicle/contracts.ts:10`）、`chronicle/plugin.ts` 的 `provides`、`work-focus/plugin.ts:55` 的 `requires` 与 `:75` 的 `services.get`。
-- **`.read()` 零命中。**
+- ~~**`.read()` 零命中。**~~（2026-10-08：改为 1 处，见上方注）
 - 写入侧唯一调用点：`src/work-focus/session.ts:81` 的 `await chronicle.append(draft)`。
 - CLI 侧（`cli/start.ts`、`cli/resident.ts`、`cli/chronicle-init.ts`）只接触 `chroniclePlugin`（组合）与 `initializeChronicle`（建 store），**不读事实**。
 
@@ -420,7 +430,13 @@ Memory 能给它的唯一增量 = 把输入从 `work-focus.current@1` 换成 `ch
 
 三条理由，**每条独立充分**：
 
-1. **无真实 consumer。** `chronicleService.read()` 生产代码零调用者（§3，第一手 grep + `work-focus/index.ts:16-21` 的自述）；§8 逐条否决五个候选；人类是 client 不是 consumer（`current-stage.md:41`）。
+1. **无真实 consumer。** ~~`chronicleService.read()` 生产代码零调用者~~（§3，第一手 grep + `work-focus/index.ts:16-21` 的自述）；§8 逐条否决五个候选；人类是 client 不是 consumer（`current-stage.md:41`）。
+   > **注（2026-10-08）：本条理由的结论仍然成立，但它引用的第一个证据已被后续改动证伪。**
+   > `read()` 现有 1 个生产调用者（`repository-ci-attention` 读自己的历史），因此
+   > 「零调用者」不能再作为本条的依据；**依据是「没有真实的 Memory/reactivation consumer」**，
+   > 而这一条没有被改变：§8 五个候选仍然全部被否决，本次的读者不是它们的任何一个。
+   > **本文 §16 的 BLOCKED 裁定保持不变**，不存在「顺带解开」的关系。
+   > 取代者与划界：`docs/architecture/repository-ci-attention-delivery-history-v0-boundary-freeze.md` §5.1。
 
 2. **核心问题的 owner 不在 Memory 名下。** 「值不值得重新进入认知」是 Awareness 的 Salience / Importance Judgement（`principles.md:451-453`, `:466`），而该语义位被 `current-stage.md:19`/`:43` 冻结为「**仍然均未进入，且未被预埋**」，并在 `:1428` 列入 standing do-not-do。**谁来做这件事已经定了，只是还没批准它开始做。**
 

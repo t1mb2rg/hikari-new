@@ -726,10 +726,21 @@ severity / category / 失败分类
 | --- | --- |
 | occurrence 要写 Chronicle 吗？ | **不** |
 | baseline 要写 Chronicle 吗？ | **不** |
-| 要读 Chronicle 吗？ | **不** |
+| ~~要读 Chronicle 吗？~~ | ~~**不**~~ |
 | 要创建 Memory 吗？ | **不** |
 | 要创建 Salience 吗？ | **不** |
 | 要创建 generic Notification Service 吗？ | **不** |
+
+> **注（2026-10-08）：第三问已被一次后续 Human 裁决局部取代，正文不改写。**
+> 取代者：`docs/architecture/repository-ci-attention-delivery-history-v0-boundary-freeze.md`。
+> 授权来源是 N2-01「Owner-local durable feedback」的产品决策（「同一条 Repository CI failure，
+> 如果 Hikari 曾成功投递过提醒，Resident 重启不应把它重新当作未处理的新提醒」）。
+> **未被取代的是其余五问与理由 (1)(2)**：occurrence 仍然不写 Chronicle，baseline 仍然不写、
+> 仍然不跨 activation。新增的读写**只有**本 owner 自己的一条命题
+> （`repository-ci-attention.delivered`：我成功投递过这条 failure 的提醒）——它是只增不变的事实，
+> 恰好不触碰理由 (2)「Chronicle 无法表达 baseline 的生命周期」，因为这条命题没有
+> update / delete / supersession 的需求：投递过就是投递过。理由 (1) 同理不受影响。
+> §14.3 与理由 (3) 的措辞另有指针，见本节末。
 
 ### 14.2 三条独立理由
 
@@ -739,11 +750,30 @@ severity / category / 失败分类
 
 **(3) occurrence 一旦写 Chronicle，就会立刻复现 Memory 的 BLOCKED。** `chronicleService.read()` 至今**生产代码零调用者**（前一轮第一手确认），这正是 MEMORY REACTIVATION v0 判 BLOCKED 的第一条 blocker。**给 attention 写一条无人读的 durable fact，等于为了给 Chronicle 找 reader 而制造需求**——这是用户在前一轮裁决里明确冻结的。
 
+> **注（2026-10-08）：理由 (3) 的结论仍然成立，但它的第一条前提已被本次改动证伪，需要分开读。**
+> 「`read()` 生产代码零调用者」**不再是事实**：本次 slice 让本插件成为 `read()` 的第一个生产调用者。
+> **`read()` 被调用这件事本身不解除 MEMORY REACTIVATION v0 的 BLOCKED**——该裁定的 blocker 是
+> 「没有真实的 **Memory/reactivation** consumer」，而本次的读者是本 owner 在后续 activation 里读回
+> **它自己的私有 fact 家族**，既不解释记忆的意义，也不做关联、召回或 salience。裁定与理由见
+> `docs/architecture/repository-ci-attention-delivery-history-v0-boundary-freeze.md` §5.1。
+> **仍然成立的是理由 (3) 的实质**：「不要为了给 Chronicle 找 reader 而制造需求」没有被绕过——
+> 没有新造 consumer，没有 ExperienceService / MemoryService，也没有通用 historical query router
+> （N2-01 §2 的禁止清单，测试 `这个 decider 不发布事件` 与 `没有新的通用机制跟着这次改动进来` 看守）。
+
 ### 14.3 与前一轮冻结的关系
 
 用户的正式裁决逐字包含：「**不要为了给 Chronicle 找 reader 而创造需求。**」
 
 **本设计不写 Chronicle，因此不触碰这条。** 这是刻意的，也必须被记为本设计的一个**优点而非遗漏**。
+
+> **注（2026-10-08）：这一句已被后续 slice 局部取代，正文不改写。**
+> v0 设计确实不写 Chronicle，且这一点当时是优点。后续的 delivery-history slice **改了它**：
+> 本插件现在会写一条**关于投递**的事实，并读回它。这一改动由 N2-01 的 Human 任务书直接授权
+> （其 §1 产品决策与 §2 consumer「同一 owner 在后续 activation」），取代者与逐条说明见
+> `docs/architecture/repository-ci-attention-delivery-history-v0-boundary-freeze.md` §2D。
+> **被顶掉的只有「不写」这一条结论，不是它当时防的东西**：裁决引用的
+> 「不要为了给 Chronicle 找 reader 而创造需求」**仍然有效**，且本次遵守——reader 是 owner 自己，
+> 不是新造的 consumer；occurrence 与 baseline 至今仍然不写 Chronicle。
 
 ---
 

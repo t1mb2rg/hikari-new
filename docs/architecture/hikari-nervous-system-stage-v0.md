@@ -104,6 +104,16 @@ input-activity 的全部、TUI transcript）在重启后从空开始。
 **现状：无。** `chronicleService.read()` 与 `get()` 的**生产调用者为 0**——
 唯一的 Chronicle 消费者是 `work-focus`，且只调 `append`。见 §4「读侧为零」。
 
+> **注（2026-10-08）：本条引用的证据已部分失效，但结论「现状：无」仍然成立，必须分开读。**
+> `read()` 现在有 1 个生产调用者（`repository-ci-attention` 读回它自己的历史），`get()` 仍为 0。
+> **Reactivation 的「现状：无」没有被这条改动改变**：该调用者是**一个 owner 读自己私有的 fact 家族**
+> （「我成功投递过这条 CI failure 的提醒」），不是「当前情境与过去产生关联」——没有情境匹配、
+> 没有关联、没有 salience，也没有把过去重新送进 cognition。上文引用的「读侧为零」
+> ——它在 `experience-formation-v0-research.md` §1.4（同一份文档的 §4 是「完成的含义」，
+> 该交叉引用本身即不准确）——与 `memory-reactivation-v0-boundary-review.md` 的 BLOCKED 结论
+> **都不因本次调用者出现而解除**。
+> 取代者与划界：`docs/architecture/repository-ci-attention-delivery-history-v0-boundary-freeze.md` §5.1。
+
 ### D — Ongoing Concern（持续关注）
 
 **行为**：Hikari 可以在没有新 event 的情况下，仍然持有一件它正在关注的事。

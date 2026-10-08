@@ -532,7 +532,11 @@ Transport owns delivery
 **本轮仍不读 Chronicle。Desktop Return v0 优先 activation-local。**
 
 - 先例是显式的：`repository-ci-attention` 把 `handledFailures` 留在 setup 闭包里，并明确拒绝 Chronicle 当作第二存放处；`src/work-focus/session.ts:17-19` 逐字「The history cannot restore the state」；`docs/architecture/memory-reactivation-v0-boundary-review.md:265` 把「Work Focus Chronicle history → 自动恢复 Work Focus `current()`」列为**禁止**。
-- 事实补充：今天**没有任何地方读回** work-focus 的 Chronicle facts（`src/work-focus/index.ts:16-21`「Nothing reads them back」；全仓库没有 `chronicleService.read()` 的生产调用者）。
+- 事实补充：今天**没有任何地方读回** work-focus 的 Chronicle facts（`src/work-focus/index.ts:16-21`「Nothing reads them back」；~~全仓库没有 `chronicleService.read()` 的生产调用者~~）。
+  > **注（2026-10-08）**：这个括号里的括注已被后续改动证伪（`read()` 现有 1 个生产调用者），
+  > **但本条要点不受影响**——那条调用者读的是它自己的 `repository-ci-attention.delivered` 家族，
+  > **仍然没有任何地方读回 work-focus 的 facts**，「Nothing reads them back」至今逐字有效。
+  > 本轮「不读 Chronicle、优先 activation-local」的结论不变。
 - 所以本轮明确**不做**：跨 restart 的 presence history、持久化 run 状态、从历史重建「离开多久」、把 occurrence 写 Chronicle。
 
 **Runtime restart 后之前的 inactivity state 可以丢失。** 新 activation 第一次 observation 就是 baseline——这与 awareness 的既有性质完全一致，不需要任何新机制。
