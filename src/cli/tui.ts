@@ -1,5 +1,10 @@
-// `hikari` — the TUI. One window on a running Hikari: what it is doing, what it just said, what it
-// said to you on its own, and the four things you can do about it.
+// The TUI — the window `hikari` opens. One window on a running Hikari: what it is doing, what it just
+// said, what it said to you on its own, and the four things you can do about it.
+//
+// This is not where `hikari` begins. `bootstrap.ts` is the outermost layer: it decides which data
+// directory the bare word means and whether a resident is answering there, and only then opens this
+// window. What that leaves here is one case worth naming — `dataDir` is absent when nobody expressed
+// one and the platform offered none, and the TUI then asks, which is what it has always done.
 //
 // What this file owns: a terminal, a redraw, a keypress loop, one detached spawn, and the wiring that
 // lets three existing clients run beside each other. What it does not own: the resident, its lifetime,
@@ -107,13 +112,25 @@ const DELIVERY_RETRY_MAX_MS = 30_000;
 const RESTART_WAIT_MS = 15_000;
 const RESTART_POLL_MS = 250;
 
-export async function tuiCommand(options: TuiOptions): Promise<CommandOutcome> {
-  // A TUI is a terminal or it is nothing. Refusing here rather than drawing escape sequences into a pipe
+/**
+ * The one sentence a console with no terminal gets, and the only place that sentence is written.
+ *
+ * `tuiCommand` asks it because a window with no terminal is not a window, and `bootstrapCommand`
+ * asks it before it does anything at all — a pipe is not a place to draw, and it is even less a
+ * reason to start a resident nobody will see. Two callers, one refusal: a second copy of this
+ * sentence would be a second thing an operator has to read, and the two would drift.
+ */
+export function terminalRequired(): CommandOutcome | undefined {
+  // A TUI is a terminal or it is nothing. Refusing rather than drawing escape sequences into a pipe
   // keeps `hikari > file` from producing a page of control codes, and keeps the failure a sentence
   // rather than a corrupt file.
-  if (!process.stdin.isTTY || !process.stdout.isTTY) {
-    return { exitCode: 1, stdout: '', stderr: 'Hikari 需要一个终端；请直接在终端里运行 hikari。\n' };
-  }
+  if (process.stdin.isTTY && process.stdout.isTTY) return undefined;
+  return { exitCode: 1, stdout: '', stderr: 'Hikari 需要一个终端；请直接在终端里运行 hikari。\n' };
+}
+
+export async function tuiCommand(options: TuiOptions): Promise<CommandOutcome> {
+  const refusal = terminalRequired();
+  if (refusal !== undefined) return refusal;
 
   return runTui(options.dataDir);
 }
@@ -701,8 +718,17 @@ function delay(ms: number): Promise<void> {
  * nowhere to go, so a resident that fails before it can be asked anything reports nothing here. This
  * screen says it lost the process rather than inventing a reason. Carrying that text would mean a file
  * to write it to, and a log subsystem is the thing this slice was told not to build.
+ *
+ * `onExit` is for the caller that has to know whether the process it just started is still there. The
+ * launch path passes it because that is the only way to tell a resident that is slow from one that is
+ * gone; this screen does not, because it never waits for the child it started. It is not a lifetime
+ * coupling: the child is still detached and still unreferenced, the listener dies with this process,
+ * and nothing about quitting is changed by it.
  */
-export function spawnDetached(args: readonly string[]): string | undefined {
+export function spawnDetached(
+  args: readonly string[],
+  onExit?: (code: number | null) => void,
+): string | undefined {
   const entry = fileURLToPath(new URL('./main.js', import.meta.url));
 
   try {
@@ -711,6 +737,7 @@ export function spawnDetached(args: readonly string[]): string | undefined {
     // asynchronously. Nothing waits for it: a screen that blocked here would be one that stopped
     // redrawing because a child it does not own was slow to start.
     child.on('error', () => undefined);
+    if (onExit !== undefined) child.on('exit', onExit);
     child.unref();
     return undefined;
   } catch (error) {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { NotInitializedError } from '../continuity/index.js';
 import { askCommand } from './ask-command.js';
+import { bootstrapCommand } from './bootstrap.js';
 import { chronicleInitCommand } from './chronicle-init.js';
 import { confirmCommand } from './confirm-command.js';
 import { statusCommand, stopCommand } from './control-command.js';
@@ -20,7 +21,6 @@ import {
 import { residentCommand } from './resident.js';
 import { startCommand } from './start.js';
 import { subscribeCommand } from './subscribe-command.js';
-import { tuiCommand } from './tui.js';
 
 process.exitCode = await runCommandLine(process.argv.slice(2));
 
@@ -56,6 +56,11 @@ function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOut
   if (parsed.command === 'profile-set') return profileSetCommand(parsed.options);
   if (parsed.command === 'profile-show') return profileShowCommand(parsed.options);
   if (parsed.command === 'profile-clear') return profileClearCommand(parsed.options);
+  // The default surface, which is a launch path before it is a window: `bootstrap.ts` decides which
+  // data directory `hikari` means, finds or starts the resident configured there, and only then hands
+  // over to the TUI. Everything it refuses — no terminal, no launch profile, a launch that failed —
+  // it refuses with a reason and without opening a screen.
+  //
   // The TUI draws to the terminal itself — raw mode, an alternate screen buffer, a redraw loop — so
   // it returns an outcome with nothing in it and hands the empty strings back to be written over an
   // already-restored screen. A failure to get a terminal at all is the one thing it does return for
@@ -66,7 +71,7 @@ function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOut
   // an open socket and an open socket keeps the loop alive. The `await` below settles on the outcome
   // the TUI handed back on its way out, and the two writes after it are to a terminal that has already
   // been given back — which is why those strings are empty.
-  if (parsed.command === 'tui') return tuiCommand(parsed.options);
+  if (parsed.command === 'tui') return bootstrapCommand(parsed.options);
   return startCommand(parsed.options);
 }
 

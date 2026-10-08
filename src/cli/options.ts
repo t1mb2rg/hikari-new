@@ -9,14 +9,23 @@ export interface CliOptions {
  *
  * This is the only place in this file where `dataDir` is optional, and it is optional for a reason
  * that does not generalise. Every other command reaches a store that is already there, so a data
- * directory is what it must be told; the TUI is the thing that asks, and an operator who ran
- * `hikari` with nothing has expressed no directory rather than a wrong one.
+ * directory is what it must be told; the default surface is the one an operator reaches without
+ * naming anything, and an operator who ran `hikari` with nothing has expressed no directory rather
+ * than a wrong one.
  *
- * What the absence may *not* become is a default. There is no built-in path, no environment variable,
- * no search, and no remembered "last used" — the directory a human means is a choice about which
- * Hikari they are addressing, and the same reasoning that refuses to invent a model endpoint
- * (`--model-endpoint` … "a default model would be this file choosing to send a human's words
- * somewhere nobody named") refuses to invent this one. Absent means the TUI asks.
+ * What the absence may not become is a *choice made here*. This file parses argv and nothing else, so
+ * the absence stays an absence all the way through it; `bootstrap.ts` is where it is resolved, and
+ * `--data-dir`, when given, means there is nothing to resolve. That resolution is narrow by
+ * construction — `defaultResidentDataDir` reads one platform-provided directory and names one
+ * subdirectory under it. There is still no search, still no remembered "last used", and still no file
+ * outside the data directory that could point at another one.
+ *
+ * The line this does not cross is the one `--model-endpoint` is on. A default endpoint would be this
+ * build choosing to send a human's words somewhere nobody named, and no platform convention exists
+ * that could make that a safe guess; which Hikari directory the bare word means is a different
+ * question, and on Windows the platform answers it for every other application in the same way.
+ * Where there is no such convention there is no default, and the absence stays a question the TUI
+ * asks — which is what `undefined` still means here.
  */
 export interface TuiOptions {
   readonly dataDir: string | undefined;
@@ -261,7 +270,7 @@ export type ParsedCommandLine =
   | { readonly command: 'profile-show' | 'profile-clear'; readonly options: CliOptions }
   // `tui` carries the one optional data directory in this file, and for the reason `TuiOptions`
   // gives. It reaches no store and asks no question: what it needs is a directory to look at, and it
-  // is the only command that may be run without one.
+  // is the only command that may be run without one — resolved, when it is missing, one layer up.
   //
   // The name is this file's own and not a word anyone types. `hikari` with no command word resolves
   // here (`parseCommandLine` below), and `hikari tui` is refused by name — the surface is reached by
@@ -302,11 +311,12 @@ export const USAGE = [
   '  hikari profile set --data-dir <path> [与 hikari resident 相同的选项]',
   '  hikari profile show --data-dir <path>',
   '  hikari profile clear --data-dir <path>',
-  '  hikari                                  打开 TUI；没有 --data-dir 时在 TUI 里询问',
-  '  hikari --data-dir <path>                打开 TUI',
+  '  hikari                                  打开 TUI；没有 --data-dir 时用默认数据目录，',
+  '                                           常驻没在跑就按启动配置把它拉起来',
+  '  hikari --data-dir <path>                同上，但用你给的这个数据目录',
   '',
   '选项：',
-  '  --data-dir <path>                        数据根目录；除 TUI 外必填，没有默认值',
+  '  --data-dir <path>                        数据根目录；除 hikari 外必填，省略时见下方说明',
   '  --desktop-awareness-delay-ms <integer>   resident 的采集节奏，必填，没有默认值',
   '  --repository-root <path>                 Repository CI 的仓库根目录，与 --repository 成对出现',
   '  --repository <owner/name>                Repository CI 的 GitHub 仓库，与 --repository-root 成对出现',
@@ -355,9 +365,13 @@ export const USAGE = [
   '  唯一的例外是 hikari confirm 明确记下的句子，它本来就住在数据目录里，不随这个窗口消失。',
   '  要和 Hikari 说话也仍然可以用 hikari ask 或 Human Surface；它们都还在，没有替代谁。',
   '  hikari profile set 把一次 hikari resident 的选项原样记在这个数据目录里，',
-  '  TUI 启动常驻时用的就是它。它只被 TUI 读取，hikari resident 本身不读它；',
-  '  没有记过启动配置时，TUI 会说明该先运行哪一条命令。',
-  '  启动配置住在数据目录里，没有用户级配置文件、没有搜索路径、没有默认数据目录。',
+  '  hikari 打开 TUI 时启动常驻用的就是它。它只被 hikari 自己读取，hikari resident 不读它；',
+  '  没有记过启动配置时，hikari 会说明该先运行哪几条命令，并且不打开窗口。',
+  '  启动配置住在数据目录里：没有用户级配置文件、没有搜索路径、没有「上次用过」的记忆。',
+  '  没有给出 --data-dir 时，Windows 上 hikari 用的是 %LOCALAPPDATA%\\Hikari\\resident，',
+  '  除此之外这个数据目录不会被推导，其他平台上仍然是在 TUI 里问你。',
+  '  常驻已经在跑时不重复启动；退出 TUI 不停止它，窗口里按停止之后也不会被自动拉起来——',
+  '  要它再起来，重新运行一次 hikari。启动失败会原样说出来，不会假装常驻已经就绪。',
   '',
 ].join('\n');
 
