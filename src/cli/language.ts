@@ -1,30 +1,41 @@
-// The asking half of the language endpoint — discovery, the client end of the pipe, and the three ways
-// asking can fail.
+// The client end of the language endpoint — discovery, the pipe, and the three ways reaching it can
+// fail. Both of the commands that speak to it (`ask-command.ts`, `confirm-command.ts`) come through
+// here, and it is named after the endpoint rather than after either caller for the reason `focus.ts`
+// and `observe.ts` are.
 //
-// The vocabulary is *not* here. The request word, the reply shapes and the endpoint derivation all come
-// from `../language/index.js`, so the two ends of this pipe cannot disagree about what an `ask` means
-// without the compiler noticing first. This file carries a sentence in and lines out and forms no
-// opinion about either; in particular it does not decide whether a question is answerable, does not
-// pre-check its length against the plugin's bound, and does not translate an `outcome` word into one of
-// its own. Every one of those decisions has an owner on the other side of the pipe, and a second copy
-// here would be a second answer to a question that already has one.
+// The vocabulary is *not* here. The request words, the reply shapes and the endpoint derivation all
+// come from `../language/index.js`, so the two ends of this pipe cannot disagree about what an `ask` or
+// a `confirm` means without the compiler noticing first. This file carries a request in and lines out
+// and forms no opinion about either; in particular it does not decide whether a sentence is answerable
+// or recordable, does not pre-check its length against the plugin's bound, and does not translate an
+// `outcome` word into one of its own. Every one of those decisions has an owner on the other side of the
+// pipe, and a second copy here would be a second answer to a question that already has one.
+//
+// Taking a whole `LanguageRequest` rather than a word and a string is the same argument applied to this
+// function's own signature: the request type is the owner's, so a caller cannot hand this file a word
+// the endpoint does not have, and a third word would arrive here as a compile error rather than as a
+// request the plugin refuses at runtime.
 //
 // Three situations, the same three as the observation client, and for the same reason: this plugin is
 // loaded only when an operator configured a model, and a resident either has it or is not running.
 //
-//   replied       the question was processed. The reply's own `outcome` — `chatted`, `answered`,
-//                 `refused` or `failed` — is carried through untouched, because those four are the
-//                 language plugin's statement about what happened and this file has no standing to
-//                 merge, rename or re-derive any of them. `chatted` in particular is not an error and
-//                 not a lesser `answered`: it is a conversation, and this client prints it and exits
-//                 zero exactly as it does for a grounded answer.
+//   replied       the request was processed. The reply's own `outcome` — `chatted`, `answered`,
+//                 `recorded`, `refused` or `failed` — is carried through untouched, because those five
+//                 are the language plugin's statement about what happened and this file has no standing
+//                 to merge, rename or re-derive any of them. `chatted` in particular is not an error and
+//                 not a lesser `answered`: it is a conversation, and its client prints it and exits zero
+//                 exactly as it does for a grounded answer. `recorded` is the one that is *not* a
+//                 client's business to interpret either — it says a record was written, and whether that
+//                 is a success is its own command's question, decided there and not here.
 //   unavailable   something went wrong reaching the endpoint, or it answered unreadably.
 //   absent        nothing is serving this endpoint on this data directory.
 //
 // `absent` really is two facts, and this is the one place they are worth naming together: no resident
 // at all, or a resident that was started without both `--model-endpoint` and `--model` and therefore
 // never loaded this plugin. Neither is an error and neither is distinguishable from here, which is what
-// `askFailureLines` says rather than guessing between them.
+// `languageFailureLines` says rather than guessing between them. Both words share that failure surface
+// because it is a property of the endpoint rather than of the request — which is why the lines below
+// name the entry point and never the sentence that did not arrive.
 //
 // Nothing here probes the Resident's control channel. A surface that reached for the Resident's own
 // vocabulary to explain a domain plugin's absence would be the first step toward routing domain
@@ -42,6 +53,7 @@ import {
   encodeLanguageRequest,
   languageEndpointPath,
   type LanguageOutcome,
+  type LanguageRequest,
 } from '../language/index.js';
 import { oneLine } from '../terminal-text/index.js';
 
@@ -102,7 +114,10 @@ export const READ_AND_FRAMING_BUDGET_MS = 90_000;
 export const REPLY_TIMEOUT_MS =
   (LONGEST_EXPOSURE_COUNT + 1) * MODEL_TIMEOUT_MS + READ_AND_FRAMING_BUDGET_MS;
 
-export function requestLanguageAsk(rootDir: string, text: string): Promise<LanguageOutcome> {
+export function requestLanguage(
+  rootDir: string,
+  request: LanguageRequest,
+): Promise<LanguageOutcome> {
   const path = languageEndpointPath(rootDir);
   if (path === undefined) {
     return Promise.resolve({
@@ -131,7 +146,7 @@ export function requestLanguageAsk(rootDir: string, text: string): Promise<Langu
       finish({ kind: 'unavailable', detail: `语言入口在 ${REPLY_TIMEOUT_MS}ms 内没有应答。` });
     });
 
-    socket.on('connect', () => socket.write(encodeLanguageRequest({ word: 'ask', text })));
+    socket.on('connect', () => socket.write(encodeLanguageRequest(request)));
 
     socket.on('data', (chunk: string) => {
       if (settled) return;
@@ -174,8 +189,15 @@ export function requestLanguageAsk(rootDir: string, text: string): Promise<Langu
  * the same observation. The remedy for the second is a different command line, and an operator who is
  * told only to start a resident that is already running would go looking for a problem that is not
  * there.
+ *
+ * Nothing here names the word that was sent, and that is deliberate rather than an omission: every
+ * sentence in this function is true of `ask` and of `confirm` alike, because none of them is about the
+ * request. "No entry point" is a fact about the data directory; adding "your question was not asked" or
+ * "nothing was kept" would be this file asserting something about a request that never left the
+ * machine. The one thing an operator needs to know is that nothing happened, and a `confirm` that
+ * reports a failure has said the same thing the durable record would have said — nothing was kept.
  */
-export function askFailureLines(
+export function languageFailureLines(
   answer: Exclude<LanguageOutcome, { readonly kind: 'replied' }>,
 ): readonly string[] {
   if (answer.kind === 'absent') {

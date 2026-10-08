@@ -4,6 +4,22 @@
 // endpoint derivation and the wire vocabulary, so that both ends of the pipe are the owner's own
 // statement of what the pipe means rather than two copies of it; and a test imports the pipeline.
 //
+// There is one durable family now, and it is exported for the reason `createAnswerer` is: every claim
+// this slice makes about it is a claim about *code that runs without a pipe*. "An unconfirmed statement
+// leaves no record", "a record survives a restart", "a failed append is not a record" — each is
+// checked by building the pieces directly and doing the thing, and none of them can be reached through
+// the endpoint on CI.
+//
+// What is deliberately *not* published is the family's type name and its source kind. Both stay private
+// in `continuity.ts`, as the sibling owners' equivalents do, so that a test asserting what a written
+// record says writes the string out rather than importing it — a test that imported the constant would
+// pass after the store's vocabulary had been renamed.
+//
+// That is the boundary this barrel draws and no wider: `continuity.ts` publishes what it does and what
+// it writes, not the shape of the list it keeps while doing it. `selectConfirmedDecisions` is here
+// because it is the budget rule and the budget rule is checkable on its own; `prompt.ts` is not,
+// because the prompt is reached through the answerer in production and therefore in tests too.
+//
 // `createAnswerer` is exported, and the argument is the one `desktop-session-observe` makes for
 // `renderAssessment` rather than the one the work focus's package makes. What stays inside there is the
 // dialogue turn's lifetime, because a second thing that held its own turn could answer a follow-up
@@ -72,6 +88,14 @@ export type {
   LanguageSpeakingService,
 } from './contracts.js';
 export { languageEndpointPath } from './endpoint-path.js';
+export {
+  confirmDecision,
+  createDecisionContinuity,
+  decisionFactDraft,
+  readConfirmedDecisions,
+  selectConfirmedDecisions,
+} from './continuity.js';
+export type { ConfirmedDecision, DecisionContinuity, SelectedDecisions } from './continuity.js';
 export { LanguageError } from './errors.js';
 export { renderSpokenOccurrence, renderSpokenReturn } from './express.js';
 // The transport's own per-call bound, for the reason the endpoint derivation is exported: a client
@@ -83,6 +107,7 @@ export {
   createLanguagePlugin,
   createRepositoryLanguagePlugin,
   languagePlugin,
+  languageRequestHandler,
   repositoryLanguagePlugin,
 } from './plugin.js';
 export type { LanguagePluginConfig } from './plugin.js';

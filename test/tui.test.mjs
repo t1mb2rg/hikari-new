@@ -364,10 +364,10 @@ test('一个 ask 在飞时，System view 的内容与不在飞时逐字节相同
 });
 
 // ---------------------------------------------------------------------------------------------
-// §13: the four Language outcomes, and the colour rule
+// §13: the Language outcomes, and the colour rule
 // ---------------------------------------------------------------------------------------------
 
-test('Language 的四个结局各自有名字，不合并', () => {
+test('Language 的每个结局各自有名字，不合并', () => {
   assert.equal(toneLabel('chatted'), 'Hikari');
   assert.equal(toneLabel('answered'), 'Hikari');
   assert.match(toneLabel('refused'), /没有回答/);
@@ -378,6 +378,15 @@ test('Language 的四个结局各自有名字，不合并', () => {
   // refused and failed are different words for different events, and the type has no member that three
   // of them could be collapsed into.
   assert.notEqual(toneLabel('refused'), toneLabel('failed'));
+
+  // `recorded` is the fifth protocol outcome and the one that must not share a label with the other
+  // two successes, because it is the only one under which something was *kept*. What a person reads is
+  // already different — the plugin's own three lines rather than an answer — and what this pins is the
+  // mark beside it: a window that rendered it as `answered` would say Hikari looked something up where
+  // what happened is that Hikari wrote down what the person said.
+  assert.equal(toneLabel('recorded'), 'Hikari');
+  assert.notEqual(toneOfReplied({ outcome: 'recorded' }), toneOfReplied({ outcome: 'answered' }));
+  assert.notEqual(toneOfReplied({ outcome: 'recorded' }), toneOfReplied({ outcome: 'chatted' }));
 
   // §9/§12, and the assertion that would have caught the mislabelling: a resident that is running with
   // no model loaded returns `absent` from the ask client, which is a real observed pair — a probe against
@@ -395,6 +404,7 @@ test('Language 的四个结局各自有名字，不合并', () => {
   // the protocol's vocabulary stops compiling rather than silently rendering the wrong word.
   assert.equal(toneOfReplied({ outcome: 'answered' }), 'answered');
   assert.equal(toneOfReplied({ outcome: 'failed' }), 'failed');
+  assert.equal(toneOfReplied({ outcome: 'recorded' }), 'recorded');
 });
 
 test('颜色只来自协议字段，不来自任何一行文字', () => {

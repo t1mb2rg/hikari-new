@@ -10,20 +10,25 @@
 // repository, for the same reason: an envelope that shrugged at an unknown field would already be an
 // extensible schema, and the next person to want a field would find the room already reserved.
 //
-// The reply's `outcome` is the four-word vocabulary from `types.ts` and it is checked here rather
-// than assumed. That check is duplicated from the type on purpose: the union is a compile-time fact
-// about our own code, and this is the runtime boundary where a string we did not write arrives.
+// The request's `word` is checked here for the same reason, and by the same kind of hand-written test:
+// the union in `types.ts` is a compile-time fact about our own code, and this is the runtime boundary
+// where a string we did not write arrives. There is no table of words anywhere, because there is no
+// second thing that needs one — the reader below names both, and a third fails to decode loudly.
 //
-// The four words are listed out below rather than derived from the union, which is the one place in
+// The reply's `outcome` is the five-word vocabulary from `types.ts` and it is checked here rather than
+// assumed. That check is duplicated from the type on purpose, for the reason above.
+//
+// The five words are listed out below rather than derived from the union, which is the one place in
 // this repository where a hand-written list guards a type that could produce it. Deriving it would need
 // a runtime array of the outcomes, and a runtime array is a value a `types.ts` that promises to be a
 // type declaration would then have to carry — so the list stays here, at the boundary that actually
-// needs it, and a fifth outcome fails to decode loudly rather than silently.
+// needs it, and a sixth outcome fails to decode loudly rather than silently.
 
 import {
   LANGUAGE_PROTOCOL_VERSION,
   type LanguageReply,
   type LanguageRequest,
+  type LanguageWord,
 } from './types.js';
 
 const REQUEST_KEYS: readonly string[] = ['protocol', 'request', 'text'];
@@ -51,10 +56,16 @@ export type DecodedLanguageRequest =
  * Everything decided here is structural, and the line between structural and semantic is drawn here
  * rather than left to be inferred. A question that is empty or absurdly long *decodes* — it is a
  * well-formed ask — and the plugin refuses it, because "this build will not answer that" is a
- * statement about the question and not about the envelope. What fails to decode is an envelope that
- * is not this protocol's at all, and the endpoint answers those with `failed`, exactly as the sibling
- * endpoints do, because "whoever is on the other end is not speaking this protocol" is not a refusal
- * this build can make about a question it never received.
+ * statement about the question and not about the envelope. `confirm` splits the same way at the same
+ * place: an empty or absurdly long statement decodes, and the plugin refuses it. What fails to decode
+ * is an envelope that is not this protocol's at all, and the endpoint answers those with `failed`,
+ * exactly as the sibling endpoints do, because "whoever is on the other end is not speaking this
+ * protocol" is not a refusal this build can make about a request it never received.
+ *
+ * The word is looked up rather than compared, so that both words carry the same field rules and the
+ * same messages. The two differ in what the plugin *does* with the text and in nothing the envelope can
+ * see; a reader with a branch per word would be two statements of one structure, and the second would
+ * be the one that drifted.
  */
 export function decodeLanguageRequest(line: string): DecodedLanguageRequest {
   const record = readObject(line);
@@ -66,17 +77,27 @@ export function decodeLanguageRequest(line: string): DecodedLanguageRequest {
       `协议版本不匹配：Hikari 使用 ${LANGUAGE_PROTOCOL_VERSION}，请求使用 ${JSON.stringify(protocol)}。`,
     );
   }
-  if (request !== 'ask') {
+  const word = readWord(request);
+  if (word === undefined) {
     return refused(`未知请求：${JSON.stringify(request ?? null)}。`);
   }
   if (!hasExactlyKeys(record, REQUEST_KEYS)) {
-    return refused(`请求 ask 的字段必须恰好是 ${REQUEST_KEYS.join('、')}。`);
+    return refused(`请求 ${word} 的字段必须恰好是 ${REQUEST_KEYS.join('、')}。`);
   }
   if (typeof text !== 'string') {
-    return refused('ask 的 text 必须是一个字符串。');
+    return refused(`${word} 的 text 必须是一个字符串。`);
   }
 
-  return { kind: 'request', request: { word: 'ask', text } };
+  return { kind: 'request', request: { word, text } };
+}
+
+// Both words, spelled out here rather than compared inline at the one call site above, so that the
+// envelope's reader has one statement of what a word is. `ask` and `confirm` are the same *shape* of
+// request — a word and a sentence — and this is the function that says so.
+function readWord(value: unknown): LanguageWord | undefined {
+  if (value === 'ask') return 'ask';
+  if (value === 'confirm') return 'confirm';
+  return undefined;
 }
 
 export type DecodedLanguageReply =
@@ -97,7 +118,15 @@ export function decodeLanguageReply(line: string): DecodedLanguageReply {
     return unreadable(`应答的字段必须恰好是 ${REPLY_KEYS.join('、')}。`);
   }
 
-  if (outcome !== 'chatted' && outcome !== 'answered' && outcome !== 'refused' && outcome !== 'failed') {
+  // The five words, listed rather than derived — see the note at the top of this file for why this is
+  // the one hand-written list in the repository that guards a type which could produce it.
+  if (
+    outcome !== 'chatted' &&
+    outcome !== 'answered' &&
+    outcome !== 'recorded' &&
+    outcome !== 'refused' &&
+    outcome !== 'failed'
+  ) {
     return unreadable(`未知应答结果：${JSON.stringify(outcome)}。`);
   }
 

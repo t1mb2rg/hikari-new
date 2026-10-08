@@ -79,10 +79,12 @@
 // read — is `refused`, because the model spoke and this build could not act on it. The distinctions are
 // the ones `plugin-design-spec.md` §13 already draws, and nothing new is invented for them.
 
+import type { ConfirmedDecision } from './continuity.js';
 import type { DialogueTurn } from './dialogue.js';
 import { advanceDialogue, usableDialogueTurn } from './dialogue.js';
 import type { GroundedBlock } from './express.js';
 import {
+  describe,
   emptyQuestionLines,
   groundingFailureLines,
   longQuestionLines,
@@ -119,6 +121,21 @@ export interface LanguageDependencies {
    * of variant is made once, by the plugin that constructed these dependencies.
    */
   readonly exposures: readonly LanguageExposure[];
+  /**
+   * What this person has confirmed before, oldest first — the plugin's own durable history, as its owner
+   * keeps it.
+   *
+   * A function rather than an array because the list grows during the activation: a `confirm` writes a
+   * record, and the next question in the same process should be able to answer from it. Handing the loop
+   * a snapshot at construction would make the record invisible until the next restart, which is a
+   * behavior nobody asked for and which would be invisible in the code.
+   *
+   * Read on every turn rather than only when the list is empty, and that is not an oversight: a turn that
+   * read nothing and a turn that read something both get the same system message, so the record frames
+   * the same context either way. What it does *not* do is move the referent — the record is material,
+   * not a reading, and `turn` below is advanced only by reads.
+   */
+  readonly decisions: () => readonly ConfirmedDecision[];
 }
 
 export interface Answerer {
@@ -144,7 +161,7 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
 
       const contextUsed = usableDialogueTurn(turn, now);
       const messages: ModelMessage[] = [
-        { role: 'system', content: buildSystemPrompt(contextUsed) },
+        { role: 'system', content: buildSystemPrompt(contextUsed, dependencies.decisions()) },
         { role: 'user', content: text },
       ];
       const tools: readonly ModelTool[] = toModelTools(dependencies.exposures);
@@ -241,9 +258,8 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
   };
 }
 
-// Errors reach here from the transport, from a contract, or from a renderer, and all three are this
-// repository's own code raising a message meant to be read. Anything that is not an `Error` is
-// stringified rather than dropped, because a `throw 'x'` should not become an empty detail line.
-function describe(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
+// `describe` used to live here and now comes from `express.ts`. Errors reach the loop from the
+// transport, from a contract, or from a renderer, and all three are this repository's own code raising a
+// message meant to be read. It moved because the `confirm` path needs the same rendering for the same
+// kinds of error and `continuity.ts` cannot import from this file without the answer loop and the
+// recording act becoming one module. The body is unchanged; only its home is.

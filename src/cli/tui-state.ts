@@ -63,13 +63,27 @@ export const TRANSCRIPT_LIMIT = 200;
  * program talking; a `reply` is Hikari answering; the two are never the same object, and the renderer
  * gives them different marks.
  *
- * `reply.log` of the six outcomes is the protocol's own list, not a summary of it: `chatted`,
- * `answered`, `refused` and `failed` are the language plugin's four words for what it did, and `absent`
+ * `reply` of the seven outcomes is the protocol's own list, not a summary of it: `chatted`, `answered`,
+ * `recorded`, `refused` and `failed` are the language plugin's five words for what it did, and `absent`
  * and `unreachable` are the two the client distinguishes when nothing came back. §9 forbids merging
  * them, so the type does not give anyone the chance — there is no `error` member that three of them
  * could be collapsed into.
+ *
+ * `recorded` is in this window for the same reason it is in the protocol and it is worth saying twice:
+ * it is the one tone under which something was *kept*. A window that rendered it as an `answered` —
+ * which is what folding it into the two successes would do — would show a human "Hikari looked
+ * something up" where what happened was "Hikari wrote down what you said", and that is precisely the
+ * second statement this whole surface keeps out of the first. The tone exists so that the mark beside
+ * the line can differ; the words themselves already do.
  */
-export type ReplyTone = 'chatted' | 'answered' | 'refused' | 'failed' | 'absent' | 'unreachable';
+export type ReplyTone =
+  | 'chatted'
+  | 'answered'
+  | 'recorded'
+  | 'refused'
+  | 'failed'
+  | 'absent'
+  | 'unreachable';
 
 export type TranscriptEntry =
   | { readonly kind: 'human'; readonly at: string; readonly text: string }
@@ -291,13 +305,21 @@ export function afterClear(state: TuiState): TuiState {
 export function toneLabel(tone: ReplyTone): string {
   if (tone === 'chatted') return 'Hikari';
   if (tone === 'answered') return 'Hikari';
+  // The same speaker as the two above — it is Hikari that kept the sentence — and the label stays
+  // `Hikari` for that reason. What differs is on the lines themselves, which are the plugin's own words
+  // about what it did and which say plainly that the statement is the human's and not a verified fact.
+  // A label is a speaker, not a verdict, and inventing a second one here would put this window in the
+  // business of judging the record.
+  if (tone === 'recorded') return 'Hikari';
   if (tone === 'refused') return 'Hikari（没有回答）';
   if (tone === 'failed') return 'Hikari（失败）';
   if (tone === 'absent') return '没有语言入口';
   return '联系不上语言入口';
 }
 
-/** Which of the six came back, from the client's own outcome. No merging, no default. */
-export function toneOfReplied(reply: { readonly outcome: 'chatted' | 'answered' | 'refused' | 'failed' }): ReplyTone {
+/** Which of the seven came back, from the client's own outcome. No merging, no default. */
+export function toneOfReplied(reply: {
+  readonly outcome: 'chatted' | 'answered' | 'recorded' | 'refused' | 'failed';
+}): ReplyTone {
   return reply.outcome;
 }

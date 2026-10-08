@@ -257,6 +257,60 @@ export function longQuestionLines(limit: number): readonly string[] {
   return [`这句话超过了 ${limit} 个字符，不是一句问话。`];
 }
 
+// ---------------------------------------------------------------------------------------------
+// The second word's lines. `confirm` is not a question and does not reach the loop, so none of the
+// renderers above can produce them and none of the wording above fits: "不是一句问话" is a statement
+// about a sentence nobody asked, and "没有找到该读的哪一部分" is about a search that never happened.
+// Four constructors, one per way the word can land, and each is fixed text for the reason every other
+// line in this file is.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * What a human is told when a statement was kept.
+ *
+ * Three lines rather than one, and none of them quotes the statement back — the person just typed it,
+ * and echoing a person's own words into the record of what was kept would suggest this file had formed
+ * a reading of them.
+ *
+ * The second line is where it now lives, because "kept" means nothing to somebody who does not know it
+ * survives the process that kept it. The third is the boundary said out loud rather than left to be
+ * inferred from the absence of a claim: this surface has no way to verify what a person says and does
+ * not pretend otherwise. A model is given the same sentence in its prompt (`prompt.ts`), which is
+ * deliberate — a human and a model are told the same thing about what a record is, so neither can be
+ * reading it more strongly than the other.
+ */
+export function recordedLines(): readonly string[] {
+  return [
+    '记下了这句话。',
+    '它作为「你明确确认过的话」保存在这个数据目录里，常驻重启之后仍然在。',
+    '它不是 Hikari 核实过的事实，也不是任何形式的授权——它只是你当时说过的这句话。',
+  ];
+}
+
+export function emptyStatementLines(): readonly string[] {
+  return ['这句话是空的，没有可以记录的内容。'];
+}
+
+/**
+ * Deliberately not `longQuestionLines`, which would tell a person their statement was not a question —
+ * true, and about a question they never asked. This says what actually happened to it: nothing.
+ */
+export function longStatementLines(limit: number): readonly string[] {
+  return [`这句话超过了 ${limit} 个字符，没有被记录。`];
+}
+
+/**
+ * What a human is told when the writing itself did not go through.
+ *
+ * `failed` and not a refusal, and the line says the consequence rather than the cause: the request *was*
+ * to write this down, so a write that did not happen means the confirmation did not happen. The second
+ * half of that sentence is the part worth having — a person who is told only "it failed" will reasonably
+ * wonder whether it half-worked, and the answer here is that nothing was kept.
+ */
+export function confirmFailureLines(detail: string): readonly string[] {
+  return ['没有记下来：这次确认没有写进记录，所以它不算发生过。', detailLine(detail)];
+}
+
 /**
  * What a human is told when the model's reply was cut off before it finished.
  *
@@ -296,7 +350,7 @@ export function groundingFailureLines(detail: string): readonly string[] {
 
 // The reason, escaped where it is interpolated, and this is the one line in the file that needs it.
 //
-// `renderAnswer` applies `oneLine` to a whole answer, but these two constructors never pass through it:
+// `renderAnswer` applies `oneLine` to a whole answer, but these constructors never pass through it:
 // they *are* the answer, returned to the caller as-is. Their `detail` is also the only text in this
 // file that this repository did not write — it arrives from an error raised somewhere else, by the
 // transport or by a contract — so it is exactly the text a renderer cannot vouch for. Escaping at the
@@ -304,4 +358,21 @@ export function groundingFailureLines(detail: string): readonly string[] {
 // applies, instead of making every future line in this file pay for it.
 function detailLine(detail: string): string {
   return `  细节：${oneLine(detail)}`;
+}
+
+/**
+ * An error, as the one string every failure line above is built from.
+ *
+ * It lives here rather than beside any one caller because it is a property of the *line* and not of who
+ * caught the error: `detailLine` is the only consumer, and it has three callers now — the loop's two
+ * failure paths and the confirmation's. Three copies of "an `Error`'s message, or the value stringified"
+ * would be three statements of one rule, and the day they disagree the disagreement is invisible: they
+ * all still print a detail line, and only one of them is still safe against a `throw 'x'`.
+ *
+ * Anything that is not an `Error` is stringified rather than dropped, so a thrown string does not become
+ * an empty detail. Not exported from the package's barrel — it is a seam inside this plugin, not an
+ * entry point a caller has.
+ */
+export function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

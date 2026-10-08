@@ -10,10 +10,17 @@
 // The mandate's §1 says the unification is of the UI and not of the protocol, so the test it has to pass
 // is whether anything here could be lifted out and served to a second surface. Nothing can: every line
 // below either drives a terminal or hands a sentence to a function that already existed, and the four
-// calls it makes — `requestControl`, `requestLanguageAsk`, `subscribeToHumanDelivery`,
+// calls it makes — `requestControl`, `requestLanguage`, `subscribeToHumanDelivery`,
 // `readLaunchProfile` — are the same four calls `control-command.ts`, `ask-command.ts`,
 // `subscribe-command.ts` and the v0 console already made. There is no router, no shared message type,
 // no second vocabulary, and no state object that outlives the process.
+//
+// `requestLanguage` is the whole client for both words, and this window uses it for `ask` only. That is
+// a decision rather than an oversight: `confirm` writes a durable record, and the mandate's own words
+// for it are 明确交互确认 — an explicit act. A window where the same input line both asks and confirms,
+// or where a keystroke decides which, would make the one act in this surface that leaves something
+// behind a property of how a sentence was typed. `hikari confirm` is where a person says it on purpose,
+// and this file does not grow a second way to say it.
 //
 // Three boundaries carried over from the v0 console, each of them a thing this file is most naturally
 // tempted to do:
@@ -39,8 +46,8 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 import { oneLine } from '../terminal-text/index.js';
-import { askFailureLines, requestLanguageAsk } from './ask.js';
 import { requestControl, type ControlOutcome } from './control.js';
+import { languageFailureLines, requestLanguage } from './language.js';
 import {
   launchArguments,
   launchProfilePath,
@@ -501,7 +508,7 @@ function runTui(initialDataDir: string | undefined): Promise<CommandOutcome> {
       draw();
 
       void guard(async () => {
-        const answer = await requestLanguageAsk(dataDir, decision.text);
+        const answer = await requestLanguage(dataDir, { word: 'ask', text: decision.text });
         if (finished || state === undefined) return;
         state = {
           ...state,
@@ -515,10 +522,10 @@ function runTui(initialDataDir: string | undefined): Promise<CommandOutcome> {
                   at: stamp(),
                   tone: answer.kind === 'absent' ? 'absent' : 'unreachable',
                   // The client's own words for these two states, reused rather than rewritten. `absent`
-                  // covers both "no resident" and "a resident with no model configured", and `ask.ts`
-                  // says both rather than guessing between them — a second copy of that sentence here
-                  // would be a second answer to a question that already has one.
-                  lines: askFailureLines(answer),
+                  // covers both "no resident" and "a resident with no model configured", and
+                  // `language.ts` says both rather than guessing between them — a second copy of that
+                  // sentence here would be a second answer to a question that already has one.
+                  lines: languageFailureLines(answer),
                 },
           ),
         };

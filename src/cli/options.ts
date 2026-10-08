@@ -159,6 +159,21 @@ export interface AskOptions extends CliOptions {
   readonly text: string;
 }
 
+// A separate interface from `AskOptions` even though the two are structurally identical, and the reason
+// is that their documentation would not be. The paragraph above says what a *question* is not: nothing
+// here trims it, because what a sentence means is the plugin's question, asked with a model. For a
+// confirmation the reason is stronger and different — the statement is kept byte for byte, so trimming
+// it would not be this file failing to interpret a question, it would be this file changing what a
+// person asked Hikari to remember. A shared type would have to carry one of those sentences and would
+// therefore be false about the other act.
+//
+// One operand, and here the grammar is the whole of what this file decides about it. Whether a
+// statement is empty, how long is too long, and whether a resident is there to keep it are all the
+// language plugin's questions, answered on the other side of the pipe with a reason a human can read.
+export interface ConfirmOptions extends CliOptions {
+  readonly text: string;
+}
+
 export interface CommandOutcome {
   readonly exitCode: number;
   readonly stdout: string;
@@ -177,6 +192,7 @@ export type CliCommand =
   | 'relevance'
   | 'observe'
   | 'ask'
+  | 'confirm'
   | 'profile-set'
   | 'profile-show'
   | 'profile-clear'
@@ -206,6 +222,12 @@ export type CliCommand =
 // would be a second way to send a human's words somewhere, and the configuration belongs to the thing
 // that holds the connection.
 //
+// `confirm` has an arm of its own for the same reason and is a separate command for the reason
+// `language/types.ts` gives one layer down: it writes, `ask` does not, and an act that leaves a durable
+// record behind must be the word a person typed rather than a flag on a word that does not. It carries
+// no configuration of its own either — in particular not the data directory's store, which is the
+// resident's Chronicle and not something a client gets to name.
+//
 // `subscribe` is in the first arm, and it is the one command there whose obligation is not a question.
 // It carries a data directory and nothing else, which is what that arm is for; what distinguishes it is
 // the direction — it does not ask the resident anything, it waits to be told something. That is still
@@ -230,6 +252,7 @@ export type ParsedCommandLine =
   | { readonly command: 'resident'; readonly options: ResidentOptions }
   | { readonly command: 'focus'; readonly options: FocusOptions }
   | { readonly command: 'ask'; readonly options: AskOptions }
+  | { readonly command: 'confirm'; readonly options: ConfirmOptions }
   // `profile set` carries the *resident's* options, and that is the whole of what it is: the flag
   // surface an operator would have typed to start a resident once, kept. Giving it a reader of its own
   // would be giving the profile format a second opinion about which combinations are legal, and the
@@ -275,6 +298,7 @@ export const USAGE = [
   '  hikari relevance repository-ci status --data-dir <path>',
   '  hikari observe desktop-session status --data-dir <path>',
   '  hikari ask --data-dir <path> "<text>"',
+  '  hikari confirm --data-dir <path> "<text>"',
   '  hikari profile set --data-dir <path> [与 hikari resident 相同的选项]',
   '  hikari profile show --data-dir <path>',
   '  hikari profile clear --data-dir <path>',
@@ -304,6 +328,12 @@ export const USAGE = [
   '  读到的内容由 Hikari 自己渲染成回答；模型不解释事实，也不替 Hikari 说话。',
   '  端点必须支持 OpenAI 兼容的原生 tool calling（tools / tool_calls / tool 结果消息）；',
   '  不支持的端点会让这次交互失败，Hikari 不会退回另一套协议。',
+  '  hikari confirm 把你说的这句话原样记在这个数据目录里，常驻重启之后仍然在。',
+  '  它记下的是「你明确确认过这句话」这件事，不是 Hikari 核实过的事实，也不构成任何授权：',
+  '  没有哪一处会读它来决定能不能做什么，工作焦点也不会因为它被恢复。',
+  '  只有 confirm 会写，hikari ask 不写任何东西。记下的句子会在以后的对话里作为',
+  '  低信任材料交给模型，并明确标注为「你说过的话」而不是 Hikari 观察到的事实，',
+  '  也不是发给模型的指令。删除数据目录里的 Chronicle 记录，它就等于没被记过。',
   '  --model-credential-env 给的是环境变量的名字，不是凭据本身。',
   '  --model-reasoning-effort 是写给端点的一个请求，Hikari 不判断端点认不认这个值；',
   '  省略时请求里不会有这个字段，因此对不认识它的端点没有任何影响。',
@@ -322,6 +352,7 @@ export const USAGE = [
   '  Profile 显示这个数据目录记着的那份启动配置。',
   '  TUI 是另一个进程，通过常驻自己的本地控制通道说话，不是常驻的持有者——退出 TUI 不会停止常驻。',
   '  TUI 窗口里显示过的东西只活在这个进程里：常驻重启之后屏幕上的对话还在，但 Hikari 并不记得它。',
+  '  唯一的例外是 hikari confirm 明确记下的句子，它本来就住在数据目录里，不随这个窗口消失。',
   '  要和 Hikari 说话也仍然可以用 hikari ask 或 Human Surface；它们都还在，没有替代谁。',
   '  hikari profile set 把一次 hikari resident 的选项原样记在这个数据目录里，',
   '  TUI 启动常驻时用的就是它。它只被 TUI 读取，hikari resident 本身不读它；',
@@ -367,6 +398,12 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   // for `readCommand`: a sentence is not a token any table can enumerate.
   if (head === 'ask') return readAskCommand(rest);
 
+  // `confirm` resolves here for the same reason, and its operand is the same kind of thing: a sentence
+  // no table can enumerate. The two resolve separately rather than through one operand reader with a
+  // word parameter, because the *arity* rule is the only thing they share and it is one line — a shared
+  // reader would be a small framework whose second row is a command that does not exist.
+  if (head === 'confirm') return readConfirmCommand(rest);
+
   // `profile` resolves here for the reason `chronicle` does: it is one word of sub-grammar before any
   // options are read, and which sub-word it is decides what the rest of the line means.
   if (head === 'profile') return readProfileCommand(rest);
@@ -390,7 +427,15 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
 interface CommandTokens {
   readonly command: Exclude<
     CliCommand,
-    'focus' | 'relevance' | 'observe' | 'ask' | 'profile-set' | 'profile-show' | 'profile-clear' | 'tui'
+    | 'focus'
+    | 'relevance'
+    | 'observe'
+    | 'ask'
+    | 'confirm'
+    | 'profile-set'
+    | 'profile-show'
+    | 'profile-clear'
+    | 'tui'
   >;
   readonly tokens: readonly string[];
 }
@@ -525,6 +570,28 @@ function readAskCommand(rest: readonly string[]): ParsedCommandLine {
   }
 
   return { command: 'ask', options: { dataDir, text } };
+}
+
+// The same grammar as `readAskCommand`, and the paragraph above applies to it unchanged: one operand,
+// no vocabulary to compare it against, and the arity is the whole of the decision.
+//
+// The messages say `confirm` rather than reusing the ones above, because what a human did is not the
+// same act and the fix for an unquoted sentence is the same only by coincidence. A person told "ask
+// 需要一个问题" after typing `confirm` would be asked to reconsider a command they did not run.
+function readConfirmCommand(rest: readonly string[]): ParsedCommandLine {
+  const { dataDir, operands } = readOperandTokens(rest);
+  const [text, ...extra] = operands;
+
+  if (text === undefined) {
+    throw new UsageError('confirm 需要一句话；请把整句话用引号括起来。');
+  }
+  if (extra.length > 0) {
+    throw new UsageError(
+      `confirm 只接受一句话，收到 ${operands.length} 个；请把整句话用引号括起来。`,
+    );
+  }
+
+  return { command: 'confirm', options: { dataDir, text } };
 }
 
 // Close to `readOptionTokens` and deliberately not folded into it. That reader's contract is that

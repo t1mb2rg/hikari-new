@@ -1,17 +1,26 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import test from 'node:test';
 
 import {
+  chroniclePlugin,
+  chronicleService,
+  initializeChronicle,
+  openChronicle,
+  resolveChroniclePath,
+} from '../dist/chronicle/index.js';
+import { confirmCommand } from '../dist/cli/confirm-command.js';
+import {
   READ_AND_FRAMING_BUDGET_MS,
   REPLY_TIMEOUT_MS,
-  askFailureLines,
-  requestLanguageAsk,
-} from '../dist/cli/ask.js';
+  languageFailureLines,
+  requestLanguage,
+} from '../dist/cli/language.js';
+import { continuityPlugin, initializeHikari } from '../dist/continuity/index.js';
 import {
   desktopContextReadExposure,
   desktopSessionAwarenessPeekService,
@@ -19,24 +28,37 @@ import {
 } from '../dist/desktop-session-awareness/index.js';
 import { renderAssessment } from '../dist/desktop-session-observe/index.js';
 import { Runtime } from '../dist/index.js';
-import { renderFocus, renderSpokenOccurrence } from '../dist/language/express.js';
+import {
+  confirmFailureLines,
+  emptyStatementLines,
+  longStatementLines,
+  recordedLines,
+  renderFocus,
+  renderSpokenOccurrence,
+} from '../dist/language/express.js';
 import {
   LANGUAGE_EXPOSURES,
   LANGUAGE_REPOSITORY_EXPOSURES,
   MAX_LANGUAGE_TEXT_LENGTH,
   LANGUAGE_PROTOCOL_VERSION,
+  confirmDecision,
   createAnswerer,
+  createDecisionContinuity,
   createLanguagePlugin,
   createRepositoryLanguagePlugin,
   decodeLanguageReply,
   decodeLanguageRequest,
+  decisionFactDraft,
   findExposure,
   languageDesktopReturnSpeakingService,
   languageEndpointPath,
   languagePlugin,
+  languageRequestHandler,
   languageSpeakingService,
   readArguments,
+  readConfirmedDecisions,
   repositoryLanguagePlugin,
+  selectConfirmedDecisions,
   toModelTools,
 } from '../dist/language/index.js';
 import { MODEL_TIMEOUT_MS, REASONING_EFFORTS } from '../dist/language/model.js';
@@ -275,6 +297,7 @@ function harness({
   repository = false,
   judgement = RELEVANT,
   relevanceThrows,
+  decisions = [],
 } = {}) {
   const requests = [];
   const serviceReads = { focus: 0, peek: 0, relevance: 0 };
@@ -332,6 +355,11 @@ function harness({
     // offered" is checkable by choosing a variant here. The two values are the two exported literals and
     // not copies of them: a test that wrote its own list would agree with itself and prove nothing.
     exposures: repository ? LANGUAGE_REPOSITORY_EXPOSURES : LANGUAGE_EXPOSURES,
+    // The live list, not a copy of it. `answer.ts` reads this on every turn so that a confirmation
+    // written mid-activation is visible to the next question without a restart, and a harness that
+    // handed over a snapshot would make that behavior untestable — and would silently agree with the
+    // wrong implementation. Pushing onto `decisions` after construction is how a test writes one down.
+    decisions: () => decisions,
   });
 
   return {
@@ -339,6 +367,7 @@ function harness({
     requests,
     serviceReads,
     performed,
+    decisions,
     advance: (ms) => {
       clock = new Date(Date.parse(clock) + ms).toISOString();
     },
@@ -1039,6 +1068,10 @@ test('读到一半模型断了是 failed，不是把已经读到的拼成回答'
     // mid-loop rather than about which capabilities exist, so the shorter list keeps the failing step the
     // only thing it depends on.
     exposures: LANGUAGE_EXPOSURES,
+    // Empty, because this test is about the transport dying and not about what the person said
+    // beforehand. The record is a dependency for the same reason the exposure list is: the loop is one
+    // loop with one signature, and a variant of it that took no record would be a second loop.
+    decisions: () => [],
   });
 
   const reply = await answerer.answer('我现在关注什么？');
@@ -1185,6 +1218,7 @@ test('failed 不推进 referent，也不清除已有的那个', async () => {
     },
     now: () => NOW,
     exposures: LANGUAGE_EXPOSURES,
+    decisions: () => [],
   });
 
   await answerer.answer('我现在关注什么？');
@@ -1353,18 +1387,28 @@ test('CLI 的等待上界高于 loop 合法能花掉的时间', () => {
 // The boundary, stated as a type and as a roster.
 // ---------------------------------------------------------------------------------------------
 
-test('Language 的 requires 恰好是冻结的那两个，provides 恰好是两个发言入口', () => {
+test('Language 的 requires 是冻结的那两个读加上 Chronicle，provides 恰好是两个发言入口', () => {
   assert.equal(languagePlugin.id, 'language');
   assert.equal(languagePlugin.version, '1.0.0');
 
   // A structural fact, and the reason it is asserted by contract rather than described in prose: the
-  // Runtime has no optional requirement, so a third entry here would be a contract nobody provides and
-  // the plugin would stay `waiting` — which, as a member of the default composition, is a resident that
-  // does not start. `peek` specifically, for the reason the observation plugin gives: a question a human
-  // asks must not become the next comparison partner of the timeline they are asking about.
+  // Runtime has no optional requirement, so an entry here that nobody provides is a contract that holds
+  // the plugin at `waiting` — which, as a member of the default composition, is a resident that does not
+  // start. `peek` specifically, for the reason the observation plugin gives: a question a human asks
+  // must not become the next comparison partner of the timeline they are asking about.
+  //
+  // The third entry is not a reading, and it is the reason this list is no longer the variant's list.
+  // It is where the statements a person confirmed are kept, and it is required — not optional, and not
+  // absent when the deployment has no store — because the mandate's first verification item is that an
+  // explicit confirmation is what produces a record, and a Language that could come up without a store
+  // would answer that by silently keeping nothing. The Runtime has no third option: a requirement either
+  // holds or the plugin waits. It is outside the variant because a variant's difference is what the model
+  // may *read*, and this is not something the model reads — `plugin.ts` appends it to the variant's own
+  // literal, and the test below asserts that both variants got the same one.
   assert.deepEqual(languagePlugin.requires, [
     workFocusCurrentService,
     desktopSessionAwarenessPeekService,
+    chronicleService,
   ]);
 
   // `provides` was empty until a composition member needed to speak unprompted, and it now holds two.
@@ -1381,7 +1425,11 @@ test('Language 的 requires 恰好是冻结的那两个，provides 恰好是两�
   ]);
 
   const keys = languagePlugin.requires.map((contract) => `${contract.id}@${contract.version}`);
-  assert.deepEqual(keys, ['work-focus.current@1', 'desktop-session-awareness.peek@1']);
+  assert.deepEqual(keys, [
+    'work-focus.current@1',
+    'desktop-session-awareness.peek@1',
+    'chronicle@1',
+  ]);
 
   const provided = languagePlugin.provides.map((c) => `${c.id}@${c.version}`);
   assert.deepEqual(provided, ['language.speaking@1', 'language.desktop-return-speaking@1']);
@@ -1512,7 +1560,11 @@ test('provider 的存在不会让 base Language 自动多出第三个能力', ()
   // neither fact is reachable from the base variant: the base plugin is built from a literal that names
   // two exposures, and no code path in `src` appends to it.
   assert.equal(LANGUAGE_EXPOSURES.length, 2);
-  assert.equal(languagePlugin.requires.length, 2);
+  // Written as an exclusion rather than as a count, which is what this test is named for and what a count
+  // could only ever approximate now that the roster also carries Chronicle. A count would have to be kept
+  // in step with a list this test is not about; this says the thing itself — the Service the provider
+  // offers is not one the base variant declares, so the base roster did not grow when the provider arrived.
+  assert.ok(!languagePlugin.requires.includes(repositoryCiRelevanceService));
   assert.equal(findExposure(RELEVANCE, LANGUAGE_EXPOSURES), undefined);
   for (const exposure of LANGUAGE_EXPOSURES) {
     assert.notEqual(exposure.service, repositoryCiRelevanceService);
@@ -1588,6 +1640,7 @@ test('repository-aware Language 的 requires 是 base 那两个加上 relevance 
     workFocusCurrentService,
     desktopSessionAwarenessPeekService,
     repositoryCiRelevanceService,
+    chronicleService,
   ]);
   // The same two, and not variant-specific additions: speaking is not a way of *reading*, so neither
   // belongs on the axis the two variants differ along. A variant that offered one while the other did not
@@ -1607,13 +1660,26 @@ test('repository-aware Language 的 requires 是 base 那两个加上 relevance 
     'work-focus.current@1',
     'desktop-session-awareness.peek@1',
     'repository-ci-relevance.current@1',
+    'chronicle@1',
   ]);
 
   // The base two come first and in the same order, so "repository-aware is base plus one" is true of the
   // sequence and not merely of the set. This is also the sentence that says `peek` rather than `current`
   // is still what is required — a variant that reached for the advancing contract would be a second,
   // quieter change riding along with the one this slice is about.
-  assert.deepEqual(repositoryLanguagePlugin.requires.slice(0, 2), [...languagePlugin.requires]);
+  //
+  // Read against the variants rather than against the two plugins, because the plugins each carry the
+  // shared third requirement at the end and comparing their whole lists would fold two claims into one.
+  // What is asserted here is the axis: this variant's own list is the other one's plus exactly one entry.
+  assert.deepEqual(repositoryLanguageVariant.requires, [
+    ...baseLanguageVariant.requires,
+    repositoryCiRelevanceService,
+  ]);
+  // And the requirement that is not on that axis is the same contract in both plugins. Chronicle is in
+  // the roster because it has to be provided, not because either variant differs by it, and this is the
+  // one way to say that as a fact about the two objects rather than as a sentence about the code.
+  assert.deepEqual(languagePlugin.requires.slice(-1), [chronicleService]);
+  assert.deepEqual(repositoryLanguagePlugin.requires.slice(-1), [chronicleService]);
 });
 
 test('repository-aware Language 允许的 exposure 是 base 那两个加上 owner 自己的第三个', () => {
@@ -1708,10 +1774,12 @@ test('relevance Service 缺席时，repository-aware Language 停在 waiting，�
     reasoningEffort: undefined,
   };
 
-  // The two base requirements arrive, so the only thing unsatisfied is the third. A plugin that fell back
-  // to the base behaviour here would come up `active` and answer the first question about CI by telling
-  // the model it has no such capability — a resident that started and then could not do what its
-  // composition said it would.
+  // Everything the base variant needs arrives, and so does the shared Chronicle, so the only thing
+  // unsatisfied is the third. Loading the Chronicle provider is not decoration: without it this plugin
+  // would be `waiting` on a requirement that has nothing to do with the claim, and the test would pass
+  // for the wrong reason. A plugin that fell back to the base behaviour here would come up `active` and
+  // answer the first question about CI by telling the model it has no such capability — a resident that
+  // started and then could not do what its composition said it would.
   assert.equal(
     await runtime.loadPlugin(
       provider('test.focus-provider', workFocusCurrentService, Object.freeze({ current: async () => [] })),
@@ -1728,6 +1796,7 @@ test('relevance Service 缺席时，repository-aware Language 停在 waiting，�
     ),
     'active',
   );
+  assert.equal(await runtime.loadPlugin(chronicleProvider()), 'active');
   assert.equal(
     await runtime.loadPlugin(
       createRepositoryLanguagePlugin(() => {
@@ -1784,6 +1853,7 @@ test('同一组合里换回 base variant，Language 就 active', { skip: NO_PIPE
     ),
     'active',
   );
+  assert.equal(await alsoBase.loadPlugin(chronicleProvider()), 'active');
   assert.equal(await alsoBase.loadPlugin(createLanguagePlugin(() => scriptedModel([says('在的。')])), config), 'active');
 });
 
@@ -1944,6 +2014,39 @@ function provider(pluginId, contract, behaviour) {
   };
 }
 
+/**
+ * A Chronicle that satisfies the contract, holds nothing, and refuses to be written to.
+ *
+ * Every composition in this file that expects Language to reach `active` needs one, because Language
+ * requires `chronicle` and the Runtime has no optional requirement — an absent provider is a Language held
+ * at `waiting`, which is the same symptom as a bug and would be indistinguishable from one in the tests
+ * above. `read()` returning nothing is both what a fresh store gives and what a failed read degrades to,
+ * so a composition built on this stub is also the empty-history case.
+ *
+ * `append` throws rather than succeeding quietly, and that is the load-bearing half: over a real pipe this
+ * stub is the only Chronicle in the process, so a `Language` that wrote on `ask` would fail loudly here
+ * instead of passing. The claim "you call tool to read, never to write" is otherwise only a sentence in
+ * `plugin.ts`. The confirm tests below need the opposite and build their own recorder.
+ */
+function emptyChronicle() {
+  return Object.freeze({
+    async append() {
+      throw new Error('这个组合不该被写入 Chronicle');
+    },
+    async get() {
+      return undefined;
+    },
+    async read() {
+      return [];
+    },
+  });
+}
+
+/** The same stub, wired as a provider, which is how every composition below receives it. */
+function chronicleProvider() {
+  return provider('test.chronicle-provider', chronicleService, emptyChronicle());
+}
+
 /** A model whose steps are written down in advance, for the tests that go through a real pipe. */
 function scriptedModel(script) {
   let index = 0;
@@ -2016,6 +2119,12 @@ async function compose(t, { script = [says('在的。')], focus, assessment, rep
     ),
     'active',
   );
+  // Loaded before Language in every composition, the way `cli/resident.ts` loads the real one, and for the
+  // reason stated there: the Runtime re-checks waiting plugins when a Service appears, so order is not
+  // load-bearing for the outcome — this composition just happens to give the plugin what it needs rather
+  // than relying on the re-check to reach `active` eventually. `emptyChronicle`'s refusing `append` is what
+  // makes these pipe tests double as the "ask writes nothing" check.
+  assert.equal(await runtime.loadPlugin(chronicleProvider()), 'active');
 
   if (repository) {
     assert.equal(
@@ -2151,6 +2260,11 @@ test('relevance Service 到达后，repository-aware Language 才 active', { ski
     'active',
   );
 
+  // The shared requirement, so that the `waiting` below is a statement about the relevance Service and
+  // about nothing else. Without it this composition would be one requirement short in two places and the
+  // contrast with the test above would stop being evidence.
+  assert.equal(await runtime.loadPlugin(chronicleProvider()), 'active');
+
   const plugin = createRepositoryLanguagePlugin(() => scriptedModel([DONE]));
   assert.equal(await runtime.loadPlugin(plugin, config), 'waiting');
 
@@ -2185,9 +2299,9 @@ test('repository-aware 组合里，模型被给出的能力是三个，且 base 
   // Asserted rather than discarded: an ask that never reached the answerer would leave both `tools`
   // assertions below reading an empty request list, and the failure would point at the assertion rather
   // than at the question that did not arrive.
-  const asked = await requestLanguageAsk(repository.root, 'CI 那边怎么样？');
+  const asked = await requestLanguage(repository.root, { word: 'ask', text: 'CI 那边怎么样？' });
   assert.equal(asked.kind, 'replied');
-  const askedBase = await requestLanguageAsk(base.root, '我现在关注什么？');
+  const askedBase = await requestLanguage(base.root, { word: 'ask', text: '我现在关注什么？' });
   assert.equal(askedBase.kind, 'replied');
 
   // And the third capability is *read*, not merely offered. `requestLanguageAsk` answers `replied` for
@@ -2263,7 +2377,7 @@ test('一次提问经过真实管道得到 grounded 回答，且与 renderAssess
     assessment,
   });
 
-  const answer = await requestLanguageAsk(root, '光，你现在看到什么？');
+  const answer = await requestLanguage(root, { word: 'ask', text: '光，你现在看到什么？' });
 
   assert.equal(answer.kind, 'replied');
   assert.equal(answer.reply.outcome, 'answered');
@@ -2273,7 +2387,7 @@ test('一次提问经过真实管道得到 grounded 回答，且与 renderAssess
 test('一次闲聊经过真实管道回来的是 chatted', { skip: NO_PIPES }, async (t) => {
   const { root } = await compose(t, { script: [says('在的，有什么想问的？')] });
 
-  const answer = await requestLanguageAsk(root, 'ayobro');
+  const answer = await requestLanguage(root, { word: 'ask', text: 'ayobro' });
 
   assert.equal(answer.kind, 'replied');
   assert.equal(answer.reply.outcome, 'chatted');
@@ -2285,12 +2399,12 @@ test('同一个激活里的两次提问共享那一轮的 referent', { skip: NO_
     script: [callsTo(toolCall('a', WORK)), DONE, callsTo(toolCall('b', WORK)), DONE],
   });
 
-  const first = await requestLanguageAsk(root, '我现在关注什么？');
+  const first = await requestLanguage(root, { word: 'ask', text: '我现在关注什么？' });
   assert.equal(first.reply.outcome, 'answered');
 
   // A second `hikari ask` is a second process and shares nothing with the first; the referent that
   // reaches this request is the resident activation's, which is the whole reason it exists.
-  const second = await requestLanguageAsk(root, '那现在呢？');
+  const second = await requestLanguage(root, { word: 'ask', text: '那现在呢？' });
   assert.equal(second.reply.outcome, 'answered');
 
   assert.equal(connections.length, 1, '同一个激活只有一个模型连接');
@@ -2305,7 +2419,7 @@ test('同一个激活里的两次提问共享那一轮的 referent', { skip: NO_
 test('模型不可达时，管道里回来的是 failed 而不是 refused', { skip: NO_PIPES }, async (t) => {
   const { root } = await compose(t, { script: [] });
 
-  const answer = await requestLanguageAsk(root, '你现在看到什么？');
+  const answer = await requestLanguage(root, { word: 'ask', text: '你现在看到什么？' });
 
   assert.equal(answer.kind, 'replied');
   assert.equal(answer.reply.outcome, 'failed');
@@ -2345,15 +2459,101 @@ test('hikari ask 的退出码跟着 outcome 走：chatted 是 0，refused 是 1'
   assert.ok(refused.stderr.length > 0, 'refused 的理由要有人看得到');
 });
 
-test('没有常驻时，提问得到的是 absent，而不是一个编出来的答案', { skip: NO_PIPES }, async (t) => {
+// Ungated, and for the reason `work-focus.test.mjs` states for its own copy of this test: every case
+// here is refused while argv is being read, so no pipe and no endpoint is involved. That file also
+// records what it cost to learn this — deleting its grammar rule left 72 tests green — which is why
+// the two operand commands added here get the same treatment rather than riding on the exit-code tests
+// above. Those tests pass whole sentences and would stay green if a second operand were quietly
+// accepted; these are the only ones that would notice.
+//
+// The cross-checks are the point of the second assertion in each pair. `confirm` has its own reader and
+// its own two sentences rather than sharing `ask`'s, because a person told "ask 需要一个问题" after
+// typing `confirm` would be asked to reconsider a command they did not run — so a later refactor that
+// folds the two readers together has to fail something, and "the message names the word you typed" is
+// the behaviour that refactor would break.
+test('两个带操作数的命令都在 argv 上被拒绝，而且拒绝语说的是你打的那个词', async (t) => {
+  const root = createRoot(t);
+  const cases = [
+    [['ask', '--data-dir', root], /ask 需要一个问题/, /confirm 需要一句话/],
+    [['ask', '--data-dir', root, 'a', 'b'], /ask 只接受一个问题，收到 2 个/, /confirm 只接受一句话/],
+    [['confirm', '--data-dir', root], /confirm 需要一句话/, /ask 需要一个问题/],
+    [['confirm', '--data-dir', root, 'a', 'b'], /confirm 只接受一句话，收到 2 个/, /ask 只接受一个问题/],
+  ];
+
+  for (const [args, expected, wrongWord] of cases) {
+    const result = await runCli(...args);
+    assert.equal(result.code, 2, `不是用法错误：${args.join(' ')} → ${result.stderr}`);
+    assert.equal(result.stdout, '', '用法错误不上 stdout');
+    assert.match(result.stderr, expected);
+    assert.doesNotMatch(result.stderr, wrongWord, '拒绝语必须是这个词自己的，不能是另一个词的');
+    assert.match(result.stderr, /用法/, '用法错误要带上用法');
+  }
+
+  // And the whole point of refusing during argv: nothing was looked at, so nothing was made. A
+  // `--data-dir` that does not exist and is not created is the observable form of "this never got as
+  // far as opening a store".
+  assert.deepEqual(readdirSync(root), []);
+});
+
+test('hikari confirm 的退出码跟着 outcome 走：只有 recorded 是 0', { skip: NO_PIPES }, async (t) => {
+  // The same chain as the `ask` test above and for the same reason, with the difference that matters
+  // here: `confirm` has five possible outcomes and exactly one of them means the person's words are now
+  // in the store. `failed` and `refused` are not successes, and neither is `chatted` — which this word
+  // cannot produce, and which the command must therefore not treat as one either.
+  const { root } = storeRoot(t);
+  await resident(t, root, { script: [says('好。')] });
+
+  const kept = await runCli('confirm', '--data-dir', root, CONFIRMED);
+  assert.equal(kept.code, 0, 'recorded 是唯一算成功的结局');
+  assert.equal(kept.stderr, '');
+  assert.deepEqual(kept.stdout.split('\n').slice(0, -1), [...recordedLines()]);
+
+  // The refusal a person gets for an empty line names what actually happened to it, and the exit code
+  // says it was not kept. Run as a real process, so this is the argument path and not a direct call.
+  const blank = await runCli('confirm', '--data-dir', root, '   ');
+  assert.equal(blank.code, 1);
+  assert.equal(blank.stdout, '', '没记下来的话不上 stdout');
+  assert.ok(blank.stderr.includes('空的'), '拒绝的理由要说到这句话本身');
+});
+
+test('没有常驻时，提问与确认得到的都是 absent，而不是一个编出来的结果', { skip: NO_PIPES }, async (t) => {
   const root = createRoot(t);
 
-  const answer = await requestLanguageAsk(root, '你现在看到什么？');
-
+  const answer = await requestLanguage(root, { word: 'ask', text: '你现在看到什么？' });
   assert.equal(answer.kind, 'absent');
-  const lines = askFailureLines(answer).join('\n');
+  const lines = languageFailureLines(answer).join('\n');
   assert.ok(lines.includes('没有正在提供语言入口'));
   assert.ok(lines.includes('--model-endpoint'), '应说明语言入口的加载条件');
+
+  // And the same for `confirm`, which must not report a write it could not have made. There is no
+  // resident, so there is no store, so nothing was kept — and the failure text says that rather than
+  // leaving a person to wonder whether it half-worked.
+  const confirmed = await confirmCommand({ dataDir: root, text: CONFIRMED });
+  assert.equal(confirmed.exitCode, 1);
+  assert.equal(confirmed.stdout, '');
+  assert.ok(!confirmed.stderr.includes('记下了'), '没有任何常驻时不得说记下了');
+  assert.ok(confirmed.stderr.includes('没有正在提供语言入口'));
+});
+
+test('confirm 是协议里的第二个词，recorded 是第五个结果词', () => {
+  // The envelope, checked on its own because it is the runtime boundary: a word this build does not know
+  // is refused before anything writes, so a typo can never reach the store as one of the two words. The
+  // positive half is here as well — the test above this one only shows that `command` is refused, which
+  // would also pass if `confirm` were.
+  const confirm = decodeLanguageRequest(
+    JSON.stringify({ protocol: LANGUAGE_PROTOCOL_VERSION, request: 'confirm', text: CONFIRMED }),
+  );
+  assert.equal(confirm.kind, 'request');
+  assert.equal(confirm.request.word, 'confirm');
+  assert.equal(confirm.request.text, CONFIRMED);
+
+  for (const outcome of ['chatted', 'answered', 'recorded', 'refused', 'failed']) {
+    const decoded = decodeLanguageReply(
+      JSON.stringify({ protocol: LANGUAGE_PROTOCOL_VERSION, outcome, lines: ['x'] }),
+    );
+    assert.equal(decoded.kind, 'reply', `${outcome} 应当被读懂`);
+    assert.equal(decoded.reply.outcome, outcome);
+  }
 });
 
 test('凭据只以变量名的形式出现在状态里，值本身不出现', { skip: NO_PIPES }, async () => {
@@ -2469,4 +2669,553 @@ test('状态行里的端点、模型与变量名各占一行，值里的控制�
   assert.ok(status.includes('\\n'), '换行应写成它的码点');
   assert.ok(status.includes('\\u001b'), 'ESC 应写成它的码点');
   assert.ok(status.includes(FORGERY) && status.includes('模型：pwned'), '文本本身不被删掉');
+});
+
+// ---------------------------------------------------------------------------------------------
+// The record: the ten things the mandate asks of a bounded conversational continuity.
+//
+// The section above tests the plugin against stub stores, because everything it is about is the
+// Language side. This one is about the store — whether a confirmation is the only thing that produces a
+// record, whether that record survives a resident being restarted, whether it can be believed to be
+// more than it is — so the compositions here load the *real* `continuity` and `chronicle` plugins over a
+// real directory. Nothing below is reachable on `ubuntu-latest`: activation opens a named pipe. What
+// that costs is stated with each test rather than in one place, because the halves differ.
+//
+// The one claim this section cannot make, and says so where it comes up: a scripted model proves the
+// record *reached* the model, not that the model was influenced by it. `language-semantic.live.test.mjs`
+// is the harness for the second, and nothing here is evidence for it.
+// ---------------------------------------------------------------------------------------------
+
+/** A directory with an identity and a Chronicle store, which is what a resident is given. */
+function storeRoot(t) {
+  const root = createRoot(t);
+  const identity = initializeHikari({ rootDir: root });
+  initializeChronicle({ rootDir: root, identity });
+  return { root, identity };
+}
+
+/**
+ * Everything in the store, read back through the owner's own reader.
+ *
+ * Deliberately not a reimplementation of the file format: a test that parsed `chronicle.jsonl` itself
+ * would go on passing while the store's encoding changed underneath it, and it would be asserting
+ * against this file's idea of the format rather than against what Hikari can actually read. It also
+ * means the assertions below are about facts that *survive a reader*, which is the only form of
+ * "it was recorded" that means anything to the next resident.
+ */
+async function storedFacts(root, identity) {
+  return openChronicle({ rootDir: root, identity }).read();
+}
+
+/**
+ * A resident assembled the way `cli/resident.ts` assembles one, over the store at `root`.
+ *
+ * The real `continuity` and `chronicle` plugins rather than the stub the section above uses, and the
+ * three providers the same way. `stop()` is returned rather than only registered with `t.after`,
+ * because the restart tests have to end this runtime *before* the next one opens the same pipe — a
+ * `t.after` cleanup runs at the end of the test, which is the wrong end.
+ *
+ * `focusReads()` counts calls to the focus provider, which is how "restarting did not restore the work
+ * focus" is checked as something that did not happen rather than as something nobody looked for.
+ */
+async function resident(t, root, { script = [says('好。')], repository = false, judgement = RELEVANT } = {}) {
+  const runtime = new Runtime();
+  let stopped = false;
+  const stop = async () => {
+    if (stopped) return;
+    stopped = true;
+    await runtime.shutdown();
+  };
+  t.after(stop);
+
+  const models = [];
+  let focusReads = 0;
+  const plugin = (repository ? createRepositoryLanguagePlugin : createLanguagePlugin)(() => {
+    const model = scriptedModel(script);
+    models.push(model);
+    return model;
+  });
+
+  const config = {
+    rootDir: root,
+    endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
+    model: 'test-model',
+    credentialEnv: undefined,
+  };
+
+  // The two storage plugins first, which is also the order `cli/resident.ts` uses. Unlike Language's
+  // third requirement they are not *order*-sensitive — the Runtime re-checks its waiting list — but a
+  // composition that had to rely on that re-check would be testing the Runtime rather than this slice.
+  assert.equal(await runtime.loadPlugin(continuityPlugin, { rootDir: root }), 'active');
+  assert.equal(await runtime.loadPlugin(chroniclePlugin, { rootDir: root }), 'active');
+  assert.equal(
+    await runtime.loadPlugin(
+      provider(
+        'test.focus-provider',
+        workFocusCurrentService,
+        Object.freeze({
+          current: async () => {
+            focusReads += 1;
+            return ['hikari-new'];
+          },
+        }),
+      ),
+    ),
+    'active',
+  );
+  assert.equal(
+    await runtime.loadPlugin(
+      provider(
+        'test.awareness-provider',
+        desktopSessionAwarenessPeekService,
+        Object.freeze({ peek: async () => assessmentFixture() }),
+      ),
+    ),
+    'active',
+  );
+  if (repository) {
+    assert.equal(
+      await runtime.loadPlugin(
+        provider(
+          'test.relevance-provider',
+          repositoryCiRelevanceService,
+          Object.freeze({ current: async () => judgement }),
+        ),
+      ),
+      'active',
+    );
+  }
+
+  assert.equal(await runtime.loadPlugin(plugin, config), 'active', '真实组合应 active');
+
+  return { runtime, models, stop, focusReads: () => focusReads };
+}
+
+/** The system message of one step, which is where a record can be observed to have reached a model. */
+function systemPromptOf(model, step = 0) {
+  return model.requests[step].messages[0].content;
+}
+
+const CONFIRMED = '我更喜欢在夜里写代码';
+
+test('ask 一次都不写 Chronicle，只有 confirm 写，而且只写这一族', async () => {
+  // No pipe, so this half runs on CI — and it is the half worth having there, because "the word that only
+  // asks produces no fact at all" is the sentence the whole slice rests on. The answerer is called and
+  // observed to have been called, so a zero here is "ask was answered and wrote nothing" rather than
+  // "ask never arrived".
+  const appended = [];
+  const answered = [];
+  const continuity = createDecisionContinuity({
+    append: async (draft) => {
+      appended.push(draft);
+      return { factId: `f${appended.length}`, ...draft };
+    },
+    now: () => NOW,
+    initial: [],
+  });
+  const handler = languageRequestHandler(
+    {
+      async answer(text) {
+        answered.push(text);
+        return { outcome: 'chatted', lines: ['好。'] };
+      },
+    },
+    continuity,
+  );
+
+  const asked = await handler({ word: 'ask', text: `记一下：${CONFIRMED}` });
+  assert.deepEqual(answered, [`记一下：${CONFIRMED}`], 'ask 必须到达答案器');
+  assert.equal(asked.outcome, 'chatted');
+  assert.deepEqual(appended, [], 'ask 不得产生任何事实');
+  assert.deepEqual(continuity.current(), [], '一次 ask 之后，已确认的清单仍然是空的');
+
+  const confirmed = await handler({ word: 'confirm', text: CONFIRMED });
+  assert.equal(confirmed.outcome, 'recorded');
+  assert.deepEqual(confirmed.lines, recordedLines());
+  assert.equal(appended.length, 1, 'confirm 恰好写一次');
+  // The draft is asserted field by field rather than by shape, because every field here is a claim the
+  // mandate makes: the type names the *act*, the payload carries the person's own bytes, and the source
+  // says only what an unauthenticated local ingress can say.
+  assert.equal(appended[0].type, 'language.decision-confirmed');
+  assert.equal(appended[0].version, 1);
+  assert.equal(appended[0].occurredAt, NOW);
+  assert.deepEqual(appended[0].source, { kind: 'language.endpoint' });
+  assert.deepEqual(appended[0].payload, { statement: CONFIRMED });
+  assert.deepEqual(continuity.current(), [{ statement: CONFIRMED, at: NOW }]);
+});
+
+test('空话与超长的话都不写，回话也不说「记下了」', async () => {
+  // The two refusals, asserted together because they are the same rule twice: nothing is written unless
+  // something was actually said, and the sentence a person gets must name the act they performed —
+  // `longQuestionLines` would tell them their statement was not a question, which is true and about a
+  // question they never asked.
+  const appended = [];
+  const continuity = createDecisionContinuity({
+    append: async (draft) => {
+      appended.push(draft);
+      return { factId: 'f', ...draft };
+    },
+    now: () => NOW,
+    initial: [],
+  });
+
+  const blank = await confirmDecision(continuity, '   ');
+  assert.equal(blank.outcome, 'refused');
+  assert.deepEqual(blank.lines, emptyStatementLines());
+
+  const long = await confirmDecision(continuity, 'a'.repeat(MAX_LANGUAGE_TEXT_LENGTH + 1));
+  assert.equal(long.outcome, 'refused');
+  assert.deepEqual(long.lines, longStatementLines(MAX_LANGUAGE_TEXT_LENGTH));
+
+  assert.deepEqual(appended, [], '被拒绝的话不得触及存储');
+  assert.deepEqual(continuity.current(), []);
+});
+
+test('写入失败时说的是「没有记下来」，这一轮也不再持有它', async () => {
+  // The failure semantics, and the reason they are not copied from `work-focus/session.ts`: there the
+  // state change is real and independent of the write, so a failed append can be reported as a change
+  // with an unconfirmed record. Here the append *is* the act, so a write that did not happen is a
+  // confirmation that did not happen — `failed`, and the activation's own list must not have it either.
+  const continuity = createDecisionContinuity({
+    append: async () => {
+      throw new Error('store is gone');
+    },
+    now: () => NOW,
+    initial: [],
+  });
+
+  const reply = await confirmDecision(continuity, CONFIRMED);
+
+  assert.equal(reply.outcome, 'failed');
+  assert.deepEqual(reply.lines, confirmFailureLines('store is gone'));
+  assert.deepEqual(continuity.current(), [], '写失败的话不得留在这一轮的清单里');
+});
+
+test('读回是有界的：取最新的那一段，并说出漏掉了几条', () => {
+  // §8's last item, and the rule it is about is a rule about a prompt budget rather than about history —
+  // which is why the function takes a budget and why nothing in it ranks, filters by subject or scores.
+  // The failure this prevents is a record section that grows without limit and pushes the question a
+  // person is actually asking out of the window they are talking through.
+  const decisions = [
+    { statement: 'a'.repeat(10), at: '2026-01-01T00:00:00.000Z' },
+    { statement: 'b'.repeat(10), at: '2026-01-02T00:00:00.000Z' },
+    { statement: 'c'.repeat(10), at: '2026-01-03T00:00:00.000Z' },
+  ];
+
+  assert.deepEqual(selectConfirmedDecisions(decisions, 1000), { decisions, dropped: 0 });
+
+  // Two fit. What comes back is the newest two — not the oldest two, and not a set chosen to fit more.
+  assert.deepEqual(selectConfirmedDecisions(decisions, 25), {
+    decisions: decisions.slice(1),
+    dropped: 1,
+  });
+
+  // And the contiguity, which is the part a "fit as many as possible" rule would get wrong: a newest
+  // record that does not fit stops the walk rather than being skipped over, so a shorter older record is
+  // never shown ahead of the sentence it came after. Empty with a count is the honest report of that.
+  assert.deepEqual(selectConfirmedDecisions(decisions, 5), { decisions: [], dropped: 3 });
+});
+
+test('认不出来的事实一律跳过，一条都不编', () => {
+  // The read-back's failure policy, and the one that matters most: this material ends up in a prompt, so
+  // inventing a statement out of a payload that is not this family's would be the worst available
+  // outcome. The store is shared — a sibling's fact is not an error — and it is a file, so it can be
+  // edited. Every entry below is one a real store could contain; none of them may become a decision.
+  const facts = [
+    { type: 'work-focus.declared', version: 1, occurredAt: NOW, source: { kind: 'work-focus.endpoint' }, payload: { designation: 'hikari-new' } },
+    { type: 'language.decision-confirmed', version: 2, occurredAt: NOW, source: { kind: 'language.endpoint' }, payload: { statement: '未来的版本' } },
+    { type: 'language.decision-confirmed', version: 1, occurredAt: NOW, source: { kind: 'language.endpoint' }, payload: { statement: 42 } },
+    { type: 'language.decision-confirmed', version: 1, occurredAt: NOW, source: { kind: 'language.endpoint' }, payload: null },
+    { type: 'language.decision-confirmed', version: 1, occurredAt: NOW, source: { kind: 'language.endpoint' } },
+  ];
+
+  assert.deepEqual(readConfirmedDecisions(facts), []);
+
+  // And the one that is this family's, in the shape this build writes, is read — otherwise the empty
+  // result above would be evidence about the reader being broken rather than about it being careful.
+  const good = { type: 'language.decision-confirmed', version: 1, occurredAt: NOW, source: { kind: 'language.endpoint' }, payload: { statement: CONFIRMED } };
+  assert.deepEqual(readConfirmedDecisions([...facts, good]), [{ statement: CONFIRMED, at: NOW }]);
+});
+
+test('本地入口收到过，不等于一个已认证的人说过', { skip: NO_PIPES }, async (t) => {
+  // §8's third item, checked on what is actually written rather than on what a comment promises. The
+  // type is a free string at the type level and at runtime — `FactSource.kind` is `string` — so the only
+  // thing standing between this record and a claim nothing here established is which literal was
+  // written, and that is exactly what a test can pin.
+  const { root, identity } = storeRoot(t);
+  await resident(t, root, { script: [says('好。')] });
+
+  const confirmed = await requestLanguage(root, { word: 'confirm', text: CONFIRMED });
+  assert.equal(confirmed.kind, 'replied');
+  assert.equal(confirmed.reply.outcome, 'recorded');
+
+  const facts = await storedFacts(root, identity);
+  assert.equal(facts.length, 1);
+  assert.equal(facts[0].source.kind, 'language.endpoint');
+  assert.notEqual(facts[0].source.kind, 'human');
+  assert.ok(!JSON.stringify(facts[0]).includes('human'), '记录里不得出现身份认证的字样');
+
+  // And the person is told the same thing the record says — a human and a model are given the same
+  // sentence about what a record is, so neither can read it more strongly than the other.
+  const spoken = confirmed.reply.lines.join('\n');
+  assert.ok(spoken.includes('不是 Hikari 核实过的事实'));
+  assert.ok(spoken.includes('不是任何形式的授权'));
+});
+
+test('这一族事实只有语言包自己读写，别处连它的名字都不出现', () => {
+  // §9's structural half — no side-effect authorization — as a property of the source rather than as a
+  // sentence in a comment. A gate, a router or a piece of restored state would each have to *name* this
+  // family to read it, and the name appears in exactly one file. What follows is that the only consumer
+  // is the prompt builder and a prompt is not an authority; and that nothing can be added to the other
+  // side of it without this test going red, which is the point of checking it here rather than
+  // describing it.
+  //
+  // The family is also not reachable through either variant's `provides`, which the roster test above
+  // pins as an exact list — so there is no Service through which a second module could ask for it.
+  const sourceRoot = join(import.meta.dirname, '..', 'src');
+  const holders = sourceFiles(sourceRoot)
+    .filter((file) => readFileSync(file, 'utf8').includes('language.decision-confirmed'))
+    .map((file) => relative(sourceRoot, file).replaceAll('\\', '/'));
+
+  assert.deepEqual(holders, ['language/continuity.ts']);
+});
+
+test('一次完整的提问什么也不留：未确认的话不会变成已确认的决定', { skip: NO_PIPES }, async (t) => {
+  // §8's second item over the real store, which is the form of it that can be wrong in a way the pure
+  // test above cannot see: a conversation that was answered and grounded still leaves the family empty,
+  // because `ask` is the only path it took. Read back through the owner's reader rather than off the
+  // plugin's list, so what is asserted is that nothing was *written*, not that nothing was kept.
+  const { root, identity } = storeRoot(t);
+  await resident(t, root, { script: [callsTo(toolCall('a', WORK)), DONE] });
+
+  const answer = await requestLanguage(root, { word: 'ask', text: '我现在关注什么？' });
+  assert.equal(answer.kind, 'replied');
+  assert.equal(answer.reply.outcome, 'answered', '这次对话本身要成功，否则空记录证明不了什么');
+
+  assert.deepEqual(await storedFacts(root, identity), []);
+});
+
+test('确认过的决定经得起重启，并且以低信任材料进入下一次对话', { skip: NO_PIPES }, async (t) => {
+  // §8's first, fourth and fifth items in one composition, because they are one behaviour: what was
+  // confirmed is on disk, the next resident reads it back at activation, and the model is told it.
+  //
+  // The question in the second activation is asked in a fresh process state — the first runtime is shut
+  // down before the second opens the same pipe — so the sentence below cannot have come from the first
+  // activation's in-memory list. That is the whole of what makes this a restart rather than a long
+  // conversation, and it is why `stop()` is called here instead of left to `t.after`.
+  const { root } = storeRoot(t);
+
+  const first = await resident(t, root, { script: [says('好。')] });
+  const confirmed = await requestLanguage(root, { word: 'confirm', text: CONFIRMED });
+  assert.equal(confirmed.kind, 'replied');
+  assert.equal(confirmed.reply.outcome, 'recorded');
+  await first.stop();
+
+  const second = await resident(t, root, { script: [says('是的。')] });
+  const asked = await requestLanguage(root, { word: 'ask', text: '我刚才让你记了什么？' });
+  assert.equal(asked.kind, 'replied');
+  assert.equal(asked.reply.outcome, 'chatted');
+
+  const prompt = systemPromptOf(second.models[0]);
+  assert.ok(prompt.includes(CONFIRMED), '重启之后，这条记录应当回到对话里');
+  // And it arrives labelled. A model handed a bare list of sentences would have no way to know they are
+  // one person's unverified words rather than something Hikari established — which is the reading §8's
+  // third item forbids, arriving through the prompt instead of through the record.
+  assert.ok(prompt.includes('不是 Hikari 观察到的事实'), '低信任必须随材料一起交给模型');
+  assert.ok(prompt.includes('不构成许可'));
+  assert.ok(prompt.includes('以你读到的为准'), '工具读到的事实优先于这一段');
+
+  // What this cannot show, and does not claim: that the model was *influenced*. A scripted model agrees
+  // with whatever it was handed. The prompt is the furthest this file can see.
+});
+
+test('没被确认过的话在重启之后不回来', { skip: NO_PIPES }, async (t) => {
+  // The other direction of the same claim, and the one that would be silently wrong if `ask` wrote
+  // anything: an entire conversation — including a sentence that reads exactly like something worth
+  // keeping — is gone after a restart, and the model is told no record at all.
+  const { root } = storeRoot(t);
+
+  const first = await resident(t, root, { script: [says('好。')] });
+  await requestLanguage(root, { word: 'ask', text: `记一下：${CONFIRMED}` });
+  await first.stop();
+
+  const second = await resident(t, root, { script: [says('是的。')] });
+  await requestLanguage(root, { word: 'ask', text: '我刚才让你记了什么？' });
+
+  const prompt = systemPromptOf(second.models[0]);
+  assert.ok(!prompt.includes(CONFIRMED), 'ask 说过的话不得在重启后回来');
+  assert.ok(!prompt.includes('明确确认过'), '没有记录时，这一段整个不出现，而不是出现一个空的');
+});
+
+test('删掉记录之后，Hikari 不装作还记得', { skip: NO_PIPES }, async (t) => {
+  // §8's seventh item. The record is a file and there is no second copy — no database, no index, no
+  // cache that outlives the activation — so removing it removes the memory.
+  //
+  // The replacement store is built by the owner's own initializer under the same identity, rather than
+  // by editing the file or parsing it here. That keeps this file from holding a second opinion about
+  // the format, and it is the same end state an operator's `rm` would leave.
+  const { root, identity } = storeRoot(t);
+
+  const first = await resident(t, root, { script: [says('好。')] });
+  await requestLanguage(root, { word: 'confirm', text: CONFIRMED });
+  await first.stop();
+
+  const emptied = createRoot(t);
+  initializeChronicle({ rootDir: emptied, identity });
+  copyFileSync(resolveChroniclePath(emptied), resolveChroniclePath(root));
+  // The setup is asserted rather than assumed. Without this, a copy that silently did nothing would
+  // leave the record in place, and the only thing that would notice is the assertion at the bottom —
+  // arriving as a failure of the wrong claim, which is the one way a test like this wastes an hour.
+  assert.deepEqual(await storedFacts(root, identity), [], '删除这一步本身要成立');
+
+  const second = await resident(t, root, { script: [says('是的。')] });
+  await requestLanguage(root, { word: 'ask', text: '我刚才让你记了什么？' });
+
+  assert.ok(!systemPromptOf(second.models[0]).includes(CONFIRMED), '记录没了就不能再说记得');
+});
+
+test('重启时读回记录不会恢复工作焦点', { skip: NO_PIPES }, async (t) => {
+  // §8's eighth item, checked as a call that does not happen. Restoring the work focus would require
+  // reading it while reading the record back — there is nowhere else it could happen at activation — so
+  // a zero here is the claim. The question afterwards is what keeps the zero from being vacuous: a
+  // question that reads the focus does move the counter, so it is measuring something.
+  const { root } = storeRoot(t);
+
+  const first = await resident(t, root, { script: [says('好。')] });
+  await requestLanguage(root, { word: 'confirm', text: CONFIRMED });
+  await first.stop();
+
+  const second = await resident(t, root, { script: [callsTo(toolCall('a', WORK)), DONE] });
+  assert.equal(second.focusReads(), 0, '激活不得读工作焦点');
+
+  await requestLanguage(root, { word: 'ask', text: '我现在关注什么？' });
+  assert.equal(second.focusReads(), 1, '焦点确实可被读——否则上面的 0 什么也没测到');
+});
+
+test('Chronicle 读不出来时，Language 照常说话，只是没有记录那一段', { skip: NO_PIPES }, async (t) => {
+  // §8's last item's second half: the degradation. The direction is `repository-ci-attention/plugin.ts`'s
+  // — speak with what you have rather than refuse — and the empty list it degrades to produces a prompt
+  // with no record section in it, which says nothing at all. That is why it is honest here and would not
+  // be anywhere that read it as "nothing was ever confirmed", and nothing in this build asks that.
+  const root = createRoot(t);
+  const runtime = new Runtime();
+  t.after(() => runtime.shutdown());
+
+  const models = [];
+  await runtime.loadPlugin(
+    provider('test.focus-provider', workFocusCurrentService, Object.freeze({ current: async () => ['hikari-new'] })),
+  );
+  await runtime.loadPlugin(
+    provider(
+      'test.awareness-provider',
+      desktopSessionAwarenessPeekService,
+      Object.freeze({ peek: async () => assessmentFixture() }),
+    ),
+  );
+  await runtime.loadPlugin({
+    id: 'test.chronicle-provider',
+    version: '1.0.0',
+    provides: [chronicleService],
+    setup(context) {
+      context.services.provide(
+        chronicleService,
+        Object.freeze({
+          async append() {
+            throw new Error('这个组合不该被写入');
+          },
+          async get() {
+            return undefined;
+          },
+          async read() {
+            throw new Error('store is unreadable');
+          },
+        }),
+      );
+    },
+  });
+
+  assert.equal(
+    await runtime.loadPlugin(
+      createLanguagePlugin(() => {
+        const model = scriptedModel([DONE]);
+        models.push(model);
+        return model;
+      }),
+      {
+        rootDir: root,
+        endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
+        model: 'test-model',
+        credentialEnv: undefined,
+      },
+    ),
+    'active',
+    '读不出来不该让插件起不来',
+  );
+
+  const answer = await requestLanguage(root, { word: 'ask', text: '你现在看到什么？' });
+  assert.equal(answer.kind, 'replied');
+  assert.notEqual(answer.reply.outcome, 'failed', '存储读失败不得变成答不出话');
+  assert.ok(!systemPromptOf(models[0]).includes('明确确认过'), '降级时这一段不出现');
+});
+
+test('Chronicle 不可写时，confirm 是 failed，而不是一个成功的样子', { skip: NO_PIPES }, async (t) => {
+  // The write half of the same boundary, over the pipe and through the real client: the operator learns
+  // that nothing was kept at the moment they asked for it to be kept, rather than at the next restart
+  // when it is not there.
+  const root = createRoot(t);
+  const runtime = new Runtime();
+  t.after(() => runtime.shutdown());
+
+  await runtime.loadPlugin(
+    provider('test.focus-provider', workFocusCurrentService, Object.freeze({ current: async () => [] })),
+  );
+  await runtime.loadPlugin(
+    provider(
+      'test.awareness-provider',
+      desktopSessionAwarenessPeekService,
+      Object.freeze({ peek: async () => assessmentFixture() }),
+    ),
+  );
+  await runtime.loadPlugin({
+    id: 'test.chronicle-provider',
+    version: '1.0.0',
+    provides: [chronicleService],
+    setup(context) {
+      context.services.provide(
+        chronicleService,
+        Object.freeze({
+          async append() {
+            throw new Error('store is read-only');
+          },
+          async get() {
+            return undefined;
+          },
+          async read() {
+            return [];
+          },
+        }),
+      );
+    },
+  });
+  await runtime.loadPlugin(createLanguagePlugin(() => scriptedModel([says('好。')])), {
+    rootDir: root,
+    endpoint: 'http://127.0.0.1:11434/v1/chat/completions',
+    model: 'test-model',
+    credentialEnv: undefined,
+  });
+
+  const reply = await requestLanguage(root, { word: 'confirm', text: CONFIRMED });
+  assert.equal(reply.kind, 'replied');
+  assert.equal(reply.reply.outcome, 'failed');
+  const lines = reply.reply.lines.join('\n');
+  assert.ok(lines.includes('没有记下来'));
+  assert.ok(!lines.includes('记下了'), '失败时不得说记下了');
+
+  // And `hikari confirm`'s exit code follows it, which is how a script learns the difference. Run
+  // against the same resident, so this is the real client and the real plugin rather than a second
+  // composition that happens to look like it.
+  const outcome = await confirmCommand({ dataDir: root, text: CONFIRMED });
+  assert.equal(outcome.exitCode, 1);
+  assert.equal(outcome.stdout, '', '失败的话不上 stdout');
+  assert.ok(outcome.stderr.length > 0, '失败的理由要有人看得到');
 });

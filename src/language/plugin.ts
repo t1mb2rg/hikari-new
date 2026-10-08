@@ -9,8 +9,22 @@
 // What this plugin is not, and the list is here because each entry is a thing it would have been easy
 // to become: it is not a brain, a planner, an action orchestrator, a tool registry, a capability
 // registry, a global context, memory, a model router or a reasoning service. It answers questions
-// about facts other plugins already established. It reads; it does not write. `ask` is the only word
-// it speaks and every one of those roles would need a second.
+// about facts other plugins already established, and — since `confirm` — it keeps a person's own
+// sentences about themselves.
+//
+// The second of those is new and it is the one this list has to be re-read against, because "keeps
+// something a person said" is the shape memory arrives in. Three things keep it from being memory, and
+// each is structural rather than promised. What it keeps is one family, named in `continuity.ts`, whose
+// proposition is "a person confirmed this through this ingress" — not a fact about the world, not a
+// summary, not an association, and not anything a model produced. Only this plugin ever names that
+// type, so the family has one writer and one reader and nothing else in the repository can ask it for
+// anything. And nothing here is ever *consulted in order to decide something*: the one consumer is the
+// prompt builder, and a sentence shown to a model is not an authority — no gate, no routing, no
+// restored state, no permission reads this family anywhere.
+//
+// `ask` still writes nothing. Every one of the roles in the list above would need more than the two
+// words this endpoint has, and the second word buys exactly one durable record and no capability at
+// all.
 //
 // The loop it now runs makes that list worth re-reading rather than assuming, because "the model picks
 // a tool" is the shape most of those roles arrive in. Three things keep it from being any of them, and
@@ -32,10 +46,17 @@
 //   base Language               work-focus.current, desktop-session-awareness.peek
 //   repository-aware Language   those two, plus repository-ci-relevance.current
 //
-// The base variant is what every resident with a model gets, and it is byte-for-byte the plugin this
-// file has always built: same id, same version, same two requirements, same two exposures. A resident
-// with no repository scope answers exactly what it answered before this slice, and nothing about the
-// repository-aware variant reaches it.
+// Both also require `chronicle`, and it is not part of that axis — see `buildLanguagePlugin`, where it
+// is appended to the variant's list rather than written into either literal. The axis is what a model
+// may *read*; the durable family is about what this plugin keeps, which is the same question in both
+// variants and would be an axis with two identical values.
+//
+// The base variant is what every resident with a model gets, and the variant itself did not change: the
+// same two requirements and the same two exposures it has always named, under the same plugin id and
+// version. What did change is the plugin those requirements build — the third requirement above is new
+// to both variants, and it is what the `confirm` word writes through — so a resident with no repository
+// scope is no longer answering exactly what it answered before this slice. The other half of that
+// sentence still holds: nothing about the repository-aware variant reaches it.
 //
 // The repository-aware variant is what a resident gets when a repository scope *and* a model were both
 // configured. It offers one more capability, so it depends on the Service behind that capability, and
@@ -100,19 +121,38 @@
 // routed to plugins, because the first question it answered would make it the router that design
 // refuses to be.
 //
-// Nothing durable is held. The model connection is this activation's, the dialogue turn is this
-// activation's, and the endpoint is gone when the activation ends; there is no file, no store and no
-// Chronicle entry anywhere behind this plugin, so "Hikari forgot the conversation because it
-// restarted" is a structural fact rather than a cleanup somebody has to remember to run.
+// What is durable and what is not, because this paragraph used to say "nothing" and that is no longer
+// true. The model connection is this activation's, the dialogue turn is this activation's, and the
+// endpoint is gone when the activation ends — so a *conversation* is still forgotten the moment the
+// process is, in exactly the structural way it was before, and no part of this file had to change to
+// keep that. What survives is one thing: the statements a person explicitly confirmed, which are the
+// one family `confirm` writes.
+//
+// The line between those two is the whole design of the slice, so it is worth being blunt about what
+// is *not* kept. There is no transcript. A question is not stored, an answer is not stored, a reading
+// is not stored, and the model's prose is not stored — a confirmation is the only act in this plugin
+// that leaves anything behind, and what it leaves is the person's own sentence and nothing about the
+// conversation it arrived in. So "Hikari remembered what I told it to remember" is true and "Hikari
+// remembered our conversation" is false, and the difference is a property of which code path writes
+// rather than of anybody remembering to run a cleanup.
+//
+// The record is read back once, at activation, into the activation's own list — `continuity.ts` argues
+// why once and why that list rather than a re-read per question — and it enters the conversation as
+// material in the system prompt, framed as the low-trust source it is. See `prompt.ts`.
 
 import type { ServiceContract } from '../runtime/contracts.js';
 import type { PluginContext, PluginDefinition } from '../runtime/plugin.js';
+import { chronicleService } from '../chronicle/index.js';
+import type { ChronicleService } from '../chronicle/index.js';
 import { desktopSessionAwarenessPeekService } from '../desktop-session-awareness/index.js';
 import { repositoryCiRelevanceService } from '../repository-ci-relevance/index.js';
 import { workFocusCurrentService } from '../work-focus/index.js';
 
+import type { Answerer } from './answer.js';
 import { createAnswerer } from './answer.js';
 import { languageDesktopReturnSpeakingService, languageSpeakingService } from './contracts.js';
+import { confirmDecision, createDecisionContinuity, readConfirmedDecisions } from './continuity.js';
+import type { ConfirmedDecision, DecisionContinuity } from './continuity.js';
 import { listenLanguageEndpoint } from './endpoint.js';
 import { languageEndpointPath } from './endpoint-path.js';
 import { LanguageError } from './errors.js';
@@ -129,6 +169,7 @@ import {
 } from './model.js';
 import { createExposureReader, createRepositoryExposureReader } from './read.js';
 import type { ExposureReader } from './read.js';
+import type { LanguageReply, LanguageRequest } from './types.js';
 
 /**
  * What the composition must tell this plugin: where its endpoint goes, which model to ask, and how much
@@ -205,9 +246,19 @@ function buildLanguagePlugin(
   return {
     id: 'language',
     version: '1.0.0',
-    // The variant's own list and nothing else. What is *absent* from both variants is the argument: no
-    // Memory, no Chronicle, no Runtime service that would make this a place other plugins reach in.
-    requires: variant.requires,
+    // The variant's own list, plus the one Service both variants need and neither variant is a choice
+    // about. Chronicle sits outside the variant for the same reason `provides` below does: what this
+    // plugin keeps about a person is not a question about what a model may *read*, so a variant axis for
+    // it would be an axis whose two values are identical — the cross-product `exposure.ts` refuses,
+    // arrived at from the other direction. `variant.requires` therefore stays the complete answer to
+    // "which Services does this variant read through its exposures", and this line stays the complete
+    // answer to "what must the composition have given it".
+    //
+    // What is still absent from both, and this half did not change: no Memory, no Runtime service that
+    // would make this a place other plugins reach in. Chronicle is a store, and this plugin is a client
+    // of it in one direction — it appends one family and reads that family back, never a sibling's.
+    // There is nothing on the other side of it to reach in through.
+    requires: [...variant.requires, chronicleService],
     // Outside the variant, and these are the only entries either variant has. A reader checking that
     // the two agree reads `variant.requires` against `variant.exposures` and never has to account for
     // either of these, because speaking is not a read: nothing here is offered to a model, and no
@@ -252,7 +303,32 @@ function buildLanguagePlugin(
       // anyone checking that the two agree reads one place rather than two files.
       const read = variant.makeReader(context);
 
-      // Four dependencies are wired here and nowhere else, and the loop they feed keeps its own
+      // Pulled rather than reached for, like everything else here: the Service is in `requires`, so a
+      // composition without Chronicle never gets this far — the plugin stays `waiting` and the resident
+      // says so, which is the same fail-closed shape the repository-aware variant uses for its third
+      // exposure. A Language that could not keep a confirmation would still answer questions, and that
+      // is a real alternative; it is refused because "Hikari silently does not remember" is a worse
+      // failure to hand a person than "this composition cannot use Language", and because the Runtime
+      // has no way to say the former.
+      const chronicle = context.services.get(chronicleService);
+
+      // The person's own history, read once, here, before anything can be asked — and it is read from
+      // inside a `catch` that turns any failure into an empty list. That degradation is
+      // `repository-ci-attention/plugin.ts`'s, and it points the same way: the plugin says what it can
+      // rather than refusing to speak. A resident that answered no questions because a store file could
+      // not be parsed would be trading a missing sentence for a dead conversation.
+      //
+      // The direction of that choice is why the empty list is honest *here* and would not be anywhere it
+      // was read as a claim. Nothing in this plugin answers "were you told anything before?" — an empty
+      // list produces a prompt with no record section in it, which says nothing at all. It is not
+      // evidence that nothing was ever confirmed, and nothing in this build treats it as any.
+      const continuity = createDecisionContinuity({
+        append: (draft) => chronicle.append(draft),
+        now: () => new Date().toISOString(),
+        initial: await readConfirmedDecisionsOrNothing(chronicle),
+      });
+
+      // Five dependencies are wired here and nowhere else, and the loop they feed keeps its own
       // dialogue turn — see `answer.ts` for why the decisions live in a plain function instead of this
       // closure. Nothing below this line decides what a question means; this is the wiring, and the
       // wiring is the whole of it.
@@ -261,12 +337,11 @@ function buildLanguagePlugin(
         read,
         now: () => new Date().toISOString(),
         exposures: variant.exposures,
+        decisions: () => continuity.current(),
       });
 
       const endpoint = await listenLanguageEndpoint(
-        {
-          handle: (request) => answerer.answer(request.text),
-        },
+        { handle: languageRequestHandler(answerer, continuity) },
         path,
       );
       context.defer(() => endpoint.close());
@@ -292,6 +367,43 @@ function buildLanguagePlugin(
       context.services.provide(languageDesktopReturnSpeakingService, { speak: renderSpokenReturn });
     },
   };
+}
+
+/**
+ * One request, and the act its word names.
+ *
+ * This is the whole of the routing in this plugin, and it is a function rather than a ternary inlined in
+ * the endpoint's `handle` for one reason: on `ubuntu-latest` the platform gate above refuses before any
+ * of this runs, so a dispatch written inside `setup` would be a rule CI never checks. The rule it
+ * carries is the strongest claim in the slice — **`ask` writes nothing, ever** — and a test can now
+ * state it by handing this function an answerer, a continuity over a recording append, and a request
+ * whose word is `ask`: zero appends is the assertion.
+ *
+ * Two branches and no default, because there is no third word to fall through to — `decodeLanguageRequest`
+ * is the runtime boundary that decides what a word is, and it refuses anything that is not one of these
+ * two. A `switch` with a default here would be a second statement of the vocabulary, in the one place
+ * where being wrong about it means writing something nobody asked to keep.
+ */
+export function languageRequestHandler(
+  answerer: Answerer,
+  continuity: DecisionContinuity,
+): (request: LanguageRequest) => Promise<LanguageReply> {
+  return (request) =>
+    request.word === 'confirm'
+      ? confirmDecision(continuity, request.text)
+      : answerer.answer(request.text);
+}
+
+// The read-back, with the failure folded into "no record" rather than propagated. See the call site for
+// why that is the honest direction here and why the resulting empty list must not be read as a claim.
+async function readConfirmedDecisionsOrNothing(
+  chronicle: ChronicleService,
+): Promise<readonly ConfirmedDecision[]> {
+  try {
+    return readConfirmedDecisions(await chronicle.read());
+  } catch {
+    return [];
+  }
 }
 
 // Everything wrong with this config is a reason not to start, and all of it is checked here rather than
@@ -353,8 +465,10 @@ function readConfig(input: unknown): LanguagePluginConfig {
 /**
  * The base variant: the two reads that need nothing beyond the pair this plugin has always required.
  *
- * A resident with a model and no repository scope gets this one, and it is the plugin every build before
- * this slice built — same id, same version, same two requirements, same two exposures.
+ * A resident with a model and no repository scope gets this one, and the variant is unchanged since it
+ * was written — same two requirements, same two exposures. The plugin it is handed to is not: a third
+ * requirement is appended in `buildLanguagePlugin`, because `confirm` writes a durable family and the
+ * variant axis is about what a model may read rather than about what this plugin keeps.
  *
  * Exported, and for the reason `index.ts` gives for exporting `createAnswerer`: on `ubuntu-latest` the
  * platform gate in `setup` refuses before anything under it runs, so a wiring that only `setup` could

@@ -7,25 +7,34 @@
 // answered, and "this build does not know that request" would stop being sayable — which is the same
 // argument `desktop-session-observe/types.ts` and `work-focus/types.ts` make for their own words.
 //
-// The reply has four outcomes, and they are four rather than three because two different things used to
-// be spelled the same way.
+// The reply has five outcomes, and each of the last three arrived separately because it was a different
+// thing wearing the same spelling.
 //
 //   chatted    nothing was read. The model talked to the human and that conversation is the answer.
 //   answered   at least one capability was read, and the answer is what was read.
+//   recorded   a statement the human explicitly confirmed was written down. Nothing was read and no
+//              model was asked anything; the act *was* the writing.
 //   refused    this build understood the *request* and will not answer *that*: the question is empty,
 //              it is longer than any question needs to be, or the model produced nothing this build
 //              could act on — no reading it could perform, no usable reply.
 //   failed     this build itself did not get to a verdict — the model could not be reached, or a
 //              contract the answer is grounded in rejected on the way.
 //
-// `chatted` is new, and the reason it is not folded into `answered` is the whole reason it exists. An
-// answer that quotes Hikari's own observations and an answer that is the model making conversation are
-// different kinds of thing, and only one of them is entitled to be believed about the machine. A
-// `answered` reply is a reading; a `chatted` one is a sentence, and a client that had to guess which it
-// was holding would be guessing about exactly the distinction this surface exists to keep. The mandate
-// is explicit that they stay separate, and the separation is enforced upstream rather than here: the
-// loop only produces `chatted` when it read nothing at all, so the outcome cannot be chosen
-// independently of what happened.
+// `chatted` is not folded into `answered`, and the reason is the whole reason it exists. An answer that
+// quotes Hikari's own observations and an answer that is the model making conversation are different
+// kinds of thing, and only one of them is entitled to be believed about the machine. A `answered` reply
+// is a reading; a `chatted` one is a sentence, and a client that had to guess which it was holding would
+// be guessing about exactly the distinction this surface exists to keep. The separation is enforced
+// upstream rather than here: the loop only produces `chatted` when it read nothing at all, so the
+// outcome cannot be chosen independently of what happened.
+//
+// `recorded` is not folded into either of those, and for a sharper reason than tidiness: it is the one
+// outcome under which this plugin *wrote something durable*, and the other four all report that nothing
+// was written. A client that read `recorded` as a variant of `answered` would be reading "Hikari looked
+// something up" out of "Hikari now remembers what you told it", which is the second statement this whole
+// surface exists to keep out of the first. It also has no line a model wrote and no line an owner
+// rendered — both of the other success paths are made of one of those two, and this one is made of
+// neither, so `recorded` is the outcome a client can least afford to guess at.
 //
 // `refused` and `failed` are not two spellings of "no". A refusal is Hikari saying it does not answer
 // this; a failure is Hikari saying it did not finish. Folding them together would tell a human their
@@ -36,14 +45,24 @@
 export const LANGUAGE_PROTOCOL_VERSION = 1;
 
 /**
- * The one word this endpoint answers.
+ * The two words this endpoint answers, and there are two rather than one because one of them writes.
  *
- * It carries a payload, which is the structural difference from the other endpoints' words: what a
- * human asks cannot be enumerated in advance, so it travels with the word. That is also why this is a
- * word rather than a payload with no vocabulary around it — the envelope stays closed even though the
- * content cannot be.
+ * `ask` never writes anything. `confirm` writes one durable record, and that record is the whole of what
+ * it does — which is why it could not be folded into `ask` as a flag or a mode. A single word covering
+ * both would make "nothing was recorded" and "something was recorded" two readings of the same request,
+ * and the property this surface has to be able to state is exactly that they are not: a person who only
+ * asked has not confirmed anything, and no arrangement of flags should be able to blur that.
+ *
+ * Both carry a payload, which is the structural difference from the other endpoints' words: what a human
+ * asks, and what a human confirms, cannot be enumerated in advance, so each travels with the word. That
+ * is also why these are words rather than payloads with no vocabulary around them — the envelope stays
+ * closed even though the content cannot be.
+ *
+ * Two words is the whole vocabulary and it is meant to stay small. Each one is a different act by the
+ * person at the other end — asking Hikari something, and telling Hikari to keep something they said —
+ * and a third would have to be a third act rather than a third spelling of one of these.
  */
-export type LanguageWord = 'ask';
+export type LanguageWord = 'ask' | 'confirm';
 
 /**
  * A request carries its word and the sentence a human typed, and nothing else.
@@ -59,21 +78,27 @@ export interface LanguageRequest {
 }
 
 /**
- * The answer, in the four shapes the plugin can give, named as the mandate names them.
+ * The answer, in the five shapes the plugin can give, named as the mandate names them.
  *
- * All four are lines and there is deliberately no machine-readable verdict beside them, for the reason
+ * All five are lines and there is deliberately no machine-readable verdict beside them, for the reason
  * the observe endpoint gives: any field rich enough to carry what was asked and what was read would be
  * a second encoding of facts that already have owners. What a client has to tell apart is which of the
- * four happened, and `outcome` says exactly that.
+ * five happened, and `outcome` says exactly that.
  *
  * Which lines belong to which outcome is the load-bearing part. A `chatted` reply's lines are model
  * prose and nothing else; an `answered` reply's lines are owner-rendered readings and contain no model
- * prose at all, not even a joining sentence. There is no outcome under which the two are mixed, and
- * that is by construction rather than by convention — see the one-way door in `answer.ts`.
+ * prose at all, not even a joining sentence. A `recorded` reply's lines are neither — they are this
+ * plugin's own fixed words about what it did with what it was given, the same kind of line `refused` and
+ * `failed` carry. There is no outcome under which model prose and a reading are mixed, and that is by
+ * construction rather than by convention — see the one-way door in `answer.ts`.
+ *
+ * No outcome carries the recorded statement back. A `recorded` reply says the writing happened and says
+ * nothing else; a client that wanted to show the human what was kept has the text it just sent.
  */
 export type LanguageReply =
   | { readonly outcome: 'chatted'; readonly lines: readonly string[] }
   | { readonly outcome: 'answered'; readonly lines: readonly string[] }
+  | { readonly outcome: 'recorded'; readonly lines: readonly string[] }
   | { readonly outcome: 'refused'; readonly lines: readonly string[] }
   | { readonly outcome: 'failed'; readonly lines: readonly string[] };
 

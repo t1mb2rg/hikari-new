@@ -27,7 +27,7 @@
 // This command does not start, restart or configure a resident. It can reach one that is already
 // running, and that is the whole of what it does.
 
-import { askFailureLines, requestLanguageAsk } from './ask.js';
+import { languageFailureLines, requestLanguage } from './language.js';
 import type { AskOptions, CommandOutcome } from './options.js';
 
 export function askCommand(options: AskOptions): Promise<CommandOutcome> {
@@ -35,20 +35,25 @@ export function askCommand(options: AskOptions): Promise<CommandOutcome> {
 }
 
 async function askRunningHikari(dataDir: string, text: string): Promise<CommandOutcome> {
-  const answer = await requestLanguageAsk(dataDir, text);
+  const answer = await requestLanguage(dataDir, { word: 'ask', text });
 
   if (answer.kind === 'replied') {
     // A refusal is Hikari answering, not the command failing, so what it said goes out whole and the
     // exit code follows what it said rather than whether it had anything good to report. The two
     // successes are listed rather than the two failures, because which outcomes are successes is the
     // plugin's statement and this line should change exactly when that statement does.
+    //
+    // `recorded` is absent from this list, and it is not an oversight about the union's size: an `ask`
+    // cannot produce it. The word this command sends is the one that never writes, so the only outcome
+    // that reports a write belongs to the other command. Naming it here would make this line true of
+    // any reply rather than true of an answer, which is the difference between a rule and a shrug.
     const spoke = answer.reply.outcome === 'chatted' || answer.reply.outcome === 'answered';
     return spoke
       ? { exitCode: 0, stdout: render(answer.reply.lines), stderr: '' }
       : { exitCode: 1, stdout: '', stderr: render(answer.reply.lines) };
   }
 
-  return { exitCode: 1, stdout: '', stderr: render(askFailureLines(answer)) };
+  return { exitCode: 1, stdout: '', stderr: render(languageFailureLines(answer)) };
 }
 
 function render(lines: readonly string[]): string {
