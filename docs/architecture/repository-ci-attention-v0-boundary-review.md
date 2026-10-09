@@ -556,6 +556,8 @@ const endpoint = await listenLanguageEndpoint(
 
 同文件 `:215` 说明这条是**当作结构不变量来验证的**，由自动化测试证明。
 
+> **指针（R7.2，原文不改）**：本节所引 §8 四条不变量里的**第二条与第三条**已由 `docs/architecture/language-grounded-synthesis-v0-boundary-review.md` 收窄（有已确认材料 + 该步未截断 + 模型确实说了话时，模型那句话以固定标签引导的一节接在**所有 owner 渲染块之后**）。**本节援引的第四条（Domain Plugin 不获得 user-facing speaking turn）未动**，因此本节据此得出的结论——说话的是 Language Plugin 自己、Domain 的判词只是被它转述的材料——不受影响；`renderAnswer` 与它的两个主动播报调用方同样一个字节未改。
+
 **注意这条的措辞**：它不区分「主动说」与「被动说」——它说的是 Domain Plugin **不获得 speaking turn**。今天 Language 之所以合法，是因为说话的是 **Language Plugin 自己**，而 Domain 的判词只是被它转述的材料。
 
 ### 10.3 Language 结构上无法被激活

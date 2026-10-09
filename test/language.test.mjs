@@ -20,6 +20,10 @@ import {
   languageFailureLines,
   requestLanguage,
 } from '../dist/cli/language.js';
+// The terminal's own measure rather than a second counter, because the claim being asserted is about what
+// a terminal shows: a counter that disagreed with `clip` would pass here while a human still lost the
+// sentence. The TUI is not this module's dependency — this is a test reaching for the shipped ruler.
+import { displayWidth } from '../dist/cli/tui-render.js';
 import { continuityPlugin, initializeHikari } from '../dist/continuity/index.js';
 import {
   desktopContextReadExposure,
@@ -35,6 +39,7 @@ import {
   recordedLines,
   renderFocus,
   renderSpokenOccurrence,
+  renderSynthesis,
 } from '../dist/language/express.js';
 import {
   LANGUAGE_EXPOSURES,
@@ -3055,9 +3060,14 @@ test('记录这一段说了它是干什么用的：问起以前确认过的话�
   const reply = await h.answerer.answer('我们之前确认的快速认知部署原则是什么？');
 
   // The consequence, asserted here so that the prompt's sentence about it is not the only place it is
-  // written: once anything has been read, the answer is the reading. A deep comparison rather than a
-  // substring search, because what is being checked is that nothing else was appended — which is the same
-  // reason the one-way door test above uses one.
+  // written: this step is `DONE`, which says nothing, so the answer is the reading. A deep comparison
+  // rather than a substring search, because what is being checked is that nothing else was appended —
+  // which is the same reason the one-way door test above uses one.
+  //
+  // The empty content is what makes this the record-present-but-silent case rather than the ordinary one,
+  // and naming it is the point: the record *is* in this interaction's context, so a paragraph would have
+  // been composed had the model said anything. That the answer is still exactly the owner's lines is the
+  // half of the rule that says silence costs nothing.
   assert.equal(reply.outcome, 'answered');
   assert.deepEqual(reply.lines, renderFocus([]), '读过之后回答就是读回来的那样，记录不在里面');
 
@@ -3068,7 +3078,16 @@ test('记录这一段说了它是干什么用的：问起以前确认过的话�
   const prompt = messages[0].content;
   assert.ok(prompt.includes(decision.statement), '记录在上下文里');
   assert.ok(prompt.includes('回答就是这些话本身'), '要说出这一段的用处：问起这些话，就是直接说');
-  assert.ok(prompt.includes('你要说的话就不会被展示'), '也要说出读了之后会发生什么');
+  // Both halves of what the section says about a reading, and the order they are asserted in is the order
+  // the failure arrived in. The negative one is first because it is the one that had to be *added*: the
+  // section used to end on a bare route, and a route with nothing bounding it is an instruction to bring
+  // the record up — which is how an unrelated deployment note ends up appended to a question about the
+  // screen. The second is the sentence the route used to contradict.
+  assert.ok(prompt.includes('只在他问到的时候才提'), '要圈出这一段的范围：没问到就不要提');
+  assert.ok(
+    prompt.includes('你说的话会跟在读到的内容后面展示'),
+    '也要说出混合问题读了之后会发生什么：话会被展示出来',
+  );
 
   // And the route is a statement about this material rather than a branch on what the person typed: no
   // capability and no domain appears in the prompt at all, so there is no word for a question to be
@@ -3087,6 +3106,184 @@ test('记录这一段说了它是干什么用的：问起以前确认过的话�
     !empty.requests[0].messages[0].content.includes('回答就是这些话本身'),
     '没有记录时，这一段整段不出现，路线也跟着不出现',
   );
+
+  // And the grant goes with it, which is the same claim about a different sentence and needed its own
+  // needle. Both sentences were once moved together and an earlier draft kept this one in the static body:
+  // there, every machine read a second duty — "say what you read and what he said before together" —
+  // including the machines whose model then had its sentence discarded, because the gate asks about the
+  // record. A model told to write something this build throws away is being asked for work it cannot
+  // deliver, and the guard above could not catch it: it looks for the route.
+  assert.ok(
+    !empty.requests[0].messages[0].content.includes('你负责的事有两件'),
+    '没有记录时，也不能授权模型「把两半一起说清楚」',
+  );
+});
+
+/** One confirmed statement, as this plugin's own record keeps it. Named for what it is about. */
+const DEPLOYMENT_DECISION = Object.freeze({
+  statement: '快速认知部署原则是：先在一台机器上跑通，再考虑第二台。',
+  at: '2026-10-01T00:00:00.000Z',
+});
+
+test('有记录时，读过之后说的话跟在读回来的内容后面，并且标明那是谁说的', async () => {
+  // The outcome this round added, asserted as a shape rather than as a substring: a reading, then a label,
+  // then the model's sentence. The order is the entire safety argument — the label leads its section and
+  // the section follows every reading — so a test that only checked the sentence was somewhere in the
+  // answer would pass on an implementation that had laid it between two of the owner's lines.
+  //
+  // The question is a mixed one and the script says what the model did with it: read the work focus, then
+  // say something joining that reading to what this person confirmed before. A scripted model cannot show
+  // that a real one *would* — that evidence is `language-semantic.live.test.mjs`'s half and it is skipped
+  // without an endpoint. What is pinned here is that when a model does, the answer has a place to put it.
+  const spoken = '你之前说过先在一台机器上跑通再考虑第二台；现在这台机器上还没有相关的草稿。';
+  const h = harness({
+    script: [callsTo(toolCall('c1', WORK)), says(spoken)],
+    focus: [],
+    decisions: [DEPLOYMENT_DECISION],
+  });
+
+  const reply = await h.answerer.answer('我们之前确认的部署原则是什么？当前焦点又是什么？');
+  assert.equal(reply.outcome, 'answered');
+
+  // The reading first, and byte for byte what the owner rendered. Nothing above it, because a label that
+  // came before the readings would be a section about them rather than an aside after them.
+  const reading = renderFocus([]);
+  assert.deepEqual(reply.lines.slice(0, reading.length), reading, '读回来的内容在最前面，且没有被改动');
+
+  const composed = reply.lines.slice(reading.length);
+  assert.equal(composed.length, 2, '一段：标签一行，模型的话一行');
+  assert.ok(composed[0].startsWith('（'), '标签在段首，不在两句之间');
+  assert.ok(composed[0].includes('不是读回来的内容'), '标签要说这不是读回来的');
+  // The second clause, which is the only place a reader learns that a sentence about their own past words
+  // is not the record itself. A label saying only "not a reading" would leave the stronger-looking claim —
+  // this person's own words, therefore a fact — unmarked.
+  assert.ok(composed[0].includes('没有核实过'), '标签也要说记录本身没有被 Hikari 核实过');
+  assert.equal(composed[1], spoken, '模型的话逐字出现，不被改写');
+});
+
+test('没有记录时，读过之后说的话仍然不算数', async () => {
+  // The gate, and the reason it is the record rather than the model's own confidence: with no confirmed
+  // statements the only material in the context is the readings, so a sentence added to them is a sentence
+  // *about the readings* — the judgement `answer.ts`'s header says this surface does not have. The same
+  // condition also keeps every machine that has never recorded anything on exactly the behavior it had
+  // before this existed, which is what makes the change checkable against the old tests rather than only
+  // against new ones.
+  const spoken = '看起来你正在写 Hikari。';
+  const h = harness({
+    script: [callsTo(toolCall('c1', WORK)), says(spoken)],
+    focus: [],
+    decisions: [],
+  });
+
+  const reply = await h.answerer.answer('我在做什么？');
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(reply.lines, renderFocus([]), '没有材料可谈时，模型的话不出现');
+});
+
+test('提问进行中才写进来的记录，不给这一轮开门', async () => {
+  // The store reaches the loop as a live view rather than a copy — `continuity.ts` says so in the
+  // interface's own words and `plugin.ts` hands that view straight over — and this endpoint serves one
+  // connection at a time with nothing serialized between them, so a `confirm` on another connection lands
+  // while an ask is waiting on the model. The prompt for that ask was built before the write and lists no
+  // record. If the gate asked about the store instead of about the page it would see the new record, open,
+  // and the answer would carry a section labelled as drawing on this person's words while showing none.
+  //
+  // Written from inside the model call, which is the only moment the race can happen, and the moment a
+  // length test cannot cover: the value read before the call and the value read after it are the same
+  // array. This builds its own answerer rather than going through `harness` because the push has to happen
+  // between the two steps, and `harness` is handed a script rather than a hook.
+  const decisions = [];
+  const reader = createExposureReader({
+    async readFocus() {
+      return Object.freeze([]);
+    },
+    async peek() {
+      return assessmentFixture();
+    },
+  });
+
+  let calls = 0;
+  const answerer = createAnswerer({
+    async step() {
+      calls += 1;
+      if (calls === 1) {
+        decisions.push(DEPLOYMENT_DECISION);
+        return callsTo(toolCall('c1', WORK));
+      }
+      return says('你之前说过先在一台机器上跑通再考虑第二台。');
+    },
+    async read(exposure) {
+      return reader(exposure);
+    },
+    now: () => NOW,
+    exposures: LANGUAGE_EXPOSURES,
+    decisions: () => decisions,
+  });
+
+  const reply = await answerer.answer('我们之前确认的部署原则是什么？当前焦点又是什么？');
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(reply.lines, renderFocus([]), 'prompt 里没有记录段时，这一轮也不许出现合成段');
+});
+
+test('合成段的标签在默认终端宽度下是一整行', () => {
+  // The label is the only thing telling a reader these lines are not a reading, and it is one line of an
+  // answer a terminal lays out: `tui-render.ts` clips every line to `render.columns` and reserves a column
+  // for its own ellipsis, so at the default 80 the budget is 79. A wider label loses its tail on a default
+  // window, and the tail is the clause that says the material was never verified — the label would then be
+  // present, cut, and useless exactly where it matters most.
+  //
+  // Measured off the rendered section rather than off a constant, so the number checked is the one a human
+  // would be shown, and measured with the terminal's own `displayWidth`, so a label that is short in code
+  // points but wide in cells cannot pass.
+  const width = displayWidth(renderSynthesis('好。')[0]);
+  assert.ok(width <= 79, `标签占 ${width} 列，默认终端一行放不下（上限 79）`);
+
+  // Both claims survive at that width, which is the reason the text is as short as it is: the first says
+  // where these lines came from, the second says nothing verified them. Dropping either to save columns
+  // would make the remaining one a weaker statement than the one this build can actually make.
+  assert.ok(renderSynthesis('好。')[0].includes('不是读回来的内容'));
+  assert.ok(renderSynthesis('好。')[0].includes('没有核实过'));
+});
+
+test('最后一步被截断时，半句话不进回答', async () => {
+  // A truncated step carries a prefix of a sentence and nothing says where the rest went. The rule is not
+  // new — the chat path already refuses to show one — and it has to hold here for a reason the label
+  // creates: a reader told these are Hikari's own words is being told the sentence is whole, and the half
+  // that is missing would be missing exactly there, underneath a claim that it is complete.
+  const h = harness({
+    script: [
+      callsTo(toolCall('c1', WORK)),
+      { content: '你之前说过先在一台机器上跑通，', toolCalls: [], truncated: true },
+    ],
+    focus: [],
+    decisions: [DEPLOYMENT_DECISION],
+  });
+
+  const reply = await h.answerer.answer('我们之前确认的部署原则是什么？');
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(reply.lines, renderFocus([]), '半句话不出现在回答里');
+});
+
+test('因为调用没执行而结束的那一步，写的话不算数', async () => {
+  // The loop's other exit. That step both wrote and called, and the assistant message pushed back onto the
+  // array carries no content — the model is deliberately not told it said something no human saw. A
+  // sentence the loop hid twice on the way in is not one to surface on the way out, so the capture hangs
+  // off the grounded exit specifically and not off the loop's ending.
+  //
+  // A repeated capability is what reaches that exit, and the repeat is the fixture: the second step asks
+  // for the focus it already read.
+  const h = harness({
+    script: [
+      callsTo(toolCall('c1', WORK)),
+      { content: '你之前说过先在一台机器上跑通。', toolCalls: [toolCall('c2', WORK)], truncated: false },
+    ],
+    focus: [],
+    decisions: [DEPLOYMENT_DECISION],
+  });
+
+  const reply = await h.answerer.answer('我们之前确认的部署原则是什么？');
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(reply.lines, renderFocus([]), '被拒绝的重复读取那一步，说的话不出现');
 });
 
 test('没被确认过的话在重启之后不回来', { skip: NO_PIPES }, async (t) => {

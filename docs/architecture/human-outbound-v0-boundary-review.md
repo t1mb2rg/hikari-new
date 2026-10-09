@@ -605,6 +605,12 @@ export interface GroundedBlock {
 
 用户 §十一：Language 不得把「new failed CI occurrence」扩写成「你的项目出大问题了」。研究现有 deterministic grounded answer 机制能否复用，或是否需要新的 Language-private path。**不要重新打开完整 Grounded LLM Expression 除非它真的成为 blocker。**
 
+> **指针（加在这一行之下，上面的原文不改，依据 `governance-rules-v1.md` R7.2）**：`docs/architecture/language-grounded-synthesis-v0-boundary-review.md`（LANGUAGE GROUNDED SYNTHESIS v0）触碰了本行末尾那个**例外子句**，因此这里必须留下指针，且必须**如实**说明它做了什么、没有做什么。
+>
+> 该轮**没有**打开「**完整**」的 Grounded LLM Expression：它交付的**不是**「让模型解释已读到的事实」这个通用能力（`language-tool-use-loop-v1.md` §11 里那一项所预留的东西），而是**一条边**——只在**这一问的 prompt 确实把已确认材料列了出来**（问的是页面，不是库房）、该步未被截断、且模型确实说了话三者同时成立时，模型自己那句话才以固定标签引导的一节接在**所有 owner 渲染块之后**；没有记录时这条边整条不存在，回答与改动前逐字节相同。该轮据此把自己的判级定为 **L2**（移动一条 SHOULD 默认），并明确声明**零 MUST 被触及**。
+>
+> **但例外子句的解除权不在那一轮手里，也不在本文作者手里。** 子句写的是「除非它真的成为 blocker」，那是**一句人类裁决**：真实端点上混合问题只能答一半已被稳定复现（该评审 §1.3 / §0.3），**「这是否达到 blocker」这个判断是 Human 的**，不是从证据自动得出的结论。该评审 §7.4 与 §11 据实记录了这一分工，并把这个问题**上报**而非自行批准。回滚路径也写在那里：删掉 `SYNTHESIS_LABEL` / `renderSynthesis` / 捕获块并还原 prompt 的四处替换，即回到该轮之前。本文 §19.4 清单里那一项的指针见下。
+
 ### 10.1 现有机制能否复用 —— 能，而且这是最强的答案
 
 `express.ts` 的整个纪律就是这件事：
@@ -1052,6 +1058,8 @@ Windows 的 `ToastNotification` 确实支持 `Tag` / `Group`，可用于**平台
 - 没有打开上游 Repository CI Attention（用户 §十五 逐字禁止）
 - 没有重新打开 Memory（记忆 `memory-reactivation-v0-blocked` 封箱）
 - 没有重新打开完整 Grounded LLM Expression（用户 §十一 逐字禁止，且 §10.2 证明第一片不需要）
+
+> **指针（R7.2，原文不改）**：`LANGUAGE GROUNDED SYNTHESIS v0` 触碰了本条所援引的**例外子句**，因此上面的「没有重新打开**完整**的 Grounded LLM Expression」需要一句限定：那一轮打开的是**一条边**（有记录 + 未截断 + 模型确实说了话，三者同时成立），**不是**「完整」那个能力，其判级为 L2 且声明零 MUST 被触及；例外子句是否解除，是 **Human 的裁决**，该评审 §7.4 / §11 上报而**没有**自行批准。详见 §10 之下那条指针。
 
 ### 19.5 READY 的条件
 

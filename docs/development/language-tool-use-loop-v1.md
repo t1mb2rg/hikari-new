@@ -12,6 +12,10 @@
 
 ---
 
+> **口径更新（LANGUAGE GROUNDED SYNTHESIS v0 之后）**：§8 的 Speech Sovereignty 第三条「grounded answer **仅由** deterministic renderer 产生」，以及 §11「明确不做」清单里的 **`Grounded LLM Expression`** 一项，**已由 `docs/architecture/language-grounded-synthesis-v0-boundary-review.md` 收窄**。收窄的形状是**一条边，不是一个能力**：在**这一问的 prompt 确实把已确认材料列了出来**（问的是**页面**，不是库房——两份条件的区分见那份评审 §5.1）、**该步未被截断**、**模型确实说了话**三个条件同时成立时，模型自己那句话会以**固定标签引导的一节**接在**所有 owner 渲染块之后**（`express.ts` 的 `SYNTHESIS_LABEL` / `renderSynthesis`；判定点写在 `answer.ts` 的门那一处）。**默认没有变**——读取仍然就是回答的全部；没有记录时这条边**整条不存在**，回答与本次改动前逐字节相同（TEST F：真实端点上 4/4 走 `answered` 且合成段缺席）。**`renderAnswer` 一个字节未改**，它的两个主动播报调用方（`desktop-return-attention`、`repository-ci-attention`）因此不受影响。§8 的四条不变量里，**第一条与第四条未动**（`tool_calls` 非空时 content 不进回答、Domain Plugin 不获得 user-facing speaking turn），**第二条与第三条已被收窄**——这两条就是本段开头说的那两处，逐条指针加在 §8 之后，本文不改写它们的原文。§3 的终止不变量（含「重复读取不产生第二次 Service 读」）、§4 的批完整性、§5 的 tool result 形状、§6 的 referent、§7 的四个 outcome 同样未动。`src/runtime/**` 与两个 Service contract 再次一个字节未改。**本节是这份记录里唯一一处 §8 被收窄的地方**，收窄的判级、授权来源与它没有触碰任何 MUST 的论证写在上面那份评审的 §7。
+
+---
+
 > **口径更新（thinking tool loop 之后）**：`reasoning_effort` 的闭集由 `'none'` 扩为 **`'none' | 'high'`**，并且**在本构建内部实现了 `reasoning_content` 的单次 interaction 回放**——见 §15。上面第二条 blockquote 与 §11、§13 第五层里「本构建不拥有 reasoning trace 的生命周期」「不实现 `reasoning_content` 的回放」的说法，**作为当时的事实仍然成立，作为现在的口径已被取代**：被取代的不是「不拥有」，而是「因此不能支持 thinking 模式」。生命周期仍然只有一个 interaction，仍然不是 Hikari 的概念，仍然没有 ReasoningService / trace / Chronicle 条目 / Memory——变的是**它可以在一次交互内被原样带回**，而这正是 thinking 端点做多轮 tool calling 的前提。同一轮里 `MODEL_MAX_TOKENS` 由 512 改为 **4096**（附单变量实测），因此 §2 的线上形状样本里的 `max_tokens=512` 是**改动前的实测值**，形状逐字未变、只有这一个数字不同；§13 第六层那份 A/B harness 的「生产值仍是 512」前提**随之失效**，该文件现在会按其自身设计失败并报告前提移动，这是**已知且有意保留**的，见 §15.10。§3 的终止不变量、§4 的批完整性、§5 的 tool result 形状、§6 的 referent、§7 的四个 outcome、§8 的 Speech Sovereignty、§11 的「明确不做」**均不受影响**，`src/runtime/**` 与两个 Service contract 再次一个字节未改。
 
 ---
@@ -219,6 +223,10 @@ failed     本构建没能走到一个结论——模型够不到，或者回答
 - grounded answer **仅由 deterministic renderer 产生**；
 - **Domain Plugin 不获得 user-facing speaking turn**。
 
+> **后两轮的口径更新，指针只加在这里，逐条原文一律不改**（依据 `governance-rules-v1.md` R7.2：「解除 / 收窄一条冻结时不要求改写源冻结的正文」）：
+>
+> - 第二条与第三条**已被收窄**，收窄者是 `docs/architecture/language-grounded-synthesis-v0-boundary-review.md`。收窄的**不是**「grounded 后可以随便说话」，而是**一条有记录的边上的一句话**：读取仍然是回答的全部，除非这一问的 prompt 确实列出了已确认材料、该步未截断、且模型确实说了话——此时它那句话跟在所有渲染块之后，由固定标签标明它不是读回来的内容。**第一条与第四条未被触碰**，因此「model prose 从不与一段 reading 混排、从不夹在两段 reading 之间」仍然成立。
+
 grounded 状态下的合法控制结果只有两种：
 
 ```text
@@ -233,6 +241,8 @@ grounded 状态下出现普通散文：**不进 answer / 不进 fact / 不进 di
 本机实测：stub 在 grounded 态故意说「（读了之后我想评论两句，但这段话不该出现在答案里。）」，两次 `stdout` 里都**没有**这句话。
 
 **Grounded LLM Expression**（让模型解释已读到的事实）**明确不在本轮**，记录为后续独立 slice。
+
+> **该 slice 已经到来，标记为 `LANGUAGE GROUNDED SYNTHESIS v0`**，收窄者为 `docs/architecture/language-grounded-synthesis-v0-boundary-review.md`。它交付的**不是**上面那句所预留的通用能力（「让模型解释已读到的事实」），而是**一条边**：只在有已确认材料时存在，只接在所有渲染块之后，且由固定标签标明那段话不是读回来的内容。**「解释已读到的事实」这件事本身仍然没有出口**——本轮没有回答 `answer.ts` 提出的那个设计问题（凭什么一句流畅的转述不是第二意见），而是用标签把这个问题的**答案责任**交回给读者。判级为 L2（移动一条 SHOULD 默认），零 MUST 被触及，论证见那份评审 §7。
 
 ---
 
@@ -285,6 +295,8 @@ Authority / Approval / policy framework（两个 capability 都是只读）
 Global Context / Memory / Chronicle 条目 / transcript / reasoning trace
 Grounded LLM Expression
 ```
+
+> **上面这张表里的 `Grounded LLM Expression` 一项，已由 `docs/architecture/language-grounded-synthesis-v0-boundary-review.md` 收窄。** 表里的其余各项**全部仍然成立**，一个字都没有动。被收窄的只有那一条，且收窄的形状是**一条边**而不是解冻：默认仍是「读取就是回答的全部」，没有记录时这条边整条不存在。§8 末的指针与本文开头的口径更新记录同一件事。
 
 `src/runtime/**` 本轮**一个字节未改**。`LANGUAGE_EXPOSURES` 仍然是**写出来的两个字面条目**，没有登记、没有发现、没有遍历 Runtime。
 

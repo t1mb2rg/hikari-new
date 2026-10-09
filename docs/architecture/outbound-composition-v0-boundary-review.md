@@ -743,6 +743,8 @@ Domain Result → Presentation → RenderedMessage → Transport
 
 **「形成」是这条不变量的对象，不是「搬运」。** 在 B 里，形成文字的是 owner 的 renderer + Language 的 `renderAnswer`；consumer 拿到的是成品，它只有搬运的手，没有造句的嘴。
 
+> **指针（R7.2，原文不改）**：上面枚举里引用的 §8 **第二条与第三条**，已由 `docs/architecture/language-grounded-synthesis-v0-boundary-review.md` 收窄（有已确认材料 + 该步未截断 + 模型确实说了话时，模型那句话以固定标签引导的一节接在**所有 owner 渲染块之后**；没有记录时这条边整条不存在）。这**不改变本节结论的方向**——第四条不变量未动，「Domain Plugin 不获得 user-facing speaking turn」仍然成立，consumer 仍然只有搬运的手——但它使本节证据链里的**一条前提不再是无条件句**：「句子只能由 renderer 产生」现在读作「**reading** 只能由 renderer 产生，模型自己的话可以跟在其后，但必须待在一节明说它不是 reading 的标签之下」。后续任何一轮若再引用 `:219` 那一行，都必须用收窄后的措辞。
+
 **但这个读法与紧邻的上一份 review 相反，必须正面对上，不能装作没看见。** `repository-ci-attention-v0-boundary-review.md:559` 逐字：
 
 > **注意这条的措辞**：它不区分「主动说」与「被动说」——它说的是 Domain Plugin **不获得 speaking turn**。

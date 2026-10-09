@@ -11,7 +11,8 @@
 // thing wearing the same spelling.
 //
 //   chatted    nothing was read. The model talked to the human and that conversation is the answer.
-//   answered   at least one capability was read, and the answer is what was read.
+//   answered   at least one capability was read, and the answer is what was read — followed, when this
+//              person has confirmed statements on file, by one labelled section of the model's words.
 //   recorded   a statement the human explicitly confirmed was written down. Nothing was read and no
 //              model was asked anything; the act *was* the writing.
 //   refused    this build understood the *request* and will not answer *that*: the question is empty,
@@ -22,9 +23,12 @@
 //
 // `chatted` is not folded into `answered`, and the reason is the whole reason it exists. An answer that
 // quotes Hikari's own observations and an answer that is the model making conversation are different
-// kinds of thing, and only one of them is entitled to be believed about the machine. A `answered` reply
-// is a reading; a `chatted` one is a sentence, and a client that had to guess which it was holding would
-// be guessing about exactly the distinction this surface exists to keep. The separation is enforced
+// kinds of thing, and only one of them is entitled to be believed about the machine. A `chatted` reply is
+// the model's words and nothing else; an `answered` reply leads with readings, and whatever the model
+// wrote in it sits after every one of them under a label saying whose words those are. A client that had
+// to guess which it was holding would be guessing about exactly the distinction this surface exists to
+// keep, and the guessing would be worst exactly where it matters — a `chatted` reply about the machine is
+// a model talking, and it can only be told from a reading by the outcome. The separation is enforced
 // upstream rather than here: the loop only produces `chatted` when it read nothing at all, so the
 // outcome cannot be chosen independently of what happened.
 //
@@ -33,8 +37,9 @@
 // was written. A client that read `recorded` as a variant of `answered` would be reading "Hikari looked
 // something up" out of "Hikari now remembers what you told it", which is the second statement this whole
 // surface exists to keep out of the first. It also has no line a model wrote and no line an owner
-// rendered — both of the other success paths are made of one of those two, and this one is made of
-// neither, so `recorded` is the outcome a client can least afford to guess at.
+// rendered — the other two success paths are made of those, either alone or in the labelled order
+// described below, and this one is made of neither, so `recorded` is the outcome a client can least
+// afford to guess at.
 //
 // `refused` and `failed` are not two spellings of "no". A refusal is Hikari saying it does not answer
 // this; a failure is Hikari saying it did not finish. Folding them together would tell a human their
@@ -86,11 +91,17 @@ export interface LanguageRequest {
  * five happened, and `outcome` says exactly that.
  *
  * Which lines belong to which outcome is the load-bearing part. A `chatted` reply's lines are model
- * prose and nothing else; an `answered` reply's lines are owner-rendered readings and contain no model
- * prose at all, not even a joining sentence. A `recorded` reply's lines are neither — they are this
- * plugin's own fixed words about what it did with what it was given, the same kind of line `refused` and
- * `failed` carry. There is no outcome under which model prose and a reading are mixed, and that is by
- * construction rather than by convention — see the one-way door in `answer.ts`.
+ * prose and nothing else. An `answered` reply's lines are owner-rendered readings; when this person has
+ * confirmed statements on file the reading may be followed by one more section, and that section is the
+ * model's own words under a fixed label that says so. A `recorded` reply's lines are neither — they are
+ * this plugin's own fixed words about what it did with what it was given, the same kind of line
+ * `refused` and `failed` carry.
+ *
+ * What is still true, and is the property a client may rely on: **model prose is never mixed into a
+ * reading.** It is never laid between two readings and never takes a reading's place. When it appears in
+ * an `answered` reply it appears after every reading, in its own section, under a label that leads it.
+ * That is by construction rather than by convention — see the one-way door in `answer.ts`, which is
+ * where the single narrow exception to the door is written down and where its three conditions are.
  *
  * No outcome carries the recorded statement back. A `recorded` reply says the writing happened and says
  * nothing else; a client that wanted to show the human what was kept has the text it just sent.

@@ -482,6 +482,8 @@ Transport owns delivery
 2. **Language 不得重新判断用户是否真的「回来了」。** 它拿到事实、说话；判断属于 decider。反过来，decider 也不得把「判断」偷偷塞进 owner renderer 之外的任何地方。
 3. **Domain Plugin 不获得 user-facing speaking turn 是结构不变量**（`docs/development/language-tool-use-loop-v1.md:213-220`，由自动化测试证明）。
 
+> **指针（R7.2，原文不改）**：所引 §8 的**第二条与第三条**已被 `docs/architecture/language-grounded-synthesis-v0-boundary-review.md` 收窄；**本条引用的第四条未动**，上面三条推论不受影响。另有一件与本条直接相关的事实值得写下：该轮的合成段**只追加在 `answer.ts` 的问答返回值上**，`renderSpokenOccurrence` / `renderSpokenReturn` 两条主动播报路径**不经过它**——今天唯一阻止它被接到播报路径上的东西是 barrel 没有导出 `renderSynthesis`，该评审 §9 已把「不要接上去」写成明确不做的一项。
+
 **§8 的 B 与 C-退化版恰好是这条不变量在出站方向上的反面**：Domain 通过通用材料/自带 words，重新获得了 speaking turn 的**内容**。它没有打破「deterministic renderer 产生 grounded answer」的字面（排版仍是确定性的），但丢掉了「**renderer 是 owner 的**」这半句——而那正是 `contracts.ts:39-40` 用来定义安全的半句。
 
 ---

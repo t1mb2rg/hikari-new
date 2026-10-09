@@ -28,8 +28,15 @@
 //
 // It does not add. Every line is a fixed label and values taken from a contract verbatim, and the only
 // free text that reaches a line is text a human wrote (a work focus designation), text an owner already
-// rendered, or — in the one new case below — the model's own conversational reply, which is not a claim
-// about Hikari and is never mixed with one that is.
+// rendered, or — in the two cases below — the model's own words. Those two cases are held apart, and
+// the distance between them is the whole of what this file promises about them. `renderChat` prints
+// model words as the entire answer, with no reading beside them for a sentence to be mistaken for, and
+// adds nothing at all — not even a label. `renderSynthesis` prints model words *after* a reading, under
+// a fixed label that says they are not one. That label is this file's voice and it is the only sentence
+// this file contributes there; what it states is a fact about these lines and not about the machine —
+// that they are not readings and that nothing here verified what they say — so neither section asserts
+// anything about what Hikari observed. Neither is ever laid between two readings either: the label leads
+// its section, and that section follows every block rather than joining any.
 //
 // What used to be here and is not: the lead-in. Every answer opened with a sentence in this file's
 // words saying which question had been understood ("你问的是桌面现在是什么状态。"). It is gone, and its
@@ -58,6 +65,29 @@ import type { LanguageExposure } from './exposure.js';
 
 const FOCUS_HEADER = '你当前明确关注：';
 const FOCUS_NONE = '你当前还没有明确声明任何关注对象。';
+
+// The label the composed section is printed under. Fixed, and it does not vary with what the model
+// wrote: a label that softened when the sentence looked harmless would be this file forming an opinion
+// about it, which is the first thing this file is not allowed to do.
+//
+// It says what the lines are *not*, in one clause per source, because the last is the only place a
+// reader learns that a sentence about their own past words is not the record. Saying "not a reading"
+// alone would leave the stronger-looking claim — this person's own words, therefore a fact about this
+// person — unmarked, and `principles.md` §12 is explicit that an inference must not be promoted into a
+// fact nobody questions. The middle clause marks the whole section unverified rather than only the part
+// that mentions the record, because nothing here can tell those parts apart: a sentence inferred from a
+// reading is exactly as unverified as one quoted from a statement, and a label that marked only the
+// second would be claiming a distinction this build does not have.
+//
+// It is one line, and it has to stay a short one. A terminal clips every line to its width and reserves
+// a column for its own ellipsis, so at `DEFAULT_RENDER.columns` — 80 — this label loses its tail if it
+// is wider than 79 columns, and the tail is the part that says the material was never verified. `clip`
+// is the TUI's, but the sentence that gets cut is this file's, which is why the length is stated here
+// and why `test/language.test.mjs` measures it with the terminal's own `displayWidth` instead of a
+// second counter: shortening this label is free, and widening it fails a test rather than a narrow
+// window.
+const SYNTHESIS_LABEL =
+  '（下面不是读回来的内容，Hikari 自己说的、没有核实过的话；你以前说的也一样。）';
 
 /**
  * One capability's reading, rendered, with the name it was read under.
@@ -110,6 +140,41 @@ export function renderAnswer(blocks: readonly GroundedBlock[], contextUsed: Dial
   // inherit the guarantee by accident. `oneLine` does not touch a backslash, so the second pass is a
   // no-op on lines that already went through the first.
   return lines.map(oneLine);
+}
+
+/**
+ * What a human is shown when the model, having read something, also said something.
+ *
+ * A grounded answer is the readings and — when this person's own confirmed words bore on the question —
+ * one more section: the model's sentence putting what it read together with what was said before. The
+ * label above leads it and every line of the model's text follows.
+ *
+ * The label claims provenance of *form* and not of derivation, and that distinction is the whole reason
+ * this function is allowed to exist. "These lines are not a reading" is a fact about this return value,
+ * which this file can guarantee. "These lines are an inference over the material above" would be a claim
+ * about where each sentence came from, and nothing here checks that per sentence — a model given a list
+ * of designations can write "你正在写 Hikari", which is an inference over no material at all. The loop
+ * cannot ask the question that would settle it (`answer.ts` records why), so the label says the one
+ * thing that is true of every line it precedes, and asks a reader to weigh these as sentences rather
+ * than as readings.
+ *
+ * Escaped exactly as `renderChat` escapes, and for a heavier reason. The model is not a trusted source
+ * of layout either: a reply containing a newline and a colon would otherwise print a line shaped like a
+ * judgement line, in an outcome a client is entitled to treat as owner-rendered. The split happens
+ * before the escape and not after, which is the order `tui-render.ts` records having once had backwards.
+ *
+ * It stays out of this module's barrel, and that is deliberate rather than incidental. The two
+ * functions the barrel does export from this file are the proactive spoken ones, and the exception this
+ * function exists under is scoped to *answering a question*: the material it composes is a record and a
+ * reading, brought together because somebody asked about both. A CI failure or a return notice is not an
+ * answer to anything — nobody asked — so there is no question for a composed section to be about, and
+ * appending one there would attach the model's sentence to a statement the owner formed on its own.
+ * `renderSpokenOccurrence` and `renderSpokenReturn` therefore build their lines through `renderAnswer`
+ * and can never reach this function. The barrel is what makes that a property of the public surface
+ * rather than a note to remember: a caller holding the plugin's exports has no name to call.
+ */
+export function renderSynthesis(spoken: string): readonly string[] {
+  return [SYNTHESIS_LABEL, ...spoken.trim().split(/\r\n|\r|\n/).map(oneLine)];
 }
 
 // The name the block below is read under. It is bookkeeping and never reaches a line — `GroundedBlock`
@@ -182,11 +247,14 @@ export function renderSpokenReturn(occurrence: DesktopReturnOccurrence): readonl
 /**
  * What a human is shown when the model simply talked.
  *
- * The model's reply, line for line, and nothing else. This is the one path where model text is shown to
- * a human, and the reason it is safe is that it is the whole answer: nothing here is combined with a
- * reading, so there is no reading for a sentence to be mistaken for. The moment the loop reads
- * anything, this function stops being reachable in that interaction — see `answer.ts`, where the chat
- * path is guarded by "no blocks were read".
+ * The model's reply, line for line, and nothing else. This is one of the two paths where model text
+ * reaches a human and the weaker of the two claims: the words are the whole answer, so there is no
+ * reading here for a sentence to be mistaken for. The moment the loop reads anything, this function
+ * stops being reachable in that interaction — see `answer.ts`, where the chat path is guarded by "no
+ * blocks were read" — and what a sentence written beside a reading goes through instead is
+ * `renderSynthesis`, which pays for its own existence by keeping every reading out of its section and
+ * its section out of theirs. Two functions rather than one with a flag, because the two promises are
+ * different promises and a reader of either should not have to hold the other in mind.
  *
  * It is escaped like everything else. The model is not a trusted source of layout either: a reply
  * containing a newline and a colon could otherwise print something shaped like a Hikari line.
