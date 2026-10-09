@@ -316,7 +316,7 @@ Human Delivery 仍是 single subscriber，TUI 不抢、不踢、不要求 fan-ou
 
 `docs/architecture/human-surface-v0-implementation-boundary-freeze.md` §12 的第一条（「不做 Human → Hikari 对话」）已被 `human-surface-language-client-v0-implementation-boundary-freeze.md` 解除；原文按 R7.2 **保留不改**，两份文档之间已有双向指针。
 
-**这个门禁自 `a2d701f` 起失效过，已在 C# CONFORMANCE GATE RESTORATION 修复。** 上面那句「C# 会红，而不是静默漂移」的前提曾随改名消失：C# 侧探的 `dist/cli/ask.js` 不再存在，该前提是**四个测试类共用**的，因此**17 个用例全部 skip**（`DeliveryEndpointPathTests` 3 + `LanguageConformanceTests` 6 + `LivePipeTests` 4 + `LiveLanguageTests` 4），而 skip 不算失败。今天的探测常量与 helper 的 import 都指向 `dist/cli/language.js`，实测 `69 passed, 0 failed, 0 skipped`。失效期的实测与后果见 §11.7，死路径引用的完整清单见 §12.1 第 9 行。
+**这个门禁自 `a2d701f` 起失效过，已在 C# CONFORMANCE GATE RESTORATION 修复。** 上面那句「C# 会红，而不是静默漂移」的前提曾随改名消失：C# 侧探的 `dist/cli/ask.js` 不再存在，该前提是**四个测试类共用**的，因此**17 个用例全部 skip**（`DeliveryEndpointPathTests` 3 + `LanguageConformanceTests` 6 + `LivePipeTests` 4 + `LiveLanguageTests` 4），而 skip 不算失败。今天的探测常量与 helper 的 import 都指向 `dist/cli/language.js`，本机实测 `69 passed, 0 failed, 0 skipped`。**这条修复尚未经过 CI**：本地领先 `origin/main`（`5dc1bc1`）十三个提交，CI 在 `a2d701f` 及其后的每一个提交上都是 0 次运行。失效期的实测与后果见 §11.7，死路径引用的完整清单见 §12.1 第 9 行。
 
 ---
 
@@ -541,14 +541,14 @@ Tool/Capability Registry  无；暴露面是手写的冻结数组
 4. **assessed Event 的订阅者数为 0。** 它可以被持续发布，但还没有语义上的 Consumer。（已知限制 5）
 5. **Chronicle v1 没有完整性标记** —— 因此「fact 行被删光、header 完好」的 store 与全新 store 在结构上无法区分。（随 Phase 2 进入下一阶段的格式限制）
 6. **三个 live harness 自 `a2d701f` 起无法运行**（TypeError），未修；`language-reasoning-depth.live.test.mjs` 按设计会因前提移动而失败（守卫在正常工作）。
-7. **C# 一致性门禁自 `a2d701f` 起失效——而且是 skip，不是 fail。（已修复，见本条末）** `HumanSurface.Tests/NodeBridge.cs:22` 探测 `dist/cli/ask.js`、`node-helpers/conformance.mjs:29` 直接 import 它；该文件在 `a2d701f` 随 `src/cli/ask.ts` → `src/cli/language.ts` 一起改名，今天的真实产物是 `dist/cli/language.js`。实测该 import 返回 `ERR_MODULE_NOT_FOUND`。`NodeBridge.Available` 因此恒为 false，**17 个用例全部走 `Skip`**（`Available` 是四个测试类共用的前提，不是 `LanguageConformanceTests.cs:56-67` 一处），而 `TestRun` 的退出码只看 `_failed`、不看 `_skipped`（`TestRun.cs:57`）——**CI 保持绿色**（`.github/workflows/runtime-tests.yml:37,72` 确实跑这个工程）。skip 给出的理由是「run npm run build」，指向一个永远不会产生该文件的补救。
+7. **C# 一致性门禁自 `a2d701f` 起失效——而且是 skip，不是 fail。（已修复，见本条末）** `HumanSurface.Tests/NodeBridge.cs:22` 探测 `dist/cli/ask.js`、`node-helpers/conformance.mjs:29` 直接 import 它；该文件在 `a2d701f` 随 `src/cli/ask.ts` → `src/cli/language.ts` 一起改名，今天的真实产物是 `dist/cli/language.js`。实测该 import 返回 `ERR_MODULE_NOT_FOUND`。`NodeBridge.Available` 因此恒为 false，**17 个用例全部走 `Skip`**（`Available` 是四个测试类共用的前提，不是 `LanguageConformanceTests.cs:56-67` 一处），而 `TestRun` 的退出码只看 `_failed`、不看 `_skipped`（`TestRun.cs:57`）——CI 会保持绿色（`.github/workflows/runtime-tests.yml:37,72` 确实跑这个工程）。**但要说准确：CI 并没有真的在这个提交上跑过。** 实测 `origin/main` 停在 `5dc1bc1`（2026-09-29，其 CI run 为 success），本地领先 13 个提交，`gh run list` 在 `a2d701f`、`4143499`、`ada401c`、`81504db` 上各查到 **0 次运行**。所以「CI 会绿」是**由本机实测推出的机制判断**（修复前本机 `52 passed, 0 failed, 17 skipped` exit 0），**不是 CI 上观测到的结果**；这十三轮改动至今没有经过任何 CI。skip 给出的理由是「run npm run build」，指向一个永远不会产生该文件的补救。
 
     **后果不是「少测了一点」，是「按设计该红的地方不会红」**：`human-surface-language-client-v0-implementation-boundary-freeze.md` 的核心论据是「capability 增加导致 owner 的界变化时，**C# 会红，而不是静默漂移**」——这条论据**当时不成立**，C# 侧正在静默漂移，且漂移不会被任何本地或 CI 运行发现。
 
     **修复（C# CONFORMANCE GATE RESTORATION）。** 两处路径改指 `language` 系。真正把门禁补上的是 `TestRun.Unrunnable` 新增的 `brokenTree` 轴——**「机器跑不了」与「仓库坏了」是两种缺失，只有后者计为失败**：无 node、或 `dist/` 从未构建 → 仍 skip（新 clone 不该红）；node 可跑、`dist/` 已构建、而模块不在 → FAIL。实测：修复前 `52 passed, 0 failed, 17 skipped` exit 0；修复后 `69 passed, 0 failed, 0 skipped` exit 0。负向探针四次：N1 让两侧数值真分歧 → 1 failed、exit 1；N2 复现 `a2d701f` 形状（模块移走）→ 17 failed、exit 1；N3 `dist/` 整体未构建 → 17 skipped、exit 0；N4 机器上 node 不可用 → skip 且 exit 0（含模块缺失的 N4b）。**仍未覆盖**：探测把三个模块当作同一前提，模块缺失会连带跳过并不需要它的用例。
 
 8. **PowerShell 异步子进程单次观测成本 370–674 ms** —— 感知每次观测要付这个代价（随 Phase 3 进入下一阶段）。
-9. **CI 上看不见的几处**：命名管道相关断言在 `ubuntu-latest` 上被 skip（`NO_PIPES` 轴，涉及 `human-delivery` / `desktop-session-observe` / `language` / `repository-ci-relevance` / `resident-control` / `work-focus` / `tui`）；凭据与状态行泄漏 canary 只在本机绿；live harness 的判定逻辑没有离线单元测试约束。**这一条只数「本机绿、CI skip」；第 7 条比它更进一步——那条在 CI 上也 skip。**
+9. **CI 上看不见的几处**：命名管道相关断言在 `ubuntu-latest` 上被 skip（`NO_PIPES` 轴，涉及 `human-delivery` / `desktop-session-observe` / `language` / `repository-ci-relevance` / `resident-control` / `work-focus` / `tui`）；凭据与状态行泄漏 canary 只在本机绿；live harness 的判定逻辑没有离线单元测试约束。**这一条只数「本机绿、CI skip」；第 7 条比它更进一步——那条在 CI 上也 skip。** 两条都按**工作流定义**推出来的，不是 CI 上的观测：截至本条写作时 CI 的最近一次运行停在 `origin/main`（`5dc1bc1`），本地领先的十三个提交一次也没跑过（见第 7 条末）。
 10. **`language.decision-confirmed` 今天只有 CLI 写入者**，它的读者面尚未闭合。
 
 ---
