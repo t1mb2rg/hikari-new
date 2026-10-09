@@ -71,9 +71,8 @@ internal static class DeliveryEndpointPathTests
 
         if (!NodeBridge.Available)
         {
-            run.Skip(PathName, NodeBridge.UnavailableReason);
-            run.Skip(EncodeName, NodeBridge.UnavailableReason);
-            run.Skip(DecodeName, NodeBridge.UnavailableReason);
+            run.Unrunnable([PathName, EncodeName, DecodeName], NodeBridge.UnavailableReason,
+                brokenTree: NodeBridge.BrokenTree);
             return;
         }
 

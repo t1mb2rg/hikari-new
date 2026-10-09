@@ -53,16 +53,12 @@ internal static class LanguageConformanceTests
 
     public static async Task RegisterAsync(TestRun run)
     {
-        var reason = NodeBridge.UnavailableReason;
-
         if (!NodeBridge.Available)
         {
-            run.Skip(PathName, reason);
-            run.Skip(RequestName, reason);
-            run.Skip(FramingName, reason);
-            run.Skip(ReplyName, reason);
-            run.Skip(TimeoutName, reason);
-            run.Skip(BoundName, reason);
+            run.Unrunnable(
+                [PathName, RequestName, FramingName, ReplyName, TimeoutName, BoundName],
+                NodeBridge.UnavailableReason,
+                brokenTree: NodeBridge.BrokenTree);
             return;
         }
 

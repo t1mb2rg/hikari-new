@@ -10,7 +10,8 @@ namespace HumanSurface.Tests;
 /// The conformance cases are the reason this exists: they compare the C# implementation against the
 /// real JavaScript one, which means the suite has to find `dist/` and a node binary. When either is
 /// missing the cases skip with that as the stated reason, rather than passing on an assumption that
-/// the two agree.
+/// the two agree — and `BrokenTree` is what keeps that sentence honest, by separating the machine that
+/// cannot run these cases from the repository that has been built and is missing a module anyway.
 /// </remarks>
 internal static class NodeBridge
 {
@@ -19,30 +20,49 @@ internal static class NodeBridge
     // something that is already there.
     private const string DeliveryModulePath = "human-delivery/index.js";
     private const string LanguageModulePath = "language/index.js";
-    private const string AskModulePath = "cli/ask.js";
+
+    /// <remarks>
+    /// The client's own module and not the plugin's: `REPLY_TIMEOUT_MS` and `READ_AND_FRAMING_BUDGET_MS`
+    /// belong to the client that waits, so reading them out of the language plugin would be asking the
+    /// wrong file to agree with itself. This was `cli/ask.js` until the ask client was split from the
+    /// command that calls it — the constant follows the file, and a path left behind by such a split
+    /// reads as a missing build unless `BrokenTree` is what decides.
+    /// </remarks>
+    private const string LanguageClientModulePath = "cli/language.js";
 
     private static readonly Lazy<Environment> Probed = new(Probe);
 
     public static bool Available => Probed.Value.Missing.Count == 0 && Probed.Value.NodeWorks;
 
+    /// <summary>
+    /// Whether the absence is the repository's doing rather than the machine's.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The absence the probe reports has three possible authors and only one of them is worth failing
+    /// over. A machine with no node cannot run these cases whatever the tree looks like; a tree that
+    /// was never built cannot run them either. Both are the environment saying no, and for both a skip
+    /// is the honest answer — a fresh clone that has not been built yet is not a broken repository.
+    /// </para>
+    /// <para>
+    /// What is left is the one case nothing but the repository can explain: node runs, `dist/` exists,
+    /// and a module the suite reaches into is still not in it. A suite that skipped *that* would print
+    /// the defect as its reason for not looking, and then exit zero.
+    /// </para>
+    /// </remarks>
+    public static bool BrokenTree =>
+        Probed.Value.NodeWorks && Probed.Value.Built && Probed.Value.Missing.Count > 0;
+
     public static string UnavailableReason => !Probed.Value.NodeWorks
         ? "no node on PATH"
-        : $"the built dist/{string.Join(" and dist/", Probed.Value.Missing)} is missing — run npm run build";
+        : Probed.Value.Built
+            ? $"dist/ is built but contains no {string.Join(" and no ", Probed.Value.Missing)}, so the "
+              + "build is not what is missing and re-running it will not produce them"
+            : $"dist/{string.Join(" and dist/", Probed.Value.Missing)} is not there — run npm run build";
 
     public static string? DeliveryModule => Module(DeliveryModulePath);
 
     public static string? LanguageModule => Module(LanguageModulePath);
-
-    /// <summary>
-    /// The module that owns the client's wait bound, which is not the language plugin.
-    /// </summary>
-    /// <remarks>
-    /// `REPLY_TIMEOUT_MS` lives in `src/cli/ask.ts` beside the client it sizes, so reading the real one
-    /// means reading a module the Surface does not otherwise care about. That is the point: the number
-    /// being pinned is the *client's*, and asking the server's module for it would be asking the wrong
-    /// file to agree with itself.
-    /// </remarks>
-    public static string? AskModule => Module(AskModulePath);
 
     public static string? RepositoryRoot => Probed.Value.Root;
 
@@ -115,17 +135,17 @@ internal static class NodeBridge
 
         if (root is null)
         {
-            missing.AddRange([DeliveryModulePath, LanguageModulePath, AskModulePath]);
-            return new Environment(null, missing, false);
+            missing.AddRange([DeliveryModulePath, LanguageModulePath, LanguageClientModulePath]);
+            return new Environment(null, missing, false, false);
         }
 
-        foreach (var relative in new[] { DeliveryModulePath, LanguageModulePath, AskModulePath })
+        foreach (var relative in new[] { DeliveryModulePath, LanguageModulePath, LanguageClientModulePath })
         {
             var path = Path.Combine(root, "dist", relative.Replace('/', Path.DirectorySeparatorChar));
             if (!File.Exists(path)) missing.Add(relative);
         }
 
-        return new Environment(root, missing, NodeRuns());
+        return new Environment(root, missing, NodeRuns(), Directory.Exists(Path.Combine(root, "dist")));
     }
 
     // Walks up from the test assembly's own directory. A depth count would be a second statement of
@@ -173,7 +193,7 @@ internal static class NodeBridge
         }
     }
 
-    private sealed record Environment(string? Root, IReadOnlyList<string> Missing, bool NodeWorks);
+    private sealed record Environment(string? Root, IReadOnlyList<string> Missing, bool NodeWorks, bool Built);
 }
 
 internal readonly record struct NodeResult(int ExitCode, string StandardOutput, string StandardError);

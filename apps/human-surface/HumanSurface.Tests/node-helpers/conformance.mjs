@@ -26,7 +26,7 @@ const root = process.argv[2];
 
 const delivery = await import(pathToFileURL(`${root}/dist/human-delivery/index.js`).href);
 const language = await import(pathToFileURL(`${root}/dist/language/index.js`).href);
-const ask = await import(pathToFileURL(`${root}/dist/cli/ask.js`).href);
+const client = await import(pathToFileURL(`${root}/dist/cli/language.js`).href);
 
 const { encodeDelivery, decodeDelivery, humanDeliveryEndpointPath } = delivery;
 
@@ -113,9 +113,11 @@ const replyLines = [
   '{"protocol":1,"outcome":"chatted","lines":["ok",null]}',
 ];
 
-// The client's wait bound, and every number it is derived from. `REPLY_TIMEOUT_MS` is read out of
-// `cli/ask.js` rather than the language module because it belongs to the client, and a C# client that
+// The client's wait bound, and every number it is derived from. `REPLY_TIMEOUT_MS` is read out of the
+// client module rather than the language module because it belongs to the client, and a C# client that
 // agreed with a *recomputed* number would agree with itself rather than with the thing it is copying.
+// That module is `cli/language.js`; it was `cli/ask.js` until the ask client was split from the
+// command that calls it, and the two names are the same file's history rather than two files.
 const longestExposureCount = Math.max(
   language.LANGUAGE_EXPOSURES.length,
   language.LANGUAGE_REPOSITORY_EXPOSURES.length,
@@ -124,8 +126,8 @@ const longestExposureCount = Math.max(
 const timeout = {
   longestExposureCount,
   modelTimeoutMs: language.MODEL_TIMEOUT_MS,
-  readAndFramingBudgetMs: ask.READ_AND_FRAMING_BUDGET_MS,
-  replyTimeoutMs: ask.REPLY_TIMEOUT_MS,
+  readAndFramingBudgetMs: client.READ_AND_FRAMING_BUDGET_MS,
+  replyTimeoutMs: client.REPLY_TIMEOUT_MS,
   maxTextLength: language.MAX_LANGUAGE_TEXT_LENGTH,
   maxRequestLine: language.MAX_LANGUAGE_REQUEST_LINE,
   maxReplyLine: language.MAX_LANGUAGE_REPLY_LINE,

@@ -29,16 +29,19 @@ internal static class LiveLanguageTests
 
     public static Task RegisterAsync(TestRun run)
     {
-        var reason = !OperatingSystem.IsWindows()
-            ? "the language endpoint is a Windows named pipe"
-            : NodeBridge.UnavailableReason;
+        string[] names = [VerbatimName, RefusalName, AbsentName, ClosingName];
 
-        if (!NodeBridge.Available || !OperatingSystem.IsWindows())
+        // The two axes are separate claims and are kept apart here: a runner without Windows is not a
+        // repository with a problem, so it skips regardless of what `dist/` holds.
+        if (!OperatingSystem.IsWindows())
         {
-            run.Skip(VerbatimName, reason);
-            run.Skip(RefusalName, reason);
-            run.Skip(AbsentName, reason);
-            run.Skip(ClosingName, reason);
+            foreach (var name in names) run.Skip(name, "the language endpoint is a Windows named pipe");
+            return Task.CompletedTask;
+        }
+
+        if (!NodeBridge.Available)
+        {
+            run.Unrunnable(names, NodeBridge.UnavailableReason, brokenTree: NodeBridge.BrokenTree);
             return Task.CompletedTask;
         }
 

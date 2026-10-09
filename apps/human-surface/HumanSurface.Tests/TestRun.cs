@@ -12,6 +12,7 @@ internal sealed class TestRun
 {
     private readonly List<(string Name, Func<Task> Body)> _tests = [];
     private readonly List<string> _skipped = [];
+    private readonly List<(string Name, string Reason)> _unrun = [];
     private int _passed;
     private int _failed;
 
@@ -29,6 +30,36 @@ internal sealed class TestRun
     /// </summary>
     public void Skip(string name, string reason) => _skipped.Add($"{name} — {reason}");
 
+    /// <summary>
+    /// Records cases whose precondition was not there, as a skip or as a failure depending on whose
+    /// absence it is.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A machine that cannot run these cases and a repository that cannot are different absences, and
+    /// the caller has already told them apart — that is what <c>brokenTree</c> means. Skipping an
+    /// environment's limitation is honest and the exit code has no reason to move. Skipping a module
+    /// the suite was built to compare against would print the defect as the reason for not looking,
+    /// and then report the whole run as a success.
+    /// </para>
+    /// <para>
+    /// So the second is counted as a failure, which is what it is. The reason is carried through
+    /// verbatim so the missing module is named in the output rather than only in a skip line nobody
+    /// reads on a green run.
+    /// </para>
+    /// </remarks>
+    public void Unrunnable(IReadOnlyList<string> names, string reason, bool brokenTree)
+    {
+        if (brokenTree)
+        {
+            _failed += names.Count;
+            _unrun.AddRange(names.Select(name => (name, reason)));
+            return;
+        }
+
+        foreach (var name in names) Skip(name, reason);
+    }
+
     public async Task<int> ExecuteAsync()
     {
         foreach (var (name, body) in _tests)
@@ -45,6 +76,14 @@ internal sealed class TestRun
                 Console.WriteLine($"  FAIL  {name}");
                 Console.WriteLine($"        {Indent(exception.Message)}");
             }
+        }
+
+        // Ahead of the skips, because a case that could not run against a built tree is the one a
+        // reader of a failing run needs first.
+        foreach (var (name, reason) in _unrun)
+        {
+            Console.WriteLine($"  FAIL  {name}");
+            Console.WriteLine($"        {Indent(reason)}");
         }
 
         foreach (var skip in _skipped)

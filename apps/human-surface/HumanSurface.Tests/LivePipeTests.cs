@@ -21,16 +21,19 @@ internal static class LivePipeTests
 
     public static Task RegisterAsync(TestRun run)
     {
-        var reason = !OperatingSystem.IsWindows()
-            ? "the delivery endpoint is a Windows named pipe"
-            : NodeBridge.UnavailableReason;
+        string[] names = [VerbatimName, EndingName, OccupiedName, AbsentName];
 
-        if (!NodeBridge.Available || !OperatingSystem.IsWindows())
+        // The two axes are separate claims and are kept apart here: a runner without Windows is not a
+        // repository with a problem, so it skips regardless of what `dist/` holds.
+        if (!OperatingSystem.IsWindows())
         {
-            run.Skip(VerbatimName, reason);
-            run.Skip(EndingName, reason);
-            run.Skip(OccupiedName, reason);
-            run.Skip(AbsentName, reason);
+            foreach (var name in names) run.Skip(name, "the delivery endpoint is a Windows named pipe");
+            return Task.CompletedTask;
+        }
+
+        if (!NodeBridge.Available)
+        {
+            run.Unrunnable(names, NodeBridge.UnavailableReason, brokenTree: NodeBridge.BrokenTree);
             return Task.CompletedTask;
         }
 
