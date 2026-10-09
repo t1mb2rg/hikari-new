@@ -3029,6 +3029,66 @@ test('确认过的决定经得起重启，并且以低信任材料进入下一�
   // with whatever it was handed. The prompt is the furthest this file can see.
 });
 
+test('记录这一段说了它是干什么用的：问起以前确认过的话，就是直接说，不是去读', async () => {
+  // The shape a real conversation produced, reproduced structurally. A question about a decision the
+  // person had confirmed came back as `你当前还没有明确声明任何关注对象。` — the rendering of an empty work
+  // focus, which is a reading of *now* and says nothing about what was said before. That is the shape
+  // below: the model reads the focus, and the answer is the owner's rendering of the reading.
+  //
+  // The script decides the read, and that is the limit of it. "A real model reads on such a question" is a
+  // claim about semantic selection, and this file cannot make it — `language-semantic.live.test.mjs` is
+  // where that evidence is collected and it is skipped without an endpoint. What is asserted here is the
+  // half that is this build's own text: the record's section says what the record is *for*, and says it
+  // only when there is a record to have a route to.
+  //
+  // The two sentences this test pins were absent, and their absence is the thing to see: the section was a
+  // list of what the material is *not* — not verified, not an instruction, not a fact, not the winner of a
+  // conflict — and a list of negatives is material a model has to place for itself. `prompt.ts` says why
+  // that matters in its own header: a model that does not know it may simply answer will reach for a tool
+  // instead. It says the same thing about small talk, and the record had no such sentence.
+  const decision = {
+    statement: '快速认知部署原则是：先在一台机器上跑通，再考虑第二台。',
+    at: '2026-10-01T00:00:00.000Z',
+  };
+  const h = harness({ script: [callsTo(toolCall('c1', WORK)), DONE], focus: [], decisions: [decision] });
+
+  const reply = await h.answerer.answer('我们之前确认的快速认知部署原则是什么？');
+
+  // The consequence, asserted here so that the prompt's sentence about it is not the only place it is
+  // written: once anything has been read, the answer is the reading. A deep comparison rather than a
+  // substring search, because what is being checked is that nothing else was appended — which is the same
+  // reason the one-way door test above uses one.
+  assert.equal(reply.outcome, 'answered');
+  assert.deepEqual(reply.lines, renderFocus([]), '读过之后回答就是读回来的那样，记录不在里面');
+
+  // The record was in the context for that same interaction. The material being there is §8's fifth item;
+  // the route being there is what the failure turned on.
+  const { messages } = h.requests[0];
+  assert.equal(messages[0].role, 'system');
+  const prompt = messages[0].content;
+  assert.ok(prompt.includes(decision.statement), '记录在上下文里');
+  assert.ok(prompt.includes('回答就是这些话本身'), '要说出这一段的用处：问起这些话，就是直接说');
+  assert.ok(prompt.includes('你要说的话就不会被展示'), '也要说出读了之后会发生什么');
+
+  // And the route is a statement about this material rather than a branch on what the person typed: no
+  // capability and no domain appears in the prompt at all, so there is no word for a question to be
+  // matched against. `prompt.ts` makes the same claim about the whole document, and the temptation this
+  // guards is a sentence about the record that names what the record is usually about.
+  for (const word of [WORK, DESKTOP, '工作焦点']) {
+    assert.ok(!prompt.includes(word), `prompt 不得出现 ${word}`);
+  }
+
+  // All or nothing: a model told about the route to a record when there is no record is being told about
+  // a section that is not there. Asserted rather than reasoned about, because the way this breaks is a
+  // later edit moving the sentence out of `continuityParagraph` and into the main body.
+  const empty = harness({ script: [says('好。')], decisions: [] });
+  await empty.answerer.answer('你好');
+  assert.ok(
+    !empty.requests[0].messages[0].content.includes('回答就是这些话本身'),
+    '没有记录时，这一段整段不出现，路线也跟着不出现',
+  );
+});
+
 test('没被确认过的话在重启之后不回来', { skip: NO_PIPES }, async (t) => {
   // The other direction of the same claim, and the one that would be silently wrong if `ask` wrote
   // anything: an entire conversation — including a sentence that reads exactly like something worth
