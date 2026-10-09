@@ -1,0 +1,656 @@
+# Hikari 当前架构（Current Architecture）
+
+> **状态**：当前状态的**入口与总览**。描述的是**这个工作区今天实际是什么**，以 `src/`、`test/`、`package.json` 的实测为准。
+>
+> **权威**：本文**不产生 MUST**，**不取代** `principles.md`、`core-architecture-v0.md`、`plugin-design-spec.md`、`governance-rules-v1.md` 中的任何一条。本文与它们冲突时**以它们为准**，并把冲突记录在 §12。
+>
+> **配套**：`docs/vision/hikari-long-term.md` 说的是「打算成为什么」；**本文说的是「今天是什么」**。两份必须分开读。
+>
+> **证据基准**：本文写于 commit `ada401c`（工作区 `main`，领先 `origin/main` 11 个 commit）。所有 `file:line` 引用以该 commit 为准；行号会漂移，条目名与路径才是身份。
+
+---
+
+## 0. 一句话现状
+
+Hikari 今天是一个**很薄的运行生命结构 + 两条纵向感知链 + 一个语言出口 + 两个主动介入场景**。
+
+```text
+有一个 Runtime（只懂 Plugin / Service / Event / cleanup）
+有 18 个 Plugin（16 个 Service 契约、1 个 Event 契约）
+有一条身份生命线（Continuity）和一条事实生命线（Chronicle）
+有两套「感知 → World → Awareness」纵切（桌面、仓库 CI）
+有一个模型出口（Language，带原生 tool use）
+有两处主动说话（回到座位、CI 失败）
+有四个面向人的入口（CLI / TUI / Human Surface / subscribe）
+没有任何一条真实副作用经过统一治理链 —— 因为今天也没有需要治理的副作用
+```
+
+**没有** Memory、Goal、Action Pipeline、Planner、Tool Registry、权限层。这些不是「未完成」，而是**今天不存在**（§10 给出实测依据）。
+
+---
+
+## 1. 真实模块关系
+
+```mermaid
+flowchart TB
+  subgraph rt["Runtime（src/runtime/）"]
+    R1["loadPlugin / unloadPlugin / getPluginState / getPluginError / shutdown"]
+    R2["Service 注册与依赖满足（every）"]
+    R3["Event 派发"]
+    R4["EffectScope 逆序清理"]
+  end
+
+  subgraph identity["身份与事实"]
+    C1["continuity<br/>continuity.current@1"]
+    C2["chronicle<br/>chronicle@1"]
+    WF["work-focus<br/>work-focus.current@1"]
+  end
+
+  subgraph desk["桌面纵切（已实现）"]
+    FG["foreground.windows<br/>foreground.current@1"]
+    IA["input-activity.windows<br/>input-activity.current@1"]
+    DW["desktop-session-world<br/>desktop-session-world.current@1"]
+    DA["desktop-session-awareness<br/>…awareness.current@1 + …peek@1"]
+    DL["desktop-session-awareness-loop<br/>发 assessed@1（0 订阅者）"]
+    DO["desktop-session-observe<br/>人看的只读面"]
+  end
+
+  subgraph rep["仓库 CI 纵切（已实现）"]
+    GR["git-repository<br/>git-repository.current@1"]
+    GH["github-ci<br/>github-ci.current@1"]
+    RW["repository-ci-world<br/>repository-ci-world.current@1"]
+    RA["repository-ci-awareness<br/>repository-ci-awareness.current@1"]
+    RR["repository-ci-relevance<br/>repository-ci-relevance.current@1"]
+  end
+
+  subgraph out["表达与投递"]
+    L["language<br/>language.speaking@1<br/>language.desktop-return-speaking@1"]
+    HD["human-delivery<br/>human-delivery.deliver@1"]
+  end
+
+  subgraph proact["主动介入（已实现，逐场景）"]
+    DRA["desktop-return-attention"]
+    RCA["repository-ci-attention"]
+  end
+
+  CLI["cli<br/>hikari 二进制 / TUI / resident 组合根"]
+
+  R1 --- CLI
+  FG --> DW
+  IA --> DW
+  DW --> DA
+  DA --> DL
+  DA --> DO
+  DA -.->|peek| L
+  GR --> RW
+  GH --> RW
+  RW --> RA
+  RA --> RR
+  WF --> RR
+  C2 --> WF
+  WF -.-> L
+  RR -.-> L
+  L --> HD
+  IA --> DRA
+  WF --> DRA
+  DRA -->|desktop-return-speaking| L
+  RR --> RCA
+  RCA -->|"自己的事实家族"| C2
+  RCA --> HD
+  CLI -.->|控制通道 / ask / confirm| R1
+
+  classDef impl fill:#1b5e20,stroke:#0d3d12,color:#fff
+  classDef part fill:#8d6e00,stroke:#5c4800,color:#fff
+  classDef absent fill:#4a148c,stroke:#2a0a52,color:#fff,stroke-dasharray:4 3
+
+  class R1,R2,R3,R4,C1,C2,WF,FG,IA,DW,DA,DL,DO,GR,GH,RW,RA,RR,L,HD,DRA,RCA,CLI impl
+  class DL part
+```
+
+图例：**深绿** = 已实现并验证；**深黄** = 存在但有一处未闭合（见该节）；**紫虚框** = 今天不存在。
+
+> 这张图**不包含** Memory、Goal、Action、Judgement、Planner、Tool Registry —— 因为它们在 `src/` 里**没有任何对应物**（§10）。
+
+---
+
+## 2. Runtime 与 Plugin 结构
+
+### 2.1 Plugin 只有一种
+
+`PluginDefinition<TConfig>` = `{ id, version, requires?, provides?, config?, setup }` —— `src/runtime/plugin.ts:29-36`。
+
+`src/` 下 21 个目录里，18 个是 Plugin（`plugin.ts` + `contracts.ts` + `index.ts` barrel），另外三个不是：`runtime/`（Runtime 本身）、`cli/`（宿主入口）、`terminal-text/`（终端文本小工具）。
+
+**没有** `AgentPlugin` / `SensorPlugin` / `LoopPlugin` 这类业务基类树。「Loop」「Perception」「World」「Awareness」「Attention」在今天的代码里都只是**领域角色**，不是 Runtime 概念。
+
+### 2.2 生命周期与依赖
+
+```text
+loadPlugin → waiting（requires 未满足）
+           → active（#requirementsSatisfied：requires 的 every）
+           → stopping → 卸载（EffectScope 逆序清理）
+           → failed（启动或运行中抛出）
+```
+
+`#requirementsSatisfied` 是一个 **`every`** —— 这带来一个今天真实存在的后果：**require 了一个没人提供的契约的 Plugin 会永远停在 `waiting`**。这正是今天用「组合 roster」而不是「optional requires」来区分语言 variant 的原因（`src/language/plugin.ts:484` / `:531`）。
+
+### 2.3 公开 API
+
+`Runtime` 类只有五个方法（`src/runtime/runtime.ts`）：
+
+| 方法 | 行 | 作用 |
+| --- | --- | --- |
+| `loadPlugin(definition, config?)` | `:31` | 注册并启动 |
+| `unloadPlugin(id)` | `:61` | 卸载单个 |
+| `getPluginState(id)` | `:70` | `waiting | starting | active | stopping | failed` |
+| `getPluginError(id)` | `:74` | 该 Plugin 的最后一个错误 |
+| `shutdown()` | `:78` | 逆序全部释放 |
+
+Plugin 侧上下文：`services.get / has / isProvidedBy`（`src/runtime/service-registry.ts`）、`events.subscribe / emit`（`src/runtime/event-bus.ts`）。
+
+**两条真实的强制**（不是约定，是抛错）：
+
+- `services.get` 一个**没有写进 `requires`** 的契约 → `UndeclaredServiceDependencyError`（`src/runtime/plugin-context.ts`）。这是「Consumer 只能拿自己声明过的东西」在代码里的落点。
+- `services.provide` 一个**没有写进 `provides`** 的契约 → `UndeclaredServiceProviderError`。
+- `events.emit` 时任一订阅者抛出 → 以 `AggregateError` 失败。
+
+### 2.4 今天没有的 Runtime 机制
+
+无 optional requirement、无动态发现、无 service locator、无配置热重载、无插件重试（`failed` 不自动重试）、无任务取消框架、无跨进程 Service。
+
+---
+
+## 3. Service 与 Event 平面
+
+### 3.1 Service：今天恰好 16 个
+
+每个都是 `defineService<T>(id, version=1)`（`src/runtime/contracts.ts:16`），运行时 key 是 `` `${id}@${version}` ``（`:28`）。
+
+| 契约 id | 提供者 | 契约文件 |
+| --- | --- | --- |
+| `chronicle` | `chronicle` | `src/chronicle/contracts.ts:10` |
+| `continuity.current` | `continuity` | `src/continuity/contracts.ts:8` |
+| `foreground.current` | `foreground.windows` | `src/foreground/contracts.ts:8` |
+| `input-activity.current` | `input-activity.windows` | `src/input-activity/contracts.ts:8` |
+| `git-repository.current` | `git-repository` | `src/git-repository/contracts.ts:11` |
+| `github-ci.current` | `github-ci` | `src/github-ci/contracts.ts:12` |
+| `human-delivery.deliver` | `human-delivery` | `src/human-delivery/contracts.ts:46` |
+| `work-focus.current` | `work-focus` | `src/work-focus/contracts.ts:30` |
+| `desktop-session-world.current` | `desktop-session-world` | `src/desktop-session-world/contracts.ts:8` |
+| `desktop-session-awareness.current` | `desktop-session-awareness` | `src/desktop-session-awareness/contracts.ts:49` |
+| `desktop-session-awareness.peek` | `desktop-session-awareness` | `src/desktop-session-awareness/contracts.ts:83` |
+| `repository-ci-world.current` | `repository-ci-world` | `src/repository-ci-world/contracts.ts:13` |
+| `repository-ci-awareness.current` | `repository-ci-awareness` | `src/repository-ci-awareness/contracts.ts:13` |
+| `repository-ci-relevance.current` | `repository-ci-relevance` | `src/repository-ci-relevance/contracts.ts:47` |
+| `language.speaking` | `language` | `src/language/contracts.ts:72` |
+| `language.desktop-return-speaking` | `language` | `src/language/contracts.ts:96` |
+
+这 16 个数字是**今天的事实**，不是架构不变量。Runtime 不知道它们是什么。
+
+### 3.2 Event：今天恰好 1 个，生产订阅者 0
+
+```text
+desktop-session-awareness-loop.assessed@1
+  声明  src/desktop-session-awareness-loop/contracts.ts:11-12
+  发布  src/desktop-session-awareness-loop/plugin.ts:85
+  订阅  （无）—— src/ 里唯一的 events.subscribe 是 Runtime 自己（src/runtime/plugin-context.ts:36）
+```
+
+`src/cli/resident.ts:196-198, 328-331` 明确记录了这件事：**它可以被持续发布，但还没有语义上的 Consumer。**
+
+ESLint 式的「Event 误用」（用 Event 做查询、做请求/响应、做命令）今天没有发生，因为只有一个 Event，且它只承载「刚刚发生了一次评估」。
+
+---
+
+## 4. Chronicle、Continuity 与今天落盘的东西
+
+### 4.1 今天只有三处代码写盘
+
+| 内容 | 路径 | 写入方式 | 源码 |
+| --- | --- | --- | --- |
+| 身份原点 | `<dataDir>/continuity/origin.json` | 临时文件 + `renameSync` 原子替换 | `src/continuity/storage.ts:14-16, :31, :39, :48` |
+| 长期事实 | `<dataDir>/chronicle/chronicle.jsonl` | 第一行是 Store Header `{ kind:'hikari-chronicle', version:1 }`，其后每行一个 `DurableFact` | `src/chronicle/store.ts:24-36, :104-119` |
+| 启动 profile | `<dataDir>/launch.json` | 整体覆盖 / 删除 | `src/cli/launch-profile.ts:27-29, :57, :63` |
+
+`DurableFact` = `{ factId, type, version, occurredAt, recordedAt, source, payload }`（`src/chronicle/fact.ts`）。
+
+### 4.2 今天存在的事实家族（三个）
+
+```text
+repository-ci-attention.delivered   src/repository-ci-attention/facts.ts:40
+    source kind: repository-ci-attention.delivery   :51
+    dedupe key:  `${repository}#${runId}`           :73
+
+language.decision-confirmed         src/language/continuity.ts:64
+    source kind: language.endpoint   :76
+    只由 CLI 的 confirm 命令写入     :255
+
+work-focus 自己的家族                src/work-focus/facts.ts
+```
+
+**端点地址不落盘。** 每个命名管道都由 canonical dataDir 的 sha256 前 16 位推导，且非 win32 一律 `undefined`；没有任何地址文件（`src/cli/control.ts:42,66`；各 Plugin 的 `endpoint-path.ts`）。
+
+### 4.3 今天已经成立的语义
+
+- **`hikari init` 与 `hikari chronicle init` 是显式创建**；`hikari start` 与 `hikari resident` 是**零创建**路径（`src/cli/init.ts`、`src/cli/chronicle-init.ts`、`src/cli/start.ts`、`src/cli/resident.ts`）。
+- **没有 `openOrCreate`**。读取是纯读取。
+- **写事实不以动作成功为条件，动作成功也不以写事实为条件**（`durable-fact-admission-v0.md` §4，落点 `src/work-focus/` 与 `src/repository-ci-attention/` 的异步路径）。
+- **一个事实家族只有一个写入者。** 今天没有任何通用 recorder。
+
+---
+
+## 5. Resident 与人的入口
+
+### 5.1 CLI 命令面
+
+`hikari`（`bin` → `dist/cli/main.js`，`package.json:5-7`），分派表 `src/cli/main.ts:44-76`：
+
+```text
+hikari                              打开 TUI（唯一路径；`hikari tui` 被拒绝，src/cli/options.ts:276）
+hikari init  --data-dir <path>      写身份原点
+hikari chronicle init --data-dir    建事实存储
+hikari start --data-dir             组合并运行（前台，零创建）
+hikari resident --data-dir ...      常驻
+hikari status --data-dir            向常驻问状态
+hikari stop --data-dir              请常驻停机
+hikari subscribe --data-dir         流式读 Hikari 投递出来的消息
+hikari focus declare|replace|clear|status
+hikari relevance repository-ci status
+hikari observe desktop-session status
+hikari ask --data-dir "<text>"
+hikari confirm --data-dir "<text>"
+hikari profile set|show|clear
+```
+
+**`status` / `stop` / `subscribe` / `focus` / `relevance` / `observe` / `ask` / `confirm` 都经命名管道到达运行中的常驻**，因此在非 Windows 上无法工作（各 `endpoint-path.ts` 在非 win32 返回 `undefined`）。
+
+### 5.2 常驻组合
+
+`src/cli/resident.ts` 是组合根。默认 rosters 与追加轴（`--repository-root` / `--repository` / `--model`）在 `durable-fact-admission` 与 `judgement-reachability` 两轮里被记录为**四条 roster 共享同一个基础前缀**；`judgement-reachability-v0.md` §5 明确写下：
+
+> 「九个」仍然不是架构不变量。
+
+`ready` 的语义是「组合里的 Plugin 全部 active」（`src/cli/resident.ts`）。它**不等于**第一次 assessment 成功、不等于后台链路健康、不等于后续每次获取都会成功 —— `current-stage.md` 已把这条限制记为 v1 已知限制（后台 cycle 失败没有公开健康表面）。
+
+### 5.3 控制通道
+
+一个版本、两个词、封闭：`status` 与 `stop`。端点名由 canonical dataDir 推导，一个数据目录一个端点。
+
+**能问、能停 ≠ 可运维**：没有 log、没有 daemon 化、没有自动重启、没有 watchdog、没有 pid 文件、没有配置重载、没有健康检查、没有任何身份认证、没有远程控制面。
+
+### 5.4 TUI
+
+`hikari` 无命令即进入 TUI（`src/cli/tui.ts`、`src/cli/tui-render.ts`、`src/cli/tui-state.ts`、`src/cli/tui-input.ts`）。三个视图 Chat / System / Profile，`Tab` 循环；TUI 内的 `/start` `/stop` `/restart` 是**终端内的动作**，不是 CLI 子命令（`src/cli/tui.ts:593,614,618`）。
+
+已经冻结并且今天仍然成立的四条边界（`docs/architecture/hikari-tui-v1-implementation-boundary-freeze.md`）：
+
+```text
+统一的是 UI，不是协议（:62）—— 复用既有三个 endpoint，不建 Unified Backend / central router
+不把 status 行读成 Plugin 语义 —— 禁止正则反解析，避免第二套状态模型（:126）
+transcript 是进程内、有界、不落盘的，且不叫 Memory / Conversation History / Chronicle（:140,:144）
+Human Delivery 仍是 single subscriber，TUI 不抢、不踢、不要求 fan-out（:154）
+```
+
+用户可见的历史事实：**`hikari console` 已不再是命令**（现在是未知命令，退出码 2）。
+
+一条今天已经被实测钉住的渲染事实（本轮 Grounded Synthesis 修订所确立，写入 `src/language/express.ts` 头注释与 `test/language.test.mjs`）：
+
+> `clip` 在**行宽 ≤ columns 时整行保留**；为裁剪标记留的那一列只有在**真的发生裁剪**时才花掉。
+
+### 5.5 Human Surface（今天唯一的图形入口，且不在 `src/` 里）
+
+`apps/human-surface/` 是一个 .NET 8 WinForms 程序（framework-dependent，零 NuGet），三个工程：`HumanSurface/`、`HumanSurface.Core/`、`HumanSurface.Tests/`。它**不是 Runtime Plugin**，Runtime 与 `src/` 对它零依赖。
+
+```text
+出站：连到既有的 human-delivery 命名管道，托盘 + 一个窗口显示 Hikari 主动送达的消息
+入站：HUMAN SURFACE LANGUAGE CLIENT v0 之后，它直接成为既有 Language endpoint 的 client
+```
+
+已经冻结的性质：
+
+- **它没有第二条协议。** 管道名、framing、四个 outcome 词（`chatted | answered | refused | failed`）全部**镜像** Language 侧 owner（`src/language/protocol.ts`、`src/language/endpoint-path.ts`、`src/cli/language.ts`——最后一个在 `a2d701f` 由 `src/cli/ask.ts` 改名而来）；C# 侧只是 client。
+- **它不是 judgement owner。** 不做显著性/重要性/是否该通知的判断，不读 repository / input activity / Work Focus，不订阅任何 domain plugin，不调模型。
+- **它不 durable。** 消息列表 `durability = none`，不落盘、不写 Chronicle。
+- **reconnect ≠ message retry**：重连是 transport availability，不是 delivery guarantee。
+- **「退出」只退出 Surface**，不调 `hikari stop`，不碰 Resident。
+
+`docs/architecture/human-surface-v0-implementation-boundary-freeze.md` §12 的第一条（「不做 Human → Hikari 对话」）已被 `human-surface-language-client-v0-implementation-boundary-freeze.md` 解除；原文按 R7.2 **保留不改**，两份文档之间已有双向指针。
+
+**但这个门禁今天不在工作。** 上面那句「C# 会红，而不是静默漂移」的前提已随 `a2d701f` 的改名消失：C# 侧探的 `dist/cli/ask.js` 不再存在，六个一致性用例因此**全部 skip**，而 skip 不算失败。实测与后果见 §11.7，死路径引用的完整清单见 §12.1 第 9 行。
+
+---
+
+## 6. 感知 → World → Awareness：两套纵切
+
+### 6.1 桌面纵切
+
+```text
+foreground.windows       看见前台窗口        src/foreground/plugin.ts:10
+input-activity.windows   看见有没有输入      src/input-activity/plugin.ts:11
+        ↓ 两个 facet 合并
+desktop-session-world    一个 snapshot        src/desktop-session-world/plugin.ts:11
+        ↓
+desktop-session-awareness  overlay            src/desktop-session-awareness/plugin.ts:64
+        ├→ …current@1   给需要「当前判断」的消费者
+        ├→ …peek@1      给只想知道「跟上次比变了没有」的消费者，不做赋值
+        ├→ desktop-session-awareness-loop（定时评估，发 assessed@1）
+        └→ desktop-session-observe（人看的只读面）
+```
+
+已经成立的语义（来自 P3 各轮，落点在源码与 `current-stage.md`）：
+
+- **缺席是一次观测**（`available + absent`），**取不到不是缺席**，**未知不得塌缩成缺席**。
+- World 是 **composer，不是 interpreter**：它合并不解释。
+- `current()` **永不 reject**：失败以 `unavailable` 表达。
+- Awareness overlay 只做**上下文对比**，`stable` 是**关于观测值的陈述，不是关于世界的陈述**。
+
+`peek@1` 的存在值得单独读：它说明今天已经出现了「同一个数据、两种消费语义」的真实需求 —— 一种要基线做对比，一种只读不改 —— 而处理方式是**加一个契约，不是给消费者加开关**。
+
+### 6.2 仓库 CI 纵切
+
+```text
+git-repository   本地工作树/HEAD     src/git-repository/plugin.ts:19
+github-ci        Actions run（HTTP） src/github-ci/plugin.ts:24
+        ↓
+repository-ci-world        src/repository-ci-world/plugin.ts:20
+        ↓
+repository-ci-awareness    src/repository-ci-awareness/plugin.ts:37
+        ↓  + work-focus.current
+repository-ci-relevance    src/repository-ci-relevance/plugin.ts:43
+```
+
+`repository-ci-relevance` 是今天唯一一个把**两样东西合起来判断**的 Plugin（CI 变化 × 已声明的工作焦点），而它的判断规则**只有一条**：逐字相等，取值只有 `relevant | unknown`。这是被有意冻结的 v1，不是没来得及做。
+
+### 6.3 神经系统今天的真实进度
+
+「神经系统」**不是一个组件，是一个阶段视角**（`docs/architecture/hikari-nervous-system-stage-v0.md:60-61`：它描述「感知 → 形成经历 → 留下影响 → 后来被重新唤起」这一层系统行为，不是要建立的子系统）。今天它的**载体**是：
+
+```text
+4 个感知 Plugin（foreground / input-activity / git-repository / github-ci）
+2 个 World（desktop-session-world / repository-ci-world）
+2 个 Awareness（desktop-session-awareness / repository-ci-awareness）
+1 个 Loop（desktop-session-awareness-loop，每 activation 至多一个 cycle in-flight，不重叠）
+```
+
+**它不是 Central Brain，也没有一处代码叫「神经系统」。** 没有统一判据、没有优先级、没有跨 source 推断。
+
+该阶段文档自己给出了**完成判据，且今天没有达到**（`:182-184`）：
+
+> 本阶段**不能**以「建立了 X」判定完成。**1. 读侧不再为零。** 至少有一个生产 Plugin 读取**它自己的**过去，并因此行为不同。
+
+今天读侧与写侧的实测（逐条 grep，不是推断）：
+
+```text
+chronicle.append    work-focus/session.ts:81
+                    repository-ci-attention/plugin.ts:215
+                    language/plugin.ts:326
+
+chronicle.read()    repository-ci-attention/plugin.ts:161  读回「我自己投递过哪些提醒」
+                    language/plugin.ts:403                 读回「已确认的决定」
+
+chronicle.get()     生产调用者 0
+
+experience / concern / salience 三个词在 src/ 里的命中数：0
+```
+
+**一个必须说清楚的后果**：按阶段文档 §4（`:182-186`）的完成判据第 1 条 —— 「**至少有一个生产 Plugin 读取它自己的过去，并因此行为不同**」——`repository-ci-attention` 今天**字面上符合**：它读回自己私有的 `delivered` 家族，并因此**不重复播报**。而同一份文档在 §2C 下的注（2026-10-08）主张这不构成 Reactivation 的解冻，理由是「**一个 owner 读自己私有的 fact 家族**……不是『当前情境与过去产生关联』」。
+
+**两句指向的不是同一件事**（§4 判完成，§2C 判 Reactivation 语义），因此**本文不替它定性**：判据第 1 条是否已经达到，是一次 Human/作者的裁决（§13 第 9 项）。
+
+该阶段的第一份研究是 `docs/architecture/experience-formation-v0-research.md`，其结论是 `VERDICT = NARROW`（`:526`），核心判断是：
+
+> **一条写了但没被读过的 Experience，与一条 Durable Fact 无法区分。因此 Experience Formation 不是一个存储问题，是一个「谁读自己的过去」的问题。**（`:436-437`）
+
+该阶段的 §5（`:198`）明确不解决：Memory 基底 / Salience / Action Pipeline / 跨域关联 / Fast Cognition / 多 Human 身份认证 / Sensory Expansion 本身。
+
+---
+
+## 7. Language：今天的模型出口
+
+### 7.1 结构
+
+```text
+两个 variant（同一份实现，requires 不同）：
+  base        requires: work-focus.current, desktop-session-awareness.peek
+  repository  requires: 上述 + repository-ci-relevance.current
+              src/language/plugin.ts:484 / :531
+```
+
+- 提供 `language.speaking@1` 与 `language.desktop-return-speaking@1`。
+- 唯一的模型调用路径在 `src/language/model.ts`；tool-use 循环在 `src/language/answer.ts`。
+- **暴露面是一份手写的冻结数组**，不是 registry：`LANGUAGE_EXPOSURES` / `LANGUAGE_REPOSITORY_EXPOSURES`（`src/language/exposure.ts:114-131`），文件注释 `:19-22` 写明「没有按名字查找、没有注册、没有遍历 Runtime、没有办法不编辑这个文件就加一条」。今天三个工具：`work_focus_read`、`desktop_context_read`、`repository_ci_relevance_read`。
+
+### 7.2 已成立的语义
+
+- **Speech Sovereignty**：模型可以决定「还需要读什么」，不能决定「这些事实意味着什么」。
+- **两个闭集**：非空 `content` + 空 `tool_calls` → `chatted`；非空 `tool_calls` → `content` 整段丢弃（不是过滤掉，是**从未进入任何变量**）。
+- **终止是不变量**：每一次能继续的迭代必须消费一个此前没读过的 exposure，否则循环终止。
+- **批完整性**：还要再发一次请求时，上一条 assistant 消息里的每个 `tool_call_id` 都必须已有对应结果。
+- **`requires` 是硬依赖**：base variant 不依赖 Repository CI；fail-closed 是 v0 的语义，不是疏忽。
+
+### 7.4 会话连续性（今天有一个被有意收窄的版本）
+
+`docs/architecture/shared-experience-continuity-v0-boundary-review.md` 原来的目标（跨领域共享经验）被判**过宽**，收窄为 **LANGUAGE CONVERSATIONAL CONTINUITY v0**，级别 L2，并已实施（该文件 §14：`VERDICT = READY`）。
+
+被放行的**只有一条边**：
+
+> **Language 可以拥有 bounded conversational continuity。** 但**不得**升级为通用 Memory / Experience 中心。（Human 裁决九条之 `:336`）
+
+同一条裁决同时钉住：对话历史的保存**不等于**可信人类身份认证（`:335`）；Work Focus 的现有重启语义**保持不变**（`:337`）。该文件 §12.4 明确**不新建** Memory Store / `memoryService` / Experience 中心 / 通用 recall substrate，也**不建立**任何关联机制（不排序、不打分、不做语义相似度、不做 relevance）。
+
+### 7.3 Grounded Synthesis：本轮（commit `4143499` / `ada401c`）之后，必须如实记录的七条
+
+| # | 事实 | 证据 |
+| --- | --- | --- |
+| 1 | **Owner 读数可以与模型解释共同出现。** `answered` 的形状是：读数在前 → 标签两行 → 模型原话。 | `src/language/answer.ts:332`（`lines: synthesis === undefined ? answer : [...answer, ...renderSynthesis(synthesis)]`） |
+| 2 | **模型解释不等于 Owner 事实。** 标签逐字写着「下面不是读回来的内容」，且读回来的那一段**在最前面且未被改动**。 | `src/language/express.ts` 的 `SYNTHESIS_LABEL`；测试 `test/language.test.mjs`（`reply.lines.slice(0, reading.length)` 深比对） |
+| 3 | **`answered` 不能被整体视作同等级事实。** 一个回答里同时存在两种东西，且只有前者可追溯。 | 同上；这是标签存在的理由 |
+| 4 | **纯当前事实问题仍可能多余合成。** 当记录在场时，即使问题只需要读数，模型那一句依然可能出现 —— **有记录在场时那句话的存在不是相关性信号**。 | 真实常驻实测：四条问句（`answer.ts:204-205` 的门 + `248-254` + `spoken !== ''` 决定是否合成） |
+| 5 | **部分 live harness 当前存在 TypeError。** | `docs/architecture/language-grounded-synthesis-v0-boundary-review.md` §13.5：三个 live harness 自 `a2d701f` 起无法运行，**未修** |
+| 6 | **隔离 Resident 已验证，用户主实例尚未重启。** 主常驻跑的是改动前的代码。 | 隔离 data dir 的常驻实测；主实例从未被终止 |
+| 7 | **窄终端来源标签的可见性存在宽度边界。** | 实测：第一行 24 列、第二行 53 列、旧单行 77 列；收益区间 **53–76** 列；`clip` 在 `行宽 ≤ columns` 时整行保留 |
+
+第 7 条的落点是 `src/language/express.ts` 的两行标签与 `test/language.test.mjs` 的宽度断言（`essentialWidth <= 24`、`displayWidth(rest) <= 80`）。测试已被变异验证真的会咬人（把第一行加宽到 48 列 → FAIL；第二行加宽到 93 列 → FAIL）。
+
+---
+
+## 8. 今天的主动介入能力：两个场景，各自独立
+
+```text
+场景一：回到座位                       src/desktop-return-attention/plugin.ts:101
+  requires: input-activity.current, work-focus.current,
+            language.desktop-return-speaking, human-delivery.deliver
+
+场景二：CI 失败值得说                  src/repository-ci-attention/
+  消费 repository-ci-relevance 的判词；把自己已投递过的失败写成事实
+  （家族 repository-ci-attention.delivered，去重键 `${repository}#${runId}`）
+```
+
+两条路径**没有共同的判据、优先级或预算**。各自决定「这次要不要说话」，各自调用 `human-delivery.deliver`（`src/human-delivery/plugin.ts:45`）。
+
+**这看起来像统一的 Attention，实际上是逐场景的**。是否要合并、由谁拥有总量控制，本文不裁决（§13 列为待 Human 裁决）。
+
+### 8.1 两条路径真实的抵达历史（它们都不是顺理成章来的）
+
+```text
+场景一  desktop-return-attention
+  review §17 判 BLOCKED（desktop-return-attention-v0-boundary-review.md:775）
+  → 由治理评审 v1 §5 取代为 eligible for local contract evolution
+  → L2 实现边界冻结（desktop-return-attention-v0-implementation-boundary-freeze.md）
+  → 2026-09-28 真实送达（该文件 :192）
+
+场景二  repository-ci-attention
+  review §19 判 BLOCKED（repository-ci-attention-v0-boundary-review.md:960）—— 阻塞点不在判词侧，在「主动出站人类通道」缺失
+  → proactive-repository-ci-v0 实现边界冻结 → 2026-09-27 真实送达（该冻结 :270-271）
+  → 重启语义由 Human 裁决（N2-01）解决，落成 repository-ci-attention-delivery-history-v0（PROCEED，:304）
+```
+
+**「重启后会不会重复打扰人」这条语义是三次分歧之后由 Human 裁决的**，不是实现顺手定的：
+
+```text
+review §7                  重启 → 全静默
+冻结文本 + 已交付实现       重启 → 全部重报
+Human 裁决 N2-01           已成功投递过的静默；从未投递过的仍然说
+```
+
+（三者的并列对照见 `repository-ci-attention-delivery-history-v0-boundary-freeze.md:70-76`。）这条历史今天仍然有指导意义：**主动能力的「该不该说」不能由实现者顺手定，它需要 Human 的 mandate**（`repository-ci-attention-v0-boundary-review.md:495` 逐字：**「只在新的失败上打扰人」就是一条 mandate**）。
+
+---
+
+## 9. 实际有效的权限与行为边界
+
+今天真正生效的限制，不是写在文档里的承诺，而是**代码里做不到**：
+
+| 边界 | 今天的执行方式 |
+| --- | --- |
+| Consumer 只能拿声明过的能力 | `services.get` 抛 `UndeclaredServiceDependencyError` |
+| Provider 只能提供声明过的能力 | `services.provide` 抛 `UndeclaredServiceProviderError` |
+| 模型只能调用暴露面里的工具 | 暴露面是手写冻结数组，无注册路径（`src/language/exposure.ts:19-22`） |
+| 模型不能改事实 | Language 不写 Chronicle；事实家族各有唯一写入者 |
+| 感知不能解释 | Perception Plugin 只产生 observation；解释在 Awareness 一侧 |
+| World 不解释、不持久化 | `desktop-session-world` / `repository-ci-world` 不写盘 |
+| 非 Windows 不假装支持 | 各 `endpoint-path.ts` 返回 `undefined`；感知 Plugin 在非 win32 `failed`，消费者 `waiting` |
+
+**今天没有权限系统的原因不是「还没做」**：今天所有能力要么是只读查询，要么是自己内部的事实写入。**没有任何一条真实副作用经过统一治理链** —— 没有 Action Pipeline，因此也没有需要它治理的动作。这条顺序是正确的，不是欠债。
+
+---
+
+## 10. 今天不存在的东西（实测）
+
+对 `src/` 的搜索结论（不是推断）：
+
+```text
+Memory          无任何实现；所有出现都是「这里不是 memory」的注释
+Goal / Planner  无模块、无标识符
+Action Pipeline 无实现；出现处只有注释里的「conventional agent loop」
+Tool/Capability Registry  无；暴露面是手写的冻结数组
+权限 / 授权层    无；exposure 注释明写「不携带任何权限」（src/language/exposure.ts:56-59）
+跨平台管道       无；全部端点非 win32 返回 undefined
+第二类判据       无；relevance 只有「逐字相等」，取值只有 relevant | unknown
+```
+
+---
+
+## 11. 未解决的技术问题 / 下一阶段的真实需求
+
+按「今天确实挡在路上」排序，而不是按对称性：
+
+1. **后台 cycle 失败没有健康表面。** Runtime 不会把 active Plugin 的后台 rejection 变成 `failed`；Loop 吸收每次失败后继续下一个 cycle。**后果**：常驻可以活着，但无法证明每个 cycle 都成功。（`current-stage.md` 已知限制 1）
+2. **停机没有严格上界。** 没有超时、没有 hard kill。（已知限制 2）
+3. **Windows 上无法用外部自动化完整复现真实控制台 Ctrl+C 的优雅信号路径。** POSIX 用例在 win32 自我 skip —— 这是「这台机器上测不了」，不是「已经测过」。（已知限制 3）
+4. **assessed Event 的订阅者数为 0。** 它可以被持续发布，但还没有语义上的 Consumer。（已知限制 5）
+5. **Chronicle v1 没有完整性标记** —— 因此「fact 行被删光、header 完好」的 store 与全新 store 在结构上无法区分。（随 Phase 2 进入下一阶段的格式限制）
+6. **三个 live harness 自 `a2d701f` 起无法运行**（TypeError），未修；`language-reasoning-depth.live.test.mjs` 按设计会因前提移动而失败（守卫在正常工作）。
+7. **C# 一致性门禁自 `a2d701f` 起失效——而且是 skip，不是 fail。** `HumanSurface.Tests/NodeBridge.cs:22` 探测 `dist/cli/ask.js`、`node-helpers/conformance.mjs:29` 直接 import 它；该文件在 `a2d701f` 随 `src/cli/ask.ts` → `src/cli/language.ts` 一起改名，今天的真实产物是 `dist/cli/language.js`。实测该 import 返回 `ERR_MODULE_NOT_FOUND`。`NodeBridge.Available` 因此恒为 false，六个一致性用例全部走 `Skip`（`LanguageConformanceTests.cs:56-67`），而 `TestRun` 的退出码只看 `_failed`、不看 `_skipped`（`TestRun.cs:57`）——**CI 保持绿色**（`.github/workflows/runtime-tests.yml:37,72` 确实跑这个工程）。skip 给出的理由是「run npm run build」，指向一个永远不会产生该文件的补救。
+
+    **后果不是「少测了一点」，是「按设计该红的地方不会红」**：`human-surface-language-client-v0-implementation-boundary-freeze.md` 的核心论据是「capability 增加导致 owner 的界变化时，**C# 会红，而不是静默漂移**」——这条论据**今天不成立**，C# 侧正在静默漂移，且漂移不会被任何本地或 CI 运行发现。**修法明确且很小**（把两处路径改成 `language` 系），属于本地实现修复，不是架构裁决；本轮不修（mandate：只处理架构文档）。
+
+8. **PowerShell 异步子进程单次观测成本 370–674 ms** —— 感知每次观测要付这个代价（随 Phase 3 进入下一阶段）。
+9. **CI 上看不见的几处**：命名管道相关断言在 `ubuntu-latest` 上被 skip（`NO_PIPES` 轴，涉及 `human-delivery` / `desktop-session-observe` / `language` / `repository-ci-relevance` / `resident-control` / `work-focus` / `tui`）；凭据与状态行泄漏 canary 只在本机绿；live harness 的判定逻辑没有离线单元测试约束。**这一条只数「本机绿、CI skip」；第 7 条比它更进一步——那条在 CI 上也 skip。**
+10. **`language.decision-confirmed` 今天只有 CLI 写入者**，它的读者面尚未闭合。
+
+---
+
+## 12. 发现的过时文档与冲突
+
+本节只记录**能确认的**；不能确认的进入 §13。
+
+### 12.1 已确认的过时 / 自相矛盾（行号已逐条核对）
+
+| # | 位置 | 问题 | 处理 |
+| --- | --- | --- | --- |
+| 1 | `docs/development/current-stage.md:1014` | 写「**Resident 的生产组合仍然是七个 Plugin**，本轮**没有**加入 composition」，而同一文件 `:807` 的默认组合是九个、`:75` 可达十五个 | **保留正文**；以本文 §5.2 为准。**组合大小不是架构不变量**（`:833` 自己写明「『九个』不再是一个架构不变量」） |
+| 2 | `current-stage.md:833` vs `:835` | `:833` 写「测试钉的是每条合法组合各自（现在是**四条**）」，`:835` 的口径更新写「『四条』这个计数**已不再准确**」——同一对象两种表述 | 以 `:835` 为准：合法组合是 **scope 轴 × mandate 轴之积**，不是一份列表 |
+| 3 | `current-stage.md:890-892` | `ready` 定义为「九个 Plugin 全部 active」，未随 roster 变化更新 | 本文 §5.2 给出不依赖计数的表述（全部成员 active） |
+| 4 | `current-stage.md:1494` vs `:1496` | 删除线把 `hikari log` 与 stop/status 划在一起，而 `:1496` 明写 log **仍然不做** | 语义以 `:1496` 为准；删除线范围过宽 |
+| 5 | `docs/architecture/phase-4-explicit-work-focus-review.md:57,59-66,68-75` | 同一个行号累计三条补记（「Exactly eight plugins」→「已不存在」→「the eight members below」已不存在） | **不改正文**；行号漂移，符合 `governance-rules-v1.md` R7「行号不是身份」 |
+| 6 | `docs/development/language-plugin-v1.md:10` | 其内部路由（固定四选一 topic）已被 `language-tool-use-loop-v1.md` 取代 | 该文件已自带后置口径，**不需要新的修订指针** |
+| 7 | `current-stage.md:119` 与 `:129` | 四条结构不变量里的两条已被 Grounded Synthesis 收窄，文件已用口径更新说明 | 已自带口径更新；**不需要新的修订指针** |
+| 8 | `docs/architecture/hikari-nervous-system-stage-v0.md` §2C 注（2026-10-08） | 该注写「`read()` 现在有 **1** 个生产调用者」；今天的实测是 **2** —— `language/plugin.ts:403` 的已确认决定读取者是**该注之后**加入的（`fc49ac4`） | **不改正文**（该注本身是口径更新，按 R7.2 保留）；以本文 §6.3 的实测为准 |
+
+| 9 | `docs/architecture/human-surface-language-client-v0-implementation-boundary-freeze.md:26,59,84,91,94,247,258`；`human-inbound-v0-boundary-review.md:265,267,347,354,364,401,405,472,512`；`outbound-composition-v0-boundary-review.md:207,611`；`current-stage.md:113,195,197`；`judgement-reachability-v0.md:169`；源码注释 `src/language/protocol.ts:4`、`src/language/index.ts:102`、`src/language/model.ts:219`、`src/language/endpoint-path.ts:12`、`test/language.test.mjs:163`；C# `HumanSurface.Core/LanguageAsking.cs`、`PipeLanguageAsker.cs`、`HumanSurface.Tests/NodeBridge.cs:22,40`、`node-helpers/conformance.mjs:29,117` | 全部逐字引用 `src/cli/ask.ts` / `dist/cli/ask.js`，而该文件已在 `a2d701f` 改名为 `src/cli/language.ts`（产物 `dist/cli/language.js`），**今天不存在**；同一个改名也产生了 §11.7 那个静默失效的门禁 | **不改任何正文**（R7.2：历史评审与源码注释按原样保留，行号不是身份）；以本文 §5.5 的实测路径为准。**其中两处是功能性的、不只是引用**：`NodeBridge.cs:22` 的探测常量与 `conformance.mjs:29` 的 import。另需单指出 freeze 文档 `:247`——那一行不是引用而**是论据本身**（「从 `dist/cli/ask.js` 读真实的 `REPLY_TIMEOUT_MS` 并断言相等」），因此它是被 §11.7 直接推翻的那一条 |
+
+### 12.2 文档之间的两处真实分歧（不是过时，是**读法不同**）
+
+这两处**不能由本文裁定**，因为两边都由可执行证据以外的判断构成。
+
+**(a) 不变量 #4 的两种读法。**
+
+```text
+repository-ci-attention-v0-boundary-review.md:559
+  它不区分「主动说」与「被动说」——它说的是 Domain Plugin 不获得 speaking turn
+
+outbound-composition-v0-boundary-review.md:744-756
+  「形成」是这条不变量的对象，不是「搬运」…… 上一份 review 把第四条孤立出来读，
+  得到了一个比它所在段落更强的主张
+  —— 该文件自己写明：「两份文档不能同时都对，本文必须表态」，并把分歧写进 §19.1 待 Human
+```
+
+两边争的是同一条不变量（`language-tool-use-loop-v1.md:220`）**约束的是「谁造句」还是「谁说话」**。今天**没有任何代码依赖这个区别**，因为两条主动路径都由 Language Plugin 自己说话；但下一条主动能力若落在 Domain 一侧，这个区别就变成可执行的。
+
+**(b) `Human → Hikari` 在坐标之外。**
+
+```text
+outbound-composition-v0-boundary-review.md:229-230 定义 入站 / 出站
+human-inbound-v0-boundary-review.md:176-180 引用同样两句话，然后补一句：
+  **Human → Hikari 既不在这个「入站」里，也不在这个「出站」里。**
+  它在两份文档的坐标之外——**这是定义性空白，不是判决。**
+```
+
+这与 `human-inbound-v0-boundary-review.md:166` 记录的不对称一致：**三份权威文档都定义了出站**（`principles.md` §15：Domain Result → Presentation → RenderedMessage → Transport），**没有一份为入站写过任何条款**。
+
+### 12.3 今天与文档一致、可以放心引用的
+
+```text
+core-architecture-v0.md §11 的禁止清单：今天一条都没被违反（无 Central Brain / 无 GlobalWorldState /
+  无万能 Service / 无万能消息对象 / 无 Plugin 基类树）
+plugin-design-spec.md §3 禁止 service locator：src/ 里没有 getService()/resolve()/container()
+plugin-design-spec.md §4.1 符号层：跨模块 import 走 barrel
+```
+
+---
+
+## 13. 待 Human 裁决
+
+以下问题今天**无法从代码或既有权威文档推出答案**，且都有明确的下游后果：
+
+| # | 待裁决问题 | 谁已经把它标成待裁决 | 不裁决的后果 |
+| --- | --- | --- | --- |
+| 1 | **不变量 #4 的读法**：约束「谁造句」还是「谁说话」（§12.2a） | `outbound-composition-v0-boundary-review.md` §19.1（该文件逐字写「两份文档不能同时都对」） | 今天无影响；下一条落在 Domain 一侧的主动能力会立刻撞上 |
+| 2 | **`Human → Hikari` 的坐标**：它在入站/出站之外（§12.2b） | `human-inbound-v0-boundary-review.md:180`（自称「定义性空白」） | 任何需要「证明说话的是人」的能力都停在这里 |
+| 3 | **主动介入的总量控制由谁拥有**：两个场景各自判断，合并 / 分层 / 保持独立三条路都自洽 | 本文提出；无既有裁决 | 每新增一条主动路径，「喧闹」风险累积一次 |
+| 4 | **`language.decision-confirmed` 的读者面**：谁有权读、读来做什么 | `current-stage.md` 记录该事实家族只有 CLI 写入者 | 写下的已确认决定今天不影响任何行为 |
+| 5 | **后台 cycle 健康表面**：补它等于为「当时那一瞬」新增一条必须长期维护的契约 | `current-stage.md`（列为 v1 已知限制，明写「不是可以顺手补的补丁」） | 常驻活着 ≠ 每个 cycle 成功，且无法证明 |
+| 6 | **神经系统是否要有代码实体**：契约 / 组织约定 / Plugin | `hikari-nervous-system-stage-v0.md` 只定义阶段，不给形状 | 阶段的完成判据（读侧不再为零）无处落地 |
+| 7 | **Experience Formation 的解锁条件**：`VERDICT = NARROW` 自带条件 —— 出现一个真实 bounded consumer，其职责无法只靠 current facts 完成 | `experience-formation-v0-research.md:517-518` | 该阶段的第一刀切不下去 |
+| 8 | **`current-stage.md`「当前明确仍不做」的权威转写**：约 37 条里只有 4 条带具名来源，其余按 R2 默认 NOT-YET | `governance-rules-v1.md` R7.1（引不到源的条目按 NOT-YET 处理，或先补源） | 清单可读，但每条的规范力不同，容易被整体误读为同等强度 |
+| 9 | **神经系统阶段判据第 1 条是否已达到**：`repository-ci-attention` 读回自己的 `delivered` 家族并因此不重复播报，字面符合「至少有一个生产 Plugin 读取它自己的过去，并因此行为不同」（§6.3） | 由本文提出；`hikari-nervous-system-stage-v0.md` §4 与 §2C 的注指向的不是同一件事 | 该阶段的**下一步做不做、做什么**，取决于这一次定性 |
+
+**已经裁决并已实施的**（不在上表，列在这里避免被误读为待办）：
+
+```text
+repository-ci-attention 的重启语义 —— Human 裁决 N2-01（§8.1）
+Shared Experience Continuity —— 收窄为 LANGUAGE CONVERSATIONAL CONTINUITY v0，L2，已实施
+desktop-return-attention 的 BLOCKED —— 由治理评审 v1 §5 取代，已 L2 实施
+Memory Reactivation v0 —— BLOCKED（不是待办；含义是「当前不存在一个能被诚实切出的第一片」）
+```
+
+---
+
+## 14. 与长期文档的关系
+
+```text
+hikari-long-term.md   打算成为什么（不产生 MUST）
+hikari-current.md     今天是什么（本文）
+```
+
+两份都必须与下列权威文档一起读：
+
+```text
+docs/architecture/principles.md
+docs/architecture/core-architecture-v0.md
+docs/architecture/plugin-design-spec.md
+docs/architecture/governance-rules-v1.md
+```
+
+历史评审（`docs/architecture/phase-*` 与各 `*-boundary-review.md`）是**证据**，不是第三个活跃的设计层；本文不重写它们的正文。
