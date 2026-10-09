@@ -32,8 +32,8 @@
 // the distance between them is the whole of what this file promises about them. `renderChat` prints
 // model words as the entire answer, with no reading beside them for a sentence to be mistaken for, and
 // adds nothing at all — not even a label. `renderSynthesis` prints model words *after* a reading, under
-// a fixed label that says they are not one. That label is this file's voice and it is the only sentence
-// this file contributes there; what it states is a fact about these lines and not about the machine —
+// a fixed label that says they are not one. That label is this file's voice and it is the only thing this
+// file says there; what it states is a fact about these lines and not about the machine —
 // that they are not readings and that nothing here verified what they say — so neither section asserts
 // anything about what Hikari observed. Neither is ever laid between two readings either: the label leads
 // its section, and that section follows every block rather than joining any.
@@ -79,15 +79,22 @@ const FOCUS_NONE = '你当前还没有明确声明任何关注对象。';
 // reading is exactly as unverified as one quoted from a statement, and a label that marked only the
 // second would be claiming a distinction this build does not have.
 //
-// It is one line, and it has to stay a short one. A terminal clips every line to its width and reserves
-// a column for its own ellipsis, so at `DEFAULT_RENDER.columns` — 80 — this label loses its tail if it
-// is wider than 79 columns, and the tail is the part that says the material was never verified. `clip`
-// is the TUI's, but the sentence that gets cut is this file's, which is why the length is stated here
-// and why `test/language.test.mjs` measures it with the terminal's own `displayWidth` instead of a
-// second counter: shortening this label is free, and widening it fails a test rather than a narrow
-// window.
-const SYNTHESIS_LABEL =
-  '（下面不是读回来的内容，Hikari 自己说的、没有核实过的话；你以前说的也一样。）';
+// It is two lines rather than one, and the split is the fix for a loss that was measured rather than
+// imagined. A terminal clips every line to its width, and `clip` keeps a line whole while it is no wider
+// than the window — the column it spends on its own ellipsis comes out of the line only when the line is
+// actually being trimmed. So a single 77-column sentence lost its tail on every window narrower than 77,
+// which is where a tmux split and a narrow window both live. The claims are ordered so that what gets
+// lost first is what costs least: the first line is the one that has to survive — these lines are not a
+// reading — and it states that in 24 columns, so a window 24 wide and up carries it whole, where the
+// one-line form needed 77. The second line carries the rest, which is the part a reader loses when there
+// is no room for both. `clip` is the TUI's, but the sentences that get cut are this file's, which is why
+// the lengths are stated here and why `test/language.test.mjs` measures them with the terminal's own
+// `displayWidth` instead of a second counter: shortening either line is free, and widening the first one
+// fails a test rather than a narrow window.
+const SYNTHESIS_LABEL: readonly string[] = [
+  '（下面不是读回来的内容。',
+  'Hikari 自己说的、没有核实过的话；你以前说的也一样。）',
+];
 
 /**
  * One capability's reading, rendered, with the name it was read under.
@@ -174,7 +181,7 @@ export function renderAnswer(blocks: readonly GroundedBlock[], contextUsed: Dial
  * rather than a note to remember: a caller holding the plugin's exports has no name to call.
  */
 export function renderSynthesis(spoken: string): readonly string[] {
-  return [SYNTHESIS_LABEL, ...spoken.trim().split(/\r\n|\r|\n/).map(oneLine)];
+  return [...SYNTHESIS_LABEL, ...spoken.trim().split(/\r\n|\r|\n/).map(oneLine)];
 }
 
 // The name the block below is read under. It is bookkeeping and never reaches a line — `GroundedBlock`

@@ -3151,14 +3151,16 @@ test('有记录时，读过之后说的话跟在读回来的内容后面，并�
   assert.deepEqual(reply.lines.slice(0, reading.length), reading, '读回来的内容在最前面，且没有被改动');
 
   const composed = reply.lines.slice(reading.length);
-  assert.equal(composed.length, 2, '一段：标签一行，模型的话一行');
-  assert.ok(composed[0].startsWith('（'), '标签在段首，不在两句之间');
-  assert.ok(composed[0].includes('不是读回来的内容'), '标签要说这不是读回来的');
-  // The second clause, which is the only place a reader learns that a sentence about their own past words
+  assert.equal(composed.length, 3, '一段：标签两行，然后是模型的话');
+  const label = composed.slice(0, 2);
+  assert.ok(label[0].startsWith('（'), '标签在段首，不在两句之间');
+  assert.ok(label.join('').includes('不是读回来的内容'), '标签要说这不是读回来的');
+  // The second claim, which is the only place a reader learns that a sentence about their own past words
   // is not the record itself. A label saying only "not a reading" would leave the stronger-looking claim —
-  // this person's own words, therefore a fact — unmarked.
-  assert.ok(composed[0].includes('没有核实过'), '标签也要说记录本身没有被 Hikari 核实过');
-  assert.equal(composed[1], spoken, '模型的话逐字出现，不被改写');
+  // this person's own words, therefore a fact — unmarked. It is on the second line, not the first, because
+  // the first line is the one that has to survive a narrow window — see the width test below.
+  assert.ok(label.join('').includes('没有核实过'), '标签也要说记录本身没有被 Hikari 核实过');
+  assert.equal(composed[2], spoken, '模型的话逐字出现，不被改写');
 });
 
 test('没有记录时，读过之后说的话仍然不算数', async () => {
@@ -3225,24 +3227,38 @@ test('提问进行中才写进来的记录，不给这一轮开门', async () =>
   assert.deepEqual(reply.lines, renderFocus([]), 'prompt 里没有记录段时，这一轮也不许出现合成段');
 });
 
-test('合成段的标签在默认终端宽度下是一整行', () => {
-  // The label is the only thing telling a reader these lines are not a reading, and it is one line of an
-  // answer a terminal lays out: `tui-render.ts` clips every line to `render.columns` and reserves a column
-  // for its own ellipsis, so at the default 80 the budget is 79. A wider label loses its tail on a default
-  // window, and the tail is the clause that says the material was never verified — the label would then be
-  // present, cut, and useless exactly where it matters most.
+test('合成段的标签两行分开承受窄终端，最要紧的那句在 24 列时仍然完整', () => {
+  // The label is the only thing telling a reader these lines are not a reading, and it is laid out by a
+  // terminal: `tui-render.ts` clips every line to `render.columns`, and `clip` keeps a line whole while it
+  // is no wider than the window — the column it spends on its own ellipsis comes out of the line only when
+  // the line is actually being trimmed. (An earlier version of this test read that as a standing budget of
+  // `columns - 1`; the rule above is what the code does, and it is what these two assertions are written
+  // against.) The label used to be one 77-column sentence, which meant every window narrower than 77 cut
+  // its tail — and its tail was the claim that nothing verified this material. The two claims are now
+  // their own lines, so they are cut independently and in the order that costs least, and this test pins
+  // the guarantee that bought: the first line, which says these lines are not a reading, is whole on a
+  // window 24 columns wide.
   //
   // Measured off the rendered section rather than off a constant, so the number checked is the one a human
   // would be shown, and measured with the terminal's own `displayWidth`, so a label that is short in code
   // points but wide in cells cannot pass.
-  const width = displayWidth(renderSynthesis('好。')[0]);
-  assert.ok(width <= 79, `标签占 ${width} 列，默认终端一行放不下（上限 79）`);
+  const [essential, rest] = renderSynthesis('好。');
 
-  // Both claims survive at that width, which is the reason the text is as short as it is: the first says
-  // where these lines came from, the second says nothing verified them. Dropping either to save columns
-  // would make the remaining one a weaker statement than the one this build can actually make.
-  assert.ok(renderSynthesis('好。')[0].includes('不是读回来的内容'));
-  assert.ok(renderSynthesis('好。')[0].includes('没有核实过'));
+  const essentialWidth = displayWidth(essential);
+  assert.ok(
+    essentialWidth <= 24,
+    `标签第一行占 ${essentialWidth} 列，比这更窄的窗口就会把它截掉`,
+  );
+  assert.ok(essential.includes('不是读回来的内容'), '第一行就要说这不是读回来的');
+
+  // The second line carries the claim the one-line form lost first: that nothing verified this material,
+  // including the person's own earlier words. It is allowed to be longer, because it is the one that goes
+  // when there is no room for both — what may not happen is the first line going instead.
+  assert.ok(rest.includes('没有核实过'), '第二行要说记录本身没有被 Hikari 核实过');
+
+  // And both fit an ordinary window, which is what a reader on a default terminal sees: `DEFAULT_RENDER`
+  // is 80 columns when `process.stdout.columns` says nothing.
+  assert.ok(displayWidth(rest) <= 80, `标签第二行占 ${displayWidth(rest)} 列，默认的 80 列终端放不下`);
 });
 
 test('最后一步被截断时，半句话不进回答', async () => {
