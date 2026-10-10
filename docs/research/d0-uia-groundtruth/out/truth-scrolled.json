@@ -1,0 +1,2643 @@
+{
+    "generatedAtMs":  1791561630505,
+    "w1":  {
+               "hwnd":  "6362000",
+               "title":  "HIKARI-GT-W1",
+               "pid":  52552
+           },
+    "w2":  {
+               "hwnd":  "2233790",
+               "title":  "HIKARI-GT-W2"
+           },
+    "state":  {
+                  "selectedTab":  0,
+                  "tabCount":  3,
+                  "mainOffset":  400,
+                  "mainViewportHeight":  577.8,
+                  "mainExtentHeight":  1560,
+                  "sideOffset":  0,
+                  "bravoOffset":  0,
+                  "editText":  "GT-EDIT-INITIAL",
+                  "windowState":  "Normal"
+              },
+    "markers":  [
+                    {
+                        "text":  "GT-HDR-0001",
+                        "region":  "header",
+                        "tab":  "all",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    32,
+                                    32,
+                                    32
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            70,
+                                            93
+                                        ]
+                    },
+                    {
+                        "text":  "GT-EDIT-INITIAL",
+                        "region":  "inputs",
+                        "tab":  "all",
+                        "declared":  "editable",
+                        "rgb":  [
+                                    0,
+                                    0,
+                                    0
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            70,
+                                            728
+                                        ]
+                    },
+                    {
+                        "text":  "GT-NAMEONLY-A11Y",
+                        "region":  "inputs",
+                        "tab":  "all",
+                        "declared":  "name-only-control",
+                        "rgb":  [
+                                    0,
+                                    0,
+                                    0
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            398,
+                                            728
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A11YONLY-0001",
+                        "region":  "inputs",
+                        "tab":  "all",
+                        "declared":  "automation-name-only",
+                        "rgb":  [
+                                    128,
+                                    128,
+                                    128
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            606,
+                                            731
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0001",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    157,
+                                    181,
+                                    217
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            147
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0002",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    194,
+                                    42,
+                                    114
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            173
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0003",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    31,
+                                    103,
+                                    211
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            199
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0004",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    68,
+                                    164,
+                                    108
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            225
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0005",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    105,
+                                    25,
+                                    205
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            251
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0006",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    142,
+                                    86,
+                                    102
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            277
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0007",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    179,
+                                    147,
+                                    199
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            303
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0008",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    216,
+                                    208,
+                                    96
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            329
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0009",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    53,
+                                    69,
+                                    193
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            355
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0010",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    90,
+                                    130,
+                                    90
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            381
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0011",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    127,
+                                    191,
+                                    187
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            407
+                                        ]
+                    },
+                    {
+                        "text":  "GT-SIDE-0012",
+                        "region":  "side",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    164,
+                                    52,
+                                    84
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            73,
+                                            433
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0001",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    57,
+                                    81,
+                                    117
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            -253
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0002",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    94,
+                                    142,
+                                    214
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            -227
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0003",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    131,
+                                    203,
+                                    111
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            -201
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0004",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    168,
+                                    64,
+                                    208
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            -175
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0005",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    205,
+                                    125,
+                                    105
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            -149
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0006",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    42,
+                                    186,
+                                    202
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            -123
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0007",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    79,
+                                    47,
+                                    99
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            -97
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0008",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    116,
+                                    108,
+                                    196
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            -71
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0009",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    153,
+                                    169,
+                                    93
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            -45
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0010",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    190,
+                                    30,
+                                    190
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            -19
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0011",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    27,
+                                    91,
+                                    87
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            7
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0012",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    64,
+                                    152,
+                                    184
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            33
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0013",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    101,
+                                    213,
+                                    81
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            59
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0014",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    138,
+                                    74,
+                                    178
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            85
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0015",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    175,
+                                    135,
+                                    75
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            111
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0016",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    212,
+                                    196,
+                                    172
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  true,
+                        "samplePoint":  [
+                                            223,
+                                            137
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0017",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    49,
+                                    57,
+                                    69
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            163
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0018",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    86,
+                                    118,
+                                    166
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            189
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0019",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    123,
+                                    179,
+                                    63
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            215
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0020",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    160,
+                                    40,
+                                    160
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            241
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0021",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    197,
+                                    101,
+                                    57
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            267
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0022",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    34,
+                                    162,
+                                    154
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            293
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0023",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    71,
+                                    23,
+                                    51
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            319
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0024",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    108,
+                                    84,
+                                    148
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            345
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0025",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    145,
+                                    145,
+                                    45
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            371
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0026",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    182,
+                                    206,
+                                    142
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            397
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0027",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    219,
+                                    67,
+                                    39
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            423
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0028",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    56,
+                                    128,
+                                    136
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            449
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0029",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    93,
+                                    189,
+                                    33
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            475
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0030",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    130,
+                                    50,
+                                    130
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            501
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0031",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    167,
+                                    111,
+                                    27
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            527
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0032",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    204,
+                                    172,
+                                    124
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            553
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0033",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    41,
+                                    33,
+                                    21
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            579
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0034",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    78,
+                                    94,
+                                    118
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            605
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0035",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    115,
+                                    155,
+                                    215
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            631
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0036",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    152,
+                                    216,
+                                    112
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            657
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0037",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    189,
+                                    77,
+                                    209
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  true,
+                        "expectVisible":  true,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            683
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0038",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    26,
+                                    138,
+                                    106
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  true,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  true,
+                        "samplePoint":  [
+                                            223,
+                                            709
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0039",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    63,
+                                    199,
+                                    203
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            735
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0040",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    100,
+                                    60,
+                                    100
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            761
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0041",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    137,
+                                    121,
+                                    197
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            787
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0042",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    174,
+                                    182,
+                                    94
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            813
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0043",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    211,
+                                    43,
+                                    191
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            839
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0044",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    48,
+                                    104,
+                                    88
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            865
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0045",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    85,
+                                    165,
+                                    185
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            891
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0046",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    122,
+                                    26,
+                                    82
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            917
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0047",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    159,
+                                    87,
+                                    179
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            943
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0048",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    196,
+                                    148,
+                                    76
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            969
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0049",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    33,
+                                    209,
+                                    173
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            995
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0050",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    70,
+                                    70,
+                                    70
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1021
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0051",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    107,
+                                    131,
+                                    167
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1047
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0052",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    144,
+                                    192,
+                                    64
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1073
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0053",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    181,
+                                    53,
+                                    161
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1099
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0054",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    218,
+                                    114,
+                                    58
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1125
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0055",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    55,
+                                    175,
+                                    155
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1151
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0056",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    92,
+                                    36,
+                                    52
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1177
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0057",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    129,
+                                    97,
+                                    149
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1203
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0058",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    166,
+                                    158,
+                                    46
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1229
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0059",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    203,
+                                    219,
+                                    143
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1255
+                                        ]
+                    },
+                    {
+                        "text":  "GT-A-0060",
+                        "region":  "main",
+                        "tab":  "Alpha",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    40,
+                                    80,
+                                    40
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  false,
+                        "fullyInsideViewport":  false,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            223,
+                                            1281
+                                        ]
+                    },
+                    {
+                        "text":  "GT-B-0001",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    57,
+                                    81,
+                                    117
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0002",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    94,
+                                    142,
+                                    214
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0003",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    131,
+                                    203,
+                                    111
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0004",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    168,
+                                    64,
+                                    208
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0005",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    205,
+                                    125,
+                                    105
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0006",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    42,
+                                    186,
+                                    202
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0007",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    79,
+                                    47,
+                                    99
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0008",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    116,
+                                    108,
+                                    196
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0009",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    153,
+                                    169,
+                                    93
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0010",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    190,
+                                    30,
+                                    190
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0011",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    27,
+                                    91,
+                                    87
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0012",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    64,
+                                    152,
+                                    184
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0013",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    101,
+                                    213,
+                                    81
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0014",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    138,
+                                    74,
+                                    178
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0015",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    175,
+                                    135,
+                                    75
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0016",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    212,
+                                    196,
+                                    172
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0017",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    49,
+                                    57,
+                                    69
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0018",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    86,
+                                    118,
+                                    166
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0019",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    123,
+                                    179,
+                                    63
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0020",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    160,
+                                    40,
+                                    160
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0021",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    197,
+                                    101,
+                                    57
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0022",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    34,
+                                    162,
+                                    154
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0023",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    71,
+                                    23,
+                                    51
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0024",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    108,
+                                    84,
+                                    148
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0025",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    145,
+                                    145,
+                                    45
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0026",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    182,
+                                    206,
+                                    142
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0027",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    219,
+                                    67,
+                                    39
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0028",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    56,
+                                    128,
+                                    136
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0029",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    93,
+                                    189,
+                                    33
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0030",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    130,
+                                    50,
+                                    130
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0031",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    167,
+                                    111,
+                                    27
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0032",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    204,
+                                    172,
+                                    124
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0033",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    41,
+                                    33,
+                                    21
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0034",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    78,
+                                    94,
+                                    118
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0035",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    115,
+                                    155,
+                                    215
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0036",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    152,
+                                    216,
+                                    112
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0037",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    189,
+                                    77,
+                                    209
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0038",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    26,
+                                    138,
+                                    106
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0039",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    63,
+                                    199,
+                                    203
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-B-0040",
+                        "region":  "bravo",
+                        "tab":  "Bravo",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    100,
+                                    60,
+                                    100
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-H-COLLAPSED-0001",
+                        "region":  "hidden-tab",
+                        "tab":  "Hidden",
+                        "declared":  "collapsed",
+                        "rgb":  [
+                                    20,
+                                    20,
+                                    20
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-H-HIDDEN-0001",
+                        "region":  "hidden-tab",
+                        "tab":  "Hidden",
+                        "declared":  "hidden",
+                        "rgb":  [
+                                    57,
+                                    81,
+                                    117
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-H-ZEROOPACITY-0001",
+                        "region":  "hidden-tab",
+                        "tab":  "Hidden",
+                        "declared":  "zero-opacity",
+                        "rgb":  [
+                                    94,
+                                    142,
+                                    214
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  0,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-H-VISIBLE-0001",
+                        "region":  "hidden-tab",
+                        "tab":  "Hidden",
+                        "declared":  "visible",
+                        "rgb":  [
+                                    131,
+                                    203,
+                                    111
+                                ],
+                        "isVisibleWpf":  false,
+                        "effectiveOpacity":  1,
+                        "tabActive":  false,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  null
+                    },
+                    {
+                        "text":  "GT-W2-0001",
+                        "region":  "w2",
+                        "tab":  "W2",
+                        "declared":  "other-window",
+                        "rgb":  [
+                                    157,
+                                    181,
+                                    217
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            990,
+                                            93
+                                        ]
+                    },
+                    {
+                        "text":  "GT-W2-0002",
+                        "region":  "w2",
+                        "tab":  "W2",
+                        "declared":  "other-window",
+                        "rgb":  [
+                                    194,
+                                    42,
+                                    114
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            990,
+                                            119
+                                        ]
+                    },
+                    {
+                        "text":  "GT-W2-0003",
+                        "region":  "w2",
+                        "tab":  "W2",
+                        "declared":  "other-window",
+                        "rgb":  [
+                                    31,
+                                    103,
+                                    211
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            990,
+                                            145
+                                        ]
+                    },
+                    {
+                        "text":  "GT-W2-0004",
+                        "region":  "w2",
+                        "tab":  "W2",
+                        "declared":  "other-window",
+                        "rgb":  [
+                                    68,
+                                    164,
+                                    108
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            990,
+                                            171
+                                        ]
+                    },
+                    {
+                        "text":  "GT-W2-0005",
+                        "region":  "w2",
+                        "tab":  "W2",
+                        "declared":  "other-window",
+                        "rgb":  [
+                                    105,
+                                    25,
+                                    205
+                                ],
+                        "isVisibleWpf":  true,
+                        "effectiveOpacity":  1,
+                        "tabActive":  true,
+                        "inViewport":  null,
+                        "fullyInsideViewport":  null,
+                        "expectVisible":  false,
+                        "expectPartial":  false,
+                        "samplePoint":  [
+                                            990,
+                                            197
+                                        ]
+                    }
+                ]
+}

@@ -1,0 +1,596 @@
+{
+  "_comment": "Output of uia-hwnd-coverage.ps1 for the three target apps, re-run read-only. Backs the report section 6.3.4 table: how many tree elements carry their own NativeWindowHandle, and how many TextPattern (body-text-carrying) elements do not. The pywinauto UIA backend derives control_id from NativeWindowHandle and filters descendants(depth=N) on it, so a 100% miss rate means that identity test cannot mean \"tree depth\".",
+  "_repro": "CFG=$(node -e \"console.log(Buffer.from(JSON.stringify({target:'Code',maxNodes:4000,maxDepth:40})).toString('base64'))\"); HIKARI_HWNDCFG_B64=\"$CFG\" powershell.exe -NoProfile -NonInteractive -File ./uia-hwnd-coverage.ps1",
+  "_note": "ChatGPT reports 2399 nodes here; the report quotes 2400 from the original run. A live chat window drifts by a node between runs. Every load-bearing figure (withHwnd, coverage %, textEls, textElsWithoutOwnHwnd) reproduces exactly.",
+  "runs": [
+    {
+      "target": "msedge",
+      "hwnd": "1118906",
+      "nodes": 1125,
+      "withHwnd": 4,
+      "hwndCoveragePct": 0.4,
+      "textEls": 134,
+      "textElsWithoutOwnHwnd": 134,
+      "textElsWithoutOwnHwndPct": 100,
+      "maxDepthReached": 33,
+      "byDepth": [
+        {
+          "depth": 0,
+          "nodes": 1,
+          "withHwnd": 1
+        },
+        {
+          "depth": 1,
+          "nodes": 3,
+          "withHwnd": 2
+        },
+        {
+          "depth": 2,
+          "nodes": 1,
+          "withHwnd": 0
+        },
+        {
+          "depth": 3,
+          "nodes": 2,
+          "withHwnd": 0
+        },
+        {
+          "depth": 4,
+          "nodes": 5,
+          "withHwnd": 0
+        },
+        {
+          "depth": 5,
+          "nodes": 16,
+          "withHwnd": 0
+        },
+        {
+          "depth": 6,
+          "nodes": 20,
+          "withHwnd": 0
+        },
+        {
+          "depth": 7,
+          "nodes": 57,
+          "withHwnd": 0
+        },
+        {
+          "depth": 8,
+          "nodes": 62,
+          "withHwnd": 0
+        },
+        {
+          "depth": 9,
+          "nodes": 57,
+          "withHwnd": 0
+        },
+        {
+          "depth": 10,
+          "nodes": 57,
+          "withHwnd": 1
+        },
+        {
+          "depth": 11,
+          "nodes": 7,
+          "withHwnd": 0
+        },
+        {
+          "depth": 12,
+          "nodes": 14,
+          "withHwnd": 0
+        },
+        {
+          "depth": 13,
+          "nodes": 53,
+          "withHwnd": 0
+        },
+        {
+          "depth": 14,
+          "nodes": 8,
+          "withHwnd": 0
+        },
+        {
+          "depth": 15,
+          "nodes": 4,
+          "withHwnd": 0
+        },
+        {
+          "depth": 16,
+          "nodes": 5,
+          "withHwnd": 0
+        },
+        {
+          "depth": 17,
+          "nodes": 6,
+          "withHwnd": 0
+        },
+        {
+          "depth": 18,
+          "nodes": 5,
+          "withHwnd": 0
+        },
+        {
+          "depth": 19,
+          "nodes": 124,
+          "withHwnd": 0
+        },
+        {
+          "depth": 20,
+          "nodes": 18,
+          "withHwnd": 0
+        },
+        {
+          "depth": 21,
+          "nodes": 67,
+          "withHwnd": 0
+        },
+        {
+          "depth": 22,
+          "nodes": 65,
+          "withHwnd": 0
+        },
+        {
+          "depth": 23,
+          "nodes": 36,
+          "withHwnd": 0
+        },
+        {
+          "depth": 24,
+          "nodes": 22,
+          "withHwnd": 0
+        },
+        {
+          "depth": 25,
+          "nodes": 31,
+          "withHwnd": 0
+        },
+        {
+          "depth": 26,
+          "nodes": 41,
+          "withHwnd": 0
+        },
+        {
+          "depth": 27,
+          "nodes": 55,
+          "withHwnd": 0
+        },
+        {
+          "depth": 28,
+          "nodes": 42,
+          "withHwnd": 0
+        },
+        {
+          "depth": 29,
+          "nodes": 92,
+          "withHwnd": 0
+        },
+        {
+          "depth": 30,
+          "nodes": 69,
+          "withHwnd": 0
+        },
+        {
+          "depth": 31,
+          "nodes": 58,
+          "withHwnd": 0
+        },
+        {
+          "depth": 32,
+          "nodes": 20,
+          "withHwnd": 0
+        },
+        {
+          "depth": 33,
+          "nodes": 2,
+          "withHwnd": 0
+        }
+      ]
+    },
+    {
+      "target": "Code",
+      "hwnd": "724028",
+      "nodes": 940,
+      "withHwnd": 4,
+      "hwndCoveragePct": 0.4,
+      "textEls": 200,
+      "textElsWithoutOwnHwnd": 200,
+      "textElsWithoutOwnHwndPct": 100,
+      "maxDepthReached": 39,
+      "byDepth": [
+        {
+          "depth": 0,
+          "nodes": 1,
+          "withHwnd": 1
+        },
+        {
+          "depth": 1,
+          "nodes": 2,
+          "withHwnd": 1
+        },
+        {
+          "depth": 2,
+          "nodes": 1,
+          "withHwnd": 0
+        },
+        {
+          "depth": 3,
+          "nodes": 1,
+          "withHwnd": 0
+        },
+        {
+          "depth": 4,
+          "nodes": 2,
+          "withHwnd": 0
+        },
+        {
+          "depth": 5,
+          "nodes": 5,
+          "withHwnd": 0
+        },
+        {
+          "depth": 6,
+          "nodes": 1,
+          "withHwnd": 0
+        },
+        {
+          "depth": 7,
+          "nodes": 2,
+          "withHwnd": 0
+        },
+        {
+          "depth": 8,
+          "nodes": 3,
+          "withHwnd": 1
+        },
+        {
+          "depth": 9,
+          "nodes": 4,
+          "withHwnd": 1
+        },
+        {
+          "depth": 10,
+          "nodes": 3,
+          "withHwnd": 0
+        },
+        {
+          "depth": 11,
+          "nodes": 2,
+          "withHwnd": 0
+        },
+        {
+          "depth": 12,
+          "nodes": 5,
+          "withHwnd": 0
+        },
+        {
+          "depth": 13,
+          "nodes": 40,
+          "withHwnd": 0
+        },
+        {
+          "depth": 14,
+          "nodes": 15,
+          "withHwnd": 0
+        },
+        {
+          "depth": 15,
+          "nodes": 13,
+          "withHwnd": 0
+        },
+        {
+          "depth": 16,
+          "nodes": 25,
+          "withHwnd": 0
+        },
+        {
+          "depth": 17,
+          "nodes": 26,
+          "withHwnd": 0
+        },
+        {
+          "depth": 18,
+          "nodes": 26,
+          "withHwnd": 0
+        },
+        {
+          "depth": 19,
+          "nodes": 22,
+          "withHwnd": 0
+        },
+        {
+          "depth": 20,
+          "nodes": 14,
+          "withHwnd": 0
+        },
+        {
+          "depth": 21,
+          "nodes": 10,
+          "withHwnd": 0
+        },
+        {
+          "depth": 22,
+          "nodes": 28,
+          "withHwnd": 0
+        },
+        {
+          "depth": 23,
+          "nodes": 44,
+          "withHwnd": 0
+        },
+        {
+          "depth": 24,
+          "nodes": 39,
+          "withHwnd": 0
+        },
+        {
+          "depth": 25,
+          "nodes": 83,
+          "withHwnd": 0
+        },
+        {
+          "depth": 26,
+          "nodes": 57,
+          "withHwnd": 0
+        },
+        {
+          "depth": 27,
+          "nodes": 118,
+          "withHwnd": 0
+        },
+        {
+          "depth": 28,
+          "nodes": 111,
+          "withHwnd": 0
+        },
+        {
+          "depth": 29,
+          "nodes": 107,
+          "withHwnd": 0
+        },
+        {
+          "depth": 30,
+          "nodes": 22,
+          "withHwnd": 0
+        },
+        {
+          "depth": 31,
+          "nodes": 24,
+          "withHwnd": 0
+        },
+        {
+          "depth": 32,
+          "nodes": 26,
+          "withHwnd": 0
+        },
+        {
+          "depth": 33,
+          "nodes": 16,
+          "withHwnd": 0
+        },
+        {
+          "depth": 34,
+          "nodes": 11,
+          "withHwnd": 0
+        },
+        {
+          "depth": 35,
+          "nodes": 9,
+          "withHwnd": 0
+        },
+        {
+          "depth": 36,
+          "nodes": 12,
+          "withHwnd": 0
+        },
+        {
+          "depth": 37,
+          "nodes": 5,
+          "withHwnd": 0
+        },
+        {
+          "depth": 38,
+          "nodes": 3,
+          "withHwnd": 0
+        },
+        {
+          "depth": 39,
+          "nodes": 2,
+          "withHwnd": 0
+        }
+      ]
+    },
+    {
+      "target": "ChatGPT",
+      "hwnd": "199628",
+      "nodes": 2399,
+      "withHwnd": 3,
+      "hwndCoveragePct": 0.1,
+      "textEls": 1048,
+      "textElsWithoutOwnHwnd": 1048,
+      "textElsWithoutOwnHwndPct": 100,
+      "maxDepthReached": 35,
+      "byDepth": [
+        {
+          "depth": 0,
+          "nodes": 1,
+          "withHwnd": 1
+        },
+        {
+          "depth": 1,
+          "nodes": 2,
+          "withHwnd": 1
+        },
+        {
+          "depth": 2,
+          "nodes": 2,
+          "withHwnd": 0
+        },
+        {
+          "depth": 3,
+          "nodes": 2,
+          "withHwnd": 0
+        },
+        {
+          "depth": 4,
+          "nodes": 5,
+          "withHwnd": 0
+        },
+        {
+          "depth": 5,
+          "nodes": 1,
+          "withHwnd": 0
+        },
+        {
+          "depth": 6,
+          "nodes": 1,
+          "withHwnd": 0
+        },
+        {
+          "depth": 7,
+          "nodes": 1,
+          "withHwnd": 1
+        },
+        {
+          "depth": 8,
+          "nodes": 1,
+          "withHwnd": 0
+        },
+        {
+          "depth": 9,
+          "nodes": 1,
+          "withHwnd": 0
+        },
+        {
+          "depth": 10,
+          "nodes": 33,
+          "withHwnd": 0
+        },
+        {
+          "depth": 11,
+          "nodes": 5,
+          "withHwnd": 0
+        },
+        {
+          "depth": 12,
+          "nodes": 7,
+          "withHwnd": 0
+        },
+        {
+          "depth": 13,
+          "nodes": 14,
+          "withHwnd": 0
+        },
+        {
+          "depth": 14,
+          "nodes": 11,
+          "withHwnd": 0
+        },
+        {
+          "depth": 15,
+          "nodes": 11,
+          "withHwnd": 0
+        },
+        {
+          "depth": 16,
+          "nodes": 7,
+          "withHwnd": 0
+        },
+        {
+          "depth": 17,
+          "nodes": 14,
+          "withHwnd": 0
+        },
+        {
+          "depth": 18,
+          "nodes": 6,
+          "withHwnd": 0
+        },
+        {
+          "depth": 19,
+          "nodes": 8,
+          "withHwnd": 0
+        },
+        {
+          "depth": 20,
+          "nodes": 10,
+          "withHwnd": 0
+        },
+        {
+          "depth": 21,
+          "nodes": 10,
+          "withHwnd": 0
+        },
+        {
+          "depth": 22,
+          "nodes": 34,
+          "withHwnd": 0
+        },
+        {
+          "depth": 23,
+          "nodes": 36,
+          "withHwnd": 0
+        },
+        {
+          "depth": 24,
+          "nodes": 61,
+          "withHwnd": 0
+        },
+        {
+          "depth": 25,
+          "nodes": 97,
+          "withHwnd": 0
+        },
+        {
+          "depth": 26,
+          "nodes": 155,
+          "withHwnd": 0
+        },
+        {
+          "depth": 27,
+          "nodes": 300,
+          "withHwnd": 0
+        },
+        {
+          "depth": 28,
+          "nodes": 704,
+          "withHwnd": 0
+        },
+        {
+          "depth": 29,
+          "nodes": 150,
+          "withHwnd": 0
+        },
+        {
+          "depth": 30,
+          "nodes": 111,
+          "withHwnd": 0
+        },
+        {
+          "depth": 31,
+          "nodes": 171,
+          "withHwnd": 0
+        },
+        {
+          "depth": 32,
+          "nodes": 111,
+          "withHwnd": 0
+        },
+        {
+          "depth": 33,
+          "nodes": 131,
+          "withHwnd": 0
+        },
+        {
+          "depth": 34,
+          "nodes": 124,
+          "withHwnd": 0
+        },
+        {
+          "depth": 35,
+          "nodes": 61,
+          "withHwnd": 0
+        }
+      ]
+    }
+  ]
+}

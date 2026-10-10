@@ -54,11 +54,22 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Only the build, and not `npm test`: the TypeScript suite already ran in the job above, and
-      # running it twice would spend the billable Windows minutes on tests that do not need them. What
-      # the surface's tests need from Node is `dist/`, so this step produces exactly that.
-      - name: Build the runtime
-        run: npm run build
+      # The build and the tests both, and not the build alone any more. This step used to run `npm run
+      # build` on the argument that the TypeScript suite had already run in the job above and repeating
+      # it would spend billable Windows minutes on tests that do not need them. That argument holds for
+      # the tests that run on both hosts. It does not hold for the ones that only run here, and there
+      # was no step anywhere that ran those: the desktop content reader's tests create a real WPF
+      # window, walk it over UI Automation and answer through a real named pipe, and on the Ubuntu job
+      # every one of them skip themselves with a reason. So the Windows-only half of the suite was an
+      # assertion about this platform rather than a check, in a job whose whole purpose is the opposite
+      # of that — the same defect the comment above this job already describes for the shell.
+      #
+      # `npm test` is `npm run build && node --test test/*.test.mjs`, so `dist/` is still produced for
+      # the .NET steps below and a build failure still fails this job; nothing here relies on the build
+      # step being separate. A failing test fails the job — there is no `continue-on-error` and no
+      # widening of what counts as a skip.
+      - name: Test the runtime
+        run: npm test
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

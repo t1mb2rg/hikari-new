@@ -1,0 +1,2929 @@
+{
+  "config": {
+    "maxNodes": 3000,
+    "maxDepth": 40,
+    "timeBudgetMs": 30000,
+    "charCap": 2000000,
+    "targets": [
+      "QQ",
+      "Weixin",
+      "cloudmusic",
+      "PowerToys.QuickAccess",
+      "SystemSettings"
+    ]
+  },
+  "windowCount": 68,
+  "windows": [
+    {
+      "process": "QQ",
+      "hwnd": "1315330",
+      "pid": 15208,
+      "titleLen": 2,
+      "className": "Chrome_WidgetWin_1",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 2,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 9,
+        "named": 2,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 7,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 36,
+        "controlTypes": "Pane=8 Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 2,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "201390",
+      "pid": 27772,
+      "titleLen": 4,
+      "className": "DesktopLyrics",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 4,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 4,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "12457460",
+      "pid": 7136,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "13243982",
+      "pid": 15208,
+      "titleLen": 2,
+      "className": "Chrome_WidgetWin_1",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 2,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 10,
+        "named": 2,
+        "textEls": 1,
+        "textChars": 5,
+        "onscreenChars": 5,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 8,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "AFF5B7AD11D6",
+        "elapsedMs": 16,
+        "controlTypes": "Pane=8 Window=1 Document=1"
+      },
+      "misleading": {
+        "rootNameLen": 2,
+        "bestTextChars": 5,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135056",
+      "pid": 15208,
+      "titleLen": 2,
+      "className": "Chrome_WidgetWin_1",
+      "visible": true,
+      "iconic": false,
+      "root": {
+        "nameLen": 2,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "A",
+      "controlView": {
+        "nodes": 457,
+        "named": 223,
+        "textEls": 134,
+        "textChars": 2283,
+        "onscreenChars": 1999,
+        "offscreenChars": 284,
+        "offscreenTextEls": 53,
+        "depth": 17,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "F1BA7D5095A2",
+        "elapsedMs": 378,
+        "controlTypes": "Group=210 Text=131 Image=51 Button=47 Pane=12 ToolBar=3"
+      },
+      "rawView": {
+        "nodes": 809,
+        "named": 225,
+        "textEls": 135,
+        "textChars": 2285,
+        "onscreenChars": 2001,
+        "offscreenChars": 284,
+        "offscreenTextEls": 53,
+        "depth": 29,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "A5D01B0D45D5",
+        "elapsedMs": 682,
+        "controlTypes": "Group=547 Text=143 Image=51 Button=47 Pane=14 ToolBar=3"
+      },
+      "contentView": {
+        "nodes": 457,
+        "named": 223,
+        "textEls": 134,
+        "textChars": 2283,
+        "onscreenChars": 1999,
+        "offscreenChars": 284,
+        "offscreenTextEls": 53,
+        "depth": 17,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "F1BA7D5095A2",
+        "elapsedMs": 390,
+        "controlTypes": "Group=210 Text=131 Image=51 Button=47 Pane=12 ToolBar=3"
+      },
+      "controlViewCached": {
+        "nodes": 457,
+        "named": 222,
+        "textEls": 134,
+        "textChars": 2283,
+        "onscreenChars": 1999,
+        "offscreenChars": 284,
+        "offscreenTextEls": 53,
+        "depth": 17,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "F1BA7D5095A2",
+        "elapsedMs": 587,
+        "controlTypes": "Group=210 Text=131 Image=51 Button=47 Pane=12 ToolBar=3"
+      },
+      "rawViewCached": {
+        "nodes": 809,
+        "named": 224,
+        "textEls": 135,
+        "textChars": 2285,
+        "onscreenChars": 2001,
+        "offscreenChars": 284,
+        "offscreenTextEls": 53,
+        "depth": 29,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "A5D01B0D45D5",
+        "elapsedMs": 825,
+        "controlTypes": "Group=547 Text=143 Image=51 Button=47 Pane=14 ToolBar=3"
+      },
+      "misleading": {
+        "rootNameLen": 2,
+        "bestTextChars": 2285,
+        "nameIsOnlySignal": false
+      },
+      "focused": {
+        "controlType": "ControlType.Document",
+        "nameLen": 16,
+        "hasTextPattern": true,
+        "textChars": 1395,
+        "belongsToThisWindow": false,
+        "elapsedMs": 7
+      },
+      "targeted": {
+        "matched": 132,
+        "scanned": 132,
+        "withText": 132,
+        "textChars": 2281,
+        "elapsedMs": 51
+      },
+      "children": [
+        {
+          "index": 0,
+          "controlType": "Pane",
+          "nameLen": 0,
+          "offscreen": false,
+          "nodes": 1,
+          "textChars": 0,
+          "textHash": "-",
+          "truncatedBy": ""
+        },
+        {
+          "index": 1,
+          "controlType": "Pane",
+          "nameLen": 2,
+          "offscreen": false,
+          "nodes": 455,
+          "textChars": 2283,
+          "textHash": "F1BA7D5095A2",
+          "truncatedBy": ""
+        }
+      ]
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "60166446",
+      "pid": 51004,
+      "titleLen": 2,
+      "className": "Qt51514QWindowIcon",
+      "visible": true,
+      "iconic": false,
+      "root": {
+        "nameLen": 2,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "A",
+      "controlView": {
+        "nodes": 3,
+        "named": 3,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 1,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=2 Window=1"
+      },
+      "rawView": {
+        "nodes": 3,
+        "named": 3,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 1,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 2,
+        "controlTypes": "Pane=2 Window=1"
+      },
+      "contentView": {
+        "nodes": 3,
+        "named": 3,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 1,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=2 Window=1"
+      },
+      "controlViewCached": {
+        "nodes": 3,
+        "named": 3,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 1,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 2,
+        "controlTypes": "Pane=2 Window=1"
+      },
+      "rawViewCached": {
+        "nodes": 3,
+        "named": 3,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 1,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=2 Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 2,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      },
+      "focused": {
+        "controlType": "ControlType.Document",
+        "nameLen": 16,
+        "hasTextPattern": true,
+        "textChars": 1395,
+        "belongsToThisWindow": false,
+        "elapsedMs": 4
+      },
+      "targeted": {
+        "matched": 0,
+        "scanned": 0,
+        "withText": 0,
+        "textChars": 0,
+        "elapsedMs": 1
+      },
+      "children": [
+        {
+          "index": 0,
+          "controlType": "Pane",
+          "nameLen": 6,
+          "offscreen": false,
+          "nodes": 1,
+          "textChars": 0,
+          "textHash": "-",
+          "truncatedBy": ""
+        },
+        {
+          "index": 1,
+          "controlType": "Pane",
+          "nameLen": 21,
+          "offscreen": false,
+          "nodes": 1,
+          "textChars": 0,
+          "textHash": "-",
+          "truncatedBy": ""
+        }
+      ]
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "1969900",
+      "pid": 27772,
+      "titleLen": 13,
+      "className": "OrpheusBrowserHost",
+      "visible": true,
+      "iconic": false,
+      "root": {
+        "nameLen": 13,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "A",
+      "controlView": {
+        "nodes": 5,
+        "named": 2,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 3,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 3,
+        "controlTypes": "Pane=4 Window=1"
+      },
+      "rawView": {
+        "nodes": 5,
+        "named": 2,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 3,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 3,
+        "controlTypes": "Pane=4 Window=1"
+      },
+      "contentView": {
+        "nodes": 5,
+        "named": 2,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 3,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 3,
+        "controlTypes": "Pane=4 Window=1"
+      },
+      "controlViewCached": {
+        "nodes": 5,
+        "named": 2,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 3,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 5,
+        "controlTypes": "Pane=4 Window=1"
+      },
+      "rawViewCached": {
+        "nodes": 5,
+        "named": 2,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 3,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 5,
+        "controlTypes": "Pane=4 Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 13,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      },
+      "focused": {
+        "controlType": "ControlType.Document",
+        "nameLen": 16,
+        "hasTextPattern": true,
+        "textChars": 1395,
+        "belongsToThisWindow": false,
+        "elapsedMs": 4
+      },
+      "targeted": {
+        "matched": 0,
+        "scanned": 0,
+        "withText": 0,
+        "textChars": 0,
+        "elapsedMs": 2
+      },
+      "children": [
+        {
+          "index": 0,
+          "controlType": "Pane",
+          "nameLen": 0,
+          "offscreen": false,
+          "nodes": 4,
+          "textChars": 0,
+          "textHash": "-",
+          "truncatedBy": ""
+        }
+      ]
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "70864",
+      "pid": 6000,
+      "titleLen": 0,
+      "className": "Base_PowerMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "2430108",
+      "pid": 30608,
+      "titleLen": 23,
+      "className": "Qt51514WxTrayIconMessageWindowClass",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 23,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 23,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "1840286",
+      "pid": 30608,
+      "titleLen": 0,
+      "className": "Base_PowerMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "267362",
+      "pid": 30608,
+      "titleLen": 0,
+      "className": "DisplayICC_SystemMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "398416",
+      "pid": 30608,
+      "titleLen": 0,
+      "className": "Chrome_SystemMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "32248756",
+      "pid": 34404,
+      "titleLen": 0,
+      "className": "Base_PowerMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "922664",
+      "pid": 51004,
+      "titleLen": 23,
+      "className": "Qt51514WxTrayIconMessageWindowClass",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 23,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 23,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "1642948",
+      "pid": 51004,
+      "titleLen": 0,
+      "className": "Base_PowerMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "332020",
+      "pid": 51004,
+      "titleLen": 0,
+      "className": "DisplayICC_SystemMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "12718304",
+      "pid": 51004,
+      "titleLen": 0,
+      "className": "Chrome_SystemMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "1511820",
+      "pid": 7136,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "1839462",
+      "pid": 15208,
+      "titleLen": 20,
+      "className": "GDI+ Hook Window Class",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 20,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 20,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "594560",
+      "pid": 27772,
+      "titleLen": 5,
+      "className": "MiniPlayer",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 5,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 5,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 5,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "528988",
+      "pid": 27772,
+      "titleLen": 64,
+      "className": "MediaPlayer SMTC window - {6D2F2062-344F-499D-B655-16E9567FFDDF}",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 64,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 64,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "592372",
+      "pid": 27772,
+      "titleLen": 13,
+      "className": "icon",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 13,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 13,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "921742",
+      "pid": 40216,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "2363968",
+      "pid": 27772,
+      "titleLen": 28,
+      "className": "GDI+ Hook Window Class",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 28,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 28,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "986218",
+      "pid": 27772,
+      "titleLen": 0,
+      "className": "Chrome_SystemMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "2102038",
+      "pid": 27772,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "725558",
+      "pid": 27772,
+      "titleLen": 0,
+      "className": "Base_PowerMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135360",
+      "pid": 7136,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135100",
+      "pid": 15208,
+      "titleLen": 2,
+      "className": "Chrome_WidgetWin_1",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 2,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 33,
+        "named": 10,
+        "textEls": 2,
+        "textChars": 41,
+        "onscreenChars": 41,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 13,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "F9B5C83C4DB5",
+        "elapsedMs": 33,
+        "controlTypes": "Pane=10 Group=8 Image=6 Button=4 ToolBar=2 Document=1"
+      },
+      "misleading": {
+        "rootNameLen": 2,
+        "bestTextChars": 41,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135348",
+      "pid": 7136,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "134978",
+      "pid": 15208,
+      "titleLen": 2,
+      "className": "Chrome_WidgetWin_1",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 2,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 10,
+        "named": 2,
+        "textEls": 1,
+        "textChars": 5,
+        "onscreenChars": 5,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 8,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "AFF5B7AD11D6",
+        "elapsedMs": 9,
+        "controlTypes": "Pane=8 Window=1 Document=1"
+      },
+      "misleading": {
+        "rootNameLen": 2,
+        "bestTextChars": 5,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135038",
+      "pid": 7136,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "396862",
+      "pid": 15208,
+      "titleLen": 2,
+      "className": "Chrome_WidgetWin_1",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 2,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 11,
+        "named": 2,
+        "textEls": 1,
+        "textChars": 11,
+        "onscreenChars": 11,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 9,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "2CBAA4FBBB24",
+        "elapsedMs": 10,
+        "controlTypes": "Pane=8 Group=1 Window=1 Document=1"
+      },
+      "misleading": {
+        "rootNameLen": 2,
+        "bestTextChars": 11,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "266044",
+      "pid": 15208,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135032",
+      "pid": 7136,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "1249552",
+      "pid": 15208,
+      "titleLen": 0,
+      "className": "Electron_NotifyIconHostWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135012",
+      "pid": 15208,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135028",
+      "pid": 15208,
+      "titleLen": 0,
+      "className": "Base_PowerMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "56037554",
+      "pid": 30608,
+      "titleLen": 6,
+      "className": "Qt51514QWindowToolSaveBits",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 6,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 6,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "70846",
+      "pid": 30608,
+      "titleLen": 2,
+      "className": "Qt51514QWindowIcon",
+      "visible": true,
+      "iconic": true,
+      "root": {
+        "nameLen": 2,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "A",
+      "controlView": {
+        "nodes": 3,
+        "named": 3,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 1,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=2 Window=1"
+      },
+      "rawView": {
+        "nodes": 3,
+        "named": 3,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 1,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=2 Window=1"
+      },
+      "contentView": {
+        "nodes": 3,
+        "named": 3,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 1,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=2 Window=1"
+      },
+      "controlViewCached": {
+        "nodes": 3,
+        "named": 3,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 1,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 2,
+        "controlTypes": "Pane=2 Window=1"
+      },
+      "rawViewCached": {
+        "nodes": 3,
+        "named": 3,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 1,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=2 Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 2,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      },
+      "focused": {
+        "controlType": "ControlType.Document",
+        "nameLen": 16,
+        "hasTextPattern": true,
+        "textChars": 1395,
+        "belongsToThisWindow": false,
+        "elapsedMs": 4
+      },
+      "targeted": {
+        "matched": 0,
+        "scanned": 0,
+        "withText": 0,
+        "textChars": 0,
+        "elapsedMs": 1
+      },
+      "children": [
+        {
+          "index": 0,
+          "controlType": "Pane",
+          "nameLen": 6,
+          "offscreen": false,
+          "nodes": 1,
+          "textChars": 0,
+          "textHash": "-",
+          "truncatedBy": ""
+        },
+        {
+          "index": 1,
+          "controlType": "Pane",
+          "nameLen": 21,
+          "offscreen": false,
+          "nodes": 1,
+          "textChars": 0,
+          "textHash": "-",
+          "truncatedBy": ""
+        }
+      ]
+    },
+    {
+      "process": "PowerToys.QuickAccess",
+      "hwnd": "132756",
+      "pid": 18388,
+      "titleLen": 32,
+      "className": "WinUIDesktopWin32WindowClass",
+      "visible": true,
+      "iconic": false,
+      "root": {
+        "nameLen": 32,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "A",
+      "controlView": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "rawView": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Window=1"
+      },
+      "contentView": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Window=1"
+      },
+      "controlViewCached": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Window=1"
+      },
+      "rawViewCached": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 32,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      },
+      "focused": {
+        "controlType": "ControlType.Document",
+        "nameLen": 16,
+        "hasTextPattern": true,
+        "textChars": 1395,
+        "belongsToThisWindow": false,
+        "elapsedMs": 4
+      },
+      "targeted": {
+        "matched": 0,
+        "scanned": 0,
+        "withText": 0,
+        "textChars": 0,
+        "elapsedMs": 0
+      },
+      "children": []
+    },
+    {
+      "process": "SystemSettings",
+      "hwnd": "264968",
+      "pid": 11660,
+      "titleLen": 0,
+      "className": "PersonalizationThemeChangeListener",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "SystemSettings",
+      "hwnd": "133546",
+      "pid": 11660,
+      "titleLen": 0,
+      "className": "WorkerW",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "SystemSettings",
+      "hwnd": "198546",
+      "pid": 11660,
+      "titleLen": 2,
+      "className": "Windows.UI.Core.CoreWindow",
+      "visible": true,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "A",
+      "controlView": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "rawView": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "contentView": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "controlViewCached": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=1"
+      },
+      "rawViewCached": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      },
+      "focused": {
+        "controlType": "ControlType.Document",
+        "nameLen": 16,
+        "hasTextPattern": true,
+        "textChars": 1395,
+        "belongsToThisWindow": false,
+        "elapsedMs": 4
+      },
+      "targeted": {
+        "matched": 0,
+        "scanned": 0,
+        "withText": 0,
+        "textChars": 0,
+        "elapsedMs": 0
+      },
+      "children": []
+    },
+    {
+      "process": "QQ",
+      "hwnd": "133040",
+      "pid": 21708,
+      "titleLen": 0,
+      "className": "Electron_SystemPreferencesHostWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "133016",
+      "pid": 21708,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "67518",
+      "pid": 21708,
+      "titleLen": 0,
+      "className": "Base_PowerMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135568",
+      "pid": 15208,
+      "titleLen": 11,
+      "className": "MSCTFIME UI",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135030",
+      "pid": 15208,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "332162",
+      "pid": 51004,
+      "titleLen": 11,
+      "className": "MSCTFIME UI",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "528596",
+      "pid": 51004,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "987518",
+      "pid": 27772,
+      "titleLen": 11,
+      "className": "MSCTFIME UI",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "856670",
+      "pid": 27772,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "135584",
+      "pid": 7136,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "70866",
+      "pid": 6000,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "1971268",
+      "pid": 34404,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "791232",
+      "pid": 15208,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "921438",
+      "pid": 27772,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "1118802",
+      "pid": 40216,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "cloudmusic",
+      "hwnd": "527736",
+      "pid": 27772,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "136298",
+      "pid": 30608,
+      "titleLen": 11,
+      "className": "MSCTFIME UI",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Weixin",
+      "hwnd": "267348",
+      "pid": 30608,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "PowerToys.QuickAccess",
+      "hwnd": "68230",
+      "pid": 18388,
+      "titleLen": 11,
+      "className": "MSCTFIME UI",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "PowerToys.QuickAccess",
+      "hwnd": "67392",
+      "pid": 18388,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "SystemSettings",
+      "hwnd": "266458",
+      "pid": 11660,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "SystemSettings",
+      "hwnd": "265424",
+      "pid": 11660,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "SystemSettings",
+      "hwnd": "133552",
+      "pid": 11660,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "QQ",
+      "hwnd": "67520",
+      "pid": 21708,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    }
+  ],
+  "wallClockMs": 9401
+}

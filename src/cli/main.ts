@@ -4,6 +4,7 @@ import { askCommand } from './ask-command.js';
 import { bootstrapCommand } from './bootstrap.js';
 import { chronicleInitCommand } from './chronicle-init.js';
 import { confirmCommand } from './confirm-command.js';
+import { contentCommand } from './content-command.js';
 import { statusCommand, stopCommand } from './control-command.js';
 import { focusCommand } from './focus-command.js';
 import { initCommand } from './init.js';
@@ -51,6 +52,7 @@ function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOut
   if (parsed.command === 'focus') return focusCommand(parsed.options);
   if (parsed.command === 'relevance') return relevanceCommand(parsed.options);
   if (parsed.command === 'observe') return observeCommand(parsed.options);
+  if (parsed.command === 'content') return contentCommand(parsed.options);
   if (parsed.command === 'ask') return askCommand(parsed.options);
   if (parsed.command === 'confirm') return confirmCommand(parsed.options);
   if (parsed.command === 'profile-set') return profileSetCommand(parsed.options);

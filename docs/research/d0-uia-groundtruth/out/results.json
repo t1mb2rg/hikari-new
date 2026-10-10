@@ -1,0 +1,822 @@
+{
+  "W1": "6362000",
+  "W2": "2233790",
+  "focusInfo": {
+    "atMs": 1791561655016,
+    "pid": 41348,
+    "marker": "GT-FOCUS-0001",
+    "isForeground": false,
+    "foregroundHwnd": "724028",
+    "hwnd": "1250322"
+  },
+  "results": [
+    {
+      "state": "baseline",
+      "truth": {
+        "selectedTab": 0,
+        "tabCount": 3,
+        "mainOffset": 0,
+        "mainViewportHeight": 577.8,
+        "mainExtentHeight": 1560,
+        "sideOffset": 0,
+        "bravoOffset": 0,
+        "editText": "GT-EDIT-INITIAL",
+        "windowState": "Normal"
+      },
+      "truthFile": "truth-baseline.json",
+      "reads": {
+        "control": {
+          "ok": true,
+          "walk": {
+            "nodes": 97,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 5,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 5,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              }
+            ]
+          },
+          "elapsedMs": 631,
+          "timedOut": false
+        },
+        "raw": {
+          "ok": true,
+          "walk": {
+            "nodes": 98,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 5,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 5,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 3
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 3
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              }
+            ]
+          },
+          "elapsedMs": 597,
+          "timedOut": false
+        },
+        "content": {
+          "ok": true,
+          "walk": {
+            "nodes": 90,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 0,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 4,
+            "truncatedBy": "",
+            "offscreenSample": []
+          },
+          "elapsedMs": 638,
+          "timedOut": false
+        },
+        "targeted": {
+          "ok": true,
+          "walk": {
+            "nodes": 77,
+            "textEls": 0,
+            "textChars": 0,
+            "named": 77,
+            "namedNoText": 0,
+            "offscreenNodes": 0,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 0,
+            "truncatedBy": "",
+            "offscreenSample": []
+          },
+          "elapsedMs": 140,
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "state": "scrolled",
+      "truth": {
+        "selectedTab": 0,
+        "tabCount": 3,
+        "mainOffset": 400,
+        "mainViewportHeight": 577.8,
+        "mainExtentHeight": 1560,
+        "sideOffset": 0,
+        "bravoOffset": 0,
+        "editText": "GT-EDIT-INITIAL",
+        "windowState": "Normal"
+      },
+      "truthFile": "truth-scrolled.json",
+      "reads": {
+        "control": {
+          "ok": true,
+          "walk": {
+            "nodes": 97,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 5,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 5,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              }
+            ]
+          },
+          "elapsedMs": 672,
+          "timedOut": false
+        },
+        "raw": {
+          "ok": true,
+          "walk": {
+            "nodes": 98,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 5,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 5,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 3
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 3
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              }
+            ]
+          },
+          "elapsedMs": 637,
+          "timedOut": false
+        },
+        "content": {
+          "ok": true,
+          "walk": {
+            "nodes": 90,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 0,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 4,
+            "truncatedBy": "",
+            "offscreenSample": []
+          },
+          "elapsedMs": 628,
+          "timedOut": false
+        },
+        "targeted": {
+          "ok": true,
+          "walk": {
+            "nodes": 77,
+            "textEls": 0,
+            "textChars": 0,
+            "named": 77,
+            "namedNoText": 0,
+            "offscreenNodes": 0,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 0,
+            "truncatedBy": "",
+            "offscreenSample": []
+          },
+          "elapsedMs": 125,
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "state": "tab-bravo",
+      "truth": {
+        "selectedTab": 1,
+        "tabCount": 3,
+        "mainOffset": 400,
+        "mainViewportHeight": 577.8,
+        "mainExtentHeight": 1560,
+        "sideOffset": 0,
+        "bravoOffset": 0,
+        "editText": "GT-EDIT-INITIAL",
+        "windowState": "Normal"
+      },
+      "truthFile": "truth-tab-bravo.json",
+      "reads": {
+        "control": {
+          "ok": true,
+          "walk": {
+            "nodes": 62,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 50,
+            "namedNoText": 50,
+            "offscreenNodes": 3,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 5,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              }
+            ]
+          },
+          "elapsedMs": 420,
+          "timedOut": false
+        },
+        "raw": {
+          "ok": true,
+          "walk": {
+            "nodes": 63,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 50,
+            "namedNoText": 50,
+            "offscreenNodes": 3,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 5,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 3
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 3
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              }
+            ]
+          },
+          "elapsedMs": 396,
+          "timedOut": false
+        },
+        "content": {
+          "ok": true,
+          "walk": {
+            "nodes": 57,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 50,
+            "namedNoText": 50,
+            "offscreenNodes": 0,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 4,
+            "truncatedBy": "",
+            "offscreenSample": []
+          },
+          "elapsedMs": 460,
+          "timedOut": false
+        },
+        "targeted": {
+          "ok": true,
+          "walk": {
+            "nodes": 45,
+            "textEls": 0,
+            "textChars": 0,
+            "named": 45,
+            "namedNoText": 0,
+            "offscreenNodes": 0,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 0,
+            "truncatedBy": "",
+            "offscreenSample": []
+          },
+          "elapsedMs": 101,
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "state": "tab-hidden",
+      "truth": {
+        "selectedTab": 2,
+        "tabCount": 3,
+        "mainOffset": 400,
+        "mainViewportHeight": 577.8,
+        "mainExtentHeight": 1560,
+        "sideOffset": 0,
+        "bravoOffset": 0,
+        "editText": "GT-EDIT-INITIAL",
+        "windowState": "Normal"
+      },
+      "truthFile": "truth-tab-hidden.json",
+      "reads": {
+        "control": {
+          "ok": true,
+          "walk": {
+            "nodes": 18,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 14,
+            "namedNoText": 14,
+            "offscreenNodes": 4,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 3,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "GT-H-COLLAPSED-0001",
+                "controlType": "ControlType.Text",
+                "depth": 3
+              },
+              {
+                "name": "GT-H-HIDDEN-0001",
+                "controlType": "ControlType.Text",
+                "depth": 3
+              }
+            ]
+          },
+          "elapsedMs": 116,
+          "timedOut": false
+        },
+        "raw": {
+          "ok": true,
+          "walk": {
+            "nodes": 19,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 14,
+            "namedNoText": 14,
+            "offscreenNodes": 4,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 3,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 3
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 3
+              },
+              {
+                "name": "GT-H-COLLAPSED-0001",
+                "controlType": "ControlType.Text",
+                "depth": 3
+              },
+              {
+                "name": "GT-H-HIDDEN-0001",
+                "controlType": "ControlType.Text",
+                "depth": 3
+              }
+            ]
+          },
+          "elapsedMs": 122,
+          "timedOut": false
+        },
+        "content": {
+          "ok": true,
+          "walk": {
+            "nodes": 16,
+            "textEls": 1,
+            "textChars": 15,
+            "named": 14,
+            "namedNoText": 14,
+            "offscreenNodes": 2,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 3,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "GT-H-COLLAPSED-0001",
+                "controlType": "ControlType.Text",
+                "depth": 3
+              },
+              {
+                "name": "GT-H-HIDDEN-0001",
+                "controlType": "ControlType.Text",
+                "depth": 3
+              }
+            ]
+          },
+          "elapsedMs": 119,
+          "timedOut": false
+        },
+        "targeted": {
+          "ok": true,
+          "walk": {
+            "nodes": 9,
+            "textEls": 0,
+            "textChars": 0,
+            "named": 9,
+            "namedNoText": 0,
+            "offscreenNodes": 2,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 0,
+            "truncatedBy": "",
+            "offscreenSample": []
+          },
+          "elapsedMs": 51,
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "state": "edited",
+      "truth": {
+        "selectedTab": 0,
+        "tabCount": 3,
+        "mainOffset": 0,
+        "mainViewportHeight": 577.8,
+        "mainExtentHeight": 1560,
+        "sideOffset": 0,
+        "bravoOffset": 0,
+        "editText": "GT-EDIT-CHANGED-0002",
+        "windowState": "Normal"
+      },
+      "truthFile": "truth-edited.json",
+      "reads": {
+        "control": {
+          "ok": true,
+          "walk": {
+            "nodes": 97,
+            "textEls": 1,
+            "textChars": 20,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 5,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 5,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              }
+            ]
+          },
+          "elapsedMs": 645,
+          "timedOut": false
+        },
+        "raw": {
+          "ok": true,
+          "walk": {
+            "nodes": 98,
+            "textEls": 1,
+            "textChars": 20,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 5,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 5,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 3
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 3
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              }
+            ]
+          },
+          "elapsedMs": 655,
+          "timedOut": false
+        },
+        "content": {
+          "ok": true,
+          "walk": {
+            "nodes": 90,
+            "textEls": 1,
+            "textChars": 20,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 0,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 4,
+            "truncatedBy": "",
+            "offscreenSample": []
+          },
+          "elapsedMs": 616,
+          "timedOut": false
+        },
+        "targeted": {
+          "ok": true,
+          "walk": {
+            "nodes": 77,
+            "textEls": 0,
+            "textChars": 0,
+            "named": 77,
+            "namedNoText": 0,
+            "offscreenNodes": 0,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 0,
+            "truncatedBy": "",
+            "offscreenSample": []
+          },
+          "elapsedMs": 148,
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "state": "shallow",
+      "truth": {
+        "selectedTab": 0,
+        "tabCount": 3,
+        "mainOffset": 0,
+        "mainViewportHeight": 577.8,
+        "mainExtentHeight": 1560,
+        "sideOffset": 0,
+        "bravoOffset": 0,
+        "editText": "GT-EDIT-CHANGED-0002",
+        "windowState": "Normal"
+      },
+      "truthFile": "truth-shallow.json",
+      "reads": {
+        "control": {
+          "ok": true,
+          "walk": {
+            "nodes": 97,
+            "textEls": 1,
+            "textChars": 20,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 5,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 5,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              }
+            ]
+          },
+          "elapsedMs": 737,
+          "timedOut": false
+        }
+      }
+    },
+    {
+      "state": "minimized",
+      "truth": {
+        "selectedTab": 0,
+        "tabCount": 3,
+        "mainOffset": 0,
+        "mainViewportHeight": 577.8,
+        "mainExtentHeight": 1560,
+        "sideOffset": 0,
+        "bravoOffset": 0,
+        "editText": "GT-EDIT-CHANGED-0002",
+        "windowState": "Minimized"
+      },
+      "truthFile": "truth-minimized.json",
+      "reads": {
+        "control": {
+          "ok": true,
+          "walk": {
+            "nodes": 97,
+            "textEls": 1,
+            "textChars": 20,
+            "named": 82,
+            "namedNoText": 82,
+            "offscreenNodes": 5,
+            "offscreenTextEls": 0,
+            "errors": 0,
+            "maxDepth": 5,
+            "truncatedBy": "",
+            "offscreenSample": [
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 2
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              },
+              {
+                "name": "",
+                "controlType": "ControlType.ScrollBar",
+                "depth": 4
+              }
+            ]
+          },
+          "elapsedMs": 683,
+          "timedOut": false
+        }
+      }
+    }
+  ]
+}

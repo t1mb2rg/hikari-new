@@ -1,0 +1,9 @@
+{
+    "id":  16,
+    "ok":  false,
+    "op":  "quit",
+    "note":  "方法调用失败，因为 [System.Windows.Threading.Dispatcher] 不包含名为“ExitAll”的方法。",
+    "selectedTab":  0,
+    "mainOffset":  0,
+    "editText":  "GT-EDIT-CHANGED-0002"
+}

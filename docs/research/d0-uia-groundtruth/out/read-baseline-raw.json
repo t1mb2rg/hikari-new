@@ -1,0 +1,6362 @@
+{
+  "strategy": "raw",
+  "timedOut": false,
+  "exitCode": 0,
+  "stderr": "",
+  "result": {
+    "ok": true,
+    "window": {
+      "rootOffscreen": false,
+      "windowPattern": true,
+      "visualState": "Normal",
+      "canMinimize": true
+    },
+    "clientOnScreen": {
+      "x": 68,
+      "y": 91,
+      "w": 884,
+      "h": 661
+    },
+    "scrollables": [
+      {
+        "name": "",
+        "verticalScrollPercent": -1,
+        "verticalViewSize": 100,
+        "verticallyScrollable": false,
+        "rect": {
+          "x": 68,
+          "y": 726,
+          "w": 320,
+          "h": 26
+        }
+      },
+      {
+        "name": "",
+        "verticalScrollPercent": -1,
+        "verticalViewSize": 100,
+        "verticallyScrollable": false,
+        "rect": {
+          "x": 71,
+          "y": 145,
+          "w": 150,
+          "h": 578
+        }
+      },
+      {
+        "name": "",
+        "verticalScrollPercent": 0,
+        "verticalViewSize": 37.03589743589744,
+        "verticallyScrollable": true,
+        "rect": {
+          "x": 221,
+          "y": 145,
+          "w": 728,
+          "h": 578
+        }
+      }
+    ],
+    "strategy": "raw",
+    "hwnd": 6362000,
+    "windowPid": 52552,
+    "probePid": 38196,
+    "foreground": {
+      "hwnd": "724028",
+      "pid": 23196,
+      "isTarget": false
+    },
+    "walk": {
+      "nodes": 98,
+      "textEls": 1,
+      "textChars": 15,
+      "named": 82,
+      "namedNoText": 82,
+      "offscreenNodes": 5,
+      "offscreenTextEls": 0,
+      "errors": 0,
+      "maxDepth": 5,
+      "truncatedBy": "",
+      "offscreenSample": [
+        {
+          "name": "",
+          "controlType": "ControlType.ScrollBar",
+          "depth": 3
+        },
+        {
+          "name": "",
+          "controlType": "ControlType.ScrollBar",
+          "depth": 3
+        },
+        {
+          "name": "",
+          "controlType": "ControlType.ScrollBar",
+          "depth": 4
+        },
+        {
+          "name": "",
+          "controlType": "ControlType.ScrollBar",
+          "depth": 4
+        },
+        {
+          "name": "",
+          "controlType": "ControlType.ScrollBar",
+          "depth": 4
+        }
+      ]
+    },
+    "elapsedMs": 597,
+    "markers": [
+      {
+        "text": "GT-HDR-0001",
+        "depth": 1,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 74,
+          "y": 98,
+          "w": 878,
+          "h": 16
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-EDIT-INITIAL",
+        "depth": 1,
+        "source": "TextPattern",
+        "controlType": "ControlType.Edit",
+        "isOffscreen": false,
+        "rect": null,
+        "ancestors": null
+      },
+      {
+        "text": "GT-EDIT-INITIAL",
+        "depth": 1,
+        "source": "ValuePattern",
+        "controlType": "ControlType.Edit",
+        "isOffscreen": false,
+        "rect": null,
+        "ancestors": null
+      },
+      {
+        "text": "GT-NAMEONLY-A11Y",
+        "depth": 1,
+        "source": "Name",
+        "controlType": "ControlType.Button",
+        "isOffscreen": false,
+        "rect": {
+          "x": 396,
+          "y": 726,
+          "w": 200,
+          "h": 26
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-NAMEONLY-BTN",
+        "depth": 2,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 436,
+          "y": 731,
+          "w": 120,
+          "h": 16
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Button",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 396,
+              "y": 726,
+              "w": 200,
+              "h": 26
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0001",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 151,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0002",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 177,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0003",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 203,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0004",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 229,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0005",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 255,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0006",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 281,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0007",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 307,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0008",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 333,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0009",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 359,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0010",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 385,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0011",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 411,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-SIDE-0012",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 437,
+          "w": 144,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 71,
+              "y": 145,
+              "w": 150,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0001",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 151,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0002",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 177,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0003",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 203,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0004",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 229,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0005",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 255,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0006",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 281,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0007",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 307,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0008",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 333,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0009",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 359,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0010",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 385,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0011",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 411,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0012",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 437,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0013",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 463,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0014",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 489,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0015",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 515,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0016",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 541,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0017",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 567,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0018",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 593,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0019",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 619,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0020",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 645,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0021",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 671,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0022",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 697,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0023",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 723,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0024",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 749,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0025",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 775,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0026",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 801,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0027",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 827,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0028",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 853,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0029",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 879,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0030",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 905,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0031",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 931,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0032",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 957,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0033",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 983,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0034",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1009,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0035",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1035,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0036",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1061,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0037",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1087,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0038",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1113,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0039",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1139,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0040",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1165,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0041",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1191,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0042",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1217,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0043",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1243,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0044",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1269,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0045",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1295,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0046",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1321,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0047",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1347,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0048",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1373,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0049",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1399,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0050",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1425,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0051",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1451,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0052",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1477,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0053",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1503,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0054",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1529,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0055",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1555,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0056",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1581,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0057",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1607,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0058",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1633,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0059",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1659,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-A-0060",
+        "depth": 4,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 227,
+          "y": 1685,
+          "w": 705,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": true,
+            "offscreen": false,
+            "rect": {
+              "x": 221,
+              "y": 145,
+              "w": 728,
+              "h": 578
+            }
+          },
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 49,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      }
+    ],
+    "classified": [
+      {
+        "text": "GT-HDR-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "header",
+        "tab": "all",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-EDIT-INITIAL",
+        "source": "TextPattern",
+        "controlType": "ControlType.Edit",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "editable",
+        "region": "inputs",
+        "tab": "all",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-EDIT-INITIAL",
+        "source": "ValuePattern",
+        "controlType": "ControlType.Edit",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "editable",
+        "region": "inputs",
+        "tab": "all",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-NAMEONLY-A11Y",
+        "source": "Name",
+        "controlType": "ControlType.Button",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "name-only-control",
+        "region": "inputs",
+        "tab": "all",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-NAMEONLY-BTN",
+        "source": "Name",
+        "verdict": "unknown"
+      },
+      {
+        "text": "GT-SIDE-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0002",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0003",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0004",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0005",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0006",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0007",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0008",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0009",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0010",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0011",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-SIDE-0012",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "side",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0002",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0003",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0004",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0005",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0006",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0007",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0008",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0009",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0010",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0011",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0012",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0013",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0014",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0015",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0016",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0017",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0018",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0019",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0020",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0021",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0022",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": true,
+        "fullyInsideViewport": true
+      },
+      {
+        "text": "GT-A-0023",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "PARTIAL-AT-EDGE",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": true,
+        "inViewport": true,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0024",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0025",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0026",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0027",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0028",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0029",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0030",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0031",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0032",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0033",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0034",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0035",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0036",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0037",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0038",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0039",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0040",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0041",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0042",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0043",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0044",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0045",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0046",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0047",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0048",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0049",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0050",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0051",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0052",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0053",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0054",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0055",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0056",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0057",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0058",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0059",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      },
+      {
+        "text": "GT-A-0060",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "SCROLLED-OUT",
+        "declared": "visible",
+        "region": "main",
+        "tab": "Alpha",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": false,
+        "fullyInsideViewport": false
+      }
+    ],
+    "pixels": null
+  }
+}

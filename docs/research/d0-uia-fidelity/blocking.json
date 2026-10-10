@@ -1,0 +1,12 @@
+{
+  "targets": ["ChatGPT", "msedge", "Code"],
+  "baselineMs": 2500,
+  "tailMs": 2500,
+  "pingTimeoutMs": 200,
+  "pingIntervalMs": 10,
+  "walk": {
+    "maxNodes": 3000,
+    "maxDepth": 40,
+    "timeBudgetMs": 8000
+  }
+}

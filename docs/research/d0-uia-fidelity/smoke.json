@@ -1,0 +1,9 @@
+{
+  "targets": ["Code"],
+  "maxNodes": 200,
+  "maxDepth": 6,
+  "timeBudgetMs": 8000,
+  "charCap": 200000,
+  "delayMs": 0,
+  "hardTimeoutMs": 120000
+}

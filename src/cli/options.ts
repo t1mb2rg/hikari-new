@@ -200,6 +200,7 @@ export type CliCommand =
   | 'focus'
   | 'relevance'
   | 'observe'
+  | 'content'
   | 'ask'
   | 'confirm'
   | 'profile-set'
@@ -223,6 +224,14 @@ export type CliCommand =
 // `observe` is in this arm for the same reason and with one fewer way to be wrong: it asks about a
 // capability that is always present in a running resident, so there is not even a half-configured
 // state for it to name.
+//
+// `content` is here for that same reason, and its own paragraph is owed because it is the one command
+// in this arm that reads something a human did not type. What it asks for is the content of a window,
+// and the whole of its safety is that the question carries no operand: this arm is "a data directory
+// and nothing else", so there is no place on the command line for a caller to name a window, a process
+// or a region. The window is the one Hikari observed, and this file could not choose a different one
+// even if it wanted to — which is the reason `parseCommandLine` resolves it with a reader that
+// compares one literal, rather than with a reader that could grow one.
 //
 // `ask` has an arm of its own because it has an operand, and the operand is why it must: a sentence is
 // not an option, so the first arm — whose whole obligation is a data directory — could not carry one
@@ -255,7 +264,8 @@ export type ParsedCommandLine =
         | 'stop'
         | 'subscribe'
         | 'relevance'
-        | 'observe';
+        | 'observe'
+        | 'content';
       readonly options: CliOptions;
     }
   | { readonly command: 'resident'; readonly options: ResidentOptions }
@@ -306,6 +316,7 @@ export const USAGE = [
   '  hikari focus status --data-dir <path>',
   '  hikari relevance repository-ci status --data-dir <path>',
   '  hikari observe desktop-session status --data-dir <path>',
+  '  hikari content status --data-dir <path>',
   '  hikari ask --data-dir <path> "<text>"',
   '  hikari confirm --data-dir <path> "<text>"',
   '  hikari profile set --data-dir <path> [与 hikari resident 相同的选项]',
@@ -407,6 +418,16 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   // operands, and an operand is not an option.
   if (head === 'observe') return readObserveCommand(rest);
 
+  // `content` resolves here for a third reason, and it is neither of the two above. It has no operands
+  // at all — the whole of its grammar after the word is a data directory — so it could have been
+  // resolved by `readCommand` like `status` and `subscribe`. What keeps it here is that its one word is
+  // part of the *address* rather than an option: `status` on its own is a command about the Resident,
+  // while `content status` is a question put to the desktop content read endpoint, and the two must not
+  // be one token apart in a way that lets `hikari status` and `hikari content status` be confused for
+  // each other. Reading the word here, beside the other multi-word commands, is what makes the
+  // difference visible at the one place it is decided.
+  if (head === 'content') return readContentCommand(rest);
+
   // `ask` resolves here for the same reason, and its operand is the one this CLI carries on a human's
   // behalf rather than choosing between a closed set. That is exactly why the resolution cannot wait
   // for `readCommand`: a sentence is not a token any table can enumerate.
@@ -444,6 +465,7 @@ interface CommandTokens {
     | 'focus'
     | 'relevance'
     | 'observe'
+    | 'content'
     | 'ask'
     | 'confirm'
     | 'profile-set'
@@ -557,6 +579,30 @@ function readObserveCommand(rest: readonly string[]): ParsedCommandLine {
   }
 
   return { command: 'observe', options: { dataDir } };
+}
+
+// One word, and one literal to compare it against.
+//
+// Noun-headed, like `chronicle init` and `profile set`, and that is the pattern being followed rather
+// than a new grammar being invented: this repository already spells a two-word address whose first word
+// is the thing and whose second word is the act. A verb-headed spelling was the other option —
+// `read desktop-content status` would have matched `observe desktop-session status` more closely — and
+// it is worse here for a reason that is about this command specifically: the desktop content read has
+// no domain axis. There is one content source, so a verb-head would have to invent a second word to sit
+// where `desktop-session` sits, and a word that exists to make a grammar look symmetric is a word that
+// will one day be given a meaning.
+//
+// What is *not* here is any check on the values, exactly as in the two readers above: this reader knows
+// the word `status` because it is the address of a question, not because it has an opinion about
+// statuses. Whether a resident can answer is the resident's business.
+function readContentCommand(rest: readonly string[]): ParsedCommandLine {
+  const [word, ...tokens] = rest;
+
+  if (word !== 'status') {
+    throw new UsageError(`content 目前只支持 status，收到：${word ?? '(缺失)'}`);
+  }
+
+  return { command: 'content', options: readOptions(tokens) };
 }
 
 // One operand, and the arity is the whole of what this reader decides.

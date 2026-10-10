@@ -1,0 +1,153 @@
+{
+  "config": {
+    "targets": [
+      "ChatGPT",
+      "msedge",
+      "Code"
+    ],
+    "baselineMs": 2500,
+    "tailMs": 2500,
+    "pingTimeoutMs": 200,
+    "pingIntervalMs": 10,
+    "walk": {
+      "maxNodes": 3000,
+      "maxDepth": 40,
+      "timeBudgetMs": 8000
+    }
+  },
+  "results": [
+    {
+      "target": "ChatGPT",
+      "hwnd": "199628",
+      "walk": {
+        "target": "ChatGPT",
+        "hwnd": "199628",
+        "startMs": 1791558742305,
+        "endMs": 1791558743362,
+        "wallMs": 1057,
+        "nodes": 1490,
+        "textEls": 698,
+        "textChars": 28237,
+        "textHash": "837069243481",
+        "errors": 0,
+        "truncatedBy": "",
+        "elapsedMs": 1057,
+        "pingHwndMatches": true
+      },
+      "pingTimeoutMs": 200,
+      "baseline": {
+        "count": 163,
+        "timeouts": 0,
+        "maxMs": 7.32,
+        "p50": 0.31,
+        "p95": 0.72,
+        "p99": 3.69
+      },
+      "duringWalk": {
+        "count": 67,
+        "timeouts": 0,
+        "maxMs": 9.95,
+        "p50": 0.26,
+        "p95": 0.77,
+        "p99": 9.95
+      },
+      "after": {
+        "count": 845,
+        "timeouts": 0,
+        "maxMs": 8.21,
+        "p50": 0.32,
+        "p95": 0.71,
+        "p99": 3.37
+      }
+    },
+    {
+      "target": "msedge",
+      "hwnd": "1118906",
+      "walk": {
+        "target": "msedge",
+        "hwnd": "1118906",
+        "startMs": 1791558759698,
+        "endMs": 1791558760058,
+        "wallMs": 360,
+        "nodes": 492,
+        "textEls": 110,
+        "textChars": 2803,
+        "textHash": "5BD35A75DA3D",
+        "errors": 0,
+        "truncatedBy": "",
+        "elapsedMs": 361,
+        "pingHwndMatches": true
+      },
+      "pingTimeoutMs": 200,
+      "baseline": {
+        "count": 161,
+        "timeouts": 0,
+        "maxMs": 7.01,
+        "p50": 0.3,
+        "p95": 0.65,
+        "p99": 3.4
+      },
+      "duringWalk": {
+        "count": 24,
+        "timeouts": 0,
+        "maxMs": 4.03,
+        "p50": 0.25,
+        "p95": 3.4,
+        "p99": 4.03
+      },
+      "after": {
+        "count": 872,
+        "timeouts": 0,
+        "maxMs": 7.06,
+        "p50": 0.34,
+        "p95": 1.5,
+        "p99": 4.09
+      }
+    },
+    {
+      "target": "Code",
+      "hwnd": "724028",
+      "walk": {
+        "target": "Code",
+        "hwnd": "724028",
+        "startMs": 1791558777226,
+        "endMs": 1791558777565,
+        "wallMs": 339,
+        "nodes": 412,
+        "textEls": 46,
+        "textChars": 3254,
+        "textHash": "A631BE3D2791",
+        "errors": 0,
+        "truncatedBy": "",
+        "elapsedMs": 339,
+        "pingHwndMatches": true
+      },
+      "pingTimeoutMs": 200,
+      "baseline": {
+        "count": 165,
+        "timeouts": 0,
+        "maxMs": 8.61,
+        "p50": 0.35,
+        "p95": 0.82,
+        "p99": 4.62
+      },
+      "duringWalk": {
+        "count": 22,
+        "timeouts": 0,
+        "maxMs": 0.91,
+        "p50": 0.3,
+        "p95": 0.87,
+        "p99": 0.91
+      },
+      "after": {
+        "count": 890,
+        "timeouts": 0,
+        "maxMs": 3.7,
+        "p50": 0.31,
+        "p95": 0.74,
+        "p99": 3.02
+      }
+    }
+  ],
+  "wallClockMs": 1791558791636
+}

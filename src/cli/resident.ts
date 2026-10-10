@@ -26,6 +26,7 @@ import { MessageChannel } from 'node:worker_threads';
 
 import { ChronicleNotInitializedError, chroniclePlugin } from '../chronicle/index.js';
 import { NotInitializedError, continuityPlugin } from '../continuity/index.js';
+import { desktopContentReadPlugin } from '../desktop-content-read/index.js';
 import { desktopReturnAttentionPlugin } from '../desktop-return-attention/index.js';
 import { desktopSessionAwarenessPlugin } from '../desktop-session-awareness/index.js';
 import { desktopSessionAwarenessLoopPlugin } from '../desktop-session-awareness-loop/index.js';
@@ -176,9 +177,9 @@ interface LoadedMember {
 //
 // Crucially, language still does not *replace* anything and does not gate anything: a resident with a
 // model and no repository scope answers questions about the work focus and the desktop, and a resident
-// with a repository scope and no model answers `relevance` and `observe` and refuses `ask` by saying
-// there is no language entry point. Neither capability is a condition of the other, and neither is a
-// condition of readiness for the rest.
+// with a repository scope and no model answers `relevance`, `observe` and `content` and refuses `ask`
+// by saying there is no language entry point. Neither capability is a condition of the other, and
+// neither is a condition of readiness for the rest.
 //
 // This is deliberately not a Profile system, a capability registry, an optional-plugin mechanism or
 // a conditional-composition framework, and it should not become one. It is the local implementation
@@ -193,9 +194,21 @@ interface LoadedMember {
 // Nothing in the base requires anything from the chain, so the default composition loses nothing by
 // omitting it.
 //
-// In particular the resident adds no subscriber of its own: `desktop-session-awareness-loop.assessed`
-// has zero subscribers in production, and that is a property of the design rather than a gap for this
-// file to fill.
+// In particular the resident adds no subscriber of its own. This comment used to say that
+// `desktop-session-awareness-loop.assessed` has zero subscribers in production, and that is no longer
+// true: `desktop-content-read` subscribes to it, and is the only thing that does. What survives is the
+// half that was about this file — the subscription is a plugin's, declared through the context the
+// Runtime hands the plugin, and nothing in this list reaches into an event bus to wire one up. A
+// composition root that subscribed on a member's behalf would be a second place where an interest is
+// declared. (The API is not spelled out here because a scan in `test/resident-cli.test.mjs` forbids the
+// name in this file outright, comments included; that bluntness is the test's, and it is right — this
+// file must not name a way to subscribe even in passing.)
+//
+// The occurrence having exactly one subscriber is also worth stating plainly, because the trade is
+// visible from here: the loop's assessment is now read by something other than its own next cycle, so
+// the loop's cadence is a cost the content read inherits. It inherits it *without* extending it —
+// `plugin.ts` does not await its probe inside the handler — which is the property this file relies on
+// and the one to re-check if that handler is ever changed.
 //
 // Chronicle is loaded because a resident without a durable fact history is not a Hikari that can
 // remember anything, and its `active` state is a precondition for readiness. That is the whole of
@@ -257,6 +270,24 @@ export function productionComposition(options: ResidentOptions): Composition {
     {
       id: desktopSessionObservePlugin.id,
       load: (runtime) => runtime.loadPlugin(desktopSessionObservePlugin, { rootDir: options.dataDir }),
+    },
+    // The second read surface, and the second half of what a person can look at: the member above
+    // answers "what does Hikari see?", and this one answers "what is in the window it saw me in?".
+    //
+    // It is placed after the loop rather than before it for a reason that is about events rather than
+    // about dependencies: it subscribes to `desktop-session-awareness-loop.assessed`, and a subscriber
+    // that is not yet loaded cannot be told about an occurrence. Loading it after the loop means the
+    // first cadence after Hikari starts is already being sampled, so the window a person is reading
+    // when they ask is not one Hikari has to wait for. It is placed before `work-focus` for the reason
+    // the member above is: the order in this list is the order the data moves, and the surfaces a
+    // person reads with are not part of the chain they read.
+    //
+    // It declares no requirement at all, and that is not an omission — subscribing consults `requires`
+    // for nothing, and there is no Service in this composition it could ask. See its own header for why
+    // a Service here would be one created for a hypothetical.
+    {
+      id: desktopContentReadPlugin.id,
+      load: (runtime) => runtime.loadPlugin(desktopContentReadPlugin, { rootDir: options.dataDir }),
     },
     // The last member of the base, and the one a person writes through rather than reads from: it is
     // where a person declares what they are working on, and the member above is where a person reads

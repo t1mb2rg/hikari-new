@@ -1,0 +1,9 @@
+{
+  "targets": ["ChatGPT", "msedge", "Code"],
+  "maxNodes": 3000,
+  "maxDepth": 40,
+  "timeBudgetMs": 30000,
+  "charCap": 2000000,
+  "delayMs": 4000,
+  "hardTimeoutMs": 1500000
+}

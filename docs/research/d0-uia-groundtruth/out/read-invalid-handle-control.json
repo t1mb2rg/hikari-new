@@ -1,0 +1,8 @@
+{
+  "strategy": "control",
+  "timedOut": false,
+  "exitCode": 1,
+  "stderr": "G:\\work\\LAB\\code\\hikari-new\\docs\\research\\d0-uia-groundtruth\\probe.ps1 : ʹ�á�1�����������á�FromHandle��ʱ�����쳣:���޷�\r\nʶ��Ĵ��󡣡�\r\n    + CategoryInfo          : NotSpecified: (:) [probe.ps1], MethodInvocationException\r\n    + FullyQualifiedErrorId : ElementNotAvailableException,probe.ps1",
+  "result": null,
+  "rawOut": ""
+}

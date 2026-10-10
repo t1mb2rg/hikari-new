@@ -1,0 +1,54 @@
+{
+  "strategy": "focused",
+  "timedOut": false,
+  "exitCode": 0,
+  "stderr": "",
+  "result": {
+    "ok": true,
+    "window": {
+      "rootOffscreen": false,
+      "windowPattern": true,
+      "visualState": "Normal",
+      "canMinimize": true
+    },
+    "clientOnScreen": {
+      "x": 988,
+      "y": 91,
+      "w": 404,
+      "h": 221
+    },
+    "scrollables": [],
+    "strategy": "focused",
+    "hwnd": 2233790,
+    "windowPid": 52552,
+    "probePid": 35056,
+    "foreground": {
+      "hwnd": "724028",
+      "pid": 23196,
+      "isTarget": false
+    },
+    "walk": {
+      "nodes": 1,
+      "textEls": 1,
+      "textChars": 0,
+      "named": 0,
+      "namedNoText": 0,
+      "offscreenNodes": 0,
+      "offscreenTextEls": 0,
+      "errors": 0,
+      "maxDepth": 0,
+      "truncatedBy": "",
+      "offscreenSample": [],
+      "owningHwnd": 724028,
+      "isThisWindow": false,
+      "controlType": "ControlType.Edit",
+      "uiaOffscreen": false,
+      "foreignNameChars": 87,
+      "foreignTextChars": 87
+    },
+    "elapsedMs": 36,
+    "markers": [],
+    "classified": [],
+    "pixels": null
+  }
+}

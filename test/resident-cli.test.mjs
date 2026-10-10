@@ -80,6 +80,12 @@ function compositionOf(states) {
 // There are two production compositions and they are pinned one per test rather than merged into a
 // count. The count is not the invariant — what a running Hikari is, is — and a merge would have made
 // the default roster something you read off a diff between two lists instead of off the list.
+// Ten members, and the tenth is the newest. `desktop-content-read` joined the base when the D0 content
+// reader landed rather than being an optional capability like everything appended below, and the reason
+// it is in the *base* is the reason it is in the list at all: it needs nothing to be configured — no
+// model, no repository, no mandate — because what it reads is the window the awareness loop already
+// sampled. It sits after the loop it subscribes to and before `work-focus`, so that the base is still
+// the read-only perception chain and the member a person writes through is still last.
 const BASE_MEMBER_IDS = [
   'continuity',
   'chronicle',
@@ -89,6 +95,7 @@ const BASE_MEMBER_IDS = [
   'desktop-session-awareness',
   'desktop-session-awareness-loop',
   'desktop-session-observe',
+  'desktop-content-read',
   'work-focus',
 ];
 
@@ -140,7 +147,7 @@ const RETURN_MEMBER_IDS = ['human-delivery', 'desktop-return-attention'];
 // entire suite green on both platforms. The tests that would have noticed end to end are the ones
 // that need a named pipe, and CI runs on a host that has none — so the member that only exists to
 // be an ingress could have disappeared from production with nothing going red.
-test('默认生产组合恰好是这九个成员，按加载顺序', () => {
+test('默认生产组合恰好是这十个成员，按加载顺序', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
@@ -152,7 +159,7 @@ test('默认生产组合恰好是这九个成员，按加载顺序', () => {
   );
 });
 
-test('显式配置 Repository CI 后，生产组合是这九个加上那五个', () => {
+test('显式配置 Repository CI 后，生产组合是这十个加上那五个', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
@@ -184,7 +191,7 @@ test('显式配置 Repository CI 后，生产组合是这九个加上那五个',
 // shared by two rosters keep their relative order, and the repository-aware language member follows the
 // whole chain it depends on. `不要修改 Runtime readiness semantics 来人为保存旧 invariant` — the
 // invariant was given up instead, and this file is where that is written down rather than assumed.
-test('给了模型端点与模型之后，生产组合是这九个加上 language', () => {
+test('给了模型端点与模型之后，生产组合是这十个加上 language', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
@@ -209,6 +216,7 @@ test('给了模型端点与模型之后，生产组合是这九个加上 languag
       'desktop-session-awareness',
       'desktop-session-awareness-loop',
       'desktop-session-observe',
+      'desktop-content-read',
       'work-focus',
       'language',
     ],

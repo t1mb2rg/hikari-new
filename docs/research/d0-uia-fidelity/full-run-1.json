@@ -1,0 +1,1815 @@
+{
+  "config": {
+    "maxNodes": 3000,
+    "maxDepth": 40,
+    "timeBudgetMs": 30000,
+    "charCap": 2000000,
+    "targets": [
+      "ChatGPT",
+      "msedge",
+      "Code"
+    ]
+  },
+  "windowCount": 42,
+  "windows": [
+    {
+      "process": "msedge",
+      "hwnd": "15340364",
+      "pid": 38756,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_1",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 4,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 3,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 35,
+        "controlTypes": "Pane=3 Button=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "1118906",
+      "pid": 38756,
+      "titleLen": 53,
+      "className": "Chrome_WidgetWin_1",
+      "visible": true,
+      "iconic": false,
+      "root": {
+        "nameLen": 53,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "A",
+      "controlView": {
+        "nodes": 1136,
+        "named": 684,
+        "textEls": 510,
+        "textChars": 13932,
+        "onscreenChars": 8892,
+        "offscreenChars": 5040,
+        "offscreenTextEls": 412,
+        "depth": 19,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "9F5789F3EE58",
+        "elapsedMs": 1193,
+        "controlTypes": "Text=507 Group=319 Image=167 Pane=33 Hyperlink=30 Button=27"
+      },
+      "rawView": {
+        "nodes": 2448,
+        "named": 821,
+        "textEls": 549,
+        "textChars": 15090,
+        "onscreenChars": 9942,
+        "offscreenChars": 5148,
+        "offscreenTextEls": 427,
+        "depth": 28,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "87CD343FDC08",
+        "elapsedMs": 2670,
+        "controlTypes": "Group=1350 Text=598 Image=168 Button=139 Pane=95 Hyperlink=31"
+      },
+      "contentView": {
+        "nodes": 1134,
+        "named": 684,
+        "textEls": 510,
+        "textChars": 14892,
+        "onscreenChars": 9852,
+        "offscreenChars": 5040,
+        "offscreenTextEls": 412,
+        "depth": 19,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "D56DBABC531E",
+        "elapsedMs": 1465,
+        "controlTypes": "Text=507 Group=318 Image=166 Pane=33 Hyperlink=30 Button=27"
+      },
+      "controlViewCached": {
+        "nodes": 1135,
+        "named": 683,
+        "textEls": 510,
+        "textChars": 14892,
+        "onscreenChars": 9852,
+        "offscreenChars": 5040,
+        "offscreenTextEls": 412,
+        "depth": 19,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "66C48F0CDDB3",
+        "elapsedMs": 2107,
+        "controlTypes": "Text=507 Group=319 Image=166 Pane=33 Hyperlink=30 Button=27"
+      },
+      "rawViewCached": {
+        "nodes": 2447,
+        "named": 820,
+        "textEls": 549,
+        "textChars": 15090,
+        "onscreenChars": 9942,
+        "offscreenChars": 5148,
+        "offscreenTextEls": 427,
+        "depth": 28,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "D7973EC927E7",
+        "elapsedMs": 3239,
+        "controlTypes": "Group=1350 Text=598 Image=167 Button=139 Pane=95 Hyperlink=31"
+      },
+      "misleading": {
+        "rootNameLen": 53,
+        "bestTextChars": 15090,
+        "nameIsOnlySignal": false
+      },
+      "focused": {
+        "controlType": "ControlType.Document",
+        "nameLen": 20,
+        "hasTextPattern": true,
+        "textChars": 8627,
+        "belongsToThisWindow": true,
+        "elapsedMs": 14
+      },
+      "targeted": {
+        "matched": 508,
+        "scanned": 400,
+        "withText": 399,
+        "textChars": 13713,
+        "elapsedMs": 174
+      },
+      "children": [
+        {
+          "index": 0,
+          "controlType": "Pane",
+          "nameLen": 9,
+          "offscreen": false,
+          "nodes": 1,
+          "textChars": 0,
+          "textHash": "-",
+          "truncatedBy": ""
+        },
+        {
+          "index": 1,
+          "controlType": "Pane",
+          "nameLen": 0,
+          "offscreen": false,
+          "nodes": 1,
+          "textChars": 0,
+          "textHash": "-",
+          "truncatedBy": ""
+        },
+        {
+          "index": 2,
+          "controlType": "Pane",
+          "nameLen": 37,
+          "offscreen": false,
+          "nodes": 1132,
+          "textChars": 14894,
+          "textHash": "4CA9D4457251",
+          "truncatedBy": ""
+        }
+      ],
+      "freshness": {
+        "delayMs": 4000,
+        "controlViewSame": false,
+        "controlViewHash2": "0E0FBCAB5BE1",
+        "controlViewCharsDelta": 1290,
+        "rawViewSame": false,
+        "rawViewHash2": "B1DC995256FC",
+        "rawViewCharsDelta": 530
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "724028",
+      "pid": 23196,
+      "titleLen": 62,
+      "className": "Chrome_WidgetWin_1",
+      "visible": true,
+      "iconic": false,
+      "root": {
+        "nameLen": 62,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "A",
+      "controlView": {
+        "nodes": 412,
+        "named": 321,
+        "textEls": 46,
+        "textChars": 3254,
+        "onscreenChars": 3205,
+        "offscreenChars": 49,
+        "offscreenTextEls": 1,
+        "depth": 17,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "A631BE3D2791",
+        "elapsedMs": 399,
+        "controlTypes": "Group=143 Button=82 TreeItem=51 Text=45 TabItem=20 ToolBar=16"
+      },
+      "rawView": {
+        "nodes": 940,
+        "named": 478,
+        "textEls": 200,
+        "textChars": 4485,
+        "onscreenChars": 4436,
+        "offscreenChars": 49,
+        "offscreenTextEls": 1,
+        "depth": 39,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "77A04CCB41DB",
+        "elapsedMs": 1046,
+        "controlTypes": "Group=510 Text=199 Button=83 TreeItem=51 TabItem=20 Pane=16"
+      },
+      "contentView": {
+        "nodes": 412,
+        "named": 321,
+        "textEls": 46,
+        "textChars": 3254,
+        "onscreenChars": 3205,
+        "offscreenChars": 49,
+        "offscreenTextEls": 1,
+        "depth": 17,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "A631BE3D2791",
+        "elapsedMs": 583,
+        "controlTypes": "Group=143 Button=82 TreeItem=51 Text=45 TabItem=20 ToolBar=16"
+      },
+      "controlViewCached": {
+        "nodes": 412,
+        "named": 321,
+        "textEls": 46,
+        "textChars": 3254,
+        "onscreenChars": 3205,
+        "offscreenChars": 49,
+        "offscreenTextEls": 1,
+        "depth": 17,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "A631BE3D2791",
+        "elapsedMs": 511,
+        "controlTypes": "Group=143 Button=82 TreeItem=51 Text=45 TabItem=20 ToolBar=16"
+      },
+      "rawViewCached": {
+        "nodes": 940,
+        "named": 478,
+        "textEls": 200,
+        "textChars": 4485,
+        "onscreenChars": 4436,
+        "offscreenChars": 49,
+        "offscreenTextEls": 1,
+        "depth": 39,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "77A04CCB41DB",
+        "elapsedMs": 1219,
+        "controlTypes": "Group=510 Text=199 Button=83 TreeItem=51 TabItem=20 Pane=16"
+      },
+      "misleading": {
+        "rootNameLen": 62,
+        "bestTextChars": 4485,
+        "nameIsOnlySignal": false
+      },
+      "focused": {
+        "controlType": "ControlType.Document",
+        "nameLen": 20,
+        "hasTextPattern": true,
+        "textChars": 8798,
+        "belongsToThisWindow": false,
+        "elapsedMs": 14
+      },
+      "targeted": {
+        "matched": 47,
+        "scanned": 47,
+        "withText": 40,
+        "textChars": 2947,
+        "elapsedMs": 42
+      },
+      "children": [
+        {
+          "index": 0,
+          "controlType": "Pane",
+          "nameLen": 0,
+          "offscreen": false,
+          "nodes": 1,
+          "textChars": 0,
+          "textHash": "-",
+          "truncatedBy": ""
+        },
+        {
+          "index": 1,
+          "controlType": "Pane",
+          "nameLen": 62,
+          "offscreen": false,
+          "nodes": 410,
+          "textChars": 3254,
+          "textHash": "A631BE3D2791",
+          "truncatedBy": ""
+        }
+      ],
+      "freshness": {
+        "delayMs": 4000,
+        "controlViewSame": true,
+        "controlViewHash2": "A631BE3D2791",
+        "controlViewCharsDelta": 0,
+        "rawViewSame": true,
+        "rawViewHash2": "77A04CCB41DB",
+        "rawViewCharsDelta": 0
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "199628",
+      "pid": 14760,
+      "titleLen": 7,
+      "className": "Chrome_WidgetWin_1",
+      "visible": true,
+      "iconic": false,
+      "root": {
+        "nameLen": 7,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "A",
+      "controlView": {
+        "nodes": 1490,
+        "named": 1197,
+        "textEls": 698,
+        "textChars": 28237,
+        "onscreenChars": 16718,
+        "offscreenChars": 11519,
+        "offscreenTextEls": 664,
+        "depth": 22,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "837069243481",
+        "elapsedMs": 1453,
+        "controlTypes": "Text=736 Button=254 Group=168 ListItem=113 DataItem=78 Image=76"
+      },
+      "rawView": {
+        "nodes": 2400,
+        "named": 1549,
+        "textEls": 1048,
+        "textChars": 30907,
+        "onscreenChars": 17180,
+        "offscreenChars": 13727,
+        "offscreenTextEls": 970,
+        "depth": 35,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "9D78831C6AB7",
+        "elapsedMs": 2434,
+        "controlTypes": "Text=1088 Group=724 Button=255 ListItem=113 DataItem=78 Image=76"
+      },
+      "contentView": {
+        "nodes": 1490,
+        "named": 1197,
+        "textEls": 698,
+        "textChars": 28237,
+        "onscreenChars": 16718,
+        "offscreenChars": 11519,
+        "offscreenTextEls": 664,
+        "depth": 22,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "837069243481",
+        "elapsedMs": 1554,
+        "controlTypes": "Text=736 Button=254 Group=168 ListItem=113 DataItem=78 Image=76"
+      },
+      "controlViewCached": {
+        "nodes": 1490,
+        "named": 1197,
+        "textEls": 698,
+        "textChars": 28237,
+        "onscreenChars": 16718,
+        "offscreenChars": 11519,
+        "offscreenTextEls": 664,
+        "depth": 22,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "837069243481",
+        "elapsedMs": 1688,
+        "controlTypes": "Text=736 Button=254 Group=168 ListItem=113 DataItem=78 Image=76"
+      },
+      "rawViewCached": {
+        "nodes": 2400,
+        "named": 1549,
+        "textEls": 1048,
+        "textChars": 30907,
+        "onscreenChars": 17180,
+        "offscreenChars": 13727,
+        "offscreenTextEls": 970,
+        "depth": 35,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "9D78831C6AB7",
+        "elapsedMs": 3125,
+        "controlTypes": "Text=1088 Group=724 Button=255 ListItem=113 DataItem=78 Image=76"
+      },
+      "misleading": {
+        "rootNameLen": 7,
+        "bestTextChars": 30907,
+        "nameIsOnlySignal": false
+      },
+      "focused": {
+        "controlType": "ControlType.Document",
+        "nameLen": 9,
+        "hasTextPattern": true,
+        "textChars": 1280,
+        "belongsToThisWindow": false,
+        "elapsedMs": 4
+      },
+      "targeted": {
+        "matched": 737,
+        "scanned": 400,
+        "withText": 378,
+        "textChars": 19111,
+        "elapsedMs": 177
+      },
+      "children": [
+        {
+          "index": 0,
+          "controlType": "Pane",
+          "nameLen": 0,
+          "offscreen": false,
+          "nodes": 1,
+          "textChars": 0,
+          "textHash": "-",
+          "truncatedBy": ""
+        },
+        {
+          "index": 1,
+          "controlType": "Pane",
+          "nameLen": 7,
+          "offscreen": false,
+          "nodes": 1488,
+          "textChars": 28237,
+          "textHash": "837069243481",
+          "truncatedBy": ""
+        }
+      ],
+      "freshness": {
+        "delayMs": 4000,
+        "controlViewSame": true,
+        "controlViewHash2": "837069243481",
+        "controlViewCharsDelta": 0,
+        "rawViewSame": true,
+        "rawViewHash2": "9D78831C6AB7",
+        "rawViewCharsDelta": 0
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "84546150",
+      "pid": 50764,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "6951568",
+      "pid": 14760,
+      "titleLen": 17,
+      "className": "OleDdeWndClass",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 17,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 17,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "148116272",
+      "pid": 38756,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "8131370",
+      "pid": 50764,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "464182",
+      "pid": 38756,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "2757912",
+      "pid": 12608,
+      "titleLen": 0,
+      "className": "crashpad_SessionEndWatcher",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "2561230",
+      "pid": 38756,
+      "titleLen": 0,
+      "className": "Base_PowerMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "18287674",
+      "pid": 14760,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "266224",
+      "pid": 23196,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "397362",
+      "pid": 27268,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "331810",
+      "pid": 34084,
+      "titleLen": 0,
+      "className": "crashpad_SessionEndWatcher",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "397444",
+      "pid": 23196,
+      "titleLen": 0,
+      "className": "Electron_SystemPreferencesHostWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "789282",
+      "pid": 23196,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "594048",
+      "pid": 23196,
+      "titleLen": 0,
+      "className": "Base_PowerMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "462518",
+      "pid": 14760,
+      "titleLen": 7,
+      "className": "Chrome_WidgetWin_1",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 7,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 13,
+        "named": 4,
+        "textEls": 1,
+        "textChars": 7,
+        "onscreenChars": 7,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 11,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "C34FB79838DE",
+        "elapsedMs": 11,
+        "controlTypes": "Pane=7 Group=3 StatusBar=1 Document=1 Image=1"
+      },
+      "misleading": {
+        "rootNameLen": 7,
+        "bestTextChars": 7,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "200376",
+      "pid": 27608,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 1,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "199354",
+      "pid": 27608,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "395918",
+      "pid": 14760,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_1",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 8,
+        "named": 1,
+        "textEls": 1,
+        "textChars": 1,
+        "onscreenChars": 1,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 7,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "CD2822E88BCD",
+        "elapsedMs": 9,
+        "controlTypes": "Pane=6 Window=1 Document=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 1,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "265792",
+      "pid": 27608,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "266000",
+      "pid": 14760,
+      "titleLen": 0,
+      "className": "OwlElectron_NotifyIconHostWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "265524",
+      "pid": 14760,
+      "titleLen": 0,
+      "className": "Chrome_StatusTrayWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "134874",
+      "pid": 14760,
+      "titleLen": 0,
+      "className": "Base_PowerMessageWindow",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "134942",
+      "pid": 14760,
+      "titleLen": 0,
+      "className": "Chrome_WidgetWin_0",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "200094",
+      "pid": 6048,
+      "titleLen": 0,
+      "className": "crashpad_SessionEndWatcher",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "265634",
+      "pid": 21188,
+      "titleLen": 0,
+      "className": "crashpad_SessionEndWatcher",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 0,
+        "controlType": "ControlType.Window",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 0,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Window=1"
+      },
+      "misleading": {
+        "rootNameLen": 0,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": false
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "1576860",
+      "pid": 38756,
+      "titleLen": 11,
+      "className": "MSCTFIME UI",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "1381606",
+      "pid": 38756,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "725146",
+      "pid": 23196,
+      "titleLen": 11,
+      "className": "MSCTFIME UI",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "331842",
+      "pid": 23196,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "265868",
+      "pid": 14760,
+      "titleLen": 11,
+      "className": "MSCTFIME UI",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "134940",
+      "pid": 14760,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "1314560",
+      "pid": 50764,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "msedge",
+      "hwnd": "1447138",
+      "pid": 12608,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "331262",
+      "pid": 27268,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "266756",
+      "pid": 34084,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "200352",
+      "pid": 27608,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "200102",
+      "pid": 6048,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "265626",
+      "pid": 21188,
+      "titleLen": 11,
+      "className": "IME",
+      "visible": false,
+      "iconic": false,
+      "root": {
+        "nameLen": 11,
+        "controlType": "ControlType.Pane",
+        "offscreen": false
+      },
+      "tier": "B",
+      "cheap": {
+        "nodes": 1,
+        "named": 1,
+        "textEls": 0,
+        "textChars": 0,
+        "onscreenChars": 0,
+        "offscreenChars": 0,
+        "offscreenTextEls": 0,
+        "depth": 0,
+        "errors": 0,
+        "truncatedBy": "",
+        "textHash": "-",
+        "elapsedMs": 0,
+        "controlTypes": "Pane=1"
+      },
+      "misleading": {
+        "rootNameLen": 11,
+        "bestTextChars": 0,
+        "nameIsOnlySignal": true
+      }
+    }
+  ],
+  "wallClockMs": 56110
+}

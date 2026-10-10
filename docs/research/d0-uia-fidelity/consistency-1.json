@@ -1,0 +1,251 @@
+{
+  "windowCount": 3,
+  "foreground": {
+    "hwnd": "1118906",
+    "process": "msedge",
+    "titleLen": 42
+  },
+  "windows": [
+    {
+      "process": "msedge",
+      "hwnd": "1118906",
+      "titleLen": 42,
+      "textChars": {
+        "controlView": 2239,
+        "rawView": 2573,
+        "contentView": 2326
+      },
+      "textHashes": {
+        "controlView": "A5E54BA8F1DB",
+        "rawView": "2B8AFF13A73E",
+        "contentView": "A72784FEBEC2"
+      },
+      "containment": {
+        "rawContainsControl": false,
+        "rawContainsContent": false,
+        "controlContainsContent": false,
+        "controlContainsRaw": false
+      },
+      "nameOverlap": {
+        "nameLen": 42,
+        "inControlView": false,
+        "inRawView": false,
+        "occurrencesInRawView": 0
+      },
+      "visibility": {
+        "offscreenNodes": 206,
+        "controlViewOffscreenChars": 527,
+        "controlViewOnscreenChars": 1712,
+        "rawViewOffscreenChars": 682,
+        "rawViewOnscreenChars": 1891
+      },
+      "patterns": {
+        "controlView": {
+          "textEls": 109,
+          "valueEls": 47,
+          "both": 5,
+          "legacyEls": 0
+        },
+        "rawView": {
+          "textEls": 157,
+          "valueEls": 50,
+          "both": 5,
+          "legacyEls": 0
+        },
+        "valueChars": {
+          "controlView": 3206,
+          "rawView": 3206
+        },
+        "legacyChars": {
+          "controlView": 0,
+          "rawView": 0
+        },
+        "valueInsideText": false,
+        "legacyInsideText": false
+      },
+      "truncation": {
+        "controlView": "",
+        "rawView": "",
+        "contentView": "",
+        "errors": {
+          "controlView": 0,
+          "rawView": 0,
+          "contentView": 0
+        }
+      },
+      "elapsedMs": {
+        "controlView": 732,
+        "rawView": 1024,
+        "contentView": 537
+      },
+      "focused": {
+        "controlType": "Document",
+        "owningHwnd": "1118906",
+        "isThisWindow": true,
+        "isForeground": true,
+        "textChars": 1486
+      }
+    },
+    {
+      "process": "Code",
+      "hwnd": "724028",
+      "titleLen": 62,
+      "textChars": {
+        "controlView": 3266,
+        "rawView": 4485,
+        "contentView": 3254
+      },
+      "textHashes": {
+        "controlView": "FD22BE18AB48",
+        "rawView": "77A04CCB41DB",
+        "contentView": "A631BE3D2791"
+      },
+      "containment": {
+        "rawContainsControl": false,
+        "rawContainsContent": false,
+        "controlContainsContent": false,
+        "controlContainsRaw": false
+      },
+      "nameOverlap": {
+        "nameLen": 62,
+        "inControlView": false,
+        "inRawView": false,
+        "occurrencesInRawView": 0
+      },
+      "visibility": {
+        "offscreenNodes": 8,
+        "controlViewOffscreenChars": 49,
+        "controlViewOnscreenChars": 3217,
+        "rawViewOffscreenChars": 49,
+        "rawViewOnscreenChars": 4436
+      },
+      "patterns": {
+        "controlView": {
+          "textEls": 46,
+          "valueEls": 11,
+          "both": 8,
+          "legacyEls": 0
+        },
+        "rawView": {
+          "textEls": 200,
+          "valueEls": 11,
+          "both": 8,
+          "legacyEls": 0
+        },
+        "valueChars": {
+          "controlView": 485,
+          "rawView": 485
+        },
+        "legacyChars": {
+          "controlView": 0,
+          "rawView": 0
+        },
+        "valueInsideText": false,
+        "legacyInsideText": false
+      },
+      "truncation": {
+        "controlView": "",
+        "rawView": "",
+        "contentView": "",
+        "errors": {
+          "controlView": 0,
+          "rawView": 0,
+          "contentView": 0
+        }
+      },
+      "elapsedMs": {
+        "controlView": 450,
+        "rawView": 989,
+        "contentView": 422
+      },
+      "focused": {
+        "controlType": "Document",
+        "owningHwnd": "1118906",
+        "isThisWindow": false,
+        "isForeground": true,
+        "textChars": 1526
+      }
+    },
+    {
+      "process": "ChatGPT",
+      "hwnd": "199628",
+      "titleLen": 7,
+      "textChars": {
+        "controlView": 28237,
+        "rawView": 30907,
+        "contentView": 28237
+      },
+      "textHashes": {
+        "controlView": "837069243481",
+        "rawView": "9D78831C6AB7",
+        "contentView": "837069243481"
+      },
+      "containment": {
+        "rawContainsControl": false,
+        "rawContainsContent": false,
+        "controlContainsContent": true,
+        "controlContainsRaw": false
+      },
+      "nameOverlap": {
+        "nameLen": 7,
+        "inControlView": true,
+        "inRawView": true,
+        "occurrencesInRawView": 27
+      },
+      "visibility": {
+        "offscreenNodes": 1217,
+        "controlViewOffscreenChars": 11519,
+        "controlViewOnscreenChars": 16718,
+        "rawViewOffscreenChars": 13727,
+        "rawViewOnscreenChars": 17180
+      },
+      "patterns": {
+        "controlView": {
+          "textEls": 698,
+          "valueEls": 13,
+          "both": 4,
+          "legacyEls": 0
+        },
+        "rawView": {
+          "textEls": 1048,
+          "valueEls": 13,
+          "both": 4,
+          "legacyEls": 0
+        },
+        "valueChars": {
+          "controlView": 2827,
+          "rawView": 2827
+        },
+        "legacyChars": {
+          "controlView": 0,
+          "rawView": 0
+        },
+        "valueInsideText": false,
+        "legacyInsideText": false
+      },
+      "truncation": {
+        "controlView": "",
+        "rawView": "",
+        "contentView": "",
+        "errors": {
+          "controlView": 0,
+          "rawView": 0,
+          "contentView": 0
+        }
+      },
+      "elapsedMs": {
+        "controlView": 1984,
+        "rawView": 2860,
+        "contentView": 2020
+      },
+      "focused": {
+        "controlType": "Document",
+        "owningHwnd": "1118906",
+        "isThisWindow": false,
+        "isForeground": true,
+        "textChars": 1253
+      }
+    }
+  ],
+  "wallClockMs": 11751
+}

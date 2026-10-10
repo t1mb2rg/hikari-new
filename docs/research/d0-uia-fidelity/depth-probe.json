@@ -1,0 +1,10 @@
+{
+  "_comment": "Re-tests the round-1 app set that reported 0 chars, at the depth the round-1 probe could not reach (round 1 capped at depth 10 / 800 nodes). If depth was the binding constraint for these apps too, they should read; if they stay at 0, round 1's '6/8 unreadable' stands on its own. StarPie is not running and is skipped by the probe. delayMs=0 skips the freshness re-read; it is not what this probe is measuring.",
+  "targets": ["QQ", "Weixin", "cloudmusic", "PowerToys.QuickAccess", "SystemSettings"],
+  "maxNodes": 3000,
+  "maxDepth": 40,
+  "timeBudgetMs": 30000,
+  "charCap": 2000000,
+  "delayMs": 0,
+  "hardTimeoutMs": 1500000
+}

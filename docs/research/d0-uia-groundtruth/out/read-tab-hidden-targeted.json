@@ -1,0 +1,192 @@
+{
+  "strategy": "targeted",
+  "timedOut": false,
+  "exitCode": 0,
+  "stderr": "",
+  "result": {
+    "ok": true,
+    "window": {
+      "rootOffscreen": false,
+      "windowPattern": true,
+      "visualState": "Normal",
+      "canMinimize": true
+    },
+    "clientOnScreen": {
+      "x": 68,
+      "y": 91,
+      "w": 884,
+      "h": 661
+    },
+    "scrollables": [
+      {
+        "name": "",
+        "verticalScrollPercent": -1,
+        "verticalViewSize": 100,
+        "verticallyScrollable": false,
+        "rect": {
+          "x": 68,
+          "y": 726,
+          "w": 320,
+          "h": 26
+        }
+      }
+    ],
+    "strategy": "targeted",
+    "hwnd": 6362000,
+    "windowPid": 52552,
+    "probePid": 52180,
+    "foreground": {
+      "hwnd": "724028",
+      "pid": 23196,
+      "isTarget": false
+    },
+    "walk": {
+      "nodes": 9,
+      "textEls": 0,
+      "textChars": 0,
+      "named": 9,
+      "namedNoText": 0,
+      "offscreenNodes": 2,
+      "offscreenTextEls": 0,
+      "errors": 0,
+      "maxDepth": 0,
+      "truncatedBy": "",
+      "offscreenSample": []
+    },
+    "elapsedMs": 51,
+    "markers": [
+      {
+        "text": "GT-HDR-0001",
+        "depth": 0,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": null,
+        "ancestors": null
+      },
+      {
+        "text": "GT-NAMEONLY-BTN",
+        "depth": 0,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": null,
+        "ancestors": null
+      },
+      {
+        "text": "GT-H-COLLAPSED-0001",
+        "depth": 0,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": true,
+        "rect": null,
+        "ancestors": null
+      },
+      {
+        "text": "GT-H-HIDDEN-0001",
+        "depth": 0,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": true,
+        "rect": null,
+        "ancestors": null
+      },
+      {
+        "text": "GT-H-ZEROOPACITY-0001",
+        "depth": 0,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": null,
+        "ancestors": null
+      },
+      {
+        "text": "GT-H-VISIBLE-0001",
+        "depth": 0,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": null,
+        "ancestors": null
+      }
+    ],
+    "classified": [
+      {
+        "text": "GT-HDR-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "header",
+        "tab": "all",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-NAMEONLY-BTN",
+        "source": "Name",
+        "verdict": "unknown"
+      },
+      {
+        "text": "GT-H-COLLAPSED-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": true,
+        "verdict": "HIDDEN-COLLAPSED",
+        "declared": "collapsed",
+        "region": "hidden-tab",
+        "tab": "Hidden",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-H-HIDDEN-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": true,
+        "verdict": "HIDDEN-VISIBILITY",
+        "declared": "hidden",
+        "region": "hidden-tab",
+        "tab": "Hidden",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-H-ZEROOPACITY-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "HIDDEN-OPACITY",
+        "declared": "zero-opacity",
+        "region": "hidden-tab",
+        "tab": "Hidden",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-H-VISIBLE-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "hidden-tab",
+        "tab": "Hidden",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      }
+    ],
+    "pixels": null
+  }
+}

@@ -1,0 +1,696 @@
+{
+  "strategy": "control",
+  "timedOut": false,
+  "exitCode": 0,
+  "stderr": "",
+  "result": {
+    "ok": true,
+    "window": {
+      "rootOffscreen": false,
+      "windowPattern": true,
+      "visualState": "Normal",
+      "canMinimize": true
+    },
+    "clientOnScreen": {
+      "x": 68,
+      "y": 91,
+      "w": 884,
+      "h": 661
+    },
+    "scrollables": [
+      {
+        "name": "",
+        "verticalScrollPercent": -1,
+        "verticalViewSize": 100,
+        "verticallyScrollable": false,
+        "rect": {
+          "x": 68,
+          "y": 726,
+          "w": 320,
+          "h": 26
+        }
+      }
+    ],
+    "strategy": "control",
+    "hwnd": 6362000,
+    "windowPid": 52552,
+    "probePid": 40556,
+    "foreground": {
+      "hwnd": "724028",
+      "pid": 23196,
+      "isTarget": false
+    },
+    "walk": {
+      "nodes": 18,
+      "textEls": 1,
+      "textChars": 15,
+      "named": 14,
+      "namedNoText": 14,
+      "offscreenNodes": 4,
+      "offscreenTextEls": 0,
+      "errors": 0,
+      "maxDepth": 3,
+      "truncatedBy": "",
+      "offscreenSample": [
+        {
+          "name": "",
+          "controlType": "ControlType.ScrollBar",
+          "depth": 2
+        },
+        {
+          "name": "",
+          "controlType": "ControlType.ScrollBar",
+          "depth": 2
+        },
+        {
+          "name": "GT-H-COLLAPSED-0001",
+          "controlType": "ControlType.Text",
+          "depth": 3
+        },
+        {
+          "name": "GT-H-HIDDEN-0001",
+          "controlType": "ControlType.Text",
+          "depth": 3
+        }
+      ]
+    },
+    "elapsedMs": 116,
+    "markers": [
+      {
+        "text": "GT-HDR-0001",
+        "depth": 1,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 74,
+          "y": 98,
+          "w": 878,
+          "h": 16
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-EDIT-INITIAL",
+        "depth": 1,
+        "source": "TextPattern",
+        "controlType": "ControlType.Edit",
+        "isOffscreen": false,
+        "rect": null,
+        "ancestors": null
+      },
+      {
+        "text": "GT-EDIT-INITIAL",
+        "depth": 1,
+        "source": "ValuePattern",
+        "controlType": "ControlType.Edit",
+        "isOffscreen": false,
+        "rect": null,
+        "ancestors": null
+      },
+      {
+        "text": "GT-NAMEONLY-A11Y",
+        "depth": 1,
+        "source": "Name",
+        "controlType": "ControlType.Button",
+        "isOffscreen": false,
+        "rect": {
+          "x": 396,
+          "y": 726,
+          "w": 200,
+          "h": 26
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-NAMEONLY-BTN",
+        "depth": 2,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 436,
+          "y": 731,
+          "w": 120,
+          "h": 16
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.Button",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 396,
+              "y": 726,
+              "w": 200,
+              "h": 26
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-H-COLLAPSED-0001",
+        "depth": 3,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": true,
+        "rect": {
+          "empty": true
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 158,
+              "y": 121,
+              "w": 58,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-H-HIDDEN-0001",
+        "depth": 3,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": true,
+        "rect": {
+          "x": 77,
+          "y": 151,
+          "w": 872,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 158,
+              "y": 121,
+              "w": 58,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-H-ZEROOPACITY-0001",
+        "depth": 3,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 177,
+          "w": 872,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 158,
+              "y": 121,
+              "w": 58,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      },
+      {
+        "text": "GT-H-VISIBLE-0001",
+        "depth": 3,
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "isOffscreen": false,
+        "rect": {
+          "x": 77,
+          "y": 203,
+          "w": 872,
+          "h": 15
+        },
+        "ancestors": [
+          {
+            "ct": "ControlType.TabItem",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 158,
+              "y": 121,
+              "w": 58,
+              "h": 21
+            }
+          },
+          {
+            "ct": "ControlType.Tab",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 68,
+              "y": 121,
+              "w": 884,
+              "h": 605
+            }
+          },
+          {
+            "ct": "ControlType.Window",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 60,
+              "y": 60,
+              "w": 900,
+              "h": 700
+            }
+          },
+          {
+            "ct": "ControlType.Pane",
+            "scrollable": false,
+            "offscreen": false,
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 2560,
+              "h": 1440
+            }
+          }
+        ]
+      }
+    ],
+    "classified": [
+      {
+        "text": "GT-HDR-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "header",
+        "tab": "all",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-EDIT-INITIAL",
+        "source": "TextPattern",
+        "controlType": "ControlType.Edit",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "editable",
+        "region": "inputs",
+        "tab": "all",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-EDIT-INITIAL",
+        "source": "ValuePattern",
+        "controlType": "ControlType.Edit",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "editable",
+        "region": "inputs",
+        "tab": "all",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-NAMEONLY-A11Y",
+        "source": "Name",
+        "controlType": "ControlType.Button",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "name-only-control",
+        "region": "inputs",
+        "tab": "all",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-NAMEONLY-BTN",
+        "source": "Name",
+        "verdict": "unknown"
+      },
+      {
+        "text": "GT-H-COLLAPSED-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": true,
+        "verdict": "HIDDEN-COLLAPSED",
+        "declared": "collapsed",
+        "region": "hidden-tab",
+        "tab": "Hidden",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-H-HIDDEN-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": true,
+        "verdict": "HIDDEN-VISIBILITY",
+        "declared": "hidden",
+        "region": "hidden-tab",
+        "tab": "Hidden",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-H-ZEROOPACITY-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "HIDDEN-OPACITY",
+        "declared": "zero-opacity",
+        "region": "hidden-tab",
+        "tab": "Hidden",
+        "expectVisible": false,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      },
+      {
+        "text": "GT-H-VISIBLE-0001",
+        "source": "Name",
+        "controlType": "ControlType.Text",
+        "uiaOffscreen": false,
+        "verdict": "visible",
+        "declared": "visible",
+        "region": "hidden-tab",
+        "tab": "Hidden",
+        "expectVisible": true,
+        "expectPartial": false,
+        "inViewport": null,
+        "fullyInsideViewport": null
+      }
+    ],
+    "pixels": {
+      "printWindowOk": true,
+      "windowVisible": true,
+      "windowIconic": false,
+      "rect": [
+        60,
+        60,
+        900,
+        700
+      ],
+      "rows": [
+        {
+          "text": "GT-HDR-0001",
+          "region": "header",
+          "declared": "visible",
+          "expectVisible": true,
+          "inBitmap": true,
+          "pixelAtSample": [
+            32,
+            32,
+            32
+          ],
+          "paintedThere": true
+        },
+        {
+          "text": "GT-H-COLLAPSED-0001",
+          "region": "hidden-tab",
+          "declared": "collapsed",
+          "expectVisible": false,
+          "inBitmap": true,
+          "pixelAtSample": [
+            255,
+            255,
+            255
+          ],
+          "paintedThere": false
+        },
+        {
+          "text": "GT-H-HIDDEN-0001",
+          "region": "hidden-tab",
+          "declared": "hidden",
+          "expectVisible": false,
+          "inBitmap": true,
+          "pixelAtSample": [
+            255,
+            255,
+            255
+          ],
+          "paintedThere": false
+        },
+        {
+          "text": "GT-H-ZEROOPACITY-0001",
+          "region": "hidden-tab",
+          "declared": "zero-opacity",
+          "expectVisible": false,
+          "inBitmap": true,
+          "pixelAtSample": [
+            255,
+            255,
+            255
+          ],
+          "paintedThere": false
+        },
+        {
+          "text": "GT-H-VISIBLE-0001",
+          "region": "hidden-tab",
+          "declared": "visible",
+          "expectVisible": true,
+          "inBitmap": true,
+          "pixelAtSample": [
+            131,
+            203,
+            111
+          ],
+          "paintedThere": true
+        },
+        {
+          "text": "GT-W2-0001",
+          "region": "w2",
+          "declared": "other-window",
+          "expectVisible": false,
+          "inBitmap": false,
+          "pixelAtSample": null,
+          "paintedThere": false
+        },
+        {
+          "text": "GT-W2-0002",
+          "region": "w2",
+          "declared": "other-window",
+          "expectVisible": false,
+          "inBitmap": false,
+          "pixelAtSample": null,
+          "paintedThere": false
+        },
+        {
+          "text": "GT-W2-0003",
+          "region": "w2",
+          "declared": "other-window",
+          "expectVisible": false,
+          "inBitmap": false,
+          "pixelAtSample": null,
+          "paintedThere": false
+        },
+        {
+          "text": "GT-W2-0004",
+          "region": "w2",
+          "declared": "other-window",
+          "expectVisible": false,
+          "inBitmap": false,
+          "pixelAtSample": null,
+          "paintedThere": false
+        },
+        {
+          "text": "GT-W2-0005",
+          "region": "w2",
+          "declared": "other-window",
+          "expectVisible": false,
+          "inBitmap": false,
+          "pixelAtSample": null,
+          "paintedThere": false
+        }
+      ]
+    }
+  }
+}
