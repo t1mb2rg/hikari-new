@@ -1,5 +1,9 @@
 # MEMORY REACTIVATION v0 — BOUNDARY REVIEW
 
+> **关于本文中指向 `docs/development/current-stage.md` 的行号**：该文件会被持续在文首追加状态行，**它的行号会漂移**——同一份文件里今天同时存在 +8、+84、+1441 等不同偏移，取决于每条引用写下的时间。**本文里的行号是写作当时的位置，不是今天的位置。** 要按今天读，请拿引号里的原文或小节标题去搜那个文件。
+>
+> 这条限定按 `governance-rules-v1.md` R7.2 加：**正文一个字符都没有改**，只在文首留一条说明，免得读者以为断掉的指针是我们今天写错的。
+
 状态：**只设计**。无实现、无 Runtime 改动、无 Memory 创建、无 commit。
 基线：`main` @ `1b9021a`（review 开始时 `git status --short` 为空）
 日期：2026-09-27

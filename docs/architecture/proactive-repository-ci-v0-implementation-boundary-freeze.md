@@ -1,5 +1,9 @@
 # PROACTIVE REPOSITORY CI v0 — Implementation Boundary Freeze
 
+> **关于本文中指向 `docs/development/current-stage.md` 的行号**：该文件会被持续在文首追加状态行，**它的行号会漂移**——同一份文件里今天同时存在 +8、+84、+1441 等不同偏移，取决于每条引用写下的时间。**本文里的行号是写作当时的位置，不是今天的位置。** 要按今天读，请拿引号里的原文或小节标题去搜那个文件。
+>
+> 这条限定按 `governance-rules-v1.md` R7.2 加：**正文一个字符都没有改**，只在文首留一条说明，免得读者以为断掉的指针是我们今天写错的。
+
 > 本文是 **实现边界冻结**，不是又一份 Boundary Review。它只回答「开始实现所必须回答的具体问题」，
 > 并且是 `docs/architecture/outbound-composition-v0-boundary-review.md` 的 Human ruling（第二轮）
 > §六 那一项的交付。
