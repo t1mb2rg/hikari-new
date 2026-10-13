@@ -58,7 +58,7 @@ git status --short     空
 | --- | --- |
 | P4-03 首次出现在仓库时，是一句**拒绝规划** | `docs/development/phase-4-resident.md:276`（`0db5516`）逐字：「**本文件不规划 P4-03。** 下一阶段的范围与取舍不在本轮决定。」 |
 | 它在进度表中首次出现时**没有名字**，只有一个状态 | `e23d382` 的 `docs/development/current-stage.md:55`：`P4-03    未开始                                  not started` |
-| 至今仍然没有名字 | `docs/development/current-stage.md:94` 同型，条目仍只有编号与 `not started` |
+| 至今仍然没有名字 | `docs/development/current-stage.md:94` 同型，条目仍只有编号与 `not started`。**指针（2026-10-13）**：**这一锚指不到地方**——`current-stage.md:94` 今天是一个空的引用续行。它想支持的结论不受影响（上表 `:55` 那一锚自带 `e23d382` 限定，按那个 commit 读是成立的），但**这个行号不构成证据**。按 R7.2 原文不改，指针在此。 |
 | 仓库中不存在任何 roadmap / 阶段规划文件 | `git ls-files` 无 `docs/plans/*`；顶层无 `README.md`；`docs/` 下无规划类 artifact |
 | 同阶段其它编号**都有名字** | `:90-93`：P4-01 Desktop Session Awareness Loop v1、P4-01.1 Awareness Loop timer 上界正确性修正、P4-02 Resident Process Composition v1、P4-02.1 Resident Local Control v1 |
 
@@ -92,7 +92,7 @@ relevant | unknown
 | slice | 交付物 | 覆盖 | 关键锚点 |
 | --- | --- | --- | --- |
 | Git Repository Perception v1 | `git-repository.current@1`，config `{ repositoryRoot }`，显式、无默认、无 cwd 回退 | **P1** 具名本地对象源 | `src/git-repository/plugin.ts:40-42`；`docs/development/phase-4-git-repository-perception.md:3-9` |
-| GitHub CI Perception v1 | `github-ci.current@1`，config `{ repository }`，观测值是 **GitHub API 报的规范拼写** | **P2** 第二个源，且是 relevance 判据的**唯一词汇来源** | `src/github-ci/types.ts:47-56`；`docs/development/current-stage.md:1263` |
+| GitHub CI Perception v1 | `github-ci.current@1`，config `{ repository }`，观测值是 **GitHub API 报的规范拼写** | **P2** 第二个源，且是 relevance 判据的**唯一词汇来源** | `src/github-ci/types.ts:47-56`；`docs/development/current-stage.md:1263`。**指针（2026-10-13）**：**后一锚指不到地方**——`current-stage.md:1263` 今天讲的是「每次 `current()` ≈ 523 ms」的观测成本，与 GitHub API 的词汇拼写无关；那个文件会被持续前置追加。前一锚不受影响。按 R7.2 原文不改，指针在此。 |
 | Repository CI World v1 | `repository-ci-world.current@1`：两份 observation 进同一 snapshot + 逐条可用性 | **P3** 同一 scope | `src/repository-ci-world/plugin.ts:29-60`；`docs/development/phase-4-repository-ci-world.md:29-40` |
 | Repository CI Awareness v1 | `repository-ci-awareness.current@1`：跨源 commit 比较，`snapshot` 按引用透传 | **P4** 判定的唯一合法输入通道 | `src/repository-ci-awareness/plugin.ts:25,49-61`；`docs/development/current-stage.md:13` |
 | Explicit Work Focus Local Ingress v1 | `work-focus` Plugin：本机端点 + `declare` / `replace` / `clear` / `status`，state 在 activation 闭包内 | **P5** human ingress（步骤 A） | `src/work-focus/plugin.ts:60,69-74`；`docs/architecture/phase-4-explicit-work-focus-review.md:105-131` |
