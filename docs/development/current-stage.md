@@ -244,7 +244,7 @@
 >
 > **图证据与它的读法**：`detect_changes --scope all` 报 `14 files / 59 symbols / 28 processes / Risk level: critical`，无 `partial` / `truncated`。**CRITICAL 照实报告，不由 `riskSharedAxes` 豁免**：它来自这次改动的**跨度**（语言工具循环 + 两个 variant + 跨语言的等待界），不是来自任何单点的调用面——编辑前逐符号 `impact` 的结果是 `readCall` **LOW**、`ExposureReader` **LOW**、`createExposureReader` **LOW**、`LanguageExposure` **UNKNOWN**（空调用集不作为证据，用文本检索确认：19 处命中全部落在 `src/language/{tools,read,answer,plugin,index,express,exposure}.ts` 的**类型位置**，唯一读值是 `src/language/express.ts:372` 的 `.name`）。
 >
-> **两条 finding 留给 Human 决定，实施者没有自己追认**：F-1 实现多出一条人可见字面 `DIRECTORY_TRUNCATED`（§3.5 冻结的是五条字面，第六条是目录项数超限的提示行；把文件那句用在目录上会让模型以为读到的是文件正文）；F-2 `outside` 只在路径**存在**时返回，于是模型能用绝对路径区分「存在但在授权外」与「不存在」——它不泄露正文，但泄露了本机某条路径是否存在，按 §6.2 的结果闭集实现，**不在本片修**。
+> **两条 finding：一条已由 Human 追认，一条留档不改**：F-1 实现多出一条人可见字面 `DIRECTORY_TRUNCATED`（§3.5 冻结的是五条字面，第六条是目录项数超限的提示行；把文件那句用在目录上会让模型以为读到的是文件正文）——**Human 于 2026-10-13 复核后确认照此保留**，自此该字面与 §3.5 那五条同级属于冻结面，指针加在 §3.5、理由记在 §13；F-2 `outside` 只在路径**存在**时返回，于是模型能用绝对路径区分「存在但在授权外」与「不存在」——它不泄露正文，但泄露了本机某条路径是否存在，按 §6.2 的结果闭集实现，**不在本片修**。
 >
 > **提交**：`ec2439d`，已 push；CI Runtime Tests #38423855497 **success**（`test` 与 `surface` 两颗 job 都 success）。工作区 `git status --short` 为空。
 

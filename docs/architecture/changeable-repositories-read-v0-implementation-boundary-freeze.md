@@ -137,6 +137,8 @@ not-text      「<路径> 不是一个文本文件。」
 roots 为空    「这个数据目录里还没有授权任何可改仓库。」   ← 复用 renderChangeableRepositories
 ```
 
+**目录被截断时的追加行（指针，不是对上表的改写）**：上表写成时只给了「文件」的截断句。目录也会被截断，所以冻结面里还有**第六条**字面——`DIRECTORY_TRUNCATED = '这个目录的项比一次能列的多，以上只是开头。'`（`src/changeable-repositories/read.ts:165`）。它由 Human 于 2026-10-13 复核后追认，过程与理由见 §13；上表保持写成时的原貌。
+
 `authorized_repositories_list` **不需要新的 renderer**：它逐行复用 `renderChangeableRepositories`（`src/changeable-repositories/state.ts`），也就是 `hikari change status` 已经显示的那几行。
 
 ---
@@ -384,8 +386,10 @@ expected: 8,
 - **没有 speculative abstraction**：`argument` 是 exposure 上**一个可选字段**，不是 parameters 框架；没有 schema 生成器；没有为第二个 owner 的参数形态预留形状（`src/language/tools.ts` 只认「恰好一个具名字符串参数」）。
 - **没越过 frozen boundary**：§3 冻结面逐条对照实现——Service 名 `changeable-repositories.read` / 版本 `1` / 两个方法；两个 exposure 名与描述、参数名 `target`；五条 frame 字面；可选 `argument`；§6.2 四种结果闭集；§6.3 两个上限；§4.1 的 8 次预算。
 - **不允许的东西没有被重新引入**：没有 `GlobalWorldState`、没有 Service Locator、没有 Central Judgement、没有 Model Router；`changeable-repositories` 的 `provides` 从空变成**恰好一个新 Service**，不含 World / Awareness / Judgement 任何一族。
-- **一处必须由 Human 决定的偏离**：§3.5 冻结了**五条**人可见字面，实现里出现**第六条** `DIRECTORY_TRUNCATED = '这个目录的项比一次能列的多，以上只是开头。'`。
-  §3.5 只给了「文件」的截断句；把文件那句用在目录上会让模型以为读到的是文件内容。这是实施者为了不写错一句话而做的最小增补，**但它是一句人可见字面，不是实施者可以自己追认的**——列在 §14 F-1，请 Human 点头或改口径。
+- **一处曾经必须由 Human 决定、现已追认的偏离**：§3.5 冻结了**五条**人可见字面，实现里出现**第六条** `DIRECTORY_TRUNCATED = '这个目录的项比一次能列的多，以上只是开头。'`。
+  §3.5 只给了「文件」的截断句；把文件那句用在目录上会让模型以为读到的是文件内容。这是实施者为了不写错一句话而做的最小增补，**但它是一句人可见字面，不是实施者可以自己追认的**——列在 §14 F-1，交 Human 点头或改口径。
+  **Human 于 2026-10-13 看过逐字内容与其余三个口径（改措辞 / 超过上限就不列 / 取消上限）之后确认照此保留**（原话：「我觉得这样就没问题」，指选项 (a)）。
+  自此这条字面与 §3.5 那五条**同级属于冻结面**：它是本片的一部分，不是实施者的临时创作；§3.5 的表保持写成时的原貌，指针加在那里。
 - **一处按 §6.2 实现、但值得留档的副作用**：`outside` 只在路径**存在**时返回，于是模型可以用绝对路径区分「存在但在授权外」与「不存在」。
   它**没有**泄露任何正文，但泄露了本机某条路径是否存在。§6.2 的结果闭集只有四态、没有第五态用来抹平这个差别，实现照做；列为 §14 F-2，**不在本片修**。
 
@@ -395,7 +399,7 @@ expected: 8,
 
 | id | severity | 内容 | 处理 |
 | --- | --- | --- | --- |
-| **F-1** | low | 实现多出一条人可见字面 `DIRECTORY_TRUNCATED`（§3.5 只冻结五条；第六条是目录截断提示行） | **待 Human 点头或改口径** |
+| **F-1** | low | 实现多出一条人可见字面 `DIRECTORY_TRUNCATED`（§3.5 只冻结五条；第六条是目录截断提示行） | **已由 Human 追认（2026-10-13）：照此保留**，自此与 §3.5 那五条同级；指针与理由见 §3.5、§13 |
 | **F-2** | low | `outside` 只在路径存在时返回，模型因此能探测任意绝对路径的存在性 | 按 §6.2 实现；记录不改（改它要动冻结的结果闭集） |
 | **F-3** | low | `apps/human-surface/HumanSurface.Core/PipeLanguageAsker.cs:11` 与 `:18` 仍引用已被拆分的 `src/cli/ask.ts` | 片外，未修，如实上报 |
 | **F-4** | — | §9 原文「本片不碰 C#」被现实推翻（`REPLY_TIMEOUT_MS` 的输入变了） | 已由 §11 记录并处理，跨语言门禁 69/69 |
