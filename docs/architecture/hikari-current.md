@@ -6,7 +6,9 @@
 >
 > **配套**：`docs/vision/hikari-long-term.md` 说的是「打算成为什么」；**本文说的是「今天是什么」**。两份必须分开读。
 >
-> **证据基准**：本文写于 commit `ada401c`（工作区 `main`，领先 `origin/main` 11 个 commit）。所有 `file:line` 引用以该 commit 为准；行号会漂移，条目名与路径才是身份。
+> **证据基准**：本文写于 commit `ada401c`（当时工作区 `main` 领先 `origin/main` 11 个 commit）。所有 `file:line` 引用以该 commit 为准；行号会漂移，条目名与路径才是身份。
+>
+> **部分重测（2026-10-13，commit `6fbc936`，工作区与 `origin/main` 同步）**：§0 的三个计数、§1 的目录与 Plugin 计数、§3.1 的 Service 契约表、§3.2 的 Event 订阅者**已按实测更新**（19 个 Plugin / 17 个 Service 契约 / 1 个 Event 契约，且它现在有 **1 个**生产订阅者）。**其余各节的正文仍以 `ada401c` 为基准，本次没有逐条重测**——不要把这次更新读成「全文已复核」。`file:line` 行号以本文原基准为准，重测过的条目另行给出实测行号。
 
 ---
 
@@ -16,7 +18,7 @@ Hikari 今天是一个**很薄的运行生命结构 + 两条纵向感知链 + �
 
 ```text
 有一个 Runtime（只懂 Plugin / Service / Event / cleanup）
-有 18 个 Plugin（16 个 Service 契约、1 个 Event 契约）
+有 19 个 Plugin（17 个 Service 契约、1 个 Event 契约，且那个 Event 现在有 1 个生产订阅者）
 有一条身份生命线（Continuity）和一条事实生命线（Chronicle）
 有两套「感知 → World → Awareness」纵切（桌面、仓库 CI）
 有一个模型出口（Language，带原生 tool use）
@@ -119,7 +121,7 @@ flowchart TB
 
 `PluginDefinition<TConfig>` = `{ id, version, requires?, provides?, config?, setup }` —— `src/runtime/plugin.ts:29-36`。
 
-`src/` 下 21 个目录里，18 个是 Plugin（`plugin.ts` + `contracts.ts` + `index.ts` barrel），另外三个不是：`runtime/`（Runtime 本身）、`cli/`（宿主入口）、`terminal-text/`（终端文本小工具）。
+`src/` 下 22 个目录里，19 个是 Plugin（`plugin.ts` + `contracts.ts` + `index.ts` barrel），另外三个不是：`runtime/`（Runtime 本身）、`cli/`（宿主入口）、`terminal-text/`（终端文本小工具）。**（重测于 `6fbc936`；`ada401c` 时是 21 / 18。）**
 
 **没有** `AgentPlugin` / `SensorPlugin` / `LoopPlugin` 这类业务基类树。「Loop」「Perception」「World」「Awareness」「Attention」在今天的代码里都只是**领域角色**，不是 Runtime 概念。
 
@@ -162,7 +164,7 @@ Plugin 侧上下文：`services.get / has / isProvidedBy`（`src/runtime/service
 
 ## 3. Service 与 Event 平面
 
-### 3.1 Service：今天恰好 16 个
+### 3.1 Service：今天恰好 17 个
 
 每个都是 `defineService<T>(id, version=1)`（`src/runtime/contracts.ts:16`），运行时 key 是 `` `${id}@${version}` ``（`:28`）。
 
@@ -184,21 +186,26 @@ Plugin 侧上下文：`services.get / has / isProvidedBy`（`src/runtime/service
 | `repository-ci-relevance.current` | `repository-ci-relevance` | `src/repository-ci-relevance/contracts.ts:47` |
 | `language.speaking` | `language` | `src/language/contracts.ts:72` |
 | `language.desktop-return-speaking` | `language` | `src/language/contracts.ts:96` |
+| `desktop-content-read.read` | `desktop-content-read` | `src/desktop-content-read/contracts.ts:70` |
 
-这 16 个数字是**今天的事实**，不是架构不变量。Runtime 不知道它们是什么。
+**重测（`6fbc936`）**：末行那条是 G-1 轮新增的，也是 Hikari 第一个由**可选的**领域插件提供的 Service——`desktop-content-read` 只在组合里显式启用时才在。其余 16 条与 `ada401c` 时相同（行号可能漂移）。
 
-### 3.2 Event：今天恰好 1 个，生产订阅者 0
+这 17 个数字是**今天的事实**，不是架构不变量。Runtime 不知道它们是什么。
+
+### 3.2 Event：今天恰好 1 个，生产订阅者 1
 
 ```text
 desktop-session-awareness-loop.assessed@1
-  声明  src/desktop-session-awareness-loop/contracts.ts:11-12
+  声明  src/desktop-session-awareness-loop/contracts.ts:12
   发布  src/desktop-session-awareness-loop/plugin.ts:85
-  订阅  （无）—— src/ 里唯一的 events.subscribe 是 Runtime 自己（src/runtime/plugin-context.ts:36）
+  订阅  src/desktop-content-read/plugin.ts:200（唯一的生产订阅者，G-1 轮加入）
 ```
 
-`src/cli/resident.ts:196-198, 328-331` 明确记录了这件事：**它可以被持续发布，但还没有语义上的 Consumer。**
+**本节在 `ada401c` 时写的是「生产订阅者 0」。** 那句当时是真的；`src/cli/resident.ts:197-200` 现在逐字记录它不再成立：「This comment used to say that `desktop-session-awareness-loop.assessed` has zero subscribers in production, and that is no longer true: `desktop-content-read` subscribes to it, and is the only thing that does.」
 
-ESLint 式的「Event 误用」（用 Event 做查询、做请求/响应、做命令）今天没有发生，因为只有一个 Event，且它只承载「刚刚发生了一次评估」。
+新事实的形状值得单独说清楚：**它恰好有一个订阅者，而那个订阅者是一个可选的领域插件**——所以「有没有订阅者」在今天的组合里仍然不是一个常量，而取决于那个插件在不在组合里。
+
+ESLint 式的「Event 误用」（用 Event 做查询、做请求/响应、做命令）今天仍然没有发生，但理由变了：不再是「只有一个 Event 且无人订阅」，而是只有一个 Event、恰好一个订阅者，且它只承载「刚刚发生了一次评估」。
 
 ---
 
