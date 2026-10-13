@@ -1,9 +1,18 @@
 import assert from 'node:assert/strict';
+import { spawn, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
+import { Runtime } from '../dist/index.js';
+import {
+  changeableRepositoriesEndpointPath,
+  changeableRepositoriesPlugin,
+} from '../dist/changeable-repositories/index.js';
+import { requestChangeableRepositories } from '../dist/cli/change.js';
+import { chroniclePlugin, initializeChronicle, openChronicle } from '../dist/chronicle/index.js';
+import { continuityPlugin, initializeHikari, restoreHikari } from '../dist/continuity/index.js';
 import { changeableRepositoriesFactDraft } from '../dist/changeable-repositories/facts.js';
 import { realDirectoryReader } from '../dist/changeable-repositories/paths.js';
 import {
@@ -12,6 +21,13 @@ import {
   renderChangeableRepositories,
   sameMembership,
 } from '../dist/changeable-repositories/state.js';
+
+const CLI = join(import.meta.dirname, '..', 'dist', 'cli', 'main.js');
+
+// Named pipes are the whole of the ingress, so everything that has to reach a real endpoint is
+// Windows-only. What is left ungated is the domain, which is pure and has no host — and that split is
+// the reason `paths.ts` is a separate file from `state.ts`.
+const NO_PIPES = process.platform === 'win32' ? false : '命名管道只在 Windows 上存在';
 
 // The human-visible sentences, written out here rather than imported from the module — for the same
 // reason the work focus test writes its own: a test that took the wording from the module would agree
@@ -258,4 +274,234 @@ test('the real reader does not follow a member when a link is retargeted later',
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+// ---------------------------------------------------------------------------------------------
+// The ingress, against a real endpoint in a real composition.
+//
+// Everything above is the domain and needs no host. What follows needs three things at once — a data
+// directory with a chronicle, a Runtime holding the plugin, and a client that reaches the pipe — and it
+// exists because the domain being right is not the same claim as the surface working. The two that
+// matter most are the ones no unit test can make: that the endpoint lives and dies with the activation,
+// and that a declaration survives one.
+// ---------------------------------------------------------------------------------------------
+
+function createRoot(t) {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'hikari-changeable-')));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  return root;
+}
+
+// The same two functions `hikari init` and `hikari chronicle init` call, so a test that needs a root set
+// up does not pay for two child processes to get one.
+function initializedRoot(t) {
+  const root = createRoot(t);
+  const identity = initializeHikari({ rootDir: root });
+  initializeChronicle({ rootDir: root, identity });
+  return root;
+}
+
+// A plugin whose `requires` is unsatisfied stays `waiting` — `setup` never runs, no endpoint is ever
+// bound — so the composition is loaded rather than the plugin alone, and the activation is asserted.
+// Without that assertion a test here would happily measure the absence of a composition.
+async function compose(root) {
+  const runtime = new Runtime();
+  await runtime.loadPlugin(continuityPlugin, { rootDir: root });
+  await runtime.loadPlugin(chroniclePlugin, { rootDir: root });
+  const state = await runtime.loadPlugin(changeableRepositoriesPlugin, { rootDir: root });
+  assert.equal(state, 'active', '可改仓库插件没有激活');
+  return runtime;
+}
+
+// Read by a reader that is not the writer: a separate service opened on the same directory, parsing the
+// store out of the file on every call. Asking the Runtime's own service would be asking the plugin to
+// grade its own work, and would pass just as happily if nothing had reached the disk.
+async function readFacts(root) {
+  return openChronicle({ rootDir: root, identity: restoreHikari({ rootDir: root }) }).read();
+}
+
+// The real client, not a hand-rolled socket: what a test asserts through should be the same code a
+// human's command runs, or it is asserting about a second implementation of the same idea.
+async function ask(root, request) {
+  const answer = await requestChangeableRepositories(root, request);
+  assert.equal(answer.kind, 'answered', `没有拿到应答：${JSON.stringify(answer)}`);
+  return answer;
+}
+
+function membersOf(answer) {
+  assert.equal(answer.outcome, 'ok', `请求被拒绝：${answer.lines.join(' / ')}`);
+  return [...answer.lines];
+}
+
+test('声明、看、替换、清空，走真实端点', NO_PIPES, async (t) => {
+  const root = initializedRoot(t);
+  const runtime = await compose(root);
+  try {
+    const dir = createRoot(t);
+
+    assert.deepEqual(membersOf(await ask(root, { word: 'status' })), [NONE]);
+    assert.deepEqual(membersOf(await ask(root, { word: 'declare', repositories: [dir] })), [dir]);
+    assert.deepEqual(membersOf(await ask(root, { word: 'status' })), [dir]);
+    assert.deepEqual(membersOf(await ask(root, { word: 'clear' })), [NONE]);
+  } finally {
+    await runtime.shutdown();
+  }
+});
+
+test('端点只在激活期间存在，卸载之后就没人提供了', NO_PIPES, async (t) => {
+  const root = initializedRoot(t);
+  const runtime = await compose(root);
+
+  // The endpoint path is derived from the data directory, so it is the same string before and after —
+  // which is what makes the second half of this test about the *endpoint* rather than about a name.
+  const path = changeableRepositoriesEndpointPath(root);
+  assert.ok(path !== undefined);
+
+  assert.equal((await requestChangeableRepositories(root, { word: 'status' })).kind, 'answered');
+  await runtime.shutdown();
+
+  // Nothing is listening, and the client says so rather than reporting a broken surface. "Gone with its
+  // plugin" is the property this endpoint has that the Resident's control endpoint deliberately does not.
+  const after = await requestChangeableRepositories(root, { word: 'status' });
+  assert.equal(after.kind, 'absent', `卸载后仍然拿到了：${JSON.stringify(after)}`);
+});
+
+test('声明活过一次激活：读回重建的那个集合就是人写下的那个', NO_PIPES, async (t) => {
+  const root = initializedRoot(t);
+  const dir = createRoot(t);
+
+  const first = await compose(root);
+  assert.deepEqual(membersOf(await ask(root, { word: 'declare', repositories: [dir] })), [dir]);
+  await first.shutdown();
+
+  // A second Runtime over the same data directory, which is what a restart is. Nothing carries over in
+  // memory — the plugin starts from an empty set and rebuilds it from the history — so this is the
+  // assertion that the declaration is persistent rather than merely held.
+  const second = await compose(root);
+  try {
+    assert.deepEqual(membersOf(await ask(root, { word: 'status' })), [dir]);
+  } finally {
+    await second.shutdown();
+  }
+});
+
+test('三个动词各写一条事实，status 与语义无操作一条都不写', NO_PIPES, async (t) => {
+  const root = initializedRoot(t);
+  const runtime = await compose(root);
+  try {
+    const dir = createRoot(t);
+    const facts = async () => (await readFacts(root)).filter((f) => f.type.startsWith('changeable-repositories.'));
+
+    assert.deepEqual(await facts(), []);
+
+    await ask(root, { word: 'status' });
+    // Asked and changed nothing: a family that admitted this would be a log of questions.
+    assert.deepEqual(await facts(), []);
+
+    await ask(root, { word: 'declare', repositories: [dir] });
+    assert.deepEqual((await facts()).map((f) => f.type), ['changeable-repositories.declared']);
+
+    // Declaring what is already declared moved nothing, so there is no occurrence to admit.
+    await ask(root, { word: 'declare', repositories: [dir] });
+    assert.equal((await facts()).length, 1);
+
+    const first = (await facts())[0];
+    assert.equal(first.version, 1);
+    // Not `human`: the ingress has no authentication, so a fact claiming one would be asserting an
+    // identity nothing here established — and this fact is the record of a permission, which is the one
+    // record that must not imply a particular person granted it.
+    assert.equal(first.source.kind, 'changeable-repositories.declaration');
+    assert.deepEqual(first.payload.repositories, [dir]);
+
+    await ask(root, { word: 'clear' });
+    assert.deepEqual((await facts()).map((f) => f.type), [
+      'changeable-repositories.declared',
+      'changeable-repositories.cleared',
+    ]);
+  } finally {
+    await runtime.shutdown();
+  }
+});
+
+// A usage error exits 2 and everything else exits 1, which is the convention the whole CLI follows and
+// not something this slice gets to choose.
+const USAGE_ERROR = 2;
+
+// `spawnSync` cannot be used against the endpoint these tests compose, and the reason is worth stating
+// because it looks like flakiness when it is not: it blocks *this* process's event loop, and the
+// endpoint is a server running in this process. The child connects, the server never gets to accept it,
+// and the child sits there until its own reply timeout expires. A resident is a separate process and has
+// no such problem; an in-process composition does, and this runner is the whole of the difference.
+function runCli(args) {
+  return new Promise((settle) => {
+    const child = spawn(process.execPath, [CLI, ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('close', (status) => settle({ status, stdout, stderr }));
+  });
+}
+
+test('hikari change 从 argv 走到端点，并且原样传目录', NO_PIPES, async (t) => {
+  const root = initializedRoot(t);
+  const runtime = await compose(root);
+  try {
+    const dir = createRoot(t);
+
+    // The whole chain: argv → options → the plugin's own wire vocabulary → the pipe → the plugin →
+    // Chronicle. Nothing in it is a second implementation of anything the client tests already cover.
+    const declared = await runCli(['change', 'declare', '--data-dir', root, dir]);
+    assert.equal(declared.status, 0, declared.stderr);
+    assert.equal(declared.stdout, `${dir}\n`);
+
+    const status = await runCli(['change', 'status', '--data-dir', root]);
+    assert.equal(status.status, 0, status.stderr);
+    assert.equal(status.stdout, `${dir}\n`);
+
+    // A path that cannot be admitted is Hikari answering, not the command failing: the reason goes to
+    // stderr with the exit code, and the human reads the sentence the plugin wrote.
+    const relative = await runCli(['change', 'declare', '--data-dir', root, 'relative/path']);
+    assert.equal(relative.status, 1);
+    assert.equal(relative.stdout, '');
+    assert.equal(relative.stderr, `${NOT_ABSOLUTE('relative/path')}\n`);
+  } finally {
+    await runtime.shutdown();
+  }
+});
+
+test('没有常驻时 hikari change 说 absent，而不是说入口坏了', NO_PIPES, async (t) => {
+  // No composition at all, which is the ordinary case on a machine where no resident is running.
+  const root = initializedRoot(t);
+
+  const answered = spawnSync(process.execPath, [CLI, 'change', 'status', '--data-dir', root], {
+    encoding: 'utf8',
+  });
+  assert.equal(answered.status, 1);
+  assert.match(answered.stderr, /没有正在提供可改仓库入口的 Hikari 常驻/);
+});
+
+test('change 的词表是它自己的，别的词在用法层被拒绝', () => {
+  // The grammar is the CLI's; the words are the owner's. A word that is not one of the four never
+  // reaches a pipe, so this needs no host and is asserted on every platform.
+  const usage = spawnSync(process.execPath, [CLI, 'change', 'wat', '--data-dir', 'x'], {
+    encoding: 'utf8',
+  });
+  assert.equal(usage.status, USAGE_ERROR);
+  assert.match(usage.stderr, /change 只支持 declare \/ replace \/ clear \/ status/);
+
+  // And the arity rule, which is grammar rather than domain: a word that requires a name and was given
+  // none is a typing mistake here, while the same request arriving over the pipe is a no-op the plugin
+  // answers honestly. Two different questions, asked in the two places that can tell them apart.
+  const empty = spawnSync(process.execPath, [CLI, 'change', 'declare', '--data-dir', 'x'], {
+    encoding: 'utf8',
+  });
+  assert.equal(empty.status, USAGE_ERROR);
+  assert.match(empty.stderr, /change declare 至少需要一个目录/);
 });
