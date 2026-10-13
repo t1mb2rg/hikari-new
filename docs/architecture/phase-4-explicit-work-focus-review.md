@@ -53,7 +53,7 @@ relevant | unknown
 | `repository-ci-awareness` 的判词只读两个 commit 字符串，且**无 config、无状态、pull-only** | `src/repository-ci-awareness/plugin.ts:7-35, 37-65` |
 | 仓库在**唯一的 repository 引用入口**就拒绝裸仓库名 | `test/github-ci.test.mjs:193-210`（`{ repository: 'hikari-new' }` 被拒） |
 | CLI 只回答**词法**问题，领域规则归 owner 的 `config.parse` | `src/cli/options.ts:52-61` |
-| 无 consumer Service「不构成一般许可」 | `docs/development/current-stage.md:17` |
+| 无 consumer Service「不构成一般许可」 | `docs/development/current-stage.md:17`。**指针（2026-10-13）**：**这一锚指不到地方**——`:17` 今天是 Repository CI Relevance 的口径更新，不是 consumer Service 的门槛。另需注意引号里那句是**本评审自己的措辞**，不是目标文件原文，所以按字符串去搜也搜不到（这正是 `scripts/citation-report.mjs` 的「引文找不到」一桶大部分是误报的原因）。要今天的位置，跑那个脚本。按 R7.2 原文不改。 |
 | 冻结禁止清单 | `docs/architecture/core-architecture-v0.md` §11、§6.6；`CLAUDE.md` |
 
 **关于证据强度的一处自我限制：** 本轮曾尝试用 subagent 统计「生产组合中全部 plugin definition 的数量」，其报告自述为 12，而同报告自身表格只列 11。该数字**不可采信**，本文因此**不引用任何 plugin 计数**。需要计数时，锚点是 `src/cli/resident.ts:106`（「Exactly seven plugins」）这一行**当下源码**。
