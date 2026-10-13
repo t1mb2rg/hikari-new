@@ -221,7 +221,7 @@ const UNRUN_CALL_RESULT = '这次调用没有执行。';
 // unboundedly many calls — and the choice is between a bound and an interaction whose length a model
 // decides.
 //
-// Eight, and the number is deliberately dull. It is twice the largest exposure list, so a model that
+// Eight, and the number is deliberately dull: the longer exposure list, plus three. A model that
 // reads every capability it was offered and then asks three follow-up questions still fits; it is small
 // enough that a model looping over a directory cannot exhaust the model's context or a human's patience;
 // and it is a count of *calls*, not of bytes or seconds, because the thing being bounded is how long this
