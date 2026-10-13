@@ -222,6 +222,30 @@ Human 于 2026-10-13 记下这一方向，逐字：「最后我们可能会做�
 
 ---
 
+## 8ter. 追加裁决与参照调研（2026-10-13，同日）
+
+**追加裁决 7：§3.1 的「可改仓库」声明是持久的**（写入 Chronicle，重启后仍在）。理由：Human 那句话的字面是「我**给他**授权的仓库」——一次给、长期有效。**代价是撤销必须显式**，因此 `clear` 是必须的，且 `status` 必须让人随时看见「现在授权了什么」。这一条把 §3.1 里"同型于 `work-focus`"的那半句**改掉了**：同型的是**形状**（人类显式声明、显式读/替换/清空），**不是持久性**——`work-focus` 今天的 designation 在 activation 闭包内，重启为空。
+
+**Human 指定的参照：Claude Code 与 Codex 的"自主审批"。实测两者做的都是 (2)，不是 (3)。** 三条可直接借用的形状：
+
+1. **机械兜底，而不是更信任模型。** Codex 逐字：「**Full auto-approval is safe because commands are isolated from your system.**」它的 four approval policies 里，推荐默认 `on-request` 的定义是：**需要逃出 sandbox 时才提示；留在 sandbox 边界内的操作自动批准**（[Codex approvals](https://mintlify.wiki/openai/codex/concepts/approvals)、[Codex introduction](https://mintlify.wiki/openai/codex/introduction)）。**安全来自爆炸半径小，不来自模型的判断力。**
+2. **权限分层，且低信任来源不得自我升权。** Claude Code 的权限规则是**人写的三层**（allow / ask / deny），并且 settings 里明写 `defaultMode` 的 `bypassPermissions` / `dontAsk` **不能由仓库里 checked-in 的 settings 启动**——也就是**仓库不能自己给自己授权**（[Claude Code permission modes](https://code.claude.com/docs/en/permission-modes)、[permissions](https://code.claude.com/docs/en/permissions)）。**这就是 (3) 那条线，被一条优先级规则直接封掉。**
+3. **模型参与的地方，参与的是"要不要打扰人"，不是"授权什么"。** Claude Code 的 auto mode 有一个 classifier 决定**要不要弹审批**（且单独计费）；Codex 有 `execpolicy` 规则——**规则由人写，机器套用**。"模型决定要不要问" 与 "模型决定什么被允许" 是两件事，两者都把前者交给模型、把后者留给人。
+
+### 8ter.1 由此得到一条本片现在就加的不变量
+
+> **不变量 4：低信任来源不得自我升权。**
+>
+> - 「可改仓库」的声明**只能由人的显式动词写**（`declare` / `replace` / `clear`），**执行者读它，不能写它**；
+> - 执行者**不能**改自己的动作集（能改文件、能 commit、能 push 的那一份）；
+> - mandate **不能**来自执行者的输出（§2 不变量 1 的直接推论）。
+
+**三条都是可测的**：前两条是"执行者的代码路径里没有任何一处能写这两个声明"；第三条是"mandate 字段的来源只能是 CLI 那个词携带的人的原句"。
+
+**Hikari 的"机械兜底"对应物**（如实记下，避免照抄一个不存在的 sandbox）：**可改仓库的声明（范围）+ git（可回退）+ 执行者的进程边界（只能在那个目录里、只能做那三个动词）**。本片**不建内核级 sandbox**——那不是本片的权限，也不是今天能诚实做出来的东西；它属于 §10「完整权限系统」那一边。
+
+---
+
 ## 9. 下一步
 
 上面六条已裁决，我按仓库流程走：**实现 → Functional Review → Architecture Review → `detect_changes` → commit / push / CI**。本片**不新增 communication plane**（Action 平面是既有平面，本片是它的第一个实现），**不改 Runtime**，**不碰 `src/runtime/**`**。
