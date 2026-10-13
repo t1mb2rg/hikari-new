@@ -229,6 +229,24 @@
 > **一处本机事实，必须与「已验证」这个说法一起读：本机没有 pty**（`winpty` 存在但报 `stdin is not a tty` 并退出 1）。因此 `hikari` 的**完整交互路径只验证到进窗口之前那一步**——每次 `bootstrap` 调用都把 `enterTui` 换成一个记录用的桩，被替换的**只有窗口**，环境（`stdin/stdout.isTTY`）是打桩的而代码不是；**进入 TUI 之后那一半、以及「退出 TUI 之后常驻还活着」的交互式验证，本机为 NOT RUN**，其中之一改为用真实 `hikari` 进程验证「窗口进程来去之间常驻一直在」（该进程因无终端而在拒绝处退出，留下的常驻仍应答）。`hikari > file` 这条路径反而是本机**能**端到端驱动的，因为拒绝发生在解析与启动之前——这也是那两句拒绝为什么必须排在最前面的可执行证据。
 >
 > **图证据与它的读法**：`terminalRequired` impact **HIGH / 6**，直接调用者恰好两个（`bootstrap` 与 `tuiCommand`）——与源码注释里「两个调用者、一句拒绝」逐字对上；`bootstrapCommand` **LOW / 1**（唯一调用点是 `main.ts:execute` 的 `tui` 分支）；`spawnDetached` 报 **CRITICAL / 10**，但真实调用点只有两个（TUI 的 `/start` 与本轮新增的 `launchAndAwait`），计数来自图把 `runTui` 内层函数当作独立符号递归计入。**CRITICAL 照实报告，不由 `riskSharedAxes` 豁免**，其收敛依据是 diff 本身（一个可选参数 + 一行 `child.on('exit')`）与 `import` 环检测 `clean`。`detect_changes(scope: all)` 无 `partial` / `truncated`，其 `changed_files: 3` **不含**两个新文件（未跟踪，git diff 看不到）——这是本仓库既有的可见性限制，不是「没影响」。
+>
+> **CHANGEABLE REPOSITORIES READ v0 已实现、已通过 Functional / Architecture Review**（**工作标签，不占用阶段编号**——**不是** P4-04）。边界冻结、两道 Review、四条 finding 与一处跨语言后果全在 `docs/architecture/changeable-repositories-read-v0-implementation-boundary-freeze.md`（§1–§10 冻结面、§11 跨语言等待界、§12 Functional、§13 Architecture、§14 findings、§15 commit 门禁）。
+>
+> **它交付的是一句话：Hikari 能读它被授权读的仓库，然后把「该改什么」说出来，而它自己不落笔。** 授权的声明面（`hikari change declare|replace|clear|status`）是上一片交付的；这一片让那组目录**第一次有读者**——`changeable-repositories.read@1` 的 `roots()` 与 `read(target)`，Language 是它的真实调用方，所以 Contract Creation Gate 今天满足，而不是「也许以后有人要」（先例是 `desktop-content-read.read@1`）。**提议面刻意没有实现**：行动片（参数是人话、要落笔）被组合边界评审判为 `BLOCKED`，见 `docs/architecture/authorized-repository-action-v0-composition-boundary-review.md`。
+>
+> **owner 归属是这一片最要紧的形状**：目录集合的语义、路径归属判定、两个上限、给模型看的五句话全在 `changeable-repositories`；Language 只做三件事——按 exposure 的**声明**生成参数 schema、把参数交给 owner、把 owner 返回的每一行转义。`src/language/read.ts` 两条新分支调用的都是 owner 导出的 renderer（`renderAuthorizedRepositories` / `renderRepositoryRead`），**Language 没有自己写任何一句给模型看的话**。注入纪律照旧：仓库正文是继窗口字节之后第二个低信任来源，以 `tool` 回复到达，owner 的固定 frame + 逐行转义。
+>
+> **循环被改的一处语义**：「已读过」从按**能力名**改为按**调用身份**（name + arguments）——零参能力时代这两句话恰好是同一句，有了参数就不是了：两个文件是两次调用，同一个文件读两次是同一件事。这是本构建第一个带参数的能力，所以它也是第一个必须回答这个问题的地方。**按构造终止**靠新增的 `MAX_READS_PER_INTERACTION = 8`（本片唯一一个新数字）：每次执行的调用恰好加一个键、同一个键不会加两次，所以键集合的大小**就是**这一轮的读数——不是一个新的 budget framework，`src/language/model.ts` 保持 0 diff。
+>
+> **测试与一条反证实验**：新增 `test/changeable-repositories-read.test.mjs`（15 条）；`test/language.test.mjs` 加 3 条循环级用例（去重键、8 次预算、注入 fixture）与参数解析用例；三个 live 语料按「**扩表而不是放宽守卫**」补齐新能力。**定向变异 RED**：把 `src/language/answer.ts:421` 的 `performed.add(reading.key)` 改回按名字去重，两个用例各自以它声称要钉住的那个机制失败（重复的第三次调用被执行了；预算计数永不增长因而十次全读），改回后全绿——**测试在约束行为，不是只跑通**。全量 `905 tests / 901 pass / 0 fail / 4 skipped`（改前 887 / 883 / 0 / 4）。
+>
+> **一处片外后果，跨语言门禁按设计响了**：`LANGUAGE_EXPOSURES` 2→4、仓库列表 3→5，于是 `src/cli/language.ts:114-117` 的 `LONGEST_EXPOSURE_COUNT` 从 3 变 5、`REPLY_TIMEOUT_MS` 从 `(3+1)*15_000 + 90_000 = 150_000 ms` 变成 `(5+1)*15_000 + 90_000 = 180_000 ms`。C# 侧把那个数**写死**（.NET 问不到 TypeScript 的数组长度），所以 `dotnet run --project apps/human-surface/HumanSurface.Tests/HumanSurface.Tests.csproj` 报 `the client's whole wait bound: expected 180000, was 150000`。处理：`PipeLanguageAsker.LongestExposureCount` 3 → 5、其 remarks 的 holds two / holds three 改为 four / five，重跑 **69 passed / 0 failed / 0 skipped**。**三处落到文档里的旧数字保持原文不改**（本文件 `:205`、`docs/architecture/human-inbound-v0-boundary-review.md:363`、`docs/architecture/human-surface-language-client-v0-implementation-boundary-freeze.md:110` 是各自那一片的记录），**指针以本条为准**。
+>
+> **图证据与它的读法**：`detect_changes --scope all` 报 `14 files / 59 symbols / 28 processes / Risk level: critical`，无 `partial` / `truncated`。**CRITICAL 照实报告，不由 `riskSharedAxes` 豁免**：它来自这次改动的**跨度**（语言工具循环 + 两个 variant + 跨语言的等待界），不是来自任何单点的调用面——编辑前逐符号 `impact` 的结果是 `readCall` **LOW**、`ExposureReader` **LOW**、`createExposureReader` **LOW**、`LanguageExposure` **UNKNOWN**（空调用集不作为证据，用文本检索确认：19 处命中全部落在 `src/language/{tools,read,answer,plugin,index,express,exposure}.ts` 的**类型位置**，唯一读值是 `src/language/express.ts:372` 的 `.name`）。
+>
+> **两条 finding 留给 Human 决定，实施者没有自己追认**：F-1 实现多出一条人可见字面 `DIRECTORY_TRUNCATED`（§3.5 冻结的是五条字面，第六条是目录项数超限的提示行；把文件那句用在目录上会让模型以为读到的是文件正文）；F-2 `outside` 只在路径**存在**时返回，于是模型能用绝对路径区分「存在但在授权外」与「不存在」——它不泄露正文，但泄露了本机某条路径是否存在，按 §6.2 的结果闭集实现，**不在本片修**。
+>
+> **提交**：`ec2439d`，已 push；CI Runtime Tests #38423855497 **success**（`test` 与 `surface` 两颗 job 都 success）。工作区 `git status --short` 为空。
 
 ---
 
