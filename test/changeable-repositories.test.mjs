@@ -333,7 +333,7 @@ function membersOf(answer) {
   return [...answer.lines];
 }
 
-test('声明、看、替换、清空，走真实端点', NO_PIPES, async (t) => {
+test('声明、看、替换、清空，走真实端点', { skip: NO_PIPES }, async (t) => {
   const root = initializedRoot(t);
   const runtime = await compose(root);
   try {
@@ -348,7 +348,7 @@ test('声明、看、替换、清空，走真实端点', NO_PIPES, async (t) => 
   }
 });
 
-test('端点只在激活期间存在，卸载之后就没人提供了', NO_PIPES, async (t) => {
+test('端点只在激活期间存在，卸载之后就没人提供了', { skip: NO_PIPES }, async (t) => {
   const root = initializedRoot(t);
   const runtime = await compose(root);
 
@@ -366,7 +366,7 @@ test('端点只在激活期间存在，卸载之后就没人提供了', NO_PIPES
   assert.equal(after.kind, 'absent', `卸载后仍然拿到了：${JSON.stringify(after)}`);
 });
 
-test('声明活过一次激活：读回重建的那个集合就是人写下的那个', NO_PIPES, async (t) => {
+test('声明活过一次激活：读回重建的那个集合就是人写下的那个', { skip: NO_PIPES }, async (t) => {
   const root = initializedRoot(t);
   const dir = createRoot(t);
 
@@ -385,7 +385,7 @@ test('声明活过一次激活：读回重建的那个集合就是人写下的�
   }
 });
 
-test('三个动词各写一条事实，status 与语义无操作一条都不写', NO_PIPES, async (t) => {
+test('三个动词各写一条事实，status 与语义无操作一条都不写', { skip: NO_PIPES }, async (t) => {
   const root = initializedRoot(t);
   const runtime = await compose(root);
   try {
@@ -449,7 +449,7 @@ function runCli(args) {
   });
 }
 
-test('hikari change 从 argv 走到端点，并且原样传目录', NO_PIPES, async (t) => {
+test('hikari change 从 argv 走到端点，并且原样传目录', { skip: NO_PIPES }, async (t) => {
   const root = initializedRoot(t);
   const runtime = await compose(root);
   try {
@@ -476,7 +476,7 @@ test('hikari change 从 argv 走到端点，并且原样传目录', NO_PIPES, as
   }
 });
 
-test('没有常驻时 hikari change 说 absent，而不是说入口坏了', NO_PIPES, async (t) => {
+test('没有常驻时 hikari change 说 absent，而不是说入口坏了', { skip: NO_PIPES }, async (t) => {
   // No composition at all, which is the ordinary case on a machine where no resident is running.
   const root = initializedRoot(t);
 
