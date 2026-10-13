@@ -165,6 +165,8 @@ const WORK_FOCUS_SOURCE_KIND = 'work-focus.endpoint';
 
 **三份权威文档**都定义了出站（`principles.md` §15：Domain Result → Presentation → RenderedMessage → Transport），**没有一份为入站写过任何条款**。
 
+> **指针（2026-10-13 裁决 ①）**：上句的**前半只有三分之一有逐字依据**。实测：三份是 `principles.md` / `core-architecture-v0.md` / `plugin-design-spec.md`，只有 `principles.md` §15 能逐字对上；在后两份里搜 `出站|入站|inbound|outbound|RenderedMessage|Transport|Presentation` —— **全 0 命中**。**「没有一份为入站写过任何条款」这半句不受影响**（上面三行的检索结果支持它），但「都定义了出站」是过度声称。**按 R7.2 原文不改，指针在此。**
+
 ### 2.2 两份出站 review 也没有覆盖反向方向
 
 对 `human-outbound-v0-boundary-review.md` 与 `outbound-composition-v0-boundary-review.md` 检索 `反向` `入站` `inbound` `reply` `feedback` `ack` `回应` `回复` `回执` `双向` `输入面` `Surface` `界面` `键盘` `鼠标` `语音` `打字` `键入`：
@@ -178,6 +180,10 @@ const WORK_FOCUS_SOURCE_KIND = 'work-focus.endpoint';
 ```
 
 **`Human → Hikari` 既不在这个「入站」里，也不在这个「出站」里。** 它在两份文档的坐标之外——**这是定义性空白，不是判决。**
+
+> **指针（2026-10-13 裁决 ③）**：上句仍然成立，但**「定义性空白」这个说法被改述**——入站/出站是**组合内**的坐标（组合里的别人 ↔ Language），而人对 Hikari 说话走的是**另一条轴**（`Hikari → Human` 与 `Human → Hikari`，本文件记的就是它）。所以 `Human → Hikari` **不是这个坐标里的一个洞，而是一个不属于它的维度**。
+>
+> 这样改述**不需要发明任何新概念**。**「扩成两轴」已被否决**：那会新增一个人可见概念，而今天**零代码依赖**这个坐标（实测：`src/` 里没有任何契约以「说话者是人」为成立条件），也**没有真实 consumer**。**按 R7.2 原文不改，指针在此。**
 
 - 两份文档的**待裁决项**（`human-outbound` §19.2 三个前提、`outbound-composition` §19.1/§19.3）**全部关于「谁有权主动说」**，没有一条关于反向方向的授权。
 - 两份文档的**非目标清单**（`human-outbound` §17.1/§18、`outbound-composition` §18 四张表）**没有任何一项指向前向的反向路径**。最近的一条是 `outbound-composition:1254` 的 `| **ack / 二次 frame 协议** | v0 无；人有没有读到不由 transport 声称 |`，它在清单里的理由是「不由 transport 声称」，不是「人不能回话」。
