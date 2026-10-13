@@ -367,7 +367,7 @@ Transport = 她从哪接收和发送信息
 | 1 | 神经系统最终是一种**组织约定**，还是一组**契约**，还是一个 **Plugin**？ | 决定它就要决定一个新的公共面；`plugin-design-spec.md` §16 要求先有真实交互语义 |
 | 2 | Hikari 是**一个主体多个循环**，还是**一个主体多个节点多个循环**？两者的连续性模型不同 | 触及 Continuity 的语义，属架构级 |
 | 3 | Experience / Memory 的**写入权**：谁有权把一次经历升级成记忆？ | 触及「模型解释不等于已核实事实」这条边界的执行方式 |
-| 4 | 主动介入的**总量控制**（预算 / 优先级 / 静默期）由谁拥有？ | 属于 `governance-rules-v1.md` R4 的 Q4：人类与 source 都还没给出的事 |
+| 4 | 主动介入的**总量控制**（预算 / 优先级 / 静默期）由谁拥有？ | 属于 `governance-rules-v1.md` R4 的 Q4：人类与 source 都还没给出的事。**（本条已关闭，2026-10-13）**经 `docs/architecture/proactive-interruption-ownership-boundary-review.md`（VERDICT = NARROW）裁决：维持**「保持独立」**（R4 四问全否 → L1 capability growth）；**中央总量控制点名否决**；「总量成为可读的**事实**而不是可决策的**判断**」登记为带触发条件的 **NOT-YET**（触发：出现第三条主动路径，或出现一条真实的、来自人的抱怨）。 |
 | 5 | Goal 与 Action 的**初始权限模型**：第一版允许做什么、谁批准 | 触及 `principles.md` §7 的收缩链，必须先于实现 |
 | 6 | Forge 是一个独立自治过程，还是 Goal 的一种形态？ | 尚无真实实现问题驱动 |
 | 7 | 跨设备第一批节点是什么、共享什么 | `core-architecture-v0.md` §10 明确延后 |

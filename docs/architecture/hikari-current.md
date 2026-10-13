@@ -626,13 +626,12 @@ plugin-design-spec.md §4.1 符号层：跨模块 import 走 barrel
 | --- | --- | --- | --- |
 | 1 | **不变量 #4 的读法**：约束「谁造句」还是「谁说话」（§12.2a） | `outbound-composition-v0-boundary-review.md` §19.1（该文件逐字写「两份文档不能同时都对」） | 今天无影响；下一条落在 Domain 一侧的主动能力会立刻撞上 |
 | 2 | **`Human → Hikari` 的坐标**：它在入站/出站之外（§12.2b） | `human-inbound-v0-boundary-review.md:180`（自称「定义性空白」） | 任何需要「证明说话的是人」的能力都停在这里 |
-| 3 | **主动介入的总量控制由谁拥有**：两个场景各自判断，合并 / 分层 / 保持独立三条路都自洽 | 本文提出；无既有裁决 | 每新增一条主动路径，「喧闹」风险累积一次 |
-| 4 | **`language.decision-confirmed` 的读者面**：谁有权读、读来做什么 | `current-stage.md` 记录该事实家族只有 CLI 写入者 | 写下的已确认决定今天不影响任何行为 |
-| 5 | **后台 cycle 健康表面**：补它等于为「当时那一瞬」新增一条必须长期维护的契约 | `current-stage.md`（列为 v1 已知限制，明写「不是可以顺手补的补丁」） | 常驻活着 ≠ 每个 cycle 成功，且无法证明 |
-| 6 | **神经系统是否要有代码实体**：契约 / 组织约定 / Plugin | `hikari-nervous-system-stage-v0.md` 只定义阶段，不给形状 | 阶段的完成判据（读侧不再为零）无处落地 |
-| 7 | **Experience Formation 的解锁条件**：`VERDICT = NARROW` 自带条件 —— 出现一个真实 bounded consumer，其职责无法只靠 current facts 完成 | `experience-formation-v0-research.md:517-518` | 该阶段的第一刀切不下去 |
-| 8 | **`current-stage.md`「当前明确仍不做」的权威转写**：约 37 条里只有 4 条带具名来源，其余按 R2 默认 NOT-YET | `governance-rules-v1.md` R7.1（引不到源的条目按 NOT-YET 处理，或先补源） | 清单可读，但每条的规范力不同，容易被整体误读为同等强度 |
-| 9 | **神经系统阶段判据第 1 条是否已达到**：`repository-ci-attention` 读回自己的 `delivered` 家族并因此不重复播报，字面符合「至少有一个生产 Plugin 读取它自己的过去，并因此行为不同」（§6.3） | 由本文提出；`hikari-nervous-system-stage-v0.md` §4 与 §2C 的注指向的不是同一件事 | 该阶段的**下一步做不做、做什么**，取决于这一次定性 |
+| 3 | **`language.decision-confirmed` 的读者面**：谁有权读、读来做什么 | `current-stage.md` 记录该事实家族只有 CLI 写入者 | 写下的已确认决定今天不影响任何行为 |
+| 4 | **后台 cycle 健康表面**：补它等于为「当时那一瞬」新增一条必须长期维护的契约 | `current-stage.md`（列为 v1 已知限制，明写「不是可以顺手补的补丁」） | 常驻活着 ≠ 每个 cycle 成功，且无法证明 |
+| 5 | **神经系统是否要有代码实体**：契约 / 组织约定 / Plugin | `hikari-nervous-system-stage-v0.md` 只定义阶段，不给形状 | 阶段的完成判据（读侧不再为零）无处落地 |
+| 6 | **Experience Formation 的解锁条件**：`VERDICT = NARROW` 自带条件 —— 出现一个真实 bounded consumer，其职责无法只靠 current facts 完成 | `experience-formation-v0-research.md:517-518` | 该阶段的第一刀切不下去 |
+| 7 | **`current-stage.md`「当前明确仍不做」的权威转写**：约 37 条里只有 4 条带具名来源，其余按 R2 默认 NOT-YET | `governance-rules-v1.md` R7.1（引不到源的条目按 NOT-YET 处理，或先补源） | 清单可读，但每条的规范力不同，容易被整体误读为同等强度 |
+| 8 | **神经系统阶段判据第 1 条是否已达到**：`repository-ci-attention` 读回自己的 `delivered` 家族并因此不重复播报，字面符合「至少有一个生产 Plugin 读取它自己的过去，并因此行为不同」（§6.3） | 由本文提出；`hikari-nervous-system-stage-v0.md` §4 与 §2C 的注指向的不是同一件事 | 该阶段的**下一步做不做、做什么**，取决于这一次定性 |
 
 **已经裁决并已实施的**（不在上表，列在这里避免被误读为待办）：
 
@@ -641,6 +640,10 @@ repository-ci-attention 的重启语义 —— Human 裁决 N2-01（§8.1）
 Shared Experience Continuity —— 收窄为 LANGUAGE CONVERSATIONAL CONTINUITY v0，L2，已实施
 desktop-return-attention 的 BLOCKED —— 由治理评审 v1 §5 取代，已 L2 实施
 Memory Reactivation v0 —— BLOCKED（不是待办；含义是「当前不存在一个能被诚实切出的第一片」）
+主动介入的总量控制由谁拥有 —— 2026-10-13 裁决：维持「保持独立」（R4 四问全否 → L1
+  capability growth）；「中央总量控制」点名否决；「总量成为可读事实而不是可决策判断」
+  登记为带触发条件的 NOT-YET。依据 `proactive-interruption-ownership-boundary-review.md`
+  （VERDICT = NARROW）。原为 §13 第 3 行，裁决后移入本块。
 ```
 
 ---

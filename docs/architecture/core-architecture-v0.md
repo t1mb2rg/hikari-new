@@ -376,7 +376,10 @@ v0 只要求：
 - 完整权限系统；
 - 多节点强一致；
 - 完整 Skill 体系；
-- 最终 Manifest 格式。
+- 最终 Manifest 格式；
+- **主动介入的总量**（作为可读的**事实**，而不是可决策的**判断**）——见 §11 的点名。
+
+其中「主动介入的总量」这一条的触发条件已被**具体化**（2026-10-13 裁决）：**出现第三条主动路径**，**或**出现一条真实的、来自人的抱怨——**任一即触发**。依据 `docs/architecture/proactive-interruption-ownership-boundary-review.md`。
 
 触发这些设计的条件必须是：
 
@@ -402,6 +405,8 @@ v0 只要求：
 - 所有交互必经的统一通信层；
 - 所有 Provider 的通用智能调度器；
 - 按业务类型不断扩张的 Plugin 基类树。
+
+> **点名（2026-10-13 裁决）**：本题境下的**中央总量控制 / 中央注意力预算 / 主动介入的全局仲裁**，是上列「中央 Judgement」「Super Orchestrator」「所有交互必经的统一通信层」在**主动介入**这件事上的实例，因此**不得重新引入**。本条**不新增结构、不新增 MUST**——它只把既有的三条连到它们第一次被问到的地方，使下一个实现者不必重新推导。依据 `docs/architecture/proactive-interruption-ownership-boundary-review.md`（VERDICT = **NARROW**；R4 判级为 L2 jurisdiction expansion）。
 
 ---
 
