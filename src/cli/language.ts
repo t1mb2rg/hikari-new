@@ -68,7 +68,8 @@ import { RESIDENT_HINT } from './options.js';
 //
 //   one model call per offered capability, plus one more
 //     to close the interaction, at the transport's own bound   computed below
-//   the capability reads, the focus read and the framing       one budget, below
+//   the capability reads, the focus read, the window read      one budget, below
+//     and the framing
 //
 // The first term is the one that moves when a capability is added, so it is computed rather than written
 // down — a literal here would be correct today and silently wrong the day a fourth read joins a variant.
@@ -90,6 +91,16 @@ import { RESIDENT_HINT } from './options.js';
 // refuses everywhere else. It is sized generously on purpose — an acquisition runs its sources in
 // parallel, so the sum over-states it — and over-stating a client's patience costs a slow failure while
 // under-stating it reports an answer that was on its way as one that never came.
+//
+// The window read joined this budget with the authorization path, and it is the term easiest to leave
+// out of the sentence above because it is spent in a different plugin: an authorized answer reads the
+// window body through `desktop-content-read`, whose ceiling is that module's own private constant —
+// private, so summing it here would first require making it public, which is a worse trade than the one
+// this paragraph is making. So it belongs inside the same budget rather than becoming a third term, and
+// the honest consequence is that the margin between this budget and the reads' own bounds is **slack
+// rather than a proof**. The direction of that slack is the one already chosen above: over-stating a
+// client's patience costs a slow failure, while under-stating it reports an answer that was on its way
+// as one that never came.
 //
 // Exported for the test that pins that arithmetic, and the test pins it two ways. The bound clears what
 // the loop can legitimately spend, which is the claim a human cares about — a question being answered is

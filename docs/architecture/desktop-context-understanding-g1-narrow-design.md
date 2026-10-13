@@ -540,6 +540,13 @@ FAIL  conformance: the framing bounds are the ones the protocol declares
 
 今天没有活体 bug（真实读取远快于 90s），但余量是**隐含的**而不是所声称的：若 capability reads 真的吃掉被预算的 90s、窗口读取又用满 20s，客户端会在 150s 放弃，而服务端 170s 才答完——正是这条注释自己说的「把正在路上的回答报成从没来过」。修法与 §7 的既有取向一致：`READ_TIMEOUT_MS` 属于别的模块，本文件拒绝持有它的副本，所以要么把窗口读取写进第二项，要么把「为何现有 slack 已覆盖它」写清楚。
 
+**已修（2026-10-13）。** 结论：**这不是一次措辞选择**——文件自己的论证已经定死了方向，因此没有需要 Human 裁决的余地。`READ_TIMEOUT_MS` 是 `src/desktop-content-read/uia.ts` 的**模块私有**常量（`const`，未导出），所以「把它加进求和」在结构上要求**先把它变成公开的**，而那比这条注释正在做的取舍更糟。于是修法就是**把窗口读取写进第二项的点名**，并把余量的性质如实写出来：
+
+- 推导的枚举由「the capability reads, the focus read and the framing」改为「the capability reads, the focus read, **the window read** and the framing」（`src/cli/language.ts`，`READ_AND_FRAMING_BUDGET_MS` 上方）；
+- 新增一段说明：窗口读取与其他读取同属**同一个预算**而不构成第三项（理由同上：它的界是别的模块的私有量），并且**这条余量是 slack，不是证明**；slack 的方向就是本文件已经选定的那个方向——高估一个 client 的耐心只付出一次慢失败，低估则把正在路上的回答报成从没来过。
+
+复测：`npm run build` exit 0；`npm test` → **867 / 863 pass / 0 fail / 4 skipped**（**逐字不变**——本轮只改注释，未改任何行为，因此没有新增或放宽任何断言）。
+
 **F-4（MEDIUM，冻结面，已由 2026-10-13 裁决更正）—— §3 冻结常量表里 `请求词 = 'ask'（唯一）` 已经不成立。**
 
 `src/language/protocol.ts:102-105` 的 `readWord` 今天接受**三个**词：`'ask' | 'confirm' | 'screen'`，而 `human-surface-language-client-v0-implementation-boundary-freeze.md` §3 那张自称「常量逐字一致」的表里写着 `请求词 = 'ask'（唯一）`。
@@ -586,4 +593,4 @@ FAIL  conformance: the framing bounds are the ones the protocol declares
 
 **F-5 的守卫被证伪过，不是承诺。** 变异验证：只从 `LanguageFraming.OutcomeWords` 拿掉 `["recorded"]` 一行，C# 侧立刻变成 **67 passed, 2 failed**，红的正是 `language: each of the five outcomes decodes to itself` 与 `conformance: the reply decoder accepts and rejects exactly what the TypeScript one does`；随后按字节还原（`restored byte-identical: True`）。所以那条语料补充确实是一条**跨语言**守卫，而不只是一条本地断言。
 
-**F-3 仍未修**，理由不变：`READ_TIMEOUT_MS` 属于别的模块，本文件拒绝持有它的副本，所以要么把窗口读取写进 `READ_AND_FRAMING_BUDGET_MS` 的第二项，要么把「为何现有 slack 已覆盖它」写清楚——这是一次措辞选择，不是顺手能改的。
+**F-3 已修（2026-10-13）**，见 §13.7 该条的「已修」段：修法不是措辞选择，而是被文件自己的论证定死的——`READ_TIMEOUT_MS` 是别的模块的**私有**常量，求和先要把它公开，那比这条注释正在做的取舍更糟，所以改为把窗口读取写进第二项的点名，并如实写明余量是 slack 而非证明。`npm test` 逐字不变（只改注释）。

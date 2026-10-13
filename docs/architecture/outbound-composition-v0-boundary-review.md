@@ -1273,6 +1273,12 @@ chronicleService：建的时候，「将来要回答什么问题」已被指定 
 | **用 subscriber 连接状态推导通知许可** | §15.7；违反 `principles.md` §5 与 Human ruling #1 |
 | **为 Memory 借出站重新开口** | `memory-reactivation-v0-blocked.md`：Memory 已封箱，不得借出站 slice 重开 |
 
+> **指针（2026-10-13）**：上表「抑制规则」一行里的「**去重**」需要一个限定语，否则会被读成「两条已交付路径各自持有的去重越了界」——而确实有人这样读过。
+>
+> `docs/architecture/proactive-interruption-ownership-boundary-review.md` §6 的结论（**那是该评审的判断，不是引用**）：那两条去重回答的是「**关于 occurrence 的问题**」，不是「**关于注意力的问题**」。`desktop-return-attention` 的 `silence` 就是 occurrence 本身的形状（「刚刚发生了一次新的 return 吗」）；`repository-ci-attention` 的 `deliveredFailures` 回答的是「这一条失败报告过没有」，用的是它自己的过去。
+>
+> **本行指的是跨路径的、关于注意力总量的去重**——那一条今天确实不存在，也没有 owner。原文不改，指针在此（`governance-rules-v1.md` R7.2）。
+
 ---
 
 ## 19. Verdict
