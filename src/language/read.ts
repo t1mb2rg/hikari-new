@@ -10,11 +10,21 @@
 // `desktop-session-observe`, which `hikari observe desktop-session status` also calls. The focus half is
 // `renderFocus` from `express.ts`, which is this surface's own statement about the focus reading and was
 // already what a human read. The relevance half is `renderJudgement` from `repository-ci-relevance`,
-// which is the endpoint's own answer to the same question. So a model is handed the owner's own rendering
-// of a reading rather than a second view of it — the same function the human's path calls — and that is
-// the point rather than a convenience: a model shown a *different* view of the same reading would be a
-// second statement of it, and since these lines are also what the final answer contains, the two could not
-// come apart without the model having been told something the human was not.
+// which is the endpoint's own answer to the same question. The two repository halves are
+// `renderChangeableRepositories` and `renderRepositoryRead` from `changeable-repositories`, the first
+// reached through a one-line wrapper because a model has to be shown the same list a human reads on a
+// command line and the way to guarantee that is for both surfaces to call one function.
+//
+// "Already existed" is the rule and not the literal history: `renderRepositoryRead` was written in the
+// same slice as the capability it renders, because the capability is new and had no rendering to inherit.
+// What the rule actually forbids is the *consumer* formatting an owner's reading, and that is what this
+// file still does not do anywhere — a frame written here would read the same today and drift the first
+// time the owner changed a line, with the drift invisible, because a model shown the old words and a human
+// shown the new ones are never in the same room to disagree. So a model is handed the owner's own
+// rendering of a reading rather than a second view of it — the same function the human's path calls — and
+// that is the point rather than a convenience: a model shown a *different* view of the same reading would
+// be a second statement of it, and since these lines are also what the final answer contains, the two could
+// not come apart without the model having been told something the human was not.
 //
 // "The owner's rendering" is the claim, and it is deliberately not "byte for byte": this file applies one
 // transformation to every branch, `lineSafe` below, because an owner that hands raw bytes hands whoever
@@ -30,10 +40,26 @@
 // relevance capability is offered to a model as a reading of Hikari, so it travels as Hikari's own text.
 //
 // There are two readers rather than one, and the split is the variant split. `createExposureReader`
-// handles the two reads every variant performs; `createRepositoryExposureReader` handles those plus the
-// one only the repository-aware variant offers, by falling through to the first. The base reader is
-// still the whole of what a base variant can do, and it still throws on an exposure it was not built to
-// read — see the last branch, which is where a capability this build was never handed lands.
+// handles the reads every variant performs; `createRepositoryExposureReader` handles those plus the one
+// only the repository-aware variant offers, by falling through to the first. The base reader is still the
+// whole of what a base variant can do, and it still throws on an exposure it was not built to read — see
+// the last branch, which is where a capability this build was never handed lands.
+//
+// The repository reads are in the *base* reader rather than the repository-aware one, and the reasoning is
+// in `exposure.ts`: the capability is reachable in every composition that loads this plugin, so it belongs
+// to the prefix both variants share. Putting it in the variant reader would compile and would work, and it
+// would also be the exact confusion that guard exists to prevent — a capability that is not independently
+// optional being treated as though it were.
+//
+// One owner needs two discriminators here, and that is a consequence of a Service with two methods. The
+// first filter is `exposure.service`, as everywhere else; but `authorized_repositories_list` and
+// `authorized_repository_read` are two questions about one concern, so they name one contract, and the
+// second filter is what the exposure *declares* — an argument or none. That is still not a string this
+// file compares: the declaration is the owner's own statement about its capability, arriving on the same
+// object the service does, and a capability that changed which of the two it is would be a change in the
+// owner's module rather than a rename here. A missing argument value with a declared argument is a wiring
+// error and throws like any other, because a read this build cannot perform is not a reading that came
+// back empty.
 //
 // What is *not* here: the raw contract values. `DesktopSessionAwarenessAssessment` is a union of nested
 // snapshots with facet verdicts, and handing that to a model would be handing it a tree to interpret —
@@ -48,6 +74,12 @@
 // branch. That branch throws, which becomes `failed`: a read this build cannot perform is not a reading
 // that came back empty, and collapsing the two would report a broken wiring as an empty fact.
 
+import type { RepositoryRead } from '../changeable-repositories/index.js';
+import {
+  changeableRepositoriesReadService,
+  renderAuthorizedRepositories,
+  renderRepositoryRead,
+} from '../changeable-repositories/index.js';
 import type { DesktopSessionAwarenessAssessment } from '../desktop-session-awareness/index.js';
 import { desktopSessionAwarenessPeekService } from '../desktop-session-awareness/index.js';
 import { renderAssessment } from '../desktop-session-observe/index.js';
@@ -63,25 +95,60 @@ import { renderFocus } from './express.js';
 /**
  * What this plugin needs in order to perform a read.
  *
- * Two functions, both already on the plugin before this file existed, named by what they return rather
+ * Four functions, all already on the plugin before this file existed, named by what they return rather
  * than by which contract they came from. The dispatch below is what knows which is which, and keeping
- * that knowledge in one place is why this is not two separate dependency objects.
+ * that knowledge in one place is why this is not four separate dependency objects.
+ *
+ * The two repository entries are separate functions rather than one because they are separate questions:
+ * `readAuthorizedRepositories` asks what the set is and takes nothing, `readAuthorizedRepository` asks
+ * what is inside it and takes the path it was asked about. A dependency object that took one function with
+ * an optional argument would be this file deciding that the two are the same reading, which is the
+ * decision `changeable-repositories/read.ts` already made in the other direction by publishing them as two
+ * methods.
  */
 export interface ExposureDependencies {
   readonly readFocus: () => Promise<readonly string[]>;
   readonly peek: () => Promise<DesktopSessionAwarenessAssessment>;
+  readonly readAuthorizedRepositories: () => Promise<readonly string[]>;
+  readonly readAuthorizedRepository: (target: string) => Promise<RepositoryRead>;
 }
 
-/** Perform one exposure's read and render it. Throws when the exposure is not one this build can read. */
-export type ExposureReader = (exposure: LanguageExposure) => Promise<readonly string[]>;
+/**
+ * Perform one exposure's read and render it.
+ *
+ * The second parameter is what the model's call carried, already read against the exposure's own
+ * declaration by `tools.ts`. A capability that declares no argument ignores it — every branch but one does
+ * — and a capability that declares one finds its value by the name the owner gave rather than by a name
+ * written here, so an owner that renamed its argument would not need this file edited.
+ *
+ * Throws when the exposure is not one this build can read, and when a declared argument arrived without a
+ * value.
+ */
+export type ExposureReader = (
+  exposure: LanguageExposure,
+  values: Readonly<Record<string, string>>,
+) => Promise<readonly string[]>;
 
 export function createExposureReader(dependencies: ExposureDependencies): ExposureReader {
-  return async function read(exposure: LanguageExposure): Promise<readonly string[]> {
+  return async function read(
+    exposure: LanguageExposure,
+    values: Readonly<Record<string, string>>,
+  ): Promise<readonly string[]> {
     if (exposure.service === workFocusCurrentService) {
       return lineSafe(renderFocus(await dependencies.readFocus()));
     }
     if (exposure.service === desktopSessionAwarenessPeekService) {
       return lineSafe(renderAssessment(await dependencies.peek()));
+    }
+    if (exposure.service === changeableRepositoriesReadService) {
+      if (!('argument' in exposure)) {
+        return lineSafe(renderAuthorizedRepositories(await dependencies.readAuthorizedRepositories()));
+      }
+      const target = values[exposure.argument.name];
+      if (target === undefined) {
+        throw new LanguageError(`能力 ${exposure.name} 需要参数 ${exposure.argument.name}。`);
+      }
+      return lineSafe(renderRepositoryRead(await dependencies.readAuthorizedRepository(target)));
     }
     throw new LanguageError(`能力 ${exposure.name} 指向的服务不是这个构建能读取的服务。`);
   };
@@ -112,11 +179,14 @@ export function createRepositoryExposureReader(
 ): ExposureReader {
   const readBase = createExposureReader(dependencies);
 
-  return async function read(exposure: LanguageExposure): Promise<readonly string[]> {
+  return async function read(
+    exposure: LanguageExposure,
+    values: Readonly<Record<string, string>>,
+  ): Promise<readonly string[]> {
     if (exposure.service === repositoryCiRelevanceService) {
       return lineSafe(renderJudgement(await dependencies.readRelevance()));
     }
-    return readBase(exposure);
+    return readBase(exposure, values);
   };
 }
 

@@ -206,11 +206,31 @@ export interface Answerer {
   answerScreen(text: string): Promise<LanguageReply>;
 }
 
-// The tool message for a call that was not performed: a capability that does not exist, a capability
-// already read this interaction, or a call carrying arguments. Fixed text, and it never quotes the
-// model. It is not a diagnostic — every path that writes one also stops the interaction — so it says
-// the only thing that is true of all three without naming any of them.
+// The tool message for a call that was not performed: a capability that does not exist, a call whose
+// arguments are not what its capability declares, a call already performed this interaction, or the call
+// that arrived after the read budget was spent. Fixed text, and it never quotes the model. It is not a
+// diagnostic — every path that writes one also stops the interaction — so it says the only thing that is
+// true of all four without naming any of them.
 const UNRUN_CALL_RESULT = '这次调用没有执行。';
+
+// How many reads one interaction may perform.
+//
+// There was no such number before, and the reason is that there was nothing to bound: a capability could
+// be read once and no capability took an argument, so the most a model could ask for was the number of
+// exposures it had been shown. An argument breaks that identity — "read this file" is one capability and
+// unboundedly many calls — and the choice is between a bound and an interaction whose length a model
+// decides.
+//
+// Eight, and the number is deliberately dull. It is twice the largest exposure list, so a model that
+// reads every capability it was offered and then asks three follow-up questions still fits; it is small
+// enough that a model looping over a directory cannot exhaust the model's context or a human's patience;
+// and it is a count of *calls*, not of bytes or seconds, because the thing being bounded is how long this
+// interaction can run rather than how much it costs. The per-call limits are the owner's
+// (`changeable-repositories/read.ts` bounds one answer), and a budget framework that could spend a
+// different number of reads on a different kind of question is exactly the machinery this build does not
+// have and is not acquiring here: this is one number, checked in one place, and the model is told nothing
+// about it — a model that hits it is answered with the same fixed line every other unperformed call gets.
+const MAX_READS_PER_INTERACTION = 8;
 
 export function createAnswerer(dependencies: LanguageDependencies): Answerer {
   let turn: DialogueTurn | null = null;
@@ -274,7 +294,22 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
     // because a reader comparing the two lists will find them equal and should know that is intended.
     const blocks: GroundedBlock[] =
       screen === null ? [] : [{ name: SCREEN_BLOCK_NAME, lines: screen }];
-    const alreadyRead = (name: string): boolean => blocks.some((block) => block.name === name);
+    // Which *calls* have been performed, as opposed to which capabilities have been read. These were one
+    // question until a capability took an argument, and the reason they cannot stay one is that a name
+    // stopped identifying a call: two reads of two files are two calls that share a name. The keys come
+    // from `readCall`, so what counts as the same call is decided where the argument is read rather than
+    // here — and a capability with no argument still has its name for a key, which makes this a superset of
+    // the rule it replaces rather than a different rule.
+    //
+    // It is seeded from the block list rather than from the initial capability, and that is load-bearing:
+    // on the authorized path the window body was read before this function was entered, so that reading is
+    // already spent and the model cannot ask for it again. Deriving the seed from `blocks` is what keeps
+    // "what is on the page" and "what has been read" from drifting apart.
+    //
+    // The same set answers the budget question, and it does so exactly: every performed call adds one key
+    // and no key is ever added twice, so its size *is* the number of reads this interaction has performed.
+    // A second counter would be a second thing to keep true.
+    const performed = new Set<string>(screen === null ? [] : [SCREEN_BLOCK_NAME]);
     // The model's own sentence, on the one path where it survives the loop, and which materials the page
     // was carrying when it did. `undefined` means the answer is the readings, which is what it was before
     // either kind of material existed.
@@ -365,8 +400,12 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
 
       let stopped = false;
       for (const call of step.toolCalls) {
-        const exposure = readCall(call, dependencies.exposures);
-        if (exposure === undefined || alreadyRead(exposure.name)) {
+        const reading = readCall(call, dependencies.exposures);
+        if (
+          reading === undefined ||
+          performed.has(reading.key) ||
+          performed.size >= MAX_READS_PER_INTERACTION
+        ) {
           messages.push({ role: 'tool', toolCallId: call.id, content: UNRUN_CALL_RESULT });
           stopped = true;
           continue;
@@ -374,12 +413,13 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
 
         let lines: readonly string[];
         try {
-          lines = await dependencies.read(exposure);
+          lines = await dependencies.read(reading.exposure, reading.values);
         } catch (error) {
           return { outcome: 'failed', lines: groundingFailureLines(describe(error)) };
         }
 
-        blocks.push({ name: exposure.name, lines });
+        performed.add(reading.key);
+        blocks.push({ name: reading.exposure.name, lines });
         // The model is shown exactly the lines the human will be shown. Not a summary of them, not
         // the raw contract value behind them — the same array, in the same order, because a model
         // told something the human was not could answer from a fact nobody else can see.
@@ -392,20 +432,27 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
     }
 
     if (blocks.length === 0) {
-      // Reached only when the first batch held no call this build performs — an unknown capability or
-      // a call carrying arguments, in some combination. A duplicate cannot land here: a repeated name
-      // needs a first read of that name to be a repeat, so a batch containing one has already put a
-      // block in `blocks` and leaves by the grounded path instead. And the authorized path cannot land
-      // here either, for the mirror-image reason: its list starts with the body already in it. Nothing
-      // was established, so nothing is answered.
+      // Reached only when the first batch held no call this build performs — an unknown capability, a call
+      // whose arguments are not what its capability declares, or a call that arrived with the read budget
+      // already spent, in some combination. A repeat cannot land here: a call is only a repeat if an
+      // earlier call had the same key, so a batch containing one has already put a block in `blocks` and
+      // leaves by the grounded path instead. And the authorized path cannot land here either, for the
+      // mirror-image reason: its list starts with the body already in it. Nothing was established, so
+      // nothing is answered.
       return { outcome: 'refused', lines: unclassifiedLines(dependencies.exposures) };
     }
 
     // Only a grounded answer moves the referent. A chat reply read nothing, so it has no subject to
     // lend and — just as importantly — no reason to clear one: a human who says "ayobro" between two
     // questions about their screen has not changed the subject.
+    //
+    // The names are de-duplicated for the label's sake, which is a change this slice made necessary rather
+    // than one it wanted: read the same capability twice and the referent would otherwise read
+    // "authorized_repository_read、authorized_repository_read", which names the same capability twice and
+    // therefore says less than naming it once. What the referent records is which capabilities the answer
+    // drew on, and that is a set. `blocks` keeps every reading, because those are what the human is shown.
     turn = advanceDialogue(
-      blocks.map((block) => block.name),
+      [...new Set(blocks.map((block) => block.name))],
       now,
     );
     // Composed here rather than inside `renderAnswer`, and that placement is deliberate rather than

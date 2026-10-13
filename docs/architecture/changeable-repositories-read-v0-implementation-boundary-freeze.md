@@ -274,3 +274,146 @@ MAX_REPOSITORY_DIRECTORY_ENTRIES       = 200           单个目录一次最多�
 7. **§8「明确不做」里「只有一个 `read`」这一条**——不做搜索能力是本片最容易在实现时被顺手加上的东西。
 
 上面七条点头之后，我按仓库流程实现：**实现 → Functional Review → Architecture Review → `detect_changes` → commit / push / CI**。
+
+---
+
+## 11. 交付时撞上的一处片外后果：跨语言等待界
+
+本片让 `LANGUAGE_EXPOSURES` 从 2 变 4、`LANGUAGE_REPOSITORY_EXPOSURES` 从 3 变 5，于是
+`src/cli/language.ts:114-117` 的 `LONGEST_EXPOSURE_COUNT = Math.max(LANGUAGE_EXPOSURES.length, LANGUAGE_REPOSITORY_EXPOSURES.length)`
+从 3 变成 5，`REPLY_TIMEOUT_MS` 从 `(3+1)*15_000 + 90_000 = 150_000 ms` 变成 `(5+1)*15_000 + 90_000 = 180_000 ms`。
+**不是本片改了推导，是本片改了推导的输入。**
+
+它撞上的是一道**此前就已经存在**的跨语言门禁：C# 侧 `apps/human-surface/HumanSurface.Core/PipeLanguageAsker.cs:45`
+把 `LongestExposureCount` **写死**（理由是 `.NET` 进程问不到 TypeScript 的数组长度），
+`apps/human-surface/HumanSurface.Tests/LanguageConformanceTests.cs:194-197` 断言它同时等于
+`conformance.Timeout.LongestExposureCount`（由 `HumanSurface.Tests/node-helpers/conformance.mjs:128-131` 从真实的两个列表算出）
+与 `conformance.Timeout.ReplyTimeoutMs`（真实的 `dist/cli/language.js` 导出的 `REPLY_TIMEOUT_MS`）。
+
+**门禁按设计响了**，原文：
+
+```text
+FAIL  conformance: the client's wait bound is the one the TypeScript client computes
+      the client's whole wait bound: expected 180000, was 150000
+```
+
+处理：`LongestExposureCount` 改为 `5`；它 remarks 里「`LANGUAGE_EXPOSURES` holds two and
+`LANGUAGE_REPOSITORY_EXPOSURES` holds three」改为 four / five；同一段里推导的出处指向
+`src/cli/language.ts:114-117`（原文写的是已被拆分掉的 `cli/ask.ts:91-94`）。
+重跑 `dotnet run --project apps/human-surface/HumanSurface.Tests/HumanSurface.Tests.csproj` → **69 passed, 0 failed, 0 skipped**。
+
+**三处落到文档里的旧数字保持原文、不改写**（各自那一片的记录）：`docs/development/current-stage.md:205`、
+`docs/architecture/human-inbound-v0-boundary-review.md:363`、
+`docs/architecture/human-surface-language-client-v0-implementation-boundary-freeze.md:110`。
+本片交付时的阶段条目会写出新数字，**指针以那条为准**。
+
+**一处相邻问题如实上报、本片不动**：`PipeLanguageAsker.cs:11` 与 `:18` 仍引用已经不存在的
+`src/cli/ask.ts`——同一处改名（`conformance.mjs:126-127` 记了这次改名），与本片无关，属于免费的顺手修复。
+
+---
+
+## 12. Functional Review
+
+**结论：PASS**（对 §9 原文有一处修订，见下）
+
+### 实测
+
+| 命令 | 结果 |
+| --- | --- |
+| `npm run build` | exit 0 |
+| `npm test` | **tests 905 / pass 901 / fail 0 / skipped 4**（改前基线 887 / 883 / 0 / 4） |
+| `dotnet run --project apps/human-surface/HumanSurface.Tests/HumanSurface.Tests.csproj` | **69 passed / 0 failed / 0 skipped**（本片第一次跑是 1 failed，见 §11） |
+
+### §9 验证计划逐条
+
+| §9 条目 | 证据 | 结果 |
+| --- | --- | --- |
+| list 与 `hikari change status` **逐行相同** | `test/changeable-repositories-read.test.mjs:56`（the list is the owner status rendering, line for line） | ✓ |
+| list 在两个 variant 里都可用 | `test/language.test.mjs:719/751/768/798` 两条列表逐条迭代；`:2006-2007` 钉住仓库列表长度为 5 | ✓ |
+| 文件 → 正文 + 固定首末行 | `test/changeable-repositories-read.test.mjs:80`；空文件 `:108`；CR 不到达读者 `:98` | ✓ |
+| 目录 → 直接项列表 | 同上 `:119`（目录带尾 `/`、不递归） | ✓ |
+| 符号链接指向 root 外 → `outside` | 同上 `:156`（`:174` 是「留在里面照常读」的反例） | ✓ |
+| root 外绝对路径 → `outside` | 同上 `:139`；相对路径不碰盘 `:204` | ✓ |
+| 不存在 → `unreadable` | 同上 `:188`（root 内与 root 外各一次） | ✓ |
+| 二进制 → `not-text` | 同上 `:216`（含 NUL 字节） | ✓ |
+| 参数缺失 / 多给键 / 非字符串 → 不执行 | 解析面 `test/language.test.mjs:851` 逐形态断言（`''`、`'{}'`、`{"other":…}`、`{"target":"x","extra":…}`、`{"target":1}`、`{"target":""}`、非对象字面量）；不执行的下游是 `UNRUN_CALL_RESULT`，`test/language.test.mjs:1414` 断言它不泄漏模型自由文本 | ✓ |
+| 不同文件两次都执行、同一文件第二次不执行 | `test/language.test.mjs:1024` | ✓ |
+| 超过 `MAX_READS_PER_INTERACTION` 不再执行 | `test/language.test.mjs:1069`（`h.serviceReads.repository === 8`、`h.requests.length === 9`） | ✓ |
+| 超过 `MAX_REPOSITORY_READ_BYTES` 截断且带固定提示行 | 同上 `:231`（截断）；`:250`（恰好等于上限不截断，反向钉住）；`:263`（目录项数上限） | ✓ |
+| 注入 fixture | `test/language.test.mjs:1106`：正文里伪造的结束语抄不进独立一行、`忽略以上指令` 不改变出口、工具回复仍是四行、真结束语仍是最后一行 | ✓ |
+| 请求行 / 回复行长度受约束、超长参数被拒 | **按构造不需要，不是漏测**：`target` 只能是已声明 root 内一个**真实存在**的路径（§6.2 的 `outside`/`unreadable` 把它钉死），其长度受文件系统约束，而读出的正文有 32KB 上限，因此回复与 `MAX_LANGUAGE_REPLY_LINE = 378305` 之间没有任何一条路径可以逼近。写一个「超长参数」用例需要先编造一个不存在的路径，那测的是 `unreadable`，不是这条界 | 按构造 |
+| 回归全绿、非 win32 不得「照跑然后失败」 | `skipped 4 / fail 0`；这条 skip 语义正是本轮早先修好的 `{ skip: NO_PIPES }`（commit `e1aacfe`） | ✓ |
+| `dotnet` 照跑 | 跑了；但**本片确实碰了 C#**——§9 这句原文是错的，理由与原文见 §11 | **修订** |
+| CI 两颗 runner 都绿 | push 后回填 | 待 |
+
+### 一条反证实验：测试在约束行为，不是只跑通
+
+把 `src/language/answer.ts:421` 的 `performed.add(reading.key)` 改回旧语义 `performed.add(reading.exposure.name)`（即「按能力名去重」），重新 build 后：
+
+```text
+actual:   [ 'C:\\repo\\one.txt', 'C:\\repo\\two.txt', 'C:\\repo\\one.txt' ],
+expected: [ 'C:\\repo\\one.txt', 'C:\\repo\\two.txt' ],
+actual: 10,
+expected: 8,
+```
+
+两个测试各自以**它声称要钉住的那个机制**失败：重复的第三次调用被执行了（按名字去重失效），预算计数永不增长因而十次全读。
+改回后重跑全绿。**这不是「测试跑通了」，是「把机制拆掉测试就红」。**
+
+### §8「明确不做」逐条自核
+
+不写任何文件 ✓（`read.ts` 只读，无 `write*`）；不做搜索能力（无 glob / grep / 递归）✓；不识别仓库（不问「这是不是一个 git repo」）✓；
+不做提议结构化格式 ✓；variant 数不变（仍是两份字面列表）✓；`src/language/prompt.ts` **0 diff** ✓；
+不引入 budget framework（`src/language/model.ts` **0 diff**，唯一新数字是 `MAX_READS_PER_INTERACTION = 8`）✓；只有一个 `read` ✓。
+
+---
+
+## 13. Architecture Review
+
+**结论：PASS**
+
+- **concern 在正确的 owner**：目录集合的语义、路径归属判定、两个上限、五条 frame 字面全在 `changeable-repositories`。
+  Language 只做三件事——按 exposure 的**声明**生成参数 schema、把参数交给 owner、把 owner 返回的每一行转义。
+  `src/language/read.ts` 的两条新分支调用的都是 owner 导出的 renderer（`renderAuthorizedRepositories` / `renderRepositoryRead`），
+  Language **没有**自己写任何一句给模型看的话（这正是「every branch ends in a renderer that already existed」那条既有规则）。
+- **Runtime 没有开始理解业务**：`src/runtime/*` **0 diff**。新 Service 用既有的 `defineService` / `context.services.provide`，没有新机制。
+- **public contract 有真实需要**：Contract Creation Gate 的消费者是 Language 自己（`src/language/exposure.ts` 的两条列表 + 两个 variant 的 `requires`）。
+  这不是「也许有人要」，是一次在**同一个 commit 里**就存在的跨模块调用；先例是 `desktop-content-read.read@1`（G-1 同样因为 Language 成了真实调用方而建立）。
+  **D0 评审 `docs/architecture/desktop-context-understanding-d0-content-reader-boundary-review.md:87` 的「H3 是一条 mandate，不是一个 consumer」在本片不成立**——
+  那条说的是「人提了一个想法」不算消费者；本片这里，调用点、`requires` 与覆盖它的测试都在同一个 diff 里。
+- **没有 speculative abstraction**：`argument` 是 exposure 上**一个可选字段**，不是 parameters 框架；没有 schema 生成器；没有为第二个 owner 的参数形态预留形状（`src/language/tools.ts` 只认「恰好一个具名字符串参数」）。
+- **没越过 frozen boundary**：§3 冻结面逐条对照实现——Service 名 `changeable-repositories.read` / 版本 `1` / 两个方法；两个 exposure 名与描述、参数名 `target`；五条 frame 字面；可选 `argument`；§6.2 四种结果闭集；§6.3 两个上限；§4.1 的 8 次预算。
+- **不允许的东西没有被重新引入**：没有 `GlobalWorldState`、没有 Service Locator、没有 Central Judgement、没有 Model Router；`changeable-repositories` 的 `provides` 从空变成**恰好一个新 Service**，不含 World / Awareness / Judgement 任何一族。
+- **一处必须由 Human 决定的偏离**：§3.5 冻结了**五条**人可见字面，实现里出现**第六条** `DIRECTORY_TRUNCATED = '这个目录的项比一次能列的多，以上只是开头。'`。
+  §3.5 只给了「文件」的截断句；把文件那句用在目录上会让模型以为读到的是文件内容。这是实施者为了不写错一句话而做的最小增补，**但它是一句人可见字面，不是实施者可以自己追认的**——列在 §14 F-1，请 Human 点头或改口径。
+- **一处按 §6.2 实现、但值得留档的副作用**：`outside` 只在路径**存在**时返回，于是模型可以用绝对路径区分「存在但在授权外」与「不存在」。
+  它**没有**泄露任何正文，但泄露了本机某条路径是否存在。§6.2 的结果闭集只有四态、没有第五态用来抹平这个差别，实现照做；列为 §14 F-2，**不在本片修**。
+
+---
+
+## 14. Findings
+
+| id | severity | 内容 | 处理 |
+| --- | --- | --- | --- |
+| **F-1** | low | 实现多出一条人可见字面 `DIRECTORY_TRUNCATED`（§3.5 只冻结五条；第六条是目录截断提示行） | **待 Human 点头或改口径** |
+| **F-2** | low | `outside` 只在路径存在时返回，模型因此能探测任意绝对路径的存在性 | 按 §6.2 实现；记录不改（改它要动冻结的结果闭集） |
+| **F-3** | low | `apps/human-surface/HumanSurface.Core/PipeLanguageAsker.cs:11` 与 `:18` 仍引用已被拆分的 `src/cli/ask.ts` | 片外，未修，如实上报 |
+| **F-4** | — | §9 原文「本片不碰 C#」被现实推翻（`REPLY_TIMEOUT_MS` 的输入变了） | 已由 §11 记录并处理，跨语言门禁 69/69 |
+
+## 15. commit 门禁（`detect_changes --scope all`）
+
+```text
+Changes: 14 files, 59 symbols
+Affected processes: 28
+Risk level: critical
+```
+
+**非 `partial`、非 `truncated`**，所以这是一个完整的判定，不是一个「零意味着没看到」的零。
+
+`critical` 来自这次改动的**跨度**（语言工具循环 + 两个 variant + 跨语言的等待界），不是来自某个单点的调用面：
+编辑前逐个符号跑 `impact`，`readCall` **LOW**、`ExposureReader` **LOW**、`createExposureReader` **LOW**、
+`LanguageExposure` **UNKNOWN**（空调用集不作为证据，用文本检索确认：19 处命中全部落在
+`src/language/{tools,read,answer,plugin,index,express,exposure}.ts` 的**类型位置**，唯一读值是 `src/language/express.ts:372` 的 `.name`，因此扩大 union 是安全的）。
+
+这正是本片必须走完整 `npm test` + 两道 Review 的原因，两件都走了（§12 / §13）。
+

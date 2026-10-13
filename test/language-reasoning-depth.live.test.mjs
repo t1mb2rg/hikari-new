@@ -118,9 +118,21 @@ const PRODUCTION_TIMEOUT_MS = 15_000;
 
 const WORK = 'work_focus_read';
 const DESKTOP = 'desktop_context_read';
+const REPOSITORIES = 'authorized_repositories_list';
+const REPOSITORY_READ = 'authorized_repository_read';
+
+// The path the read sentence names, written out rather than discovered. The two new rows are about
+// whether a model reaches for the capability that takes an argument when the sentence hands it one; a
+// path this checkout happens to contain would make that depend on the machine.
+const REPOSITORY_TARGET = 'C:\\语义验证用的假仓库\\README.md';
 
 /** `D` / `W` for the two capabilities, so a four-column table of three runs each stays readable. */
-const CODE = Object.freeze({ [WORK]: 'W', [DESKTOP]: 'D' });
+const CODE = Object.freeze({
+  [WORK]: 'W',
+  [DESKTOP]: 'D',
+  [REPOSITORIES]: 'L',
+  [REPOSITORY_READ]: 'F',
+});
 
 /**
  * The eight sentences, verbatim from the frozen criterion, with the classification each one carries.
@@ -207,7 +219,30 @@ const SENTENCES = Object.freeze([
     detour: true,
     kind: '负例·闲聊',
   },
+  {
+    text: '我现在被允许改哪些仓库？',
+    required: [REPOSITORIES],
+    forbidden: [],
+    exact: [REPOSITORIES],
+    detour: false,
+    kind: '仓库声明',
+  },
+  {
+    text: `看一下 ${REPOSITORY_TARGET} 里写了什么。`,
+    required: [REPOSITORY_READ],
+    forbidden: [],
+    exact: [REPOSITORY_READ],
+    detour: false,
+    kind: '带参数读取',
+  },
 ]);
+
+/**
+ * What one arm's denominators are: every sentence, every run. Named rather than written as `24` so that
+ * extending the table above moves the denominators with it — an experiment whose table grew while its
+ * totals did not would report "18/${OBSERVATIONS_PER_ARM} usable" for a run that made 30 observations.
+ */
+const OBSERVATIONS_PER_ARM = SENTENCES.length * RUNS;
 
 // ── The wire observation ─────────────────────────────────────────────────────────────────────────
 //
@@ -575,7 +610,7 @@ function slice(arm, sentence) {
 }
 
 test(
-  'DEEPSEEK REASONING-DEPTH MATRIX：none / low / high / max，8 句 × 3 次 × 4 档',
+  `DEEPSEEK REASONING-DEPTH MATRIX：none / low / high / max，${SENTENCES.length} 句 × ${RUNS} 次 × ${ARMS.length} 档`,
   { skip: SKIP, timeout: 2 * 60 * 60 * 1000 },
   async (t) => {
     installWire();
@@ -636,7 +671,7 @@ test(
     );
 
     const rows = [
-      ['可用 observations（语义选择统计的分母）', (a) => `${a.usable.length}/24`],
+      ['可用 observations（语义选择统计的分母）', (a) => `${a.usable.length}/${OBSERVATIONS_PER_ARM}`],
       ['Required-read success', (a) => `${a.requiredSuccess}/${a.requiredTotal}`],
       [
         'Forbidden-read violations',
@@ -647,7 +682,7 @@ test(
       ['Semantic-detour count', (a) => `${a.detourCount}`],
       ['Transport failures', (a) => `${a.transportCount}`],
       [`>${PRODUCTION_TIMEOUT_MS / 1000}s requests`, (a) => `${a.slowCount}`],
-      ['reasoning_content present', (a) => `${a.reasonedCount}/24`],
+      ['reasoning_content present', (a) => `${a.reasonedCount}/${OBSERVATIONS_PER_ARM}`],
       ['finish_reason=length', (a) => `${a.truncatedCount}`],
     ];
     // Every cell is exactly as wide as the widest one, computed before anything is printed. Padding to a
@@ -797,7 +832,7 @@ test(
     console.log('\n===== 每档十项明细 =====');
     for (const arm of arms) {
       console.log(
-        `\n── ${arm.effort} ──  可用 ${arm.usable.length}/24` +
+        `\n── ${arm.effort} ──  可用 ${arm.usable.length}/${OBSERVATIONS_PER_ARM}` +
           `（transport 失败 ${arm.transportCount}，finish_reason=length 截断 ${arm.truncatedCount}）`,
       );
       console.log(
@@ -815,14 +850,14 @@ test(
           `（分母句：#5「桌面感知是怎么实现的？」#6「Work Focus 为什么这么设计？」#8「最近写 Hikari 写麻了。」）`,
       );
       console.log(`  6. Transport failures   ${arm.transportCount}`);
-      console.log(`  7. reasoning_content present   ${arm.reasonedCount}/24`);
+      console.log(`  7. reasoning_content present   ${arm.reasonedCount}/${OBSERVATIONS_PER_ARM}`);
       console.log(
         `  8. reasoning_content length   min/median/max = ${arm.reasoningRange}` +
           `（基于 ${arm.reasoningLengths.length} 次带 trace 的应答）`,
       );
       console.log(
         `  9. latency   min/median/max = ${arm.latencyRange} ms` +
-          `   超过生产 ${PRODUCTION_TIMEOUT_MS / 1000} s 上限：${arm.slowCount}/24`,
+          `   超过生产 ${PRODUCTION_TIMEOUT_MS / 1000} s 上限：${arm.slowCount}/${OBSERVATIONS_PER_ARM}`,
       );
       console.log(
         `  10. finish_reason   ${[...arm.finishReasons.entries()]
@@ -926,10 +961,10 @@ test(
 
     for (const arm of arms) {
       t.diagnostic(
-        `${arm.effort}: 可用 ${arm.usable.length}/24；required ${arm.requiredSuccess}/${arm.requiredTotal}；` +
+        `${arm.effort}: 可用 ${arm.usable.length}/${OBSERVATIONS_PER_ARM}；required ${arm.requiredSuccess}/${arm.requiredTotal}；` +
           `forbidden ${arm.forbiddenViolations}/${arm.forbiddenTotal}；exact ${arm.exactCount}/${arm.usable.length}；` +
           `over-read ${arm.overReadCount}；detour ${arm.detourCount}；transport ${arm.transportCount}；` +
-          `reasoning_content ${arm.reasonedCount}/24；>15s ${arm.slowCount}；length ${arm.truncatedCount}`,
+          `reasoning_content ${arm.reasonedCount}/${OBSERVATIONS_PER_ARM}；>15s ${arm.slowCount}；length ${arm.truncatedCount}`,
       );
     }
 
@@ -938,7 +973,7 @@ test(
 );
 
 // The guard the other live test carries, for the same reason: the sentences above name the capabilities
-// by hand, so a third exposure would make every required/forbidden/exact set silently incomplete — and
+// by hand, so a fifth exposure would make every required/forbidden/exact set silently incomplete — and
 // this experiment would then be measuring four arms against a table that no longer describes the
 // surface they select from.
 test('reasoning-depth matrix 的句子覆盖了当前全部 capability', () => {
@@ -950,7 +985,7 @@ test('reasoning-depth matrix 的句子覆盖了当前全部 capability', () => {
   }
   assert.deepEqual(
     LANGUAGE_EXPOSURES.map((exposure) => exposure.name).sort(),
-    [WORK, DESKTOP].sort(),
+    [WORK, DESKTOP, REPOSITORIES, REPOSITORY_READ].sort(),
   );
   // 四档与 three-reading 表是这份实验的全部输入，改动它们就是改实验条件本身。
   assert.deepEqual([...ARMS], ['none', 'low', 'high', 'max']);

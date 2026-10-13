@@ -121,9 +121,21 @@ const PRODUCTION_TIMEOUT_MS = 15_000;
 
 const WORK = 'work_focus_read';
 const DESKTOP = 'desktop_context_read';
+const REPOSITORIES = 'authorized_repositories_list';
+const REPOSITORY_READ = 'authorized_repository_read';
+
+// The path the read sentence names, written out rather than discovered. The two new rows are about
+// whether a model reaches for the capability that takes an argument when the sentence hands it one; a
+// path this checkout happens to contain would make that depend on the machine.
+const REPOSITORY_TARGET = 'C:\\语义验证用的假仓库\\README.md';
 
 /** `D` / `W` for the two capabilities, so a two-column table of three runs each stays readable. */
-const CODE = Object.freeze({ [WORK]: 'W', [DESKTOP]: 'D' });
+const CODE = Object.freeze({
+  [WORK]: 'W',
+  [DESKTOP]: 'D',
+  [REPOSITORIES]: 'L',
+  [REPOSITORY_READ]: 'F',
+});
 
 /**
  * The eight sentences, verbatim from the frozen criterion, with the classification each one carries.
@@ -198,7 +210,28 @@ const SENTENCES = Object.freeze([
     exact: [],
     detour: true,
   },
+  {
+    text: '我现在被允许改哪些仓库？',
+    required: [REPOSITORIES],
+    forbidden: [],
+    exact: [REPOSITORIES],
+    detour: false,
+  },
+  {
+    text: `看一下 ${REPOSITORY_TARGET} 里写了什么。`,
+    required: [REPOSITORY_READ],
+    forbidden: [],
+    exact: [REPOSITORY_READ],
+    detour: false,
+  },
 ]);
+
+/**
+ * What one arm's denominators are: every sentence, every run. Named rather than written as `24` so that
+ * extending the table above moves the denominators with it — an experiment whose table grew while its
+ * totals did not would report "18/${OBSERVATIONS_PER_ARM} usable" for a run that made 30 observations.
+ */
+const OBSERVATIONS_PER_ARM = SENTENCES.length * RUNS;
 
 // ── The wire observation, and the one rewrite ────────────────────────────────────────────────────
 //
@@ -570,7 +603,7 @@ function slice(summary, sentence) {
 }
 
 test(
-  'HIGH REASONING TOKEN-BUDGET A/B：high@512 vs high@4096，8 句 × 3 次 × 2 档',
+  `HIGH REASONING TOKEN-BUDGET A/B：high@512 vs high@4096，${SENTENCES.length} 句 × ${RUNS} 次 × ${ARMS.length} 档`,
   { skip: SKIP, timeout: 2 * 60 * 60 * 1000 },
   async (t) => {
     installWire();
@@ -631,7 +664,7 @@ test(
     );
 
     const rows = [
-      ['usable observations', (s) => `${s.usable.length}/24`],
+      ['usable observations', (s) => `${s.usable.length}/${OBSERVATIONS_PER_ARM}`],
       ['required-read success', (s) => `${s.requiredSuccess}/${s.requiredTotal}`],
       ['forbidden violations', (s) => `${s.forbiddenViolations}/${s.forbiddenTotal}`],
       ['exact selections', (s) => `${s.exactCount}/${s.usable.length}`],
@@ -639,7 +672,7 @@ test(
       ['semantic-detour count', (s) => `${s.detourCount}`],
       ['transport failures', (s) => `${s.transportCount}`],
       ['finish_reason=length', (s) => `${s.truncatedCount}`],
-      ['reasoning_content present', (s) => `${s.reasonedCount}/24`],
+      ['reasoning_content present', (s) => `${s.reasonedCount}/${OBSERVATIONS_PER_ARM}`],
       ['reasoning_content length min/median/max', (s) => s.reasoningRange],
       ['latency min/median/max (ms)', (s) => s.latencyRange],
       [`>${PRODUCTION_TIMEOUT_MS / 1000}s requests`, (s) => `${s.slowCount}`],
@@ -718,7 +751,7 @@ test(
     for (const summary of summaries) {
       const truncated = summary.entries.filter((entry) => entry.verdict.kind === 'truncated');
       console.log(
-        `  ${pad(summary.label, 10)}finish_reason=length：${summary.truncatedCount}/24` +
+        `  ${pad(summary.label, 10)}finish_reason=length：${summary.truncatedCount}/${OBSERVATIONS_PER_ARM}` +
           (truncated.length === 0
             ? ''
             : `   出现在：${truncated
@@ -730,7 +763,7 @@ test(
       const before = summaries[0].truncatedCount;
       const after = summaries[1].truncatedCount;
       console.log(
-        `  对照：high@512 ${before}/24 → high@4096 ${after}/24` +
+        `  对照：high@512 ${before}/${OBSERVATIONS_PER_ARM} → high@4096 ${after}/${OBSERVATIONS_PER_ARM}` +
           (before > 0 && after === 0
             ? '  ← 本轮的截断在更大的预算下消失'
             : before === 0 && after === 0
@@ -797,7 +830,7 @@ test(
     console.log('\n===== 每档明细 =====');
     for (const summary of summaries) {
       console.log(
-        `\n── ${summary.label} ──  可用 ${summary.usable.length}/24` +
+        `\n── ${summary.label} ──  可用 ${summary.usable.length}/${OBSERVATIONS_PER_ARM}` +
           `（transport 失败 ${summary.transportCount}，finish_reason=length 截断 ${summary.truncatedCount}）`,
       );
       console.log(
@@ -815,14 +848,14 @@ test(
           `（分母句：#5「桌面感知是怎么实现的？」#6「Work Focus 为什么这么设计？」#8「最近写 Hikari 写麻了。」）`,
       );
       console.log(`  transport failures   ${summary.transportCount}`);
-      console.log(`  reasoning_content present   ${summary.reasonedCount}/24`);
+      console.log(`  reasoning_content present   ${summary.reasonedCount}/${OBSERVATIONS_PER_ARM}`);
       console.log(
         `  reasoning_content length   min/median/max = ${summary.reasoningRange}` +
           `（基于 ${summary.reasoningLengths.length} 次带 trace 的应答）`,
       );
       console.log(
         `  latency   min/median/max = ${summary.latencyRange} ms` +
-          `   超过生产 ${PRODUCTION_TIMEOUT_MS / 1000} s 上限：${summary.slowCount}/24`,
+          `   超过生产 ${PRODUCTION_TIMEOUT_MS / 1000} s 上限：${summary.slowCount}/${OBSERVATIONS_PER_ARM}`,
       );
       console.log(
         `  finish_reason   ${[...summary.finishReasons.entries()]
@@ -974,10 +1007,10 @@ test(
 
     for (const summary of summaries) {
       t.diagnostic(
-        `${summary.label}: 可用 ${summary.usable.length}/24；required ${summary.requiredSuccess}/${summary.requiredTotal}；` +
+        `${summary.label}: 可用 ${summary.usable.length}/${OBSERVATIONS_PER_ARM}；required ${summary.requiredSuccess}/${summary.requiredTotal}；` +
           `forbidden ${summary.forbiddenViolations}/${summary.forbiddenTotal}；exact ${summary.exactCount}/${summary.usable.length}；` +
           `over-read ${summary.overReadCount}；detour ${summary.detourCount}；transport ${summary.transportCount}；` +
-          `reasoning_content ${summary.reasonedCount}/24（${summary.reasoningRange}）；` +
+          `reasoning_content ${summary.reasonedCount}/${OBSERVATIONS_PER_ARM}（${summary.reasoningRange}）；` +
           `latency ${summary.latencyRange} ms；>15s ${summary.slowCount}；length ${summary.truncatedCount}`,
       );
     }
@@ -987,7 +1020,7 @@ test(
 );
 
 // The guard the other live harnesses carry, for the same reason: the sentences above name the
-// capabilities by hand, so a third exposure would make every required/forbidden/exact set silently
+// capabilities by hand, so a fifth exposure would make every required/forbidden/exact set silently
 // incomplete — and this experiment would then be measuring two budgets against a table that no longer
 // describes the surface they select from.
 test('high-budget harness 的句子覆盖了当前全部 capability', () => {
@@ -999,7 +1032,7 @@ test('high-budget harness 的句子覆盖了当前全部 capability', () => {
   }
   assert.deepEqual(
     LANGUAGE_EXPOSURES.map((exposure) => exposure.name).sort(),
-    [WORK, DESKTOP].sort(),
+    [WORK, DESKTOP, REPOSITORIES, REPOSITORY_READ].sort(),
   );
   // 两档与三读数表是这份实验的全部输入，改动它们就是改实验条件本身。
   assert.deepEqual(

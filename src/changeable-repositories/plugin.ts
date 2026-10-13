@@ -12,6 +12,21 @@
 // `work-focus` took when a relevance judgement became its first consumer. The trigger to watch for is
 // exactly that: a caller that needs the set and is not this plugin's own CLI.
 //
+// **The trigger fired, and the paragraph above is kept as the record of what it was waiting for.** The
+// reader is Language: it offers a model `authorized_repositories_list` and `authorized_repository_read`,
+// and reads them through `changeable-repositories.read@1` — the Service `provides` below now publishes,
+// built over the same session the pipe answers through. Both of its variants require that Service, so, as
+// the paragraph predicted, this plugin is in the composition exactly where the reader is; and since both
+// variants carry both capabilities, that is still every resident. The contract was not created for the
+// mandate. It was created for the two branches in `src/language/read.ts` that call it, and those branches
+// are the call site §16 asks for.
+//
+// Nothing else about this plugin moved. It still declares no Event, still writes the one durable family
+// it owns, and still refuses to activate where it cannot read its own history. What is new is that it has
+// something to hand out, and it hands it out as a *Service* rather than as a second endpoint: the pipe a
+// human's command arrives on stays a client surface, and a model reaches the set through the same
+// contract a reader inside the composition does.
+//
 // It declares no Event. It requires Chronicle and writes it, and the reason is the admission rule it
 // exercises: only the semantic owner of a concern may admit a durable fact about it, and only the
 // proposition that owner is entitled to assert. Nothing else in Hikari is entitled to say that an
@@ -46,6 +61,7 @@ import { listenChangeableRepositoriesEndpoint } from './endpoint.js';
 import { changeableRepositoriesEndpointPath } from './endpoint-path.js';
 import { ChangeableRepositoriesError } from './errors.js';
 import { readChangeableRepositories } from './history.js';
+import { changeableRepositoriesReadService, createChangeableRepositoriesRead } from './read.js';
 import { createChangeableRepositoriesSession } from './session.js';
 
 export interface ChangeableRepositoriesPluginConfig {
@@ -61,7 +77,12 @@ export const changeableRepositoriesPlugin: PluginDefinition<ChangeableRepositori
   // that ran anyway would be silently deciding that a human's declaration had lapsed. Loaded before its
   // provider it waits, exactly as any other dependent does.
   requires: [chronicleService],
-  provides: [],
+  // Empty until the read half arrived, and empty for the reason the header gives: a contract published
+  // for a consumer that does not exist is what `plugin-design-spec.md` §16 refuses, and for a while that
+  // was the whole truth about this plugin. The consumer exists now — `src/language/read.ts` calls this
+  // Service on behalf of a model — so the same reasoning points the other way today: an empty list would
+  // now say a capability is not expressible while a branch inside the composition is expressing it.
+  provides: [changeableRepositoriesReadService],
   config: {
     parse(input: unknown): ChangeableRepositoriesPluginConfig {
       return Object.freeze({ rootDir: readRootDir(input) });
@@ -86,6 +107,16 @@ export const changeableRepositoriesPlugin: PluginDefinition<ChangeableRepositori
     // answering `status` with a set that is not what the human declared.
     const initial = await readChangeableRepositories(chronicle);
     const session = createChangeableRepositoriesSession(chronicle, initial);
+
+    // Published over that same session, so a model and the human who declared the set can never be
+    // looking at two different sets: `current()` is read at call time, and both surfaces reach the one
+    // object this activation built. Published before the endpoint listens, because the Service is the
+    // reason this plugin has anything to give away and the pipe is a surface onto the same state rather
+    // than a second source of it.
+    context.services.provide(
+      changeableRepositoriesReadService,
+      createChangeableRepositoriesRead(session),
+    );
 
     const endpoint = await listenChangeableRepositoriesEndpoint(
       { handle: (request) => session.answer(request) },

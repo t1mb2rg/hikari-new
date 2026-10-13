@@ -142,6 +142,7 @@
 
 import type { ServiceContract } from '../runtime/contracts.js';
 import type { PluginContext, PluginDefinition } from '../runtime/plugin.js';
+import { changeableRepositoriesReadService } from '../changeable-repositories/index.js';
 import { chronicleService } from '../chronicle/index.js';
 import type { ChronicleService } from '../chronicle/index.js';
 import { desktopContentReadService, renderContentRead } from '../desktop-content-read/index.js';
@@ -491,34 +492,51 @@ function readConfig(input: unknown): LanguagePluginConfig {
 }
 
 /**
- * The base variant: the two reads that need nothing beyond the pair this plugin has always required.
+ * The base variant: the reads that need nothing beyond the Services every Language composition requires.
  *
- * A resident with a model and no repository scope gets this one, and the variant is unchanged since it
- * was written — same two requirements, same two exposures. The plugin it is handed to is not: a third
- * requirement is appended in `buildLanguagePlugin`, because `confirm` writes a durable family and the
- * variant axis is about what a model may read rather than about what this plugin keeps.
+ * A resident with a model and no repository scope gets this one. It is no longer the variant it was when
+ * it was written — the two repository reads joined it — and what did *not* change is the property that
+ * made two variants acceptable in the first place: it requires nothing that an unconditional member of the
+ * composition does not already provide, and it offers exactly what it requires. The plugin it is handed to
+ * is not the same object either: a further requirement is appended in `buildLanguagePlugin`, because
+ * `confirm` writes a durable family and the variant axis is about what a model may read rather than about
+ * what this plugin keeps.
+ *
+ * Why the repository reads are in *this* variant rather than in the repository-aware one is `exposure.ts`'s
+ * argument, and it is worth one line at the place somebody would get it wrong: `changeable-repositories` is
+ * an unconditional member of every resident, so the capabilities it provides are reachable wherever
+ * Language is reachable, and a capability that is reachable everywhere belongs to the prefix both variants
+ * share rather than to the axis that separates them.
  *
  * Exported, and for the reason `index.ts` gives for exporting `createAnswerer`: on `ubuntu-latest` the
  * platform gate in `setup` refuses before anything under it runs, so a wiring that only `setup` could
  * observe would be a wiring CI never checks. What a test reads here is the object
- * `createLanguagePlugin` hands `buildLanguagePlugin`, so "the base variant offers two capabilities and
- * reads them through the base reader" is a statement about the plugin rather than about the literals it
- * was assembled from — and the two can differ, which is the version of this that matters: a variant
- * built from the other list is a plugin whose model is shown a capability its own reader refuses.
+ * `createLanguagePlugin` hands `buildLanguagePlugin`, so "this variant offers exactly the capabilities its
+ * own list names, and reads them through the reader built here" is a statement about the plugin rather
+ * than about the literals it was assembled from — and the two can differ, which is the version of this
+ * that matters: a variant built from the other list is a plugin whose model is shown a capability its own
+ * reader refuses.
  *
  * Two named objects rather than a table of them. A third variant is the trigger for a Composition
  * Boundary Review — see `exposure.ts` — and not a third entry here.
  */
 export const baseLanguageVariant: LanguageVariant = Object.freeze({
-  requires: [workFocusCurrentService, desktopSessionAwarenessPeekService],
+  requires: [
+    workFocusCurrentService,
+    desktopSessionAwarenessPeekService,
+    changeableRepositoriesReadService,
+  ],
   exposures: LANGUAGE_EXPOSURES,
   makeReader: (context: PluginContext) => {
     const focus = context.services.get(workFocusCurrentService);
     const awareness = context.services.get(desktopSessionAwarenessPeekService);
+    const repositories = context.services.get(changeableRepositoriesReadService);
 
     return createExposureReader({
       readFocus: () => focus.current(),
       peek: () => awareness.peek(),
+      readAuthorizedRepositories: () => repositories.roots(),
+      readAuthorizedRepository: (target) => repositories.read(target),
     });
   },
 });
@@ -538,7 +556,8 @@ export function createLanguagePlugin(
 }
 
 /**
- * The repository-aware variant: the base two, plus the Repository CI relevance judgement.
+ * The repository-aware variant: the base variant's capabilities, plus the Repository CI relevance
+ * judgement.
  *
  * Loaded only by a composition that has already loaded the plugin providing
  * `repositoryCiRelevanceService`, and that ordering decision lives in `cli/resident.ts` rather than
@@ -547,30 +566,34 @@ export function createLanguagePlugin(
  * resident reports it, and an operator sees which member is missing instead of a capability that fails
  * the first time a model asks for it.
  *
- * The two base reads are pulled here a second time, in this literal, rather than shared with the base
- * variant. That is deliberate: each variant states its own requirements in full, so a reader comparing
- * a variant's reader against its `requires` never has to follow a second definition to know what the
- * services it pulls are.
+ * The shared requirements are pulled here a second time, in this literal, rather than spread from the base
+ * variant. That is deliberate: each variant states its own requirements in full, so a reader comparing a
+ * variant's reader against its `requires` never has to follow a second definition to know what the services
+ * it pulls are.
  *
  * Exported for the reason the base variant records above, and it is the half that needs it more: this is
- * the variant whose third capability can be offered without a reader that can read it, which is a
- * mismatch that shows up on the first question a model asks rather than at activation.
+ * the variant whose extra capability can be offered without a reader that can read it, which is a mismatch
+ * that shows up on the first question a model asks rather than at activation.
  */
 export const repositoryLanguageVariant: LanguageVariant = Object.freeze({
   requires: [
     workFocusCurrentService,
     desktopSessionAwarenessPeekService,
+    changeableRepositoriesReadService,
     repositoryCiRelevanceService,
   ],
   exposures: LANGUAGE_REPOSITORY_EXPOSURES,
   makeReader: (context: PluginContext) => {
     const focus = context.services.get(workFocusCurrentService);
     const awareness = context.services.get(desktopSessionAwarenessPeekService);
+    const repositories = context.services.get(changeableRepositoriesReadService);
     const relevance = context.services.get(repositoryCiRelevanceService);
 
     return createRepositoryExposureReader({
       readFocus: () => focus.current(),
       peek: () => awareness.peek(),
+      readAuthorizedRepositories: () => repositories.roots(),
+      readAuthorizedRepository: (target) => repositories.read(target),
       readRelevance: () => relevance.current(),
     });
   },

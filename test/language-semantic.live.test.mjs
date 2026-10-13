@@ -4,6 +4,11 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import {
+  changeableRepositoriesReadService,
+  renderAuthorizedRepositories,
+  renderRepositoryRead,
+} from '../dist/changeable-repositories/index.js';
 import { desktopSessionAwarenessPeekService } from '../dist/desktop-session-awareness/index.js';
 import { renderAssessment } from '../dist/desktop-session-observe/index.js';
 import { renderFocus } from '../dist/language/express.js';
@@ -95,6 +100,25 @@ const SKIP = CONFIGURED
 
 const WORK = 'work_focus_read';
 const DESKTOP = 'desktop_context_read';
+const REPOSITORIES = 'authorized_repositories_list';
+const REPOSITORY_READ = 'authorized_repository_read';
+
+// One declared root and one file inside it, fixed here rather than taken from the machine. The same
+// reason `assessmentFixture` gives: what is under test is which capability the model chooses, and a
+// real directory listing would make the answer depend on this checkout rather than on the choice.
+const REPOSITORY_ROOT = 'C:\\语义验证用的假仓库';
+const REPOSITORY_TARGET = `${REPOSITORY_ROOT}\\README.md`;
+const REPOSITORY_LINES = Object.freeze(['语义验证用的假 README 第一行。']);
+
+function repositoryReadFixture() {
+  return {
+    kind: 'read',
+    target: REPOSITORY_TARGET,
+    form: 'file',
+    lines: REPOSITORY_LINES,
+    truncated: false,
+  };
+}
 
 // ── 受控诊断 ─────────────────────────────────────────────────────────────────────────────────────
 //
@@ -321,6 +345,20 @@ const SENTENCES = Object.freeze([
     why: '这是明确的负向指令：即使 peek 没有副作用，也不得读取',
   },
   { text: '最近写 Hikari 写麻了。', required: [], forbidden: [], detour: true, why: '一句闲话，不是关于这台机器的问题' },
+  {
+    text: '我现在被允许改哪些仓库？',
+    required: [REPOSITORIES],
+    forbidden: [],
+    detour: false,
+    why: '问的是那份声明本身，只有可改仓库那一半知道它',
+  },
+  {
+    text: `看一下 ${REPOSITORY_TARGET} 里写了什么。`,
+    required: [REPOSITORY_READ],
+    forbidden: [],
+    detour: false,
+    why: '要读仓库里的一个文件，只有带参数的那个能力做得到；路径写在句子里，所以这不是靠名字能猜的',
+  },
 ]);
 
 function assessmentFixture() {
@@ -370,7 +408,7 @@ function assessmentFixture() {
 async function run(text) {
   const performed = [];
   const requested = [];
-  const reads = { focus: 0, peek: 0 };
+  const reads = { focus: 0, peek: 0, repositories: 0, repository: 0 };
   const reasoningLengths = [];
   let steps = 0;
   let truncated = false;
@@ -383,6 +421,14 @@ async function run(text) {
     async peek() {
       reads.peek += 1;
       return assessmentFixture();
+    },
+    async readAuthorizedRepositories() {
+      reads.repositories += 1;
+      return Object.freeze([REPOSITORY_ROOT]);
+    },
+    async readAuthorizedRepository() {
+      reads.repository += 1;
+      return repositoryReadFixture();
     },
   });
 
@@ -413,9 +459,9 @@ async function run(text) {
       if (step.truncated) truncated = true;
       return step;
     },
-    read: async (exposure) => {
+    read: async (exposure, values) => {
       performed.push(exposure.name);
-      return reader(exposure);
+      return reader(exposure, values);
     },
     now: () => new Date().toISOString(),
     // The base set, which is the surface this harness measures — the coverage test below asserts the
@@ -528,6 +574,8 @@ function expectedAnswer(result) {
     // it written here.
     if (name === WORK) lines.push(...renderFocus(['语义验证用的假关注对象']));
     else if (name === DESKTOP) lines.push(...renderAssessment(assessmentFixture()));
+    else if (name === REPOSITORIES) lines.push(...renderAuthorizedRepositories([REPOSITORY_ROOT]));
+    else if (name === REPOSITORY_READ) lines.push(...renderRepositoryRead(repositoryReadFixture()));
   }
   return lines;
 }
@@ -537,7 +585,7 @@ function describe(runResult) {
     `  outcome=${runResult.outcome}` +
     `  requested=[${runResult.requested.join(', ')}]` +
     `  performed=[${runResult.performed.join(', ')}]` +
-    `  serviceReads={focus:${runResult.reads.focus}, peek:${runResult.reads.peek}}` +
+    `  serviceReads={focus:${runResult.reads.focus}, peek:${runResult.reads.peek}, repositories:${runResult.reads.repositories}, repository:${runResult.reads.repository}}` +
     // The one line that says *why* nothing was selected. Without it a `failed` row reports the absence
     // of a decision and withholds the reason, which is the state this diagnostic was added to end.
     //
@@ -682,13 +730,13 @@ test(
 
     // Reached only when every sentence met the frozen criterion on every run. Stated so that the terminal
     // says something unambiguous rather than leaving a silent pass to be interpreted.
-    console.log('\n全部 8 句符合冻结的语义选择准则（required 齐全、forbidden 未触碰）。');
+    console.log(`\n全部 ${SENTENCES.length} 句符合冻结的语义选择准则（required 齐全、forbidden 未触碰）。`);
   },
 );
 
 // A guard against the harness being run with a configuration that would make the result meaningless,
 // and against the exposure set having grown without this file noticing: the sentences above name the
-// two capabilities by hand, and a third would make the required sets above silently incomplete.
+// capabilities by hand, and a fifth would make the required sets above silently incomplete.
 //
 // `required` and `forbidden` together, not `required` alone. A capability covered only as something not
 // to read is still covered — that is exactly what sentence #7 is — and a guard that demanded a positive
@@ -703,14 +751,17 @@ test('语义验证的句子覆盖了当前全部 capability', () => {
   }
   assert.deepEqual(
     LANGUAGE_EXPOSURES.map((exposure) => exposure.name).sort(),
-    [WORK, DESKTOP].sort(),
+    [WORK, DESKTOP, REPOSITORIES, REPOSITORY_READ].sort(),
   );
-  // And the two Service contracts the harness stubs are the two the plugin requires, so a third
+  // And the four Service contracts the harness stubs are the four the plugin requires, so a fifth
   // dependency would fail here rather than being quietly left unread by every sentence.
   assert.equal(typeof workFocusCurrentService.id, 'string');
   assert.equal(typeof desktopSessionAwarenessPeekService.id, 'string');
+  assert.equal(typeof changeableRepositoriesReadService.id, 'string');
   // The renderers, imported so that a change to either is a compile-time break in this file rather than
   // a stale expectation in the table above.
   assert.ok(renderFocus(['x']).length > 0);
   assert.ok(renderAssessment(assessmentFixture()).length > 0);
+  assert.ok(renderAuthorizedRepositories([REPOSITORY_ROOT]).length > 0);
+  assert.ok(renderRepositoryRead(repositoryReadFixture()).length > 0);
 });

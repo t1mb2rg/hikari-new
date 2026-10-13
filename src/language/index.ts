@@ -121,11 +121,12 @@ export {
 export type { DecodedLanguageReply, DecodedLanguageRequest, LanguageLineRead } from './protocol.js';
 // The closed sets, and the functions that consume them. A test reads these to check that what a model
 // is offered, what the loop will act on, and what the variant's `requires` names are one set rather
-// than three that agree today — and that the base set is still exactly the two entries it always was.
+// than three that agree today — and that each list is still the fixed set of entries it says it is,
+// given by length and member rather than by "contains".
 export { LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES } from './exposure.js';
 export type { LanguageExposure } from './exposure.js';
 export { findExposure, readArguments, toModelTools } from './tools.js';
-export type { ArgumentReading } from './tools.js';
+export type { ArgumentReading, DeclaredArgument, ReadCall } from './tools.js';
 export {
   LANGUAGE_PROTOCOL_VERSION,
   MAX_LANGUAGE_REPLY_LINE,
