@@ -6,15 +6,22 @@
 >
 > **配套**：`docs/vision/hikari-long-term.md` 说的是「打算成为什么」；**本文说的是「今天是什么」**。两份必须分开读。
 >
-> **证据基准**：本文写于 commit `ada401c`（当时工作区 `main` 领先 `origin/main` 11 个 commit）。所有 `file:line` 引用以该 commit 为准；行号会漂移，条目名与路径才是身份。
+> **证据基准**：本文写于 commit `ada401c`（当时工作区领先 `origin/main` 11 个提交）。所有 `file:line` 引用以该 commit 为准；行号会漂移，**条目名与路径才是身份**（`governance-rules-v1.md` R7.4）。
 >
-> **部分重测（2026-10-13，commit `6fbc936`，工作区与 `origin/main` 同步）**：§0 的三个计数、§1 的目录与 Plugin 计数、§3.1 的 Service 契约表、§3.2 的 Event 订阅者**已按实测更新**（19 个 Plugin / 17 个 Service 契约 / 1 个 Event 契约，且它现在有 **1 个**生产订阅者）。**其余各节的正文仍以 `ada401c` 为基准，本次没有逐条重测**——不要把这次更新读成「全文已复核」。`file:line` 行号以本文原基准为准，重测过的条目另行给出实测行号。
+> **全量重测（2026-10-13，`41adccd`）**：§0–§14 的可核对断言已由**五个独立核对面**（按节切分）逐条对照 HEAD 复核。**每一处纠正都在原地标了「订正 / 重测（`41adccd`）」并附证据，没有静默改写。** 改动集中在四类：
+>
+> 1. **计数**：19 个 Plugin——**判据改为「产出 `PluginDefinition` 值」**（按「目录里有 `plugin.ts`」会数出 20，因为 `runtime/plugin.ts` 定义的是机制、没有任何值）；17 个 Service 契约；1 个 Event 契约但**订阅者 0 → 1**；base **十**成员；合法 roster **六**条。
+> 2. **我自己在上一轮写错的两处**：把 `desktop-content-read` 说成「可选的领域插件」——它是**无条件加载的 base 成员**。
+> 3. **原文自己的三处错**：插件上下文的 API 多写了三个方法（`has` / `isProvidedBy` / `subscribe` 都不在上下文上）；一条列了**三条**却写「两条」；Human Surface 的 outcome 词写成四个（协议是五个）。
+> 4. **一批已过期的否定性断言**与图：「权限 / 授权层无」「第二类判据无」「Event 订阅者 0」「CI 从未运行过这些提交」——**全部不再成立**；关系图缺 `desktop-content-read` 节点、并仍标着「0 订阅者」。
+>
+> **仍未做，如实标出**：`§7.3`（Grounded Synthesis 的七条）整节已明显过期，本轮只加了该节标记与要点更正，**未重写**；`§12.1` 与 `§11.9` 里 `current-stage.md` 的行号仍按 `81504db` 时点，已就地说明漂移量（+8）。
 
 ---
 
 ## 0. 一句话现状
 
-Hikari 今天是一个**很薄的运行生命结构 + 两条纵向感知链 + 一个语言出口 + 两个主动介入场景**。
+Hikari 今天是一个**很薄的运行生命结构 + 两条纵向感知链 + 一条由人授权触发的桌面正文读取链 + 一个语言出口 + 两个主动介入场景**。
 
 ```text
 有一个 Runtime（只懂 Plugin / Service / Event / cleanup）
@@ -53,8 +60,9 @@ flowchart TB
     IA["input-activity.windows<br/>input-activity.current@1"]
     DW["desktop-session-world<br/>desktop-session-world.current@1"]
     DA["desktop-session-awareness<br/>…awareness.current@1 + …peek@1"]
-    DL["desktop-session-awareness-loop<br/>发 assessed@1（0 订阅者）"]
+    DL["desktop-session-awareness-loop<br/>发 assessed@1（1 订阅者）"]
     DO["desktop-session-observe<br/>人看的只读面"]
+    DC["desktop-content-read<br/>desktop-content-read.read@1"]
   end
 
   subgraph rep["仓库 CI 纵切（已实现）"]
@@ -84,6 +92,8 @@ flowchart TB
   DA --> DL
   DA --> DO
   DA -.->|peek| L
+  DL -.->|assessed| DC
+  DC --> L
   GR --> RW
   GH --> RW
   RW --> RA
@@ -105,11 +115,10 @@ flowchart TB
   classDef part fill:#8d6e00,stroke:#5c4800,color:#fff
   classDef absent fill:#4a148c,stroke:#2a0a52,color:#fff,stroke-dasharray:4 3
 
-  class R1,R2,R3,R4,C1,C2,WF,FG,IA,DW,DA,DL,DO,GR,GH,RW,RA,RR,L,HD,DRA,RCA,CLI impl
-  class DL part
+  class R1,R2,R3,R4,C1,C2,WF,FG,IA,DW,DA,DL,DO,DC,GR,GH,RW,RA,RR,L,HD,DRA,RCA,CLI impl
 ```
 
-图例：**深绿** = 已实现并验证；**深黄** = 存在但有一处未闭合（见该节）；**紫虚框** = 今天不存在。
+图例：**深绿** = 已实现并验证；**深黄** = 存在但有一处未闭合（**今天没有节点属于这一类**——上一版标黄的正是 `desktop-session-awareness-loop` 的 `assessed@1`，而它在 G-1 轮拿到了第一个订阅者，见 §3.2）；**紫虚框** = 今天不存在。
 
 > 这张图**不包含** Memory、Goal、Action、Judgement、Planner、Tool Registry —— 因为它们在 `src/` 里**没有任何对应物**（§10）。
 
@@ -121,7 +130,7 @@ flowchart TB
 
 `PluginDefinition<TConfig>` = `{ id, version, requires?, provides?, config?, setup }` —— `src/runtime/plugin.ts:29-36`。
 
-`src/` 下 22 个目录里，19 个是 Plugin（`plugin.ts` + `contracts.ts` + `index.ts` barrel），另外三个不是：`runtime/`（Runtime 本身）、`cli/`（宿主入口）、`terminal-text/`（终端文本小工具）。**（重测于 `6fbc936`；`ada401c` 时是 21 / 18。）**
+`src/` 下 22 个目录里，**19 个产出 `PluginDefinition` 值**。判据是「产出那个值」，**不是「目录里有 `plugin.ts`」**——按后者会数出 20，因为 `runtime/plugin.ts` 定义的是 Plugin 的**机制**（`PluginState` / `PluginServiceContext` / `PluginContext` / `PluginDefinition` 等，8 个 export 全是 `export type` 或 `export interface`，**没有任何值**），Runtime 本身不是 Plugin。另外两个不是插件模块：`cli/`（宿主入口）、`terminal-text/`（终端文本小工具）。**（重测于 `41adccd`；`ada401c` 时是 21 / 18。）**
 
 **没有** `AgentPlugin` / `SensorPlugin` / `LoopPlugin` 这类业务基类树。「Loop」「Perception」「World」「Awareness」「Attention」在今天的代码里都只是**领域角色**，不是 Runtime 概念。
 
@@ -134,7 +143,7 @@ loadPlugin → waiting（requires 未满足）
            → failed（启动或运行中抛出）
 ```
 
-`#requirementsSatisfied` 是一个 **`every`** —— 这带来一个今天真实存在的后果：**require 了一个没人提供的契约的 Plugin 会永远停在 `waiting`**。这正是今天用「组合 roster」而不是「optional requires」来区分语言 variant 的原因（`src/language/plugin.ts:484` / `:531`）。
+`#requirementsSatisfied` 是一个 **`every`** —— 这带来一个今天真实存在的后果：**require 了一个没人提供的契约的 Plugin 会永远停在 `waiting`**。这正是今天用「组合 roster」而不是「optional requires」来区分语言 variant 的原因（`baseLanguageVariant` 与 `repositoryLanguageVariant`，`src/language/plugin.ts`）。**按符号引用，不按行号**——原文引的 `:484` / `:531` 已漂到别处（`governance-rules-v1.md` R7.4「行号不是身份」）。
 
 ### 2.3 公开 API
 
@@ -148,9 +157,9 @@ loadPlugin → waiting（requires 未满足）
 | `getPluginError(id)` | `:74` | 该 Plugin 的最后一个错误 |
 | `shutdown()` | `:78` | 逆序全部释放 |
 
-Plugin 侧上下文：`services.get / has / isProvidedBy`（`src/runtime/service-registry.ts`）、`events.subscribe / emit`（`src/runtime/event-bus.ts`）。
+Plugin 侧上下文其实**只有四个方法**：`services.get` / `services.provide`（`src/runtime/plugin.ts` 的 `PluginServiceContext`）与 `events.on` / `events.emit`（同文件的 `PluginEventContext`）。**订正**：上一版写的是 `services.has / isProvidedBy` 与 `events.subscribe` —— 那三个**不在插件上下文上**，插件拿不到；它们是 Runtime 内部类的方法（`has` / `isProvidedBy` 在 `ServiceRegistry`、`subscribe` 在 `EventBus`）。
 
-**两条真实的强制**（不是约定，是抛错）：
+**三条真实的强制**（不是约定，是抛错）——上一版写「两条」，但下面本来就列了三条：
 
 - `services.get` 一个**没有写进 `requires`** 的契约 → `UndeclaredServiceDependencyError`（`src/runtime/plugin-context.ts`）。这是「Consumer 只能拿自己声明过的东西」在代码里的落点。
 - `services.provide` 一个**没有写进 `provides`** 的契约 → `UndeclaredServiceProviderError`。
@@ -188,7 +197,7 @@ Plugin 侧上下文：`services.get / has / isProvidedBy`（`src/runtime/service
 | `language.desktop-return-speaking` | `language` | `src/language/contracts.ts:96` |
 | `desktop-content-read.read` | `desktop-content-read` | `src/desktop-content-read/contracts.ts:70` |
 
-**重测（`6fbc936`）**：末行那条是 G-1 轮新增的，也是 Hikari 第一个由**可选的**领域插件提供的 Service——`desktop-content-read` 只在组合里显式启用时才在。其余 16 条与 `ada401c` 时相同（行号可能漂移）。
+**重测（`41adccd`）**：末行那条是 G-1 轮新增的。**它不属于「可选」那一类**——上一版这里写「只在组合里显式启用时才在」，那是推断，不是实测：`desktop-content-read` 是**无条件加载的 base 成员**（`src/cli/resident.ts:288-291`；`test/resident-cli.test.mjs:89-100` 的 `BASE_MEMBER_IDS` 十项里它排第 9，注释逐字写着它「joined the base … rather than being an optional capability like everything appended below」）。可配置性从来不是它进组合的条件——**它不需要模型、不需要 repository、不需要 mandate**，因为它读的就是 awareness loop 已经采样过的那个窗口。其余 16 条与 `ada401c` 时相同（行号可能漂移）。
 
 这 17 个数字是**今天的事实**，不是架构不变量。Runtime 不知道它们是什么。
 
@@ -203,7 +212,9 @@ desktop-session-awareness-loop.assessed@1
 
 **本节在 `ada401c` 时写的是「生产订阅者 0」。** 那句当时是真的；`src/cli/resident.ts:197-200` 现在逐字记录它不再成立：「This comment used to say that `desktop-session-awareness-loop.assessed` has zero subscribers in production, and that is no longer true: `desktop-content-read` subscribes to it, and is the only thing that does.」
 
-新事实的形状值得单独说清楚：**它恰好有一个订阅者，而那个订阅者是一个可选的领域插件**——所以「有没有订阅者」在今天的组合里仍然不是一个常量，而取决于那个插件在不在组合里。
+**订正（`41adccd`）**：上一版这里写「那个订阅者是一个**可选的**领域插件」——**是错的**，那是从「新加的、领域插件」推出来的，不是实测。它是 **base 成员，无条件加载**（`src/cli/resident.ts:288-291`）。所以「有没有订阅者」在今天的默认组合里**是一个常量**：恰好一个，且写死在 base 里。
+
+这比原来的说法更值得记，因为两件事因此变了性质：这条 Event 已经从「有生产者、没有语义消费者」变成**组合里的一条真实依赖边**；而「谁订阅了它」不再取决于启动参数。
 
 ESLint 式的「Event 误用」（用 Event 做查询、做请求/响应、做命令）今天仍然没有发生，但理由变了：不再是「只有一个 Event 且无人订阅」，而是只有一个 Event、恰好一个订阅者，且它只承载「刚刚发生了一次评估」。
 
@@ -241,7 +252,8 @@ work-focus 自己的家族                src/work-focus/facts.ts
 
 - **`hikari init` 与 `hikari chronicle init` 是显式创建**；`hikari start` 与 `hikari resident` 是**零创建**路径（`src/cli/init.ts`、`src/cli/chronicle-init.ts`、`src/cli/start.ts`、`src/cli/resident.ts`）。
 - **没有 `openOrCreate`**。读取是纯读取。
-- **写事实不以动作成功为条件，动作成功也不以写事实为条件**（`durable-fact-admission-v0.md` §4，落点 `src/work-focus/` 与 `src/repository-ci-attention/` 的异步路径）。
+- **动作成功不以写事实为条件**（`durable-fact-admission-v0.md` §4）：`src/work-focus/session.ts` 在 append 失败时 catch 掉，照样返回 `ok`，另附一句 UNCONFIRMED。
+  **订正（`41adccd`）**：原文还写了对称的前半句「写事实不以动作成功为条件」——**那一半是错的**，至少对 `repository-ci-attention` 明显相反：它的 `delivered` 家族**只在 `deliver` 答 `delivered` 的那一支里写**，所以「这条事实存在」本身就是「投递成功」的断言（`src/repository-ci-attention/facts.ts:35-36` 逐字：「the only code that writes one is the branch where `deliver` answered `delivered`」）。准确的表述是：**写不写由每个家族自己定**——CI 那条以投递成功为条件，work-focus 那条以「集合真的动了」为条件（语义无操作不写）；两者都与 append 是否取得持久化确认无关。
 - **一个事实家族只有一个写入者。** 今天没有任何通用 recorder。
 
 ---
@@ -266,16 +278,22 @@ hikari relevance repository-ci status
 hikari observe desktop-session status
 hikari ask --data-dir "<text>"
 hikari confirm --data-dir "<text>"
+hikari screen --data-dir "<text>"   一个词授权一次窗口读取，再按页面上实际有的材料回答
+hikari content status --data-dir    问运行中的常驻：它上次看到的那个窗口里有什么
 hikari profile set|show|clear
 ```
 
-**`status` / `stop` / `subscribe` / `focus` / `relevance` / `observe` / `ask` / `confirm` 都经命名管道到达运行中的常驻**，因此在非 Windows 上无法工作（各 `endpoint-path.ts` 在非 win32 返回 `undefined`）。
+**`status` / `stop` / `subscribe` / `focus` / `relevance` / `observe` / `ask` / `confirm` / `screen` / `content status` 都经命名管道到达运行中的常驻**（**补充于 `41adccd`**：`screen` 与 `content status` 是这一轮新增的两条，原文只列了前八条），因此在非 Windows 上无法工作（各 `endpoint-path.ts` 在非 win32 返回 `undefined`）。
 
 ### 5.2 常驻组合
 
-`src/cli/resident.ts` 是组合根。默认 rosters 与追加轴（`--repository-root` / `--repository` / `--model`）在 `durable-fact-admission` 与 `judgement-reachability` 两轮里被记录为**四条 roster 共享同一个基础前缀**；`judgement-reachability-v0.md` §5 明确写下：
+`src/cli/resident.ts` 是组合根（`productionComposition`）。默认 rosters 与追加轴（`--repository-root` / `--repository` / `--model`）被记录为**合法 roster 共享同一个基础前缀**；`judgement-reachability-v0.md` §5 明确写下：
 
 > 「九个」仍然不是架构不变量。
+
+**重测（`41adccd`）**：两个数字都变了——**base 现在是十个成员**，`desktop-content-read` 是第 9 个且**无条件加载**（`test/resident-cli.test.mjs` 的 `BASE_MEMBER_IDS` 十项，注释逐字「Ten members, and the tenth is the newest」）；**合法 roster 是六条**（同一测试文件：「六个 roster 共享同一个基础前缀，且共有成员保持相对顺序」）。原文的「四条 roster」与引文里的「九个」都停在 `ada401c`。
+
+**那句不变量仍然成立，而且这次数字变动正是它的证据**：被钉住的是「每条合法组合各自」，不是某个成员数。把它当成计数来读，就会像原文那样在下一个成员到来时过期一次。
 
 `ready` 的语义是「组合里的 Plugin 全部 active」（`src/cli/resident.ts`）。它**不等于**第一次 assessment 成功、不等于后台链路健康、不等于后续每次获取都会成功 —— `current-stage.md` 已把这条限制记为 v1 已知限制（后台 cycle 失败没有公开健康表面）。
 
@@ -315,7 +333,7 @@ Human Delivery 仍是 single subscriber，TUI 不抢、不踢、不要求 fan-ou
 
 已经冻结的性质：
 
-- **它没有第二条协议。** 管道名、framing、四个 outcome 词（`chatted | answered | refused | failed`）全部**镜像** Language 侧 owner（`src/language/protocol.ts`、`src/language/endpoint-path.ts`、`src/cli/language.ts`——最后一个在 `a2d701f` 由 `src/cli/ask.ts` 改名而来）；C# 侧只是 client。
+- **它没有第二条协议。** 管道名、framing、**五个** outcome 词（`chatted | answered | recorded | refused | failed`）全部**镜像** Language 侧 owner（`src/language/protocol.ts`、`src/language/endpoint-path.ts`、`src/cli/language.ts`——最后一个在 `a2d701f` 由 `src/cli/ask.ts` 改名而来）；C# 侧只是 client。**订正（`41adccd`）**：上一版写「四个 outcome 词」——**那句话在 HEAD 之前就是错的**：协议早已有第五个词 `recorded`，而 C# 侧一直只认得四个，于是把一个合法应答报成 unreadable。两侧现在都是五个，且 conformance 的应答语料已由四种 shape 补成五种（`apps/human-surface/HumanSurface.Tests/node-helpers/conformance.mjs`）。
 - **它不是 judgement owner。** 不做显著性/重要性/是否该通知的判断，不读 repository / input activity / Work Focus，不订阅任何 domain plugin，不调模型。
 - **它不 durable。** 消息列表 `durability = none`，不落盘、不写 Chronicle。
 - **reconnect ≠ message retry**：重连是 transport availability，不是 delivery guarantee。
@@ -323,7 +341,7 @@ Human Delivery 仍是 single subscriber，TUI 不抢、不踢、不要求 fan-ou
 
 `docs/architecture/human-surface-v0-implementation-boundary-freeze.md` §12 的第一条（「不做 Human → Hikari 对话」）已被 `human-surface-language-client-v0-implementation-boundary-freeze.md` 解除；原文按 R7.2 **保留不改**，两份文档之间已有双向指针。
 
-**这个门禁自 `a2d701f` 起失效过，已在 C# CONFORMANCE GATE RESTORATION 修复。** 上面那句「C# 会红，而不是静默漂移」的前提曾随改名消失：C# 侧探的 `dist/cli/ask.js` 不再存在，该前提是**四个测试类共用**的，因此**17 个用例全部 skip**（`DeliveryEndpointPathTests` 3 + `LanguageConformanceTests` 6 + `LivePipeTests` 4 + `LiveLanguageTests` 4），而 skip 不算失败。今天的探测常量与 helper 的 import 都指向 `dist/cli/language.js`，本机实测 `69 passed, 0 failed, 0 skipped`。**这条修复尚未经过 CI**：本地领先 `origin/main`（`5dc1bc1`）十三个提交，CI 在 `a2d701f` 及其后的每一个提交上都是 0 次运行。失效期的实测与后果见 §11.7，死路径引用的完整清单见 §12.1 第 9 行。
+**这个门禁自 `a2d701f` 起失效过，已在 C# CONFORMANCE GATE RESTORATION 修复。** 上面那句「C# 会红，而不是静默漂移」的前提曾随改名消失：C# 侧探的 `dist/cli/ask.js` 不再存在，该前提是**四个测试类共用**的，因此**17 个用例全部 skip**（`DeliveryEndpointPathTests` 3 + `LanguageConformanceTests` 6 + `LivePipeTests` 4 + `LiveLanguageTests` 4），而 skip 不算失败。今天的探测常量与 helper 的 import 都指向 `dist/cli/language.js`，本机实测 `69 passed, 0 failed, 0 skipped`。**订正（`41adccd`）**：原文接着写「这条修复尚未经过 CI：本地领先 `origin/main`（`5dc1bc1`）十三个提交，CI 在 `a2d701f` 及其后的每一个提交上都是 0 次运行」——**两句都已不成立**：`git rev-list --count origin/main..HEAD` 现在是 **0**，`origin/main` 就是本文的证据基准 `41adccd`，`gh run list` 在 `9db8d34` 起的各个推送头上都是 `completed / success`。**仍然要如实说的**：`a2d701f` / `3b406fd` / `81504db` 三个提交本身没有运行记录——它们从未成为一次推送的头；CI 按推送头跑，所以「某个提交没有运行」**不等于**「那棵树没被测过」。失效期的实测与后果见 §11.7，死路径引用的完整清单见 §12.1 第 9 行。
 
 ---
 
@@ -374,6 +392,9 @@ repository-ci-relevance    src/repository-ci-relevance/plugin.ts:43
 
 ```text
 4 个感知 Plugin（foreground / input-activity / git-repository / github-ci）
+1 个正文读取（desktop-content-read）——**不是第五个感知 Plugin**：requires 为空、
+  只 provides 一个读服务、没有自己的 World、没有 overlay；它读的是 awareness
+  loop 已经采样过的那个窗口（G-1 轮加入，base 成员）
 2 个 World（desktop-session-world / repository-ci-world）
 2 个 Awareness（desktop-session-awareness / repository-ci-awareness）
 1 个 Loop（desktop-session-awareness-loop，每 activation 至多一个 cycle in-flight，不重叠）
@@ -397,12 +418,17 @@ chronicle.read()    repository-ci-attention/plugin.ts:161  读回「我自己投
 
 chronicle.get()     生产调用者 0
 
-experience / concern / salience 三个词在 src/ 里的命中数：0
+experience / concern / salience 三个词在 src/ 里的**符号**命中数：0
+  —— **订正（`41adccd`）**：原文写「命中数：0」，实测**注释命中 17 处**（符号仍然是 0）。
+     例：`src/language/model.ts`「a language concern, and this is where that concern lives」；
+     `src/desktop-content-read/plugin.ts`「No Memory, no Experience, no store, no file」。
+     这个区别要紧：命中为 0 会被读成「这些词在仓库里不存在」，而真相是
+     「它们只出现在否认式的注释里」——后者才是可引用的证据。
 ```
 
 **一个必须说清楚的后果**：按阶段文档 §4（`:182-186`）的完成判据第 1 条 —— 「**至少有一个生产 Plugin 读取它自己的过去，并因此行为不同**」——`repository-ci-attention` 今天**字面上符合**：它读回自己私有的 `delivered` 家族，并因此**不重复播报**。而同一份文档在 §2C 下的注（2026-10-08）主张这不构成 Reactivation 的解冻，理由是「**一个 owner 读自己私有的 fact 家族**……不是『当前情境与过去产生关联』」。
 
-**两句指向的不是同一件事**（§4 判完成，§2C 判 Reactivation 语义），因此**本文不替它定性**：判据第 1 条是否已经达到，是一次 Human/作者的裁决（§13 第 9 项）。
+**两句指向的不是同一件事**（§4 判完成，§2C 判 Reactivation 语义），因此**本文不替它定性**：判据第 1 条是否已经达到，是一次 Human/作者的裁决（§13 **第 7 行**）。**订正（`41adccd`）**：原文写「§13 第 9 项」——§13 只有 7 行，那个编号是重编号之前的残迹。
 
 该阶段的第一份研究是 `docs/architecture/experience-formation-v0-research.md`，其结论是 `VERDICT = NARROW`（`:526`），核心判断是：
 
@@ -430,7 +456,7 @@ experience / concern / salience 三个词在 src/ 里的命中数：0
 ### 7.2 已成立的语义
 
 - **Speech Sovereignty**：模型可以决定「还需要读什么」，不能决定「这些事实意味着什么」。
-- **两个闭集**：非空 `content` + 空 `tool_calls` → `chatted`；非空 `tool_calls` → `content` 整段丢弃（不是过滤掉，是**从未进入任何变量**）。
+- ~~**两个闭集**~~ **订正（`41adccd`）：已经是三个出口。** 非空 `content` + 空 `tool_calls` → `chatted`；非空 `tool_calls` → `content` 整段丢弃（不是过滤掉，是**从未进入任何变量**）；**以及 G-1 之后新增的一支**——当 `recordOnThePage || screenOnThePage`、这一步未被截断、且模型确实说了话时，`content` 在一道门后存活为**带标签的合成段**（`src/language/answer.ts` 的那三道门）。**上一版只写了前两个出口**，于是「模型的话永远不能出现在回答里」这个印象是错的——它出现，但被固定标签标成「不是读回来的内容」。
 - **终止是不变量**：每一次能继续的迭代必须消费一个此前没读过的 exposure，否则循环终止。
 - **批完整性**：还要再发一次请求时，上一条 assistant 消息里的每个 `tool_call_id` 都必须已有对应结果。
 - **`requires` 是硬依赖**：base variant 不依赖 Repository CI；fail-closed 是 v0 的语义，不是疏忽。
@@ -446,6 +472,12 @@ experience / concern / salience 三个词在 src/ 里的命中数：0
 同一条裁决同时钉住：对话历史的保存**不等于**可信人类身份认证（`:335`）；Work Focus 的现有重启语义**保持不变**（`:337`）。该文件 §12.4 明确**不新建** Memory Store / `memoryService` / Experience 中心 / 通用 recall substrate，也**不建立**任何关联机制（不排序、不打分、不做语义相似度、不做 relevance）。
 
 ### 7.3 Grounded Synthesis：本轮（commit `4143499` / `ada401c`）之后，必须如实记录的七条
+
+> **警告（`41adccd`）：本节已明显过期，本轮未重写。** 七条里至少四条与 HEAD 不符——第 1 条引的 `answer.ts:332` 已改写（现在是 `[...answer, ...renderSynthesis(synthesis.spoken, synthesis.material)]` 那一处）；第 2 条引的符号 `SYNTHESIS_LABEL` **今天不存在**，已拆成 `SYNTHESIS_LABEL_FIRST` 与 `SYNTHESIS_LABEL_REST`；第 4 条引的行号已漂；第 7 条的落点是**三材料**而不是「两行」——`SynthesisMaterial = 'record' | 'screen' | 'both'`，且实测第二行宽度**随材料变化**（record 53 / screen 59 / both 73 列，第一行 24 列）。整节对新增的 `screen` 请求词与 `desktop-content-read` 整条路线**零覆盖**。
+>
+> 仍然成立的：第 3 条、第 5 条（三个 live harness 自 `a2d701f` 起缺依赖字段、走到 `decisions()` 才炸，**未修**）、第 6 条。
+>
+> **为什么不顺手改**：改这一节要重跑真实端点或重做宽度实测——这台机器够不到端点，而宽度数字必须实测不能推算。所以这里**标记而不是重写**：留一句看得见的欠条，好过一段看起来新鲜、实际靠推算的正文。
 
 | # | 事实 | 证据 |
 | --- | --- | --- |
@@ -475,7 +507,9 @@ experience / concern / salience 三个词在 src/ 里的命中数：0
 
 两条路径**没有共同的判据、优先级或预算**。各自决定「这次要不要说话」，各自调用 `human-delivery.deliver`（`src/human-delivery/plugin.ts:45`）。
 
-**这看起来像统一的 Attention，实际上是逐场景的**。是否要合并、由谁拥有总量控制，本文不裁决（§13 列为待 Human 裁决）。
+**这看起来像统一的 Attention，实际上是逐场景的**。是否要合并、由谁拥有总量控制，**已于 2026-10-13 裁决**：维持**「保持独立」**（R4 四问全否 → L1 capability growth）；**「中央总量控制」在 `core-architecture-v0.md` §11 被点名否决**；「总量成为可读的**事实**而不是可决策的**判断**」登记为带触发条件的 NOT-YET（触发：出现第三条主动路径，或出现一条真实的、来自人的抱怨）。依据 `proactive-interruption-ownership-boundary-review.md`；裁决记录见 §13 末块。
+
+**订正（`41adccd`）**：原文写「本文不裁决（§13 列为待 Human 裁决）」——那一行裁决后已移出待裁决表，**而这句没有跟着改**，于是本文一度自相矛盾。两处现在一致。
 
 ### 8.1 两条路径真实的抵达历史（它们都不是顺理成章来的）
 
@@ -517,8 +551,11 @@ Human 裁决 N2-01           已成功投递过的静默；从未投递过的仍
 | 感知不能解释 | Perception Plugin 只产生 observation；解释在 Awareness 一侧 |
 | World 不解释、不持久化 | `desktop-session-world` / `repository-ci-world` 不写盘 |
 | 非 Windows 不假装支持 | 各 `endpoint-path.ts` 返回 `undefined`；感知 Plugin 在非 win32 `failed`，消费者 `waiting` |
+| **窗口正文只在一个词授权下被读一次** | 授权是**参数而不是状态**：`LanguageWord` 的第三个值 `screen` 承载它，`answerScreen(text)` 把它当参数收下，**不写进任何闭包**——所以「授权不能比携带它的那次调用活得更久」是**代码的性质**，不是关于怎么用代码的规矩（`src/language/answer.ts` 逐字）。**这不是权限层**：没有身份、没有作用域、没有可复用的开关，两次调用之间零状态。 |
 
-**今天没有权限系统的原因不是「还没做」**：今天所有能力要么是只读查询，要么是自己内部的事实写入。**没有任何一条真实副作用经过统一治理链** —— 没有 Action Pipeline，因此也没有需要它治理的动作。这条顺序是正确的，不是欠债。
+**今天没有权限系统的原因不是「还没做」**：今天所有能力要么是只读查询，要么是自己内部的事实写入；**没有统一治理链，也没有 Action Pipeline**，因此也没有需要它们治理的动作。这条顺序是正确的，不是欠债。
+
+**订正（`41adccd`）**：原文写「**没有任何一条真实副作用经过统一治理链**」——**授权这一层今天已经在代码里**，只是形状不像权限：上表最后一行「一个词授权一次读取」就是它。原文漏掉它，原因值得记下来：它长得不像权限（没有身份、没有作用域、没有状态），而这个仓库恰恰把**授权**与**权限**分开了。
 
 ---
 
@@ -527,13 +564,18 @@ Human 裁决 N2-01           已成功投递过的静默；从未投递过的仍
 对 `src/` 的搜索结论（不是推断）：
 
 ```text
-Memory          无任何实现；所有出现都是「这里不是 memory」的注释
+Memory          无模块；多为否认式注释（**订正**：原文写「所有出现都是」，实测有一处不是——
+                `src/cli/tui-state.ts` 的「A local memory bound, not a product threshold」讲的是别的东西）
 Goal / Planner  无模块、无标识符
 Action Pipeline 无实现；出现处只有注释里的「conventional agent loop」
-Tool/Capability Registry  无；暴露面是手写的冻结数组
-权限 / 授权层    无；exposure 注释明写「不携带任何权限」（src/language/exposure.ts:56-59）
+Tool/Capability Registry  无；暴露面是手写冻结数组——今天是**两个**数组、共 **3** 个工具
+                （`LANGUAGE_EXPOSURES` 2 个 + `LANGUAGE_REPOSITORY_EXPOSURES` 3 个；§7.1 已写对，本节未同步）
+权限 / 授权层    **无统一权限层；但已有授权**（**订正**：原文写「无」，那是 `ada401c` 之前的事实）——
+                一个词（`screen`）授权一次窗口读取，量是请求局部的，见 §9 表末行
 跨平台管道       无；全部端点非 win32 返回 undefined
-第二类判据       无；relevance 只有「逐字相等」，取值只有 relevant | unknown
+第二类判据       **收窄**（**订正**：原文写「无」）——relevance 的判据仍是逐字相等、取值仍只有
+                `relevant | unknown`；但桌面正文侧新增了**窗口级**判据：`decideContentRead` 的
+                refused / unreadable / empty，以及 `viewportRelation` 的四值
 ```
 
 ---
@@ -545,7 +587,7 @@ Tool/Capability Registry  无；暴露面是手写的冻结数组
 1. **后台 cycle 失败没有健康表面。** Runtime 不会把 active Plugin 的后台 rejection 变成 `failed`；Loop 吸收每次失败后继续下一个 cycle。**后果**：常驻可以活着，但无法证明每个 cycle 都成功。（`current-stage.md` 已知限制 1）
 2. **停机没有严格上界。** 没有超时、没有 hard kill。（已知限制 2）
 3. **Windows 上无法用外部自动化完整复现真实控制台 Ctrl+C 的优雅信号路径。** POSIX 用例在 win32 自我 skip —— 这是「这台机器上测不了」，不是「已经测过」。（已知限制 3）
-4. **assessed Event 的订阅者数为 0。** 它可以被持续发布，但还没有语义上的 Consumer。（已知限制 5）
+4. ~~**assessed Event 的订阅者数为 0。**~~ **已不成立（`41adccd`）**：它现在有**恰好一个**订阅者——`desktop-content-read`，base 成员、无条件加载（`src/desktop-content-read/plugin.ts:200`；`src/cli/resident.ts` 顶部注释逐字记录了这次变化）。本条原为「已知限制 5」，随 G-1 轮关闭。
 5. **Chronicle v1 没有完整性标记** —— 因此「fact 行被删光、header 完好」的 store 与全新 store 在结构上无法区分。（随 Phase 2 进入下一阶段的格式限制）
 6. **三个 live harness 自 `a2d701f` 起无法运行**（TypeError），未修；`language-reasoning-depth.live.test.mjs` 按设计会因前提移动而失败（守卫在正常工作）。
 7. **C# 一致性门禁自 `a2d701f` 起失效——而且是 skip，不是 fail。（已修复，见本条末）** `HumanSurface.Tests/NodeBridge.cs:22` 探测 `dist/cli/ask.js`、`node-helpers/conformance.mjs:29` 直接 import 它；该文件在 `a2d701f` 随 `src/cli/ask.ts` → `src/cli/language.ts` 一起改名，今天的真实产物是 `dist/cli/language.js`。实测该 import 返回 `ERR_MODULE_NOT_FOUND`。`NodeBridge.Available` 因此恒为 false，**17 个用例全部走 `Skip`**（`Available` 是四个测试类共用的前提，不是 `LanguageConformanceTests.cs:56-67` 一处），而 `TestRun` 的退出码只看 `_failed`、不看 `_skipped`（`TestRun.cs:57`）——CI 会保持绿色（`.github/workflows/runtime-tests.yml:37,72` 确实跑这个工程）。**但要说准确：CI 并没有真的在这个提交上跑过。** 实测 `origin/main` 停在 `5dc1bc1`（2026-09-29，其 CI run 为 success），本地领先 13 个提交，`gh run list` 在 `a2d701f`、`4143499`、`ada401c`、`81504db` 上各查到 **0 次运行**。所以「CI 会绿」是**由本机实测推出的机制判断**（修复前本机 `52 passed, 0 failed, 17 skipped` exit 0），**不是 CI 上观测到的结果**；这十三轮改动至今没有经过任何 CI。skip 给出的理由是「run npm run build」，指向一个永远不会产生该文件的补救。
@@ -564,7 +606,9 @@ Tool/Capability Registry  无；暴露面是手写的冻结数组
 
 本节只记录**能确认的**；不能确认的进入 §13。
 
-### 12.1 已确认的过时 / 自相矛盾（行号已逐条核对）
+### 12.1 已确认的过时 / 自相矛盾（**行号不再逐条核对**）
+
+> **订正（`41adccd`）**：本节标题原写「行号已逐条核对」。**那只在 `81504db` 时点成立**——此后 `current-stage.md` 在第 129 与 195 行之间被插入 8 行（判据：`git grep -F "cli/ask"` 在 `81504db` 为 L113/195/197，在 `HEAD` 为 L113/203/205），因此该文件所有大于 129 的行号**整体 +8**，另有一处独立漂移（`language/plugin.ts:403 → :431`）。**下表按 R7.2 保留原行号并在此说明**：引用请按条目名而不是行号（R7.4）；重编后的行号见每行末的括注。
 
 | # | 位置 | 问题 | 处理 |
 | --- | --- | --- | --- |
@@ -613,7 +657,9 @@ human-inbound-v0-boundary-review.md:176-180 引用同样两句话，然后补一
 core-architecture-v0.md §11 的禁止清单：今天一条都没被违反（无 Central Brain / 无 GlobalWorldState /
   无万能 Service / 无万能消息对象 / 无 Plugin 基类树）
 plugin-design-spec.md §3 禁止 service locator：src/ 里没有 getService()/resolve()/container()
-plugin-design-spec.md §4.1 符号层：跨模块 import 走 barrel
+plugin-design-spec.md §4.2 符号层：跨模块 import 走 barrel —— 但这是 **SHOULD 且尚未完全满足**
+  （存在 4 条 sibling domain deep-path import，`plugin-design-spec.md` 自己记着这一点）。
+  原文写 §4.1，条号错；「可以放心引用」因此要带这个限定。
 ```
 
 ---
@@ -624,13 +670,12 @@ plugin-design-spec.md §4.1 符号层：跨模块 import 走 barrel
 
 | # | 待裁决问题 | 谁已经把它标成待裁决 | 不裁决的后果 |
 | --- | --- | --- | --- |
-| 1 | **不变量 #4 的读法**：约束「谁造句」还是「谁说话」（§12.2a） | `outbound-composition-v0-boundary-review.md` §19.1（该文件逐字写「两份文档不能同时都对」） | 今天无影响；下一条落在 Domain 一侧的主动能力会立刻撞上 |
+| 1 | **不变量 #4 的读法**：约束「谁造句」还是「谁说话」（§12.2a） | `outbound-composition-v0-boundary-review.md` **§19.3**（并列于 §19.2 的表；该文件逐字写「两份文档不能同时都对」）。原文写 §19.1，那是「为什么不是 READY」 | 今天无影响；下一条落在 Domain 一侧的主动能力会立刻撞上 |
 | 2 | **`Human → Hikari` 的坐标**：它在入站/出站之外（§12.2b） | `human-inbound-v0-boundary-review.md:180`（自称「定义性空白」） | 任何需要「证明说话的是人」的能力都停在这里 |
-| 3 | **`language.decision-confirmed` 的读者面**：谁有权读、读来做什么 | `current-stage.md` 记录该事实家族只有 CLI 写入者 | 写下的已确认决定今天不影响任何行为 |
-| 4 | **后台 cycle 健康表面**：补它等于为「当时那一瞬」新增一条必须长期维护的契约 | `current-stage.md`（列为 v1 已知限制，明写「不是可以顺手补的补丁」） | 常驻活着 ≠ 每个 cycle 成功，且无法证明 |
-| 5 | **神经系统是否要有代码实体**：契约 / 组织约定 / Plugin | `hikari-nervous-system-stage-v0.md` 只定义阶段，不给形状 | 阶段的完成判据（读侧不再为零）无处落地 |
-| 6 | **Experience Formation 的解锁条件**：`VERDICT = NARROW` 自带条件 —— 出现一个真实 bounded consumer，其职责无法只靠 current facts 完成 | `experience-formation-v0-research.md:517-518` | 该阶段的第一刀切不下去 |
-| 7 | **神经系统阶段判据第 1 条是否已达到**：`repository-ci-attention` 读回自己的 `delivered` 家族并因此不重复播报，字面符合「至少有一个生产 Plugin 读取它自己的过去，并因此行为不同」（§6.3） | 由本文提出；`hikari-nervous-system-stage-v0.md` §4 与 §2C 的注指向的不是同一件事 | 该阶段的**下一步做不做、做什么**，取决于这一次定性 |
+| 3 | **后台 cycle 健康表面**：补它等于为「当时那一瞬」新增一条必须长期维护的契约 | `current-stage.md`（列为 v1 已知限制，明写「不是可以顺手补的补丁」） | 常驻活着 ≠ 每个 cycle 成功，且无法证明 |
+| 4 | **神经系统是否要有代码实体**：契约 / 组织约定 / Plugin | `hikari-nervous-system-stage-v0.md` 只定义阶段，不给形状 | 阶段的完成判据（读侧不再为零）无处落地 |
+| 5 | **Experience Formation 的解锁条件**：`VERDICT = NARROW` 自带条件 —— 出现一个真实 bounded consumer，其职责无法只靠 current facts 完成 | `experience-formation-v0-research.md:517-518` | 该阶段的第一刀切不下去 |
+| 6 | **神经系统阶段判据第 1 条是否已达到**：`repository-ci-attention` 读回自己的 `delivered` 家族并因此不重复播报，字面符合「至少有一个生产 Plugin 读取它自己的过去，并因此行为不同」（§6.3） | 由本文提出；`hikari-nervous-system-stage-v0.md` §4 与 §2C 的注指向的不是同一件事 | 该阶段的**下一步做不做、做什么**，取决于这一次定性 |
 
 **已经裁决并已实施的**（不在上表，列在这里避免被误读为待办）：
 
@@ -648,6 +693,11 @@ Memory Reactivation v0 —— BLOCKED（不是待办；含义是「当前不存�
   「这是一个设计默认」并给出理由时才落 SHOULD）。据此 `current-stage.md`「本表的分类与
   来源」已把该清单**全表 39 条**逐条落类：**MUST 6 条 / SHOULD 6 条 / 其余约 27 条
   NOT-YET**。原为 §13 第 7 行，裁决后移入本块。
+language.decision-confirmed 的读者面 —— 原为 §13 第 3 行，2026-10-13 移入本块。**读者面早已闭合**，
+  而那一行写的「写下的已确认决定今天不影响任何行为」**是错的**：读取自 `a2d701f`（2026-10-08）起
+  就在生产路径上——`src/language/continuity.ts` 按该 type 过滤，`src/language/plugin.ts` 把它读进
+  prompt——并已于 2026-10-08 按 L2 裁决（`VERDICT = READY`，见
+  `contextual-experience-reactivation-n1-research.md`）。
 ```
 
 ---

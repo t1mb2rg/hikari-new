@@ -356,10 +356,12 @@ export function productionComposition(options: ResidentOptions): Composition {
   //
   // What this file still does not do, and the reason it is safe to add a plugin that speaks unprompted:
   // it still does not add a subscriber of its own, and it still does not route anything. Each decider
-  // reaches Language and the transport through Services it declared, and `desktop-session-awareness-loop.
-  // assessed` still has zero subscribers in production. A `provides`/`requires` pair between two named
-  // members is not a routing graph — no member chooses a destination, and there is nothing here that
-  // could be told to deliver somewhere else.
+  // reaches Language and the transport through Services it declared. (`desktop-session-awareness-loop.
+  // assessed` now has exactly one subscriber, and it is neither this file nor a decider: it is
+  // `desktop-content-read`, a base member — the note near the top of this file is where that was
+  // corrected, and it is the reason this sentence no longer says "zero".) A `provides`/`requires` pair
+  // between two named members is not a routing graph — no member chooses a destination, and there is
+  // nothing here that could be told to deliver somewhere else.
   const proactiveCiDelayMs = options.proactiveCiDelayMs;
   const proactiveReturn = options.proactiveReturn;
 
