@@ -8,6 +8,7 @@ import {
   changeableRepositoriesReadService,
   renderAuthorizedRepositories,
   renderRepositoryRead,
+  renderRepositorySearch,
 } from '../dist/changeable-repositories/index.js';
 import { desktopSessionAwarenessPeekService } from '../dist/desktop-session-awareness/index.js';
 import { renderAssessment } from '../dist/desktop-session-observe/index.js';
@@ -102,6 +103,7 @@ const WORK = 'work_focus_read';
 const DESKTOP = 'desktop_context_read';
 const REPOSITORIES = 'authorized_repositories_list';
 const REPOSITORY_READ = 'authorized_repository_read';
+const REPOSITORY_SEARCH = 'authorized_repositories_search';
 
 // One declared root and one file inside it, fixed here rather than taken from the machine. The same
 // reason `assessmentFixture` gives: what is under test is which capability the model chooses, and a
@@ -110,6 +112,12 @@ const REPOSITORY_ROOT = 'C:\\语义验证用的假仓库';
 const REPOSITORY_TARGET = `${REPOSITORY_ROOT}\\README.md`;
 const REPOSITORY_LINES = Object.freeze(['语义验证用的假 README 第一行。']);
 
+// The word the search fixture claims to have found, fixed here for the reason the path above is: the
+// claim under test is which capability the model picks, not what it typed into it. The provider answers
+// with this needle whatever the model searched for, and `expectedAnswer` renders the same fixture, so the
+// two stay an equality between the answer and the owner's renderer.
+const SEARCH_NEEDLE = 'Work Focus';
+
 function repositoryReadFixture() {
   return {
     kind: 'read',
@@ -117,6 +125,20 @@ function repositoryReadFixture() {
     form: 'file',
     lines: REPOSITORY_LINES,
     truncated: false,
+  };
+}
+
+function repositorySearchFixture(needle) {
+  // The matched line contains the word the model looked for. The next turn reads this text, so a fixture
+  // whose line had nothing to do with the needle would be evidence that the renderer ran and not that
+  // the model got an answer to the question it asked.
+  const text = `语义验证用的假 README：这里提到 ${needle}。`;
+  return {
+    kind: 'searched',
+    needle,
+    matches: [{ path: REPOSITORY_TARGET, line: 1, text }],
+    skippedDirectories: [],
+    unreadable: [],
   };
 }
 
@@ -359,6 +381,13 @@ const SENTENCES = Object.freeze([
     detour: false,
     why: '要读仓库里的一个文件，只有带参数的那个能力做得到；路径写在句子里，所以这不是靠名字能猜的',
   },
+  {
+    text: '这个仓库里哪些地方提到了 Work Focus？',
+    required: [REPOSITORY_SEARCH],
+    forbidden: [],
+    detour: false,
+    why: '问的是「哪些地方」，只有按内容找的那个能力答得了：读一个文件答不了它，列目录也答不了它',
+  },
 ]);
 
 function assessmentFixture() {
@@ -408,7 +437,7 @@ function assessmentFixture() {
 async function run(text) {
   const performed = [];
   const requested = [];
-  const reads = { focus: 0, peek: 0, repositories: 0, repository: 0 };
+  const reads = { focus: 0, peek: 0, repositories: 0, repository: 0, search: 0 };
   const reasoningLengths = [];
   let steps = 0;
   let truncated = false;
@@ -429,6 +458,10 @@ async function run(text) {
     async readAuthorizedRepository() {
       reads.repository += 1;
       return repositoryReadFixture();
+    },
+    async searchAuthorizedRepositories() {
+      reads.search += 1;
+      return repositorySearchFixture(SEARCH_NEEDLE);
     },
   });
 
@@ -576,6 +609,9 @@ function expectedAnswer(result) {
     else if (name === DESKTOP) lines.push(...renderAssessment(assessmentFixture()));
     else if (name === REPOSITORIES) lines.push(...renderAuthorizedRepositories([REPOSITORY_ROOT]));
     else if (name === REPOSITORY_READ) lines.push(...renderRepositoryRead(repositoryReadFixture()));
+    else if (name === REPOSITORY_SEARCH) {
+      lines.push(...renderRepositorySearch(repositorySearchFixture(SEARCH_NEEDLE)));
+    }
   }
   return lines;
 }
@@ -585,7 +621,7 @@ function describe(runResult) {
     `  outcome=${runResult.outcome}` +
     `  requested=[${runResult.requested.join(', ')}]` +
     `  performed=[${runResult.performed.join(', ')}]` +
-    `  serviceReads={focus:${runResult.reads.focus}, peek:${runResult.reads.peek}, repositories:${runResult.reads.repositories}, repository:${runResult.reads.repository}}` +
+    `  serviceReads={focus:${runResult.reads.focus}, peek:${runResult.reads.peek}, repositories:${runResult.reads.repositories}, repository:${runResult.reads.repository}, search:${runResult.reads.search}}` +
     // The one line that says *why* nothing was selected. Without it a `failed` row reports the absence
     // of a decision and withholds the reason, which is the state this diagnostic was added to end.
     //
@@ -598,7 +634,7 @@ function describe(runResult) {
 }
 
 test(
-  '真实 endpoint 的语义选择：8 句话，每句独立 3 次',
+  '真实 endpoint 的语义选择：9 句话，每句独立 3 次',
   { skip: SKIP, timeout: 15 * 60 * 1000 },
   async (t) => {
     const rows = [];
@@ -736,7 +772,8 @@ test(
 
 // A guard against the harness being run with a configuration that would make the result meaningless,
 // and against the exposure set having grown without this file noticing: the sentences above name the
-// capabilities by hand, and a fifth would make the required sets above silently incomplete.
+// capabilities by hand, and an exposure added to the list would make the required sets above silently
+// incomplete.
 //
 // `required` and `forbidden` together, not `required` alone. A capability covered only as something not
 // to read is still covered — that is exactly what sentence #7 is — and a guard that demanded a positive
@@ -751,7 +788,7 @@ test('语义验证的句子覆盖了当前全部 capability', () => {
   }
   assert.deepEqual(
     LANGUAGE_EXPOSURES.map((exposure) => exposure.name).sort(),
-    [WORK, DESKTOP, REPOSITORIES, REPOSITORY_READ].sort(),
+    [WORK, DESKTOP, REPOSITORIES, REPOSITORY_READ, REPOSITORY_SEARCH].sort(),
   );
   // And the four Service contracts the harness stubs are the four the plugin requires, so a fifth
   // dependency would fail here rather than being quietly left unread by every sentence.
@@ -764,4 +801,5 @@ test('语义验证的句子覆盖了当前全部 capability', () => {
   assert.ok(renderAssessment(assessmentFixture()).length > 0);
   assert.ok(renderAuthorizedRepositories([REPOSITORY_ROOT]).length > 0);
   assert.ok(renderRepositoryRead(repositoryReadFixture()).length > 0);
+  assert.ok(renderRepositorySearch(repositorySearchFixture(SEARCH_NEEDLE)).length > 0);
 });

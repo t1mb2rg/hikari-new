@@ -26,6 +26,12 @@
 // through. A consumer reads the set the way it is meant to be read — through the contract below, which
 // this plugin publishes now that it has one.
 //
+// The read half kept growing after that paragraph was written, and the same pointer discipline applies: the
+// third capability on this contract — searching the set for a piece of text — is the one that reverses a
+// line the read slice had frozen, and it reverses it by the read half's own test rather than by an
+// exception. So the barrel now publishes three renderers and three exposures, and the sentence above is
+// left as it was written because it was true of the slice that wrote it.
+//
 // The one renderer that stays inside is `renderChangeableRepositories`, and the read half reaches it
 // rather than re-exporting it: a model has to be shown the same list a human reads on a command line, and
 // the way to guarantee that is for both surfaces to call one function, not for two barrels to export the
@@ -48,16 +54,29 @@ export {
   createChangeableRepositoriesRead,
   renderAuthorizedRepositories,
   renderRepositoryRead,
+  renderRepositorySearch,
 } from './read.js';
 export type {
   ChangeableRepositoriesReadService,
   RepositoryRead,
   RepositoryReadForm,
 } from './read.js';
-export { authorizedRepositoriesListExposure, authorizedRepositoryReadExposure } from './exposure.js';
+export {
+  MAX_SEARCH_BYTES,
+  MAX_SEARCH_FILES,
+  MAX_SEARCH_MATCHES,
+  MAX_SEARCH_MATCH_TEXT,
+} from './search.js';
+export type { RepositoryMatch, RepositorySearch, SearchBound } from './search.js';
+export {
+  authorizedRepositoriesListExposure,
+  authorizedRepositoryReadExposure,
+  authorizedRepositorySearchExposure,
+} from './exposure.js';
 export type {
   AuthorizedRepositoriesListExposure,
   AuthorizedRepositoryReadExposure,
+  AuthorizedRepositorySearchExposure,
 } from './exposure.js';
 export {
   ChangeableRepositoriesLineReader,

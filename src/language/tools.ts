@@ -108,7 +108,7 @@ export function readArguments(raw: string, argument?: DeclaredArgument): Argumen
  * The comparison is against the list it was handed rather than against a copy of the names or against
  * some larger set it could consult, so a name that is not offered to this model is not found and cannot
  * become found by anything other than the caller passing a longer list. Lookup is linear because the
- * list is five entries long at most and a map would be a second structure to keep in step with the
+ * list is six entries long at most and a map would be a second structure to keep in step with the
  * first.
  */
 export function findExposure(

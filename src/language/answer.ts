@@ -127,6 +127,7 @@ import {
 } from './express.js';
 import type { SynthesisMaterial } from './express.js';
 import type { LanguageExposure } from './exposure.js';
+import { LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES } from './exposure.js';
 import type { ExposureReader } from './read.js';
 import type { ModelMessage, ModelRequest, ModelStep, ModelTool } from './model.js';
 import { buildScreenMaterial, buildSystemPrompt, promptListsRecord } from './prompt.js';
@@ -221,16 +222,29 @@ const UNRUN_CALL_RESULT = '这次调用没有执行。';
 // unboundedly many calls — and the choice is between a bound and an interaction whose length a model
 // decides.
 //
-// Eight, and the number is deliberately dull: the longer exposure list, plus three. A model that
-// reads every capability it was offered and then asks three follow-up questions still fits; it is small
-// enough that a model looping over a directory cannot exhaust the model's context or a human's patience;
-// and it is a count of *calls*, not of bytes or seconds, because the thing being bounded is how long this
-// interaction can run rather than how much it costs. The per-call limits are the owner's
-// (`changeable-repositories/read.ts` bounds one answer), and a budget framework that could spend a
+// The longer exposure list, plus three — and the number *is* that expression rather than a value written
+// beside it. A model that reads every capability it was offered and then asks three follow-up questions
+// still fits; it is small enough that a model looping over a directory cannot exhaust the model's context
+// or a human's patience; and it is a count of *calls*, not of bytes or seconds, because the thing being
+// bounded is how long this interaction can run rather than how much it costs. The per-call limits are the
+// owner's (`changeable-repositories/read.ts` bounds one answer), and a budget framework that could spend a
 // different number of reads on a different kind of question is exactly the machinery this build does not
 // have and is not acquiring here: this is one number, checked in one place, and the model is told nothing
 // about it — a model that hits it is answered with the same fixed line every other unperformed call gets.
-const MAX_READS_PER_INTERACTION = 8;
+//
+// This was a literal once, and it was wrong twice. The first version said the number was twice the longest
+// exposure list, which was not true of the lists it was describing; the correction said "the longer list,
+// plus three", which was true on the day it was written and stopped being true the moment a capability was
+// added to those lists. Both are one failure: a sentence and a number are two things, and the only thing
+// holding them together was somebody remembering. Deriving it is the fix — the same move `read.ts` names in
+// its own header, a property that follows rather than one that is remembered.
+//
+// A recorded trigger rather than a task: `src/cli/language.ts` computes the same maximum over the same two
+// lists, for the wire's timeout, so this idea now has two copies. A third copy is the point to export one
+// constant from `exposure.ts` instead of writing a fourth — not today, because hoisting it now would tie
+// the command line's derivation to this plugin's for a benefit nothing has demonstrated yet.
+const MAX_READS_PER_INTERACTION =
+  Math.max(LANGUAGE_EXPOSURES.length, LANGUAGE_REPOSITORY_EXPOSURES.length) + 3;
 
 export function createAnswerer(dependencies: LanguageDependencies): Answerer {
   let turn: DialogueTurn | null = null;

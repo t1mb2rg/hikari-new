@@ -21,6 +21,15 @@
 // refuses that field by name, and re-deciding that refusal for a capability that needs it would be a
 // worse trade than adding an optional one that only this entry carries.
 //
+// The third entry is the first capability here whose *verb* had to be declared rather than inferred, and
+// the reason is the argument shape above rather than anything to do with searching. Two entries now
+// declare one named string, so "does it declare an argument" no longer says which method is meant. A
+// second argument shape was not the answer — the shape is what `tools.ts` decided, and this module does
+// not get to decide it a second time — so the entry carries one word naming its method. The alternative,
+// telling the two apart in `language/read.ts` by comparing exposure names, would move the owner's own
+// statement about its capability into a string the consumer matches on, which is the trade that file's
+// header refuses by name.
+//
 // The frame a model actually reads is not here. It is in `read.ts`, next to the read that produces the
 // judgement, because a description is what a capability *is* and a frame is what one *answer* looks
 // like — and because the closing line of that frame has to travel with every reply rather than being
@@ -53,6 +62,31 @@ export interface AuthorizedRepositoryReadExposure {
   readonly service: ServiceContract<ChangeableRepositoriesReadService>;
 }
 
+/**
+ * Where one piece of text appears in the set.
+ *
+ * This is the third capability on one Service, and it is the first that has to say *which* of that
+ * Service's methods it names. The first two are told apart without a word for it — `language/read.ts`
+ * asks whether the exposure declares an argument at all — and that question stops being enough the moment
+ * two capabilities answer it the same way, which is exactly what this one does with
+ * `authorized_repository_read`: one takes a path, this one takes text to look for, and both declare one
+ * named string. So the declaration grows one word, and it is this owner's word rather than the consumer's:
+ * a capability that changed which method it names would change this module, not a dispatch written
+ * somewhere else.
+ *
+ * The bounds behind the answer — how many matches, how many files, how much text — are deliberately not
+ * in this description. They are in the reply when they matter, in the sentence that says the answer is
+ * shorter than the question deserved, and a number in a description would be a promise this module has to
+ * keep in two places.
+ */
+export interface AuthorizedRepositorySearchExposure {
+  readonly name: string;
+  readonly description: string;
+  readonly method: 'search';
+  readonly argument: { readonly name: string; readonly description: string };
+  readonly service: ServiceContract<ChangeableRepositoriesReadService>;
+}
+
 export const authorizedRepositoriesListExposure: AuthorizedRepositoriesListExposure = Object.freeze({
   name: 'authorized_repositories_list',
   description:
@@ -67,6 +101,18 @@ export const authorizedRepositoryReadExposure: AuthorizedRepositoryReadExposure 
   argument: Object.freeze({
     name: 'target',
     description: '要读的路径。绝对路径；必须在已声明的目录之内。',
+  }),
+  service: changeableRepositoriesReadService,
+});
+
+export const authorizedRepositorySearchExposure: AuthorizedRepositorySearchExposure = Object.freeze({
+  name: 'authorized_repositories_search',
+  description:
+    '在已声明为可改的仓库目录里按内容找一段文字，返回出现它的文件、行号，以及那一行。原样匹配，区分大小写。',
+  method: 'search',
+  argument: Object.freeze({
+    name: 'needle',
+    description: '要找的一段文字。原样匹配，区分大小写；不接受正则或通配符。',
   }),
   service: changeableRepositoriesReadService,
 });

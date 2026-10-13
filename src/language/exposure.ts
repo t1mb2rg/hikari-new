@@ -58,6 +58,14 @@
 // count of lists in this file is still two. Recorded here because the next capability will be read against
 // whatever precedent the last one left: the question to ask is the reachability one, not a headcount.
 //
+// The third one arrived by that same test and is recorded the same way. A search of the declared set is
+// reachable wherever the reading of it is — same plugin, same Service, an unconditional member of every
+// resident — so it joins the shared prefix too, and the count of variants is still two. What it does
+// disturb is the paragraph below, which said one capability declares an argument: two do now, and the
+// reason they can be told apart at all is a word the owner added to one of its exports rather than a name
+// this file matches on. That word is in `changeable-repositories/exposure.ts`, for the reason every other
+// field lives with its owner.
+//
 // What *has* changed is that this file can no longer say every capability is a zero-argument read. One of
 // the four below declares an argument, which means `tools.ts` stopped having a single shape to build and
 // this plugin gained its first capability whose call is not fully described by its name. The declaration
@@ -99,10 +107,12 @@
 import type {
   AuthorizedRepositoriesListExposure,
   AuthorizedRepositoryReadExposure,
+  AuthorizedRepositorySearchExposure,
 } from '../changeable-repositories/index.js';
 import {
   authorizedRepositoriesListExposure,
   authorizedRepositoryReadExposure,
+  authorizedRepositorySearchExposure,
 } from '../changeable-repositories/index.js';
 import type { DesktopContextReadExposure } from '../desktop-session-awareness/index.js';
 import { desktopContextReadExposure } from '../desktop-session-awareness/index.js';
@@ -124,6 +134,7 @@ import { workFocusReadExposure } from '../work-focus/index.js';
 export type LanguageExposure =
   | AuthorizedRepositoriesListExposure
   | AuthorizedRepositoryReadExposure
+  | AuthorizedRepositorySearchExposure
   | WorkFocusReadExposure
   | DesktopContextReadExposure
   | RepositoryCiRelevanceReadExposure;
@@ -146,6 +157,7 @@ export const LANGUAGE_EXPOSURES = Object.freeze([
   desktopContextReadExposure,
   authorizedRepositoriesListExposure,
   authorizedRepositoryReadExposure,
+  authorizedRepositorySearchExposure,
 ]);
 
 /**
@@ -164,5 +176,6 @@ export const LANGUAGE_REPOSITORY_EXPOSURES = Object.freeze([
   desktopContextReadExposure,
   authorizedRepositoriesListExposure,
   authorizedRepositoryReadExposure,
+  authorizedRepositorySearchExposure,
   repositoryCiRelevanceReadExposure,
 ]);

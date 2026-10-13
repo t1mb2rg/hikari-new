@@ -34,6 +34,16 @@
 // sibling that does split, `desktop-session-awareness`, splits because asking consumes a baseline;
 // nothing here does.
 //
+// A third method arrived after that paragraph was written, and the paragraph is kept rather than edited
+// because its test is the test that admitted the new one rather than the one that refused it: a search is
+// a question about what is inside the set, it consumes nothing, it takes no policy argument, and it reads
+// the same state at the moment it is called. What it does change is the shape of an answer — `search`
+// answers with where a piece of text was found rather than with the text at a path — which is why its
+// walk lives in `search.ts` and its frame lives here, beside the frame of the read it resembles. It is
+// also the method that reverses a line the read slice had frozen ("只有一个 `read`"), and that reversal,
+// the real run that forced it, and what it does *not* loosen are in
+// `changeable-repositories-search-v0-boundary-review.md`.
+//
 // Containment is decided on canonical names, both sides, and never on spelling. `paths.ts` predicted this
 // reader by name:
 //
@@ -63,6 +73,8 @@ import { isAbsolute, sep } from 'node:path';
 
 import { defineService } from '../runtime/contracts.js';
 
+import type { RepositoryMatch, RepositorySearch } from './search.js';
+import { searchWithin } from './search.js';
 import type { ChangeableRepositoriesSession } from './session.js';
 import { renderChangeableRepositories } from './state.js';
 
@@ -100,14 +112,16 @@ export type RepositoryRead =
   | { readonly kind: 'not-text'; readonly target: string };
 
 /**
- * The contract: what the set is, and what is inside one of its directories.
+ * The contract: what the set is, what is inside one of its directories, and where a piece of text appears
+ * in it.
  *
- * Two methods, no policy argument, no baseline, and no way to ask "would this be allowed" — see the file
+ * Three methods, no policy argument, no baseline, and no way to ask "would this be allowed" — see the file
  * header for why those absences are the same sentence `desktop-content-read` writes.
  */
 export interface ChangeableRepositoriesReadService {
   roots(): Promise<readonly string[]>;
   read(target: string): Promise<RepositoryRead>;
+  search(needle: string): Promise<RepositorySearch>;
 }
 
 export const changeableRepositoriesReadService = defineService<ChangeableRepositoriesReadService>(
@@ -118,7 +132,7 @@ export const changeableRepositoriesReadService = defineService<ChangeableReposit
 /**
  * The Service, over the session the endpoint already answers through.
  *
- * It is built on the session rather than on a state value so that both methods read the set *at call
+ * It is built on the session rather than on a state value so that all three methods read the set *at call
  * time*. `current()` states that rule for its own callers — "read at call time, never a snapshot of when
  * this was created" — and taking the state here would be the second way to get this wrong, on the side
  * that has a model waiting on the answer.
@@ -132,6 +146,9 @@ export function createChangeableRepositoriesRead(
     },
     async read(target: string): Promise<RepositoryRead> {
       return readWithin(session.current().repositories, target);
+    },
+    async search(needle: string): Promise<RepositorySearch> {
+      return searchWithin(session.current().repositories, needle);
     },
   });
 }
@@ -165,6 +182,17 @@ const FILE_TRUNCATED = '这个文件比一次能读的更长，以上只是开�
 const DIRECTORY_TRUNCATED = '这个目录的项比一次能列的多，以上只是开头。';
 
 /**
+ * The one fixed line for a path this process could not look at, whichever method could not look at it.
+ *
+ * A read has one such path and a search has several, and they are the same fact: the answer says what it
+ * could not see rather than quietly being smaller. It is a function rather than two template literals so
+ * that the sentence is written once.
+ */
+function unreadableLine(target: string): string {
+  return `${target} 读不到：它不存在，或者它不是这个进程能读的东西。`;
+}
+
+/**
  * Render one read for a model: the owner's fixed frame around the owner's own lines.
  *
  * Every branch is fixed here and none of them is composed by a caller. The path is interpolated into the
@@ -187,9 +215,96 @@ export function renderRepositoryRead(result: RepositoryRead): readonly string[] 
     case 'outside':
       return [`${result.target} 不在任何已声明的可改仓库之内。`];
     case 'unreadable':
-      return [`${result.target} 读不到：它不存在，或者它不是这个进程能读的东西。`];
+      return [unreadableLine(result.target)];
     case 'not-text':
       return [`${result.target} 不是一个文本文件。`];
+  }
+}
+
+/**
+ * The fixed opening line of a search.
+ *
+ * The needle travels between 「」 rather than bare, which is the one value in this file that is not simply
+ * interpolated into a sentence: a needle is text a model chose, its whole purpose is to be found inside
+ * somebody else's words, and a reader has to be able to see where the needle ended and the line began.
+ */
+function searchHead(needle: string): string {
+  return `以下是「${needle}」在这些仓库里出现的位置，来自你被授权查看的目录。`;
+}
+
+/** The fixed line for one place the needle was found: where it is, and the line itself. */
+function matchLine(match: RepositoryMatch): string {
+  return `${match.path}:${match.line}: ${match.text}`;
+}
+
+// The two bounds say different things and each says only itself. A match bound means the walk stopped with
+// a match in hand and never looked at the rest of the set; a spend bound means it walked as far as it was
+// allowed and did not reach the end. Saying the first when the second happened would claim a complete walk
+// that never happened; saying the second when the first happened would claim the set is bigger than it is.
+const SEARCH_MORE_MATCHES = '出现的地方比一次能返回的多，以上只是开头。';
+const SEARCH_UNFINISHED = '这个仓库里的文件比一次能找的多，以上只是找过的那些。';
+
+/**
+ * The fixed line for a search that looked everywhere it was allowed and found nothing.
+ *
+ * It is the one line here that carries the needle back, and it carries it because the plain alternative —
+ * "以上这些文件里没有找到" — would be this module talking about its own output rather than answering the
+ * question that was asked. It is only ever said when the walk was complete: a search that reached either
+ * bound has not established this, and saying it there would turn "there is none among the files I happened
+ * to look at" into "there is none".
+ */
+function searchNotFound(needle: string): string {
+  return `这些仓库里没有任何文本提到「${needle}」。`;
+}
+
+/** The fixed line naming the directory names a search did not descend into. */
+function skippedLine(names: readonly string[]): string {
+  return `（跳过了 ${names.join(' 与 ')}。）`;
+}
+
+/**
+ * Render one search for a model: the owner's fixed frame around the owner's own lines.
+ *
+ * It lives beside `renderRepositoryRead` rather than in `search.ts` for the reason the file header gives —
+ * every fixed line of this Service's replies is written in one place — and the walk that produced these
+ * matches has no opinion about wording. The needle is interpolated into the opening frame and the matched
+ * text into each line; both are repository-or-human text, both are one element each, and `Language`'s
+ * reader escapes every element, so a line break inside either cannot become a second line of Hikari's.
+ *
+ * A search that found nothing is not one of `read`'s four outcomes and is not written as a failure. What
+ * was asked — "where does this text appear" — has an answer: it does not, in the files that were looked
+ * at. That is the line, and the set being empty is a different line because it is a different fact: there
+ * was nothing to look in.
+ */
+export function renderRepositorySearch(result: RepositorySearch): readonly string[] {
+  switch (result.kind) {
+    case 'nothing-declared':
+      return [...renderChangeableRepositories(Object.freeze({ repositories: [] }))];
+    case 'searched': {
+      const lines: string[] = [searchHead(result.needle), ...result.matches.map(matchLine)];
+
+      if (result.truncatedBy === 'matches') {
+        lines.push(SEARCH_MORE_MATCHES);
+      } else if (result.truncatedBy !== undefined) {
+        lines.push(SEARCH_UNFINISHED);
+      } else if (result.matches.length === 0) {
+        lines.push(searchNotFound(result.needle));
+      }
+
+      if (result.skippedDirectories.length > 0) {
+        lines.push(skippedLine(result.skippedDirectories));
+      }
+
+      // One line per path, in the order the walk met them, before the closing frame rather than after it:
+      // these are Hikari's own statements about what it could not see, and they belong inside the block the
+      // frame closes rather than trailing it as loose text.
+      for (const path of result.unreadable) {
+        lines.push(unreadableLine(path));
+      }
+
+      lines.push(READ_CLOSING);
+      return lines;
+    }
   }
 }
 

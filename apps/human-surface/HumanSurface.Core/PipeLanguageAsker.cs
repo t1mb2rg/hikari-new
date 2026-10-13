@@ -35,15 +35,16 @@ public sealed class PipeLanguageAsker : ILanguageAsker
     /// <remarks>
     /// The one number here that has to be kept in step with the other side by hand, and it is written
     /// down rather than derived because a .NET process cannot ask TypeScript how long an array is.
-    /// Verified against the built module: <c>LANGUAGE_EXPOSURES</c> holds four and
-    /// <c>LANGUAGE_REPOSITORY_EXPOSURES</c> holds five, so the longest list this build can be talking
+    /// Verified against the built module: <c>LANGUAGE_EXPOSURES</c> holds five and
+    /// <c>LANGUAGE_REPOSITORY_EXPOSURES</c> holds six, so the longest list this build can be talking
     /// to is the repository one. This is the same number <c>src/cli/language.ts:114-117</c> takes a
     /// maximum over, and the conformance suite asserts that the derivation below equals the real
     /// <c>REPLY_TIMEOUT_MS</c> out of <c>dist/cli/language.js</c> — so the day a capability is added,
     /// this goes red instead of quietly timing out a question that was about to be answered. It went
-    /// red exactly once so far, when the two repository read capabilities were added.
+    /// red exactly twice so far: when the two repository read capabilities were added, and when the
+    /// search capability was.
     /// </remarks>
-    public const int LongestExposureCount = 5;
+    public const int LongestExposureCount = 6;
 
     /// <summary>
     /// The client's whole budget for the exchange, computed from what the exchange can cost.

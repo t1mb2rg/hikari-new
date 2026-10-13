@@ -13,7 +13,9 @@
 // which is the endpoint's own answer to the same question. The two repository halves are
 // `renderChangeableRepositories` and `renderRepositoryRead` from `changeable-repositories`, the first
 // reached through a one-line wrapper because a model has to be shown the same list a human reads on a
-// command line and the way to guarantee that is for both surfaces to call one function.
+// command line and the way to guarantee that is for both surfaces to call one function. A third joined them
+// with the search capability — same module, same reason — and the counts in this header are left as they
+// were written rather than edited into a number that will be wrong again.
 //
 // "Already existed" is the rule and not the literal history: `renderRepositoryRead` was written in the
 // same slice as the capability it renders, because the capability is new and had no rendering to inherit.
@@ -61,6 +63,15 @@
 // error and throws like any other, because a read this build cannot perform is not a reading that came
 // back empty.
 //
+// That paragraph is kept, and the third capability is what it could not have anticipated: a search also
+// declares an argument, so "an argument or none" stopped distinguishing anything, and the Service grew a
+// third method behind a filter this file could no longer derive. The answer is the third filter — a word
+// the owner puts on the export itself — because the alternatives were worse in the way the paragraph above
+// already rules out: matching on a name string moves the owner's statement into the consumer, and a second
+// argument shape would be this plugin deciding something `tools.ts` owns. So the count of filters equals
+// the count of methods on the contract, and a fourth method would be the point to ask whether one Service
+// is still the right size rather than to add a fourth filter.
+//
 // What is *not* here: the raw contract values. `DesktopSessionAwarenessAssessment` is a union of nested
 // snapshots with facet verdicts, and handing that to a model would be handing it a tree to interpret —
 // the inferences the exposure's own description says Hikari never drew. The renderer has already
@@ -74,11 +85,12 @@
 // branch. That branch throws, which becomes `failed`: a read this build cannot perform is not a reading
 // that came back empty, and collapsing the two would report a broken wiring as an empty fact.
 
-import type { RepositoryRead } from '../changeable-repositories/index.js';
+import type { RepositoryRead, RepositorySearch } from '../changeable-repositories/index.js';
 import {
   changeableRepositoriesReadService,
   renderAuthorizedRepositories,
   renderRepositoryRead,
+  renderRepositorySearch,
 } from '../changeable-repositories/index.js';
 import type { DesktopSessionAwarenessAssessment } from '../desktop-session-awareness/index.js';
 import { desktopSessionAwarenessPeekService } from '../desktop-session-awareness/index.js';
@@ -95,15 +107,16 @@ import { renderFocus } from './express.js';
 /**
  * What this plugin needs in order to perform a read.
  *
- * Four functions, all already on the plugin before this file existed, named by what they return rather
- * than by which contract they came from. The dispatch below is what knows which is which, and keeping
- * that knowledge in one place is why this is not four separate dependency objects.
+ * Five functions, all already on the plugin before this file existed except the last, named by what they
+ * return rather than by which contract they came from. The dispatch below is what knows which is which,
+ * and keeping that knowledge in one place is why this is not five separate dependency objects.
  *
- * The two repository entries are separate functions rather than one because they are separate questions:
- * `readAuthorizedRepositories` asks what the set is and takes nothing, `readAuthorizedRepository` asks
- * what is inside it and takes the path it was asked about. A dependency object that took one function with
- * an optional argument would be this file deciding that the two are the same reading, which is the
- * decision `changeable-repositories/read.ts` already made in the other direction by publishing them as two
+ * The three repository entries are separate functions rather than one because they are separate questions:
+ * `readAuthorizedRepositories` asks what the set is and takes nothing, `readAuthorizedRepository` asks what
+ * is inside it and takes the path it was asked about, and `searchAuthorizedRepositories` asks where a piece
+ * of text appears in it and takes the text. A dependency object that took one function with an optional
+ * argument would be this file deciding that the three are the same reading, which is the decision
+ * `changeable-repositories/read.ts` already made in the other direction by publishing them as three
  * methods.
  */
 export interface ExposureDependencies {
@@ -111,13 +124,14 @@ export interface ExposureDependencies {
   readonly peek: () => Promise<DesktopSessionAwarenessAssessment>;
   readonly readAuthorizedRepositories: () => Promise<readonly string[]>;
   readonly readAuthorizedRepository: (target: string) => Promise<RepositoryRead>;
+  readonly searchAuthorizedRepositories: (needle: string) => Promise<RepositorySearch>;
 }
 
 /**
  * Perform one exposure's read and render it.
  *
  * The second parameter is what the model's call carried, already read against the exposure's own
- * declaration by `tools.ts`. A capability that declares no argument ignores it — every branch but one does
+ * declaration by `tools.ts`. A capability that declares no argument ignores it — every branch but two does
  * — and a capability that declares one finds its value by the name the owner gave rather than by a name
  * written here, so an owner that renamed its argument would not need this file edited.
  *
@@ -141,17 +155,41 @@ export function createExposureReader(dependencies: ExposureDependencies): Exposu
       return lineSafe(renderAssessment(await dependencies.peek()));
     }
     if (exposure.service === changeableRepositoriesReadService) {
+      // Which of the three this is, asked of the owner's own export rather than of a name: a declared
+      // method is the search, no declared argument at all is the list, and what is left is the read.
+      if ('method' in exposure && exposure.method === 'search') {
+        const needle = declaredValue(exposure, values);
+        return lineSafe(
+          renderRepositorySearch(await dependencies.searchAuthorizedRepositories(needle)),
+        );
+      }
       if (!('argument' in exposure)) {
         return lineSafe(renderAuthorizedRepositories(await dependencies.readAuthorizedRepositories()));
       }
-      const target = values[exposure.argument.name];
-      if (target === undefined) {
-        throw new LanguageError(`能力 ${exposure.name} 需要参数 ${exposure.argument.name}。`);
-      }
+      const target = declaredValue(exposure, values);
       return lineSafe(renderRepositoryRead(await dependencies.readAuthorizedRepository(target)));
     }
     throw new LanguageError(`能力 ${exposure.name} 指向的服务不是这个构建能读取的服务。`);
   };
+}
+
+/**
+ * The value the model's call carried for a declared argument, or the wiring error that says there is none.
+ *
+ * Two capabilities declare an argument now, so the sentence for a call that arrived without one is written
+ * once rather than twice. It is an error rather than an empty reading for the reason this file has always
+ * given: the exposure declared the argument, so its absence is this build being unable to perform the read,
+ * and a read this build cannot perform is not a reading that came back empty.
+ */
+function declaredValue(
+  exposure: LanguageExposure & { readonly argument: { readonly name: string } },
+  values: Readonly<Record<string, string>>,
+): string {
+  const value = values[exposure.argument.name];
+  if (value === undefined) {
+    throw new LanguageError(`能力 ${exposure.name} 需要参数 ${exposure.argument.name}。`);
+  }
+  return value;
 }
 
 /**

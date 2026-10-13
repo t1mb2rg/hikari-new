@@ -243,6 +243,12 @@ MAX_REPOSITORY_DIRECTORY_ENTRIES       = 200           单个目录一次最多�
 - **不改 variant 数**，**不改 `prompt.ts`**，**不引入 budget framework**；
 - **不做「提议 → 采纳」的回路**——人看完提议之后做什么，不在本片链上。
 
+> **指针（不是对上表的改写）**：上表第 4 条「**不做搜索能力**」在 `2026-10-14` 被 **CHANGEABLE
+> REPOSITORIES SEARCH v0** 反转了一条——那一小片新增了第三个方法 `search` 与 exposure
+> `authorized_repositories_search`，见 `docs/architecture/changeable-repositories-search-v0-boundary-review.md`
+> §7.5「本片反转一条写在冻结文档里的拒绝」，并由 Human 于同日批准（冻结那片 §7.1 的六条字面，并允许反转本条）。
+> 上表**一字未改**：它记录的是 read v0 当时划下的边界，反转本身记在这里和那片文档里，不写回本表。
+
 ---
 
 ## 9. 验证计划

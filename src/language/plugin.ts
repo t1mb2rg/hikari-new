@@ -537,6 +537,7 @@ export const baseLanguageVariant: LanguageVariant = Object.freeze({
       peek: () => awareness.peek(),
       readAuthorizedRepositories: () => repositories.roots(),
       readAuthorizedRepository: (target) => repositories.read(target),
+      searchAuthorizedRepositories: (needle) => repositories.search(needle),
     });
   },
 });
@@ -594,6 +595,7 @@ export const repositoryLanguageVariant: LanguageVariant = Object.freeze({
       peek: () => awareness.peek(),
       readAuthorizedRepositories: () => repositories.roots(),
       readAuthorizedRepository: (target) => repositories.read(target),
+      searchAuthorizedRepositories: (needle) => repositories.search(needle),
       readRelevance: () => relevance.current(),
     });
   },

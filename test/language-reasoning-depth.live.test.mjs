@@ -120,10 +120,12 @@ const WORK = 'work_focus_read';
 const DESKTOP = 'desktop_context_read';
 const REPOSITORIES = 'authorized_repositories_list';
 const REPOSITORY_READ = 'authorized_repository_read';
+const REPOSITORY_SEARCH = 'authorized_repositories_search';
 
-// The path the read sentence names, written out rather than discovered. The two new rows are about
-// whether a model reaches for the capability that takes an argument when the sentence hands it one; a
-// path this checkout happens to contain would make that depend on the machine.
+// The path the read sentence names, written out rather than discovered. The three new rows are about
+// whether a model reaches for the capability that takes an argument when the sentence hands it one, and
+// about whether it reaches for the one that takes a word to look for; a path this checkout happens to
+// contain would make that depend on the machine.
 const REPOSITORY_TARGET = 'C:\\语义验证用的假仓库\\README.md';
 
 /** `D` / `W` for the two capabilities, so a four-column table of three runs each stays readable. */
@@ -132,10 +134,11 @@ const CODE = Object.freeze({
   [DESKTOP]: 'D',
   [REPOSITORIES]: 'L',
   [REPOSITORY_READ]: 'F',
+  [REPOSITORY_SEARCH]: 'S',
 });
 
 /**
- * The eight sentences, verbatim from the frozen criterion, with the classification each one carries.
+ * The nine sentences, verbatim from the frozen criterion, with the classification each one carries.
  *
  * Every sentence states the same three sets, because the three readings are independent:
  *
@@ -234,6 +237,14 @@ const SENTENCES = Object.freeze([
     exact: [REPOSITORY_READ],
     detour: false,
     kind: '带参数读取',
+  },
+  {
+    text: '这个仓库里哪些地方提到了 Work Focus？',
+    required: [REPOSITORY_SEARCH],
+    forbidden: [],
+    exact: [REPOSITORY_SEARCH],
+    detour: false,
+    kind: '按内容找',
   },
 ]);
 
@@ -973,9 +984,9 @@ test(
 );
 
 // The guard the other live test carries, for the same reason: the sentences above name the capabilities
-// by hand, so a fifth exposure would make every required/forbidden/exact set silently incomplete — and
-// this experiment would then be measuring four arms against a table that no longer describes the
-// surface they select from.
+// by hand, so an exposure added to the list would make every required/forbidden/exact set silently
+// incomplete — and this experiment would then be measuring four arms against a table that no longer
+// describes the surface they select from.
 test('reasoning-depth matrix 的句子覆盖了当前全部 capability', () => {
   const named = new Set(
     SENTENCES.flatMap((sentence) => [...sentence.required, ...sentence.forbidden, ...sentence.exact]),
@@ -985,7 +996,7 @@ test('reasoning-depth matrix 的句子覆盖了当前全部 capability', () => {
   }
   assert.deepEqual(
     LANGUAGE_EXPOSURES.map((exposure) => exposure.name).sort(),
-    [WORK, DESKTOP, REPOSITORIES, REPOSITORY_READ].sort(),
+    [WORK, DESKTOP, REPOSITORIES, REPOSITORY_READ, REPOSITORY_SEARCH].sort(),
   );
   // 四档与 three-reading 表是这份实验的全部输入，改动它们就是改实验条件本身。
   assert.deepEqual([...ARMS], ['none', 'low', 'high', 'max']);
