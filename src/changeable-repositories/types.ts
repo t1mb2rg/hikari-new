@@ -39,6 +39,23 @@ export interface ChangeableRepositoriesReply {
   readonly lines: readonly string[];
 }
 
+/**
+ * The answer to a request, in the same three shapes the control channel and the sibling plugin use.
+ *
+ * This is the client's vocabulary rather than the wire's: `answered` is a reply that arrived and was
+ * readable, `absent` is nothing listening, and `unavailable` is everything else. The three are kept
+ * apart because the human is told something different by each, and because folding the last two into
+ * "nothing there" would tell them there is nothing to find while something is there but broken.
+ */
+export type ChangeableRepositoriesOutcome =
+  | {
+      readonly kind: 'answered';
+      readonly outcome: 'ok' | 'failed';
+      readonly lines: readonly string[];
+    }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'unavailable'; readonly detail: string };
+
 // The bounds, for the same reason `hikari focus` has them and at the same sizes: what a human may
 // name is not this module's business to shorten, but whoever is on the other end of the pipe does not
 // get to choose how much this process buffers. A reply echoes the whole set back, so it is at least

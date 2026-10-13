@@ -44,6 +44,7 @@ export {
   MAX_CHANGEABLE_REPOSITORIES_REQUEST_LINE,
 } from './types.js';
 export type {
+  ChangeableRepositoriesOutcome,
   ChangeableRepositoriesReply,
   ChangeableRepositoriesRequest,
   ChangeableRepositoriesWord,

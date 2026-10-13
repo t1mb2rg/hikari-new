@@ -26,6 +26,7 @@ import { MessageChannel } from 'node:worker_threads';
 
 import { ChronicleNotInitializedError, chroniclePlugin } from '../chronicle/index.js';
 import { NotInitializedError, continuityPlugin } from '../continuity/index.js';
+import { changeableRepositoriesPlugin } from '../changeable-repositories/index.js';
 import { desktopContentReadPlugin } from '../desktop-content-read/index.js';
 import { desktopReturnAttentionPlugin } from '../desktop-return-attention/index.js';
 import { desktopSessionAwarenessPlugin } from '../desktop-session-awareness/index.js';
@@ -288,6 +289,24 @@ export function productionComposition(options: ResidentOptions): Composition {
     {
       id: desktopContentReadPlugin.id,
       load: (runtime) => runtime.loadPlugin(desktopContentReadPlugin, { rootDir: options.dataDir }),
+    },
+    // A person's second write surface, placed directly before the other one so the two acts that are a
+    // person *telling* Hikari something sit together and after every member that reads the world. It
+    // requires Chronicle — it both writes and reads back its own durable facts — and Chronicle is the
+    // second member of this list, so the position costs nothing.
+    //
+    // It provides nothing, deliberately, and that is why it belongs in this composition rather than
+    // behind a flag the way the Repository CI chain is: an endpoint exists for exactly as long as its
+    // plugin is activated, so being here is what gives the ingress its lifetime. It also means every
+    // resident has the command, which is honest — naming a directory as changeable authorizes nothing by
+    // itself, and there is nothing for it to be gated behind until the check that reads it exists.
+    //
+    // It is placed before `work-focus` rather than after so that member stays the last of the base, which
+    // is what its own comment claims and what the reasoning there depends on.
+    {
+      id: changeableRepositoriesPlugin.id,
+      load: (runtime) =>
+        runtime.loadPlugin(changeableRepositoriesPlugin, { rootDir: options.dataDir }),
     },
     // The last member of the base, and the one a person writes through rather than reads from: it is
     // where a person declares what they are working on, and the member above is where a person reads

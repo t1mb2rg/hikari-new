@@ -1,3 +1,4 @@
+import type { ChangeableRepositoriesWord } from '../changeable-repositories/index.js';
 import type { WorkFocusWord } from '../work-focus/index.js';
 
 export interface CliOptions {
@@ -159,6 +160,20 @@ export interface FocusOptions extends CliOptions {
   readonly designations: readonly string[];
 }
 
+// `change` takes operands for the same reason `focus` does, and the same rule applies to them: they are
+// exactly what a human typed. Nothing here trims them, folds them, resolves them, expands them or asks
+// whether they name a directory — whether a path can be *admitted* is the owning plugin's question, and
+// it is asked on the other side of the pipe with the filesystem in hand.
+//
+// The temptation here that `focus` does not have is to be helpful: to `resolve` a relative path, to
+// require a `.git` directory, to collapse a trailing separator. Every one of those would be this file
+// forming an opinion about what a path is, and the plugin would then be checking a value the CLI had
+// already rewritten — which is how a set ends up holding something nobody typed.
+export interface ChangeOptions extends CliOptions {
+  readonly word: ChangeableRepositoriesWord;
+  readonly repositories: readonly string[];
+}
+
 // The one operand is the human's sentence, carried exactly as they typed it. Nothing here trims it,
 // folds it, lowercases it or inspects it for intent: what a sentence means is the language plugin's
 // question, asked with a model, and a CLI that formed its own idea of what was being asked would be
@@ -282,6 +297,11 @@ export type ParsedCommandLine =
     }
   | { readonly command: 'resident'; readonly options: ResidentOptions }
   | { readonly command: 'focus'; readonly options: FocusOptions }
+  // `change` is a second command over the same protocol shape, and it gets its own arm rather than
+  // sharing the Resident's options for the reason every multi-word command above does: its word plus its
+  // operands are the address of a question put to one plugin's endpoint, and the type is what keeps that
+  // address from being reassembled somewhere else.
+  | { readonly command: 'change'; readonly options: ChangeOptions }
   | { readonly command: 'ask'; readonly options: AskOptions }
   | { readonly command: 'confirm'; readonly options: ConfirmOptions }
   // `screen` gets an arm rather than joining `content`, and the two commands are the pair worth telling
@@ -333,6 +353,10 @@ export const USAGE = [
   '  hikari focus replace --data-dir <path> <designation> [<designation> ...]',
   '  hikari focus clear --data-dir <path>',
   '  hikari focus status --data-dir <path>',
+  '  hikari change declare --data-dir <path> <目录> [<目录> ...]',
+  '  hikari change replace --data-dir <path> <目录> [<目录> ...]',
+  '  hikari change clear --data-dir <path>',
+  '  hikari change status --data-dir <path>',
   '  hikari relevance repository-ci status --data-dir <path>',
   '  hikari observe desktop-session status --data-dir <path>',
   '  hikari content status --data-dir <path>',
@@ -433,6 +457,14 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   // option — handing a token list back would mean a second reader downstream that could not tell
   // which tokens were which.
   if (head === 'focus') return readFocusCommand(rest);
+
+  // `change` resolves here for the same reason `focus` does, and it is the same reason twice over: it has
+  // operands, and an operand is not an option. The two are deliberately *not* one command with two
+  // vocabularies — they reach different plugins, hold different things, and one of them is a permission
+  // while the other is a note about what somebody is doing. A shared reader would have to be told which
+  // of the two it was reading for, and that flag is exactly the knowledge the two arm types keep in one
+  // place each.
+  if (head === 'change') return readChangeCommand(rest);
 
   // `relevance` resolves here for the same reason `focus` does, and for one more. It has operands —
   // a domain and a question — so a token list could not carry them; and reading them here rather than
@@ -546,6 +578,34 @@ function readFocusCommand(rest: readonly string[]): ParsedCommandLine {
   const { dataDir, operands } = readOperandTokens(tokens);
   readFocusArity(word, operands);
   return { command: 'focus', options: { dataDir, word, designations: operands } };
+}
+
+// The second table of this shape, and the second one typed by its owner's union for the same reason: a
+// word added there does not compile until it is added here, and the message below is derived from the
+// table rather than written out a third time. Two instances is still not enough to justify an
+// abstraction — a generic "read a word from a union" helper would have to be handed the message, the
+// table and the command name, which is everything the two readers already say plainly.
+const CHANGE_WORDS: Readonly<Record<ChangeableRepositoriesWord, true>> = {
+  declare: true,
+  replace: true,
+  clear: true,
+  status: true,
+};
+
+function isChangeableRepositoriesWord(value: string): value is ChangeableRepositoriesWord {
+  return Object.hasOwn(CHANGE_WORDS, value);
+}
+
+function readChangeCommand(rest: readonly string[]): ParsedCommandLine {
+  const [word, ...tokens] = rest;
+  if (word === undefined || !isChangeableRepositoriesWord(word)) {
+    const supported = Object.keys(CHANGE_WORDS).join(' / ');
+    throw new UsageError(`change 只支持 ${supported}，收到：${word ?? '(缺失)'}`);
+  }
+
+  const { dataDir, operands } = readOperandTokens(tokens);
+  readChangeArity(word, operands);
+  return { command: 'change', options: { dataDir, word, repositories: operands } };
 }
 
 interface OperandTokens {
@@ -769,6 +829,23 @@ function readFocusArity(word: WorkFocusWord, operands: readonly string[]): void 
   }
   if ((word === 'clear' || word === 'status') && operands.length !== 0) {
     throw new UsageError(`focus ${word} 不接受工作焦点参数。`);
+  }
+}
+
+// Same grammar, one difference in what it refuses, and the difference is the plugin's rather than this
+// file's: `focus declare` takes exactly one designation, while `change declare` and `change replace` both
+// take one or more directories. The empty list is refused here as a *usage* error rather than passed on,
+// because a word that requires a name and was given none is a typing mistake — while the same request
+// arriving over the pipe, from a client that meant it, is a no-op the plugin answers honestly. Two
+// different questions, asked in the two places that can tell them apart.
+function readChangeArity(word: ChangeableRepositoriesWord, operands: readonly string[]): void {
+  if ((word === 'declare' || word === 'replace') && operands.length === 0) {
+    throw new UsageError(
+      `change ${word} 至少需要一个目录；要清空请用 hikari change clear。`,
+    );
+  }
+  if ((word === 'clear' || word === 'status') && operands.length !== 0) {
+    throw new UsageError(`change ${word} 不接受目录参数。`);
   }
 }
 
