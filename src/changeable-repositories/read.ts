@@ -257,9 +257,36 @@ function searchNotFound(needle: string): string {
   return `这些仓库里没有任何文本提到「${needle}」。`;
 }
 
+/**
+ * A list of names as a person writes one: separators between, one `与` before the last.
+ *
+ * Written out rather than joined with a single separator because the skip list has four names now, and
+ * `a 与 b 与 c 与 d` reads like a sentence somebody gave up on. Two names produce exactly what they produced
+ * before the list grew, which is what keeps the older line in the tests a real check.
+ */
+function nameList(names: readonly string[]): string {
+  if (names.length <= 1) {
+    return names.join('');
+  }
+
+  return `${names.slice(0, -1).join('、')} 与 ${names[names.length - 1]}`;
+}
+
 /** The fixed line naming the directory names a search did not descend into. */
 function skippedLine(names: readonly string[]): string {
-  return `（跳过了 ${names.join(' 与 ')}。）`;
+  return `（跳过了 ${nameList(names)}。）`;
+}
+
+/**
+ * The fixed line for the files a search stepped over, because no single file may spend the budget every
+ * file shares.
+ *
+ * It is a count rather than a list, and it is a line at all for the reason every other line here exists:
+ * "not looked at" and "looked at and did not match" are different answers, and a reply that made the first
+ * look like the second would be claiming a search that never happened.
+ */
+function oversizedLine(count: number): string {
+  return `（跳过了 ${count} 个太大的文件。）`;
 }
 
 /**
@@ -293,6 +320,10 @@ export function renderRepositorySearch(result: RepositorySearch): readonly strin
 
       if (result.skippedDirectories.length > 0) {
         lines.push(skippedLine(result.skippedDirectories));
+      }
+
+      if (result.oversizedFiles > 0) {
+        lines.push(oversizedLine(result.oversizedFiles));
       }
 
       // One line per path, in the order the walk met them, before the closing frame rather than after it:

@@ -64,6 +64,7 @@ export type {
 export {
   MAX_SEARCH_BYTES,
   MAX_SEARCH_FILES,
+  MAX_SEARCH_FILE_BYTES,
   MAX_SEARCH_MATCHES,
   MAX_SEARCH_MATCH_TEXT,
 } from './search.js';

@@ -22,6 +22,15 @@
 // absorbed silently would turn "there is more" into "this is all there is", which is the one thing this
 // module must never do.
 //
+// Three of those numbers were chosen a second time on 2026-10-14, after the first live run against a real
+// repository. Four mebibytes of spend ended inside `.gitnexus/` — an index directory holding a 51.9 MiB
+// binary and 26.5 MiB of text — so the walk covered 0.11 MiB of a 97.2 MiB repository and never reached
+// `src/`: every search answered "there is more" and showed nothing. The size of the budget was not the only
+// mistake. A budget shared by every file is a budget that one pathological file can spend, so a fifth
+// constant bounds a single file, and it is the only one of the five that does not end the walk — the walk
+// steps over that file and carries on. The measurement, the numbers as they were first chosen, and this
+// amendment are recorded in the review's §3.5, §5.2 and §7.6.
+//
 // What is *not* here: the frame. Every fixed line of every reply this contract produces is written in
 // `read.ts`, next to the reads whose results it frames, and this file returns only the judgement — which
 // is the same split `read.ts`'s header describes, one method further along.
@@ -37,10 +46,22 @@ import { join } from 'node:path';
 export const MAX_SEARCH_MATCHES = 50;
 
 /** How many files one search opens and scans. */
-export const MAX_SEARCH_FILES = 1000;
+export const MAX_SEARCH_FILES = 2000;
 
 /** How many bytes one search reads in total. */
-export const MAX_SEARCH_BYTES = 4 * 1024 * 1024;
+export const MAX_SEARCH_BYTES = 32 * 1024 * 1024;
+
+/**
+ * How big one file may be and still be scanned.
+ *
+ * A file larger than this is not scanned, and how many of them the walk met is reported. The other two
+ * spend bounds are shared by every file, so without this one a single generated file spends the whole
+ * budget before the walk reaches the first source file — which is what the first live run measured.
+ *
+ * It is not one of the bounds `SearchBound` names, and the difference is the point: reaching it does not
+ * end the walk. The walk steps over that file and carries on with the next.
+ */
+export const MAX_SEARCH_FILE_BYTES = 1024 * 1024;
 
 /** How much of one matching line a search keeps. */
 export const MAX_SEARCH_MATCH_TEXT = 200;
@@ -48,13 +69,28 @@ export const MAX_SEARCH_MATCH_TEXT = 200;
 /**
  * The directory names no search descends into, in the order a reply names them.
  *
- * `.git` holds a repository's own bookkeeping and `node_modules` holds somebody else's code; neither can
- * be text a human is about to change. The repository's one other skip list
- * (`scripts/citation-report.mjs`) also drops `dist`, `bin` and `obj`, and this list deliberately does not:
- * those hold build output, and a search that hid them would be answering "where does this text occur"
- * with "where does it occur in the files I decided matter".
+ * `.git` holds a repository's own bookkeeping, `node_modules` holds somebody else's code, and `.gitnexus`
+ * and `.serena` hold indexes a tool built out of this repository's own text. None of the four is text a
+ * human is about to change, and none of them is what a human means by "this repository". The repository's
+ * other skip list (`scripts/citation-report.mjs`) also drops `dist`, `bin` and `obj`, and this list
+ * deliberately does not: those hold build output, and a search that hid them would be answering "where does
+ * this text occur" with "where does it occur in the files I decided matter".
+ *
+ * The two index directories were added on 2026-10-14, after a live measurement, and they are here for a
+ * different reason than the first two: not because their content could not matter, but because a budget
+ * every file shares is a budget the alphabetically first heavy directory gets to spend. `.gitnexus` held
+ * 26.5 MiB of the 40.7 MiB this repository takes to walk, and the walk stopped in `docs/` without ever
+ * reaching `src/` — for every needle. A name list is a thing that grows, and so is a budget that has to be
+ * raised each time one does; this is the smaller of the two, because it names *directories* and each name is
+ * a judgement about what a repository is rather than a number that only breaks on the host it was measured
+ * on.
  */
-export const SEARCH_SKIPPED_DIRECTORY_NAMES: readonly string[] = Object.freeze(['.git', 'node_modules']);
+export const SEARCH_SKIPPED_DIRECTORY_NAMES: readonly string[] = Object.freeze([
+  '.git',
+  '.gitnexus',
+  '.serena',
+  'node_modules',
+]);
 
 /** Which of the four bounds a search reached; the first one it reached, and only that one. */
 export type SearchBound = 'matches' | 'files' | 'bytes';
@@ -83,6 +119,11 @@ export interface RepositoryMatch {
  *
  * `skippedDirectories` names the names from `SEARCH_SKIPPED_DIRECTORY_NAMES` that were actually met, in
  * that fixed order, so that a reply claims only what happened.
+ *
+ * `oversizedFiles` counts the files the walk stepped over because no single file may spend the budget that
+ * every file shares. It is a count rather than a list, because a list of them would be as long as the thing
+ * being reported, and it is reported at all for the reason the two bounds are: a file that was not looked
+ * at must never be confused with a file that was looked at and did not match.
  */
 export type RepositorySearch =
   | {
@@ -92,6 +133,7 @@ export type RepositorySearch =
       readonly truncatedBy?: SearchBound;
       readonly skippedDirectories: readonly string[];
       readonly unreadable: readonly string[];
+      readonly oversizedFiles: number;
     }
   | { readonly kind: 'nothing-declared' };
 
@@ -103,6 +145,7 @@ interface Walk {
   readonly unreadable: string[];
   files: number;
   bytes: number;
+  oversized: number;
   truncatedBy?: SearchBound;
 }
 
@@ -124,6 +167,7 @@ export function searchWithin(roots: readonly string[], needle: string): Reposito
     unreadable: [],
     files: 0,
     bytes: 0,
+    oversized: 0,
   };
 
   for (const root of roots) {
@@ -142,6 +186,7 @@ export function searchWithin(roots: readonly string[], needle: string): Reposito
       SEARCH_SKIPPED_DIRECTORY_NAMES.filter((name) => state.skipped.has(name)),
     ),
     unreadable: Object.freeze(state.unreadable.slice()),
+    oversizedFiles: state.oversized,
   });
 }
 
@@ -199,6 +244,9 @@ function walk(directory: string, state: Walk): void {
  * *met* rather than by a count that could disagree with one: reaching either line means a candidate is in
  * hand and this call is not going to look inside it. That is the same construction as `read.ts` reading
  * one byte past its own cap — "there was more" is shown rather than assumed.
+ *
+ * The per-file limit is tested before both of them, and it is not one of them: it spends nothing and it
+ * does not end the walk. It is the reason the other two can be spent on the set instead of on one file.
  */
 function scan(path: string, state: Walk): void {
   let size: number;
@@ -206,6 +254,13 @@ function scan(path: string, state: Walk): void {
     size = statSync(path).size;
   } catch {
     state.unreadable.push(path);
+    return;
+  }
+
+  // Stepped over rather than scanned, and counted on the way past. See `MAX_SEARCH_FILE_BYTES`: this is the
+  // one check in this file that leaves the walk running.
+  if (size > MAX_SEARCH_FILE_BYTES) {
+    state.oversized += 1;
     return;
   }
 

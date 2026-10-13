@@ -267,6 +267,14 @@
 > **四处 finding**：F-1 `MAX_SEARCH_BYTES = 4 MiB` 在 `hikari-new` 自身**每次都撞上**（三个 needle 三轮全部 `truncatedBy: 'bytes'`，含一个什么都不匹配的 needle；而墙钟只有 1–3 ms——耗时来源是**文件数**，1000 个文件的用例约 530 ms），于是回答里永远跟着「文件比一次能找的多」，「没找到」那句在有内容的仓库上永远不会出现——**实现按评审原样交付，口径留 Human 定**（保留 / 上调字节上限 / 只留文件数上限）；F-2 三处落到文档里的旧等待界数字保持原文（本文件 `:205`、`docs/architecture/human-inbound-v0-boundary-review.md:363`、`docs/architecture/human-surface-language-client-v0-implementation-boundary-freeze.md:110` 是各自那一片的记录），**指针以本条为准**；F-3 `PipeLanguageAsker.cs:29`/`:53` 两处指向已不存在的 `src/cli/ask.ts`，片外不改（read 那片记过的同一条）；F-4 frame 落在 `read.ts` 而不是评审 §3.1 写的 `search.ts`——落点偏离而不是行为偏离，理由是同一条回复的固定行只有一个 owner，且反向 import 会成环。
 >
 > **提交**：`6fed7cb`，17 files changed / 1745 insertions / 87 deletions，已 push；CI Runtime Tests #38434259679 **success**（`test` 与 `surface` 两颗 job 都 success）。**真机那一次（评审 §6.5）由 Human 跑**——本片不承诺它能答出那个验收问题，只承诺模型从今天起有了「找」这个动词。
+>
+> **2026-10-14 交付后修订（真机实测之后，Human 两次裁决）：上一条的 F-1 已关闭。** 真机上六次搜索全部零命中，量下来原因不是「有点慢」：跳过 `.git` / `node_modules` 之后本仓库可扫正文 **40.7 MiB**（`.gitnexus` 一个目录占 26.5 MiB，其成员 `lbug` 是 51.9 MiB 的二进制），按 `readdirSync` 的顺序 4 MiB 预算在 `docs/` 里花完，**`src/` 从未被打开**——那个上限在真实仓库上只降低覆盖、几乎没买到时间。Human 批准两处修订：**三个上限改成 `MAX_SEARCH_FILES = 2000` / `MAX_SEARCH_BYTES = 32 MiB` / 每文件 `MAX_SEARCH_FILE_BYTES = 1 MiB`**（单个文件超限就**不扫它、不结束遍历，并由回复如实报出被跨过的条数**——这是 F-1 那四个口径里都没有的第五条，形状由他给）；**跳过清单加 `.gitnexus` 与 `.serena`**（四个名字时的字面是「（跳过了 .git、.gitnexus、.serena 与 node_modules。）」，两个名字时的字面与已批准的那句**逐字相同**）。修订后同一个仓库**走完了**：1011 文件 / 13.8 MiB / 0 超大 / 8 命中 / 不截断 / 墙钟 **71–72 ms**，命中落点包含 `src/changeable-repositories/history.ts:29` 与 `facts.ts:90`——正是修订前看不到的那两个文件。
+>
+> **修订后的复核不是沿用旧结论**：全部重跑——`npm run build` exit 0；`npm test` **927 tests / 923 pass / 0 fail / 4 skipped**（+2 是新领域用例）；`dotnet run --project apps/human-surface/HumanSurface.Tests/HumanSurface.Tests.csproj` **69 passed / 0 failed / 0 skipped**；领域文件 17 → **19 全绿**；`test/language.test.mjs` **134 条不变**（本轮一个字没动它）。**第三、四次定向变异都 RED**：每文件上限从「超过」改成「达到」→ 领域文件 2 条失败；从跳过清单里去掉 `.serena` → 1 条失败。**没有重跑的复查如实记下**：评审 §10.2 的两次变异（行号起算、「没找到 / 没找完」）针对的是本轮没碰的那两行，因此没有重跑。
+>
+> **架构判断与治理记录**：唯一被动的 public surface 是 `RepositorySearch` 的 `searched` 分支多了 `readonly oversizedFiles: number`（**加法**，不是改形；`SearchBound` 仍是三值闭集——撞上每文件上限**不结束遍历**，把它算进「本次到此为止」会用错词）；没有新 exposure、没有新参数、没有新持久状态，`src/runtime/` 仍 0 diff。**R7.2 的记法**：评审里所有旧承诺**原文一字不改**，改动、旧值与批准者记在新增的 **§7.6（三个上限）/ §7.7（跳过清单）**，§3.5 的逐字表、§5.2 的代价算术、§6 的验收清单各加一段**指针**；§6 那句「`.git` 与 `node_modules` 子树被跳过」的验收项**本身仍然成立**——它断言的是行为，不是「清单只有两个名字」。Functional 复评见 **§10.4**、架构复评见 **§11.1**，F-1 关闭。评审 §5.2 要求的「实施后必须实测一次墙钟时间」这次补齐：**71–72 ms**（三次取后两次；文件系统缓存已热），仍在「数百毫秒」这一档，**没有**跨进那条秒级子进程门。
+>
+> **真机那一次仍由 Human 跑**：能力已经按他的裁决修到能在自己的仓库上走完，但「他问一句、它答出来」这一步由他执行。常驻要重启才会加载新代码（它启动时把模块读进内存，旧进程里跑的还是旧上限），`--data-dir` 用他原来那个即可。
 
 ---
 
