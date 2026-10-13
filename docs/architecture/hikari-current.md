@@ -630,7 +630,7 @@ plugin-design-spec.md §4.1 符号层：跨模块 import 走 barrel
 | 4 | **后台 cycle 健康表面**：补它等于为「当时那一瞬」新增一条必须长期维护的契约 | `current-stage.md`（列为 v1 已知限制，明写「不是可以顺手补的补丁」） | 常驻活着 ≠ 每个 cycle 成功，且无法证明 |
 | 5 | **神经系统是否要有代码实体**：契约 / 组织约定 / Plugin | `hikari-nervous-system-stage-v0.md` 只定义阶段，不给形状 | 阶段的完成判据（读侧不再为零）无处落地 |
 | 6 | **Experience Formation 的解锁条件**：`VERDICT = NARROW` 自带条件 —— 出现一个真实 bounded consumer，其职责无法只靠 current facts 完成 | `experience-formation-v0-research.md:517-518` | 该阶段的第一刀切不下去 |
-| 7 | **`current-stage.md`「当前明确仍不做」的权威转写**：约 37 条里只有 4 条带具名来源，其余按 R2 默认 NOT-YET | `governance-rules-v1.md` R7.1（引不到源的条目按 NOT-YET 处理，或先补源） | 清单可读，但每条的规范力不同，容易被整体误读为同等强度 |
+| 7 | **「当前明确仍不做」的权威转写，以及「来源只在 phase review 时落哪一类」这条规则。** **进度**：后半段**已补源并落类**（见 `current-stage.md`「本表的分类与来源」：逐条类别 + 转写源 + 判定口径 + 四条改判，另有一处与 `plugin-design-spec.md` §11 的冲突已就地修正）；**前半段两遍独立追源在 15 条上结论不一致，尚未写入**。分歧点不是事实，是同一条规则：来源只在 **phase architecture review** 的条目，默认落 **SHOULD**（读作「设计默认」）还是 **NOT-YET**（读作「本阶段不做，还没有真实需求」）？ | `governance-rules-v1.md` R7.1（引不到源的条目按 NOT-YET 处理，或先补源）；**并且** R1 把 phase reviews 定为「历史证据，**不作为权威来源**」、R2 规则 3 把 MUST 限在前两层——这两条指向了这个缺口，但没有一条说落哪一类 | 前半段约 20 条无法落类，清单因此**仍然**「每条的规范力不同，容易被整体误读为同等强度」。**而这次追源已经实测出该后果的具体形状**：读起来像 MUST 的条目里，有两条其实不是 MUST（初判引的是「链路形状」与「禁 `GlobalWorldState` 的邻句」，两句都不是本条来源）——所以这条不是文档洁癖，它会让引用者引错层级 |
 | 8 | **神经系统阶段判据第 1 条是否已达到**：`repository-ci-attention` 读回自己的 `delivered` 家族并因此不重复播报，字面符合「至少有一个生产 Plugin 读取它自己的过去，并因此行为不同」（§6.3） | 由本文提出；`hikari-nervous-system-stage-v0.md` §4 与 §2C 的注指向的不是同一件事 | 该阶段的**下一步做不做、做什么**，取决于这一次定性 |
 
 **已经裁决并已实施的**（不在上表，列在这里避免被误读为待办）：
