@@ -247,6 +247,26 @@
 > **两条 finding：一条已由 Human 追认，一条留档不改**：F-1 实现多出一条人可见字面 `DIRECTORY_TRUNCATED`（§3.5 冻结的是五条字面，第六条是目录项数超限的提示行；把文件那句用在目录上会让模型以为读到的是文件正文）——**Human 于 2026-10-13 复核后确认照此保留**，自此该字面与 §3.5 那五条同级属于冻结面，指针加在 §3.5、理由记在 §13；F-2 `outside` 只在路径**存在**时返回，于是模型能用绝对路径区分「存在但在授权外」与「不存在」——它不泄露正文，但泄露了本机某条路径是否存在，按 §6.2 的结果闭集实现，**不在本片修**。
 >
 > **提交**：`ec2439d`，已 push；CI Runtime Tests #38423855497 **success**（`test` 与 `surface` 两颗 job 都 success）。工作区 `git status --short` 为空。
+>
+> **CHANGEABLE REPOSITORIES SEARCH v0 已实现、已通过 Functional / Architecture Review**（**工作标签，不占用阶段编号**——**不是** P4-04）。边界评审、待冻结字面、两道 Review、四处 finding 与 commit 门禁全在 `docs/architecture/changeable-repositories-search-v0-boundary-review.md`（§0–§9 评审面、§10 Functional、§11 Architecture、§12 findings、§13 门禁）。
+>
+> **它交付的是一个动词：找。** 真机验收里问「我 change declare 的那个仓库被存在哪里」，模型七次读取全部落在目录列举上，从没打开那些写着答案的文件——`authorized_repository_read` 只能回答「这一个路径是什么」，而它需要的是「哪里有」。这一片给 `changeable-repositories.read@1` 加第三个方法 `search(needle)`，模型可见能力 `authorized_repositories_search`。**contract 不换**：同一个 Service 加一个方法，版本仍是 `changeable-repositories.read@1`，两个既有方法一字未改；两份 exposure 列表各多一项（`LANGUAGE_EXPOSURES` 4→5、`LANGUAGE_REPOSITORY_EXPOSURES` 5→6），variant 数仍是 2。
+>
+> **第三个能力自己声明 `method: 'search'`**：有了两个「一个具名字符串参数」的能力之后，「带不带参数」不再能区分它们，而 `src/language/read.ts` 逐字写着不去比较一个写在自己这边的名字——判别必须来自 owner 自己的声明（`'method' in exposure` 交给 TS 收窄，不比较任何字符串）。这是本构建第一次出现「同一个 contract 的三个方法需要被区分」，所以它也是第一次必须回答这个问题的地方。
+>
+> **遍历自己走，不交给 `git grep`**：被授权的目录不要求是 git 仓库；而且 `git grep` 会静默遵守 `.gitignore`，把「没找到」变成一句假话。四个上限 `MAX_SEARCH_MATCHES = 50` / `MAX_SEARCH_FILES = 1000` / `MAX_SEARCH_BYTES = 4 * 1024 * 1024` / `MAX_SEARCH_MATCH_TEXT = 200`，撞上哪一个由 `truncatedBy` **报出来**而不是被吸收（照 `src/desktop-content-read/types.ts:40-59` 的先例）；符号链接**根本不跟随**（包含性由构造保证，不靠事后判定）；不调用任何外部命令；不写任何东西。跳过 `.git` 与 `node_modules` 的那行提示是**模板**（`（跳过了 ${names.join(' 与 ')}。）`），两个都跳过时逐字等于已批准的那句话，只跳过一个时也不说假话。**「没找到」那句只在覆盖走完时才写**——覆盖不全时说它就是假话，此时由覆盖截断那一句承担全部含义。
+>
+> **反转一条写在冻结面里的拒绝**：read 冻结面 §8 第 4 条写着「不做搜索能力……只有一个 `read`」。原文**一字未改**，只在其后加了一段指针（R7.2），评审 §7.5 记下这次反转与批准者。**Human 于 2026-10-14 批准。**
+>
+> **跨语言门禁第二次按设计响了**：两份列表变长 ⇒ `src/cli/language.ts:114-117` 的 `Math.max` 从 5 变 6 ⇒ `REPLY_TIMEOUT_MS` `(5+1)*15_000 + 90_000 = 180_000` → `(6+1)*15_000 + 90_000 = 195_000` ⇒ `PipeLanguageAsker.LongestExposureCount` 5 → 6，其 remarks 的 four / five 改为 five / six，并记下「这是它第二次红」。同一类问题的根在 TypeScript 侧也修了：`src/language/answer.ts` 里手写的 8 改成推导 `Math.max(LANGUAGE_EXPOSURES.length, LANGUAGE_REPOSITORY_EXPOSURES.length) + 3`（现为 9）——这个数字前两次都漂移过（第一次是推导写错、第二次是列表变长），第三次手写拷贝才是「从 `exposure.ts` 导出一个常量」的触发器，已记在注释里，不在本片做。
+>
+> **测试与两次反证实验**：新建 `test/changeable-repositories-search.test.mjs`（17 条，覆盖评审 §6.2 的十一条：没找到、只匹配一行、只匹配被跳过的目录、NUL 字节、不是文本、符号链接、两条截断各在最边界上而不在下一条、一个 root 走不进去、空 needle 不是调用、空集）；`test/language.test.mjs` 131 → **134**（两份列表的长度/成员/公共前缀/末位，加参数规则、去重、注入 fixture 三条）；三个 live 语料按「**扩表而不是放宽守卫**」补一行能力与一句新话。**定向变异两次都 RED**：`src/changeable-repositories/search.ts:257` 的行号从 1 起算改成 0 起算 → 领域文件 6 条失败；让「没找到」在覆盖没走完时也说 → 2 条失败。全量 `925 tests / 921 pass / 0 fail / 4 skipped`（改前 905 / 901 / 0 / 4）；`dotnet run --project apps/human-surface/HumanSurface.Tests/HumanSurface.Tests.csproj` **69 passed / 0 failed / 0 skipped**。
+>
+> **图证据与它的读法**：`detect_changes --scope all` 报 `14 files / 60 symbols / 21 processes / Risk level: critical`。CLI 的文本输出按自己的显示上限只列前 15 个符号与 10 条流程（`... and 45 more` / `... and 11 more`），加 `--limit 200` 后**汇总行一字不变**，且该 CLI 在本仓库没有 `partial` / `truncated` 字段（那是 MCP 层的输出）。**CRITICAL 照实报告，不由 `riskSharedAxes` 豁免**：它来自这次改动的**跨度**（`changeable-repositories` 的第三个方法与新 exposure、`language` 的两份列表 / reader / 两处接线 / 预算推导、`cli/language.ts` 的自动跟随、C# 一个常量、两个测试面），不是来自任何单点——改前逐符号 `impact` 为 `createExposureReader` **LOW**（`impactedCount: 3`、`direct: 2`、`processes_affected: 2`）。
+>
+> **四处 finding**：F-1 `MAX_SEARCH_BYTES = 4 MiB` 在 `hikari-new` 自身**每次都撞上**（三个 needle 三轮全部 `truncatedBy: 'bytes'`，含一个什么都不匹配的 needle；而墙钟只有 1–3 ms——耗时来源是**文件数**，1000 个文件的用例约 530 ms），于是回答里永远跟着「文件比一次能找的多」，「没找到」那句在有内容的仓库上永远不会出现——**实现按评审原样交付，口径留 Human 定**（保留 / 上调字节上限 / 只留文件数上限）；F-2 三处落到文档里的旧等待界数字保持原文（本文件 `:205`、`docs/architecture/human-inbound-v0-boundary-review.md:363`、`docs/architecture/human-surface-language-client-v0-implementation-boundary-freeze.md:110` 是各自那一片的记录），**指针以本条为准**；F-3 `PipeLanguageAsker.cs:29`/`:53` 两处指向已不存在的 `src/cli/ask.ts`，片外不改（read 那片记过的同一条）；F-4 frame 落在 `read.ts` 而不是评审 §3.1 写的 `search.ts`——落点偏离而不是行为偏离，理由是同一条回复的固定行只有一个 owner，且反向 import 会成环。
+>
+> **提交**：`6fed7cb`，17 files changed / 1745 insertions / 87 deletions，已 push；CI Runtime Tests #38434259679 **success**（`test` 与 `surface` 两颗 job 都 success）。**真机那一次（评审 §6.5）由 Human 跑**——本片不承诺它能答出那个验收问题，只承诺模型从今天起有了「找」这个动词。
 
 ---
 
