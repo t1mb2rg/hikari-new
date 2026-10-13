@@ -562,7 +562,7 @@ FAIL  conformance: the framing bounds are the ones the protocol declares
 
 ### 13.8 本轮状态
 
-**未 commit，未 push**，等待 Human 审阅。四条发现（F-1 / F-2 / F-4 / F-5）均已裁决并已实施；F-3 记录为已知限制、**未修**。
+**已 commit、已 push**（commit `bdbc591`，CI Runtime Tests #38364810038 **success**：867 tests / 730 pass / 137 skipped / 0 fail；C# surface job 69 passed / 0 failed）。本节原写「未 commit，未 push」——那句在写成时是真话，在本轮 commit 之后不再成立，故按事实更正，而不是保留一句已经被自己推翻的陈述。四条发现（F-1 / F-2 / F-4 / F-5）均已裁决并已实施；F-3 记录为已知限制、**未修**。
 
 | 发现 | 裁决 | 实施 |
 | --- | --- | --- |

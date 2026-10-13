@@ -137,6 +137,14 @@
 > **验证分层，且不得互相冒充：** 结构不变量（A–K 十条的机械证明、四个 roster、Service 与 exposure 的存在性）由自动化测试证明。**真实 endpoint 的语义验证在本机 NOT RUN**——这台机器无法访问真实模型端点，因此它不是 PASS 也不是 FAIL。可以断言的是 harness 的评判逻辑在本轮改动后仍有效且非平凡：五模式的本地假 endpoint 得到 4 种不同的失败断言 + 一次干净通过。
 >
 > **补了一处此前存在的覆盖缺口：** `src/language/**` 此前没有 slice 局部的 forbidden-structure 扫描，而 `src/` 全量扫描的模式里没有 `ServiceLocator` / tool registry / discovery——正是本轮点名要确认缺席的三类。已按仓库既有约定补上（只命名「若要引入必须新造」的复合标识符，不写裸名词，否则会在否定这些词的注释上变红）。
+>
+> **Desktop Content Read G-1（Authorization Boundary）已实现、已通过 Functional / Architecture Review、已提交、已 push**（commit `bdbc591`，CI Runtime Tests #38364810038 **success**：867 tests / 730 pass / 137 skipped / 0 fail；本机 867 / 863 pass / 4 skipped / 0 fail——CI 上被跳过的全部是依赖命名管道或 Windows 桌面 API 的用例。C# Human Surface 一致性 job 69 passed / 0 failed / 0 skipped）。**它是工作标签，不占用任何阶段编号**——**不是** P4-04，也**不是** P4-03 的一部分。文档见 `docs/architecture/desktop-context-understanding-g1-authorization-boundary-review.md`（边界评审，overall **NARROW**：G-1a 可设计 / G-1b、G-1c BLOCKED）与 `docs/architecture/desktop-context-understanding-g1-narrow-design.md`（设计与落地记录；§13.7 五条发现、§13.8 状态）。
+>
+> **它交付的是「人可以用一个词授权一次窗口读取」这一条最窄的切片，不是「Hikari 能看屏幕」这个能力。** `hikari screen "<text>"` 里那个词**本身就是授权**：它是一个 **request-local** 的量——**不是**激活状态、**不是**持久权限、**不是**可复用的开关，且两次调用之间不存在任何状态。窗口正文进入 Language 时是**材料（material）**，**不是**模型可以调用的 capability——它不进 system prompt，模型不能请求它，它只出现在被授权的这一次回答里。
+>
+> **它是 Hikari 第一次让不可信的环境正文进入模型上下文，因此本轮的工作量主要落在边界而不是功能上**：读回来的内容必须被标签标成来源材料、正文不得提升为指令或授权、`screen` 这个词不得成为第二个可独立选装的能力触发点。**真实远程端点的语义验证在本机 NOT RUN**（§13.5 逐字记录），因此它不是 PASS 也不是 FAIL。
+>
+> **本轮同时收口了四条针对 Human Surface 跨语言镜像的发现**（F-1 HIGH 红门禁 / F-2 / F-4 / F-5，逐条见 `desktop-context-understanding-g1-narrow-design.md` §13.7–§13.8）。**F-5 是核对 F-4 时发现的**：协议有**五个**应答结果词，而 C# 的枚举与解码词表只有四个，`recorded` 的合法应答会被报成 **unreadable**，并且冻结文档与 C# 注释都在陈述「四个词」。**它不可达**（只有 `confirm` 会产生 `recorded`，而 Surface 只写 `ask`）——**而这正是它一直没被发现的原因**：conformance 的应答语料枚举的是四种 shape。修法是**补上第五个词**并把语料补成五种，不是加一条守卫去拒绝它：守卫要盯的是**协议**，不是 client 的需要。**F-3 未修**，记录为已知限制（`READ_AND_FRAMING_BUDGET_MS` 的推导没有点名第三次读取；改动是措辞选择，不是顺手能补的常数）。
 
 > **Durable Fact Admission v0 已实现**（**工作标签，不占用阶段编号**——**不是** P4-04，**不是** P4-03 的一部分），详见 `docs/development/durable-fact-admission-v0.md`。本条目随实现落地；**commit / CI 记录另起一条口径更新**（仓库惯例：结论先写、哈希与 CI run 随后追记）。立项依据是 `DURABLE FACT ADMISSION v0 — BOUNDARY REVIEW`，Human ruling `VERDICT = NARROW → READY / AUTHORIZED FOR IMPLEMENTATION`。它让 **`work-focus` 成为 Hikari 第一个承认自己 durable fact 的生产 Plugin**：`declare` / `replace` / `clear` 真的改变了集合时，由**语义 owner 自己**经 `chronicleService` 写下 `work-focus.declared` / `work-focus.replaced` / `work-focus.cleared`（version 1，`occurredAt` 在发生时刻读一次，`source` 为 `{ kind: 'work-focus.endpoint' }`）。
 >
