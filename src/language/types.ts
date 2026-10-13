@@ -46,11 +46,18 @@
 // question was out of scope when in fact the model was down, and the repair for the two is different:
 // one is "ask something else", the other is "come back".
 
+// The two imports below are the two numbers the reply's framing bound is derived from, and they are
+// imports rather than copies on purpose: a bound restated from its owner is a bound that stops matching
+// it, silently, in the direction where the symptom is an answer that was produced and cannot be read.
+import { MAX_CONTENT_READ_REPLY_LINE } from '../desktop-content-read/types.js';
+import { MODEL_MAX_TOKENS } from './model.js';
+
 /** The only version this build speaks. A mismatch is refused, never guessed at. */
 export const LANGUAGE_PROTOCOL_VERSION = 1;
 
 /**
- * The two words this endpoint answers, and there are two rather than one because one of them writes.
+ * The three words this endpoint answers, and there are three because each one is a different act by the
+ * person at the other end.
  *
  * `ask` never writes anything. `confirm` writes one durable record, and that record is the whole of what
  * it does — which is why it could not be folded into `ask` as a flag or a mode. A single word covering
@@ -58,16 +65,30 @@ export const LANGUAGE_PROTOCOL_VERSION = 1;
  * and the property this surface has to be able to state is exactly that they are not: a person who only
  * asked has not confirmed anything, and no arrangement of flags should be able to blur that.
  *
- * Both carry a payload, which is the structural difference from the other endpoints' words: what a human
- * asks, and what a human confirms, cannot be enumerated in advance, so each travels with the word. That
- * is also why these are words rather than payloads with no vocabulary around them — the envelope stays
- * closed even though the content cannot be.
+ * `screen` is the third act, and it passed the test the paragraph above states rather than being excused
+ * from it: it authorizes one read of the window in front of this person and asks Hikari to interpret
+ * what the read found. Two things follow that no other word does, and they are why it is a word.
  *
- * Two words is the whole vocabulary and it is meant to stay small. Each one is a different act by the
- * person at the other end — asking Hikari something, and telling Hikari to keep something they said —
- * and a third would have to be a third act rather than a third spelling of one of these.
+ *   It is the only request that reaches outside Hikari for text nobody here wrote, and the only one
+ *   whose answer carries that text to the model endpoint. A person sending it is deciding that this
+ *   window's body may leave this machine along the configured route, which is a decision about their
+ *   screen rather than a property of a question — and a decision the surface has to be able to state in
+ *   the word the person typed rather than in a field beside it.
+ *
+ *   It is what makes one narrow exception in `answer.ts` reachable, and it is the whole of what makes it
+ *   reachable. The model never sees this word: the exception turns on a condition about the *page*, and
+ *   the only path that can establish that condition is the one this word opens. That is the sense in
+ *   which the word is the authorization — not a check performed somewhere, but the only way in.
+ *
+ * All three carry a payload, which is the structural difference from the other endpoints' words: what a
+ * human asks, what a human confirms, and what a human asks *about their screen*, cannot be enumerated in
+ * advance, so each travels with the word. That is also why these are words rather than payloads with no
+ * vocabulary around them — the envelope stays closed even though the content cannot be.
+ *
+ * Three words is the whole vocabulary and it is meant to stay small. A fourth would have to be a fourth
+ * act rather than a fourth spelling of one of these.
  */
-export type LanguageWord = 'ask' | 'confirm';
+export type LanguageWord = 'ask' | 'confirm' | 'screen';
 
 /**
  * A request carries its word and the sentence a human typed, and nothing else.
@@ -148,9 +169,33 @@ export const MAX_LANGUAGE_TEXT_LENGTH = 8 * 1024;
 // The framing bounds, on decoded text rather than wire bytes.
 //
 // The request line is generous over `MAX_LANGUAGE_TEXT_LENGTH` because the text on the wire is JSON
-// and a character may escape to six bytes; the reply line is that plus slack, for the reason
-// `work-focus/types.ts` gives. Neither is a statement about what the plugin will answer — the text
-// bound above is that — they are what keeps whoever is on the other end of the pipe from choosing how
-// much this process buffers.
+// and a character may escape to six bytes. Neither is a statement about what the plugin will answer —
+// the text bound above is that — they are what keeps whoever is on the other end of the pipe from
+// choosing how much this process buffers.
 export const MAX_LANGUAGE_REQUEST_LINE = 64 * 1024;
-export const MAX_LANGUAGE_REPLY_LINE = MAX_LANGUAGE_REQUEST_LINE + 4096;
+
+// The reply line, and it is derived rather than chosen, because the value it used to have was chosen
+// under an assumption that the third word breaks.
+//
+// `MAX_LANGUAGE_REQUEST_LINE + 4096` was written when the longest thing a reply could carry was a few
+// label-bearing lines from a capability read. An authorized answer carries a whole window read, and a
+// window read is the longest thing either endpoint renders — its ceiling is nearly seven times the
+// request line, and it was measured rather than estimated (`MAX_CONTENT_READ_REPLY_LINE` carries that
+// arithmetic). Against the old constant, a legitimate read at the content bound would have arrived at
+// the client as 语言入口的应答超过了长度上限: an answer that had been produced and rendered, reported as
+// an entry point that could not be reached. That is the same failure shape the read's own ceiling was
+// corrected for, one endpoint over, and it is imported rather than restated here so the two cannot
+// drift apart again.
+//
+// The three terms are the three things a reply can be made of:
+//
+//   the read          the rendered window body, bounded by the read owner's own reply ceiling. It is
+//                     an upper bound with room to spare: that number bounds a whole reply envelope,
+//                     and what travels here is the `lines` array inside one.
+//   the model's words `renderSynthesis` prints the model's own sentence under the label, so it is
+//                     bounded by the largest thing this build will let a model say — and multiplied by
+//                     seven, the same rendering factor, because that sentence goes through `oneLine`
+//                     and then through JSON escaping exactly as a reading does.
+//   4096              the label, the context line, the reply envelope and the field names.
+export const MAX_LANGUAGE_REPLY_LINE =
+  MAX_CONTENT_READ_REPLY_LINE + MODEL_MAX_TOKENS * 7 + 4096;

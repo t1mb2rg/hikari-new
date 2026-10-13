@@ -41,19 +41,43 @@ public static class LanguageFraming
     /// <summary>The cap on one framed request, from <c>src/language/types.ts</c>.</summary>
     public const int MaxLanguageRequestLine = 64 * 1024;
 
-    /// <summary>The cap on one framed reply, from <c>src/language/types.ts</c>.</summary>
-    public const int MaxLanguageReplyLine = MaxLanguageRequestLine + 4096;
+    /// <summary>
+    /// The cap on one framed reply, copied from <c>src/language/types.ts</c> rather than derived here.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// It used to read <c>MaxLanguageRequestLine + 4096</c>, and that was a derivation — the one shape
+    /// this file must not use. <c>node-helpers/conformance.mjs</c> says why in as many words: "a C# client
+    /// that agreed with a <i>recomputed</i> number would agree with itself rather than with the thing it
+    /// is copying". That is what happened when the owner's ceiling moved: the assertion this file carried
+    /// kept passing while the two ends disagreed, because each end was checking itself.
+    /// </para>
+    /// <para>
+    /// Deriving it again would cost more than it looks. An authorized answer carries a whole window read,
+    /// so the owner's ceiling is <c>MAX_CONTENT_READ_REPLY_LINE + MODEL_MAX_TOKENS * 7 + 4096</c> — which
+    /// would make this client mirror <c>READ_MAX_CHARS</c>, a <b>domain</b> plugin's read ceiling, and a
+    /// model token budget. The Surface is a client and understands no domain semantics. The number below
+    /// is the owner's; what keeps it equal to the owner's is <c>LanguageConformanceTests</c>, which reads
+    /// the owner's own module rather than recomputing it, and not any arithmetic performed here.
+    /// </para>
+    /// </remarks>
+    public const int MaxLanguageReplyLine = 378305;
 
     private static readonly string[] ReplyKeys = ["protocol", "outcome", "lines"];
 
-    // The four words, listed out rather than derived from the enum, mirroring the hand-written list in
+    // The five words, listed out rather than derived from the enum, mirroring the hand-written list in
     // `protocol.ts` — and for the same reason it is hand-written there: the union is a compile-time
     // fact about our own code, and this is the runtime boundary where a string we did not write
     // arrives. `Enum.TryParse` would accept "3" and "Chatted", which are not this protocol's words.
+    //
+    // `recorded` is here since 2026-10-13. It was absent while the owner's vocabulary had five words,
+    // which made a valid reply arrive as unreadable. See `LanguageReplyOutcome`'s remarks for why
+    // nothing caught it and why the answer was to add the word rather than to keep refusing it.
     private static readonly Dictionary<string, LanguageReplyOutcome> OutcomeWords = new(StringComparer.Ordinal)
     {
         ["chatted"] = LanguageReplyOutcome.Chatted,
         ["answered"] = LanguageReplyOutcome.Answered,
+        ["recorded"] = LanguageReplyOutcome.Recorded,
         ["refused"] = LanguageReplyOutcome.Refused,
         ["failed"] = LanguageReplyOutcome.Failed,
     };

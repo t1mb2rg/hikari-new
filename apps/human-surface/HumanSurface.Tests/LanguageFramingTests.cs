@@ -76,12 +76,17 @@ internal static class LanguageFramingTests
                 LanguageFraming.EncodeRequest(string.Empty), "the wire form of an empty question");
         });
 
-        run.Add("language: each of the four outcomes decodes to itself", () =>
+        run.Add("language: each of the five outcomes decodes to itself", () =>
         {
+            // Five, and `recorded` is the one that used to be missing here as well as in the decoder.
+            // This list matching the protocol's vocabulary in length is not what keeps the two equal —
+            // `conformance: the reply decoder accepts and rejects exactly what the TypeScript one does`
+            // is, and it drives the real decoder with the owner's own encoded replies.
             foreach (var (word, expected) in new[]
                      {
                          ("chatted", LanguageReplyOutcome.Chatted),
                          ("answered", LanguageReplyOutcome.Answered),
+                         ("recorded", LanguageReplyOutcome.Recorded),
                          ("refused", LanguageReplyOutcome.Refused),
                          ("failed", LanguageReplyOutcome.Failed),
                      })
@@ -162,11 +167,17 @@ internal static class LanguageFramingTests
             Assert.SequenceEqual(new[] { "last wins" }, decoded.Reply!.Lines, "the lines");
         });
 
-        run.Add("language: the reply bound is the request bound plus slack", () =>
+        // The reply bound is deliberately not asserted here any more, and the assertion it replaces was
+        // retired rather than relaxed: "the reply bound is the request bound plus slack" was a true
+        // statement about a derivation this file no longer performs, so there is nothing left in it to be
+        // self-consistent about. What pins the reply bound is `conformance: the framing bounds are the
+        // ones the protocol declares`, which compares it against the number the owner's own module
+        // exports — a strictly stronger claim than the one removed, and the only place a cross-language
+        // fact can be checked at all. Keeping a second, weaker assertion here would restore exactly the
+        // arrangement that made the divergence invisible: two ends each agreeing with themselves.
+        run.Add("language: the mirrored bounds are the ones the protocol declares", () =>
         {
             Assert.Equal(64 * 1024, LanguageFraming.MaxLanguageRequestLine, "the request bound");
-            Assert.Equal(LanguageFraming.MaxLanguageRequestLine + 4096, LanguageFraming.MaxLanguageReplyLine,
-                "the reply bound");
             Assert.Equal(8 * 1024, LanguageFraming.MaxLanguageTextLength, "the question bound");
         });
 

@@ -48,11 +48,33 @@
 LANGUAGE_PROTOCOL_VERSION = 1
 REQUEST_KEYS             = protocol, request, text      （恰好三键）
 REPLY_KEYS               = protocol, outcome, lines     （恰好三键）
-请求词                    = 'ask'（唯一）
-reply outcome            = chatted | answered | refused | failed（四词闭集）
+请求词                    = Surface 只写 'ask'（协议本身接受三词闭集；Surface 不 decode 请求，见 §1）
+reply outcome            = chatted | answered | recorded | refused | failed（五词闭集）
 MAX_LANGUAGE_REQUEST_LINE = 64 * 1024
-MAX_LANGUAGE_REPLY_LINE   = 64 * 1024 + 4096
+MAX_LANGUAGE_REPLY_LINE   = 378305
 ```
+
+### Amendment（2026-10-13，Human 裁决 A2）
+
+**一、`MAX_LANGUAGE_REPLY_LINE` 由 `64 * 1024 + 4096` 改为 `378305`。**
+
+原值假设「回复最多是请求加一点 framing」。授权后的一次回答里嵌着一次完整窗口读取，其上限接近请求行的六倍，于是原值会把一个**已经产生并渲染完**的回答报成「语言入口不可达」。
+
+新值**不是**在 C# 里重新推导出来的。owner 的表达式是 `MAX_CONTENT_READ_REPLY_LINE + MODEL_MAX_TOKENS * 7 + 4096`（`src/language/types.ts:200-201`，= `40_000*7 + 65_536 + 1 + 4096*7 + 4096` = 378305）。C# 侧改为**逐字镜像这个数**（`LanguageFraming.cs:44-62`），理由是 `node-helpers/conformance.mjs:116-118` 已经写下的那条原则——「a C# client that agreed with a *recomputed* number would agree with itself rather than with the thing it is copying」。重新推导还会让这个 client 去镜像 `READ_MAX_CHARS`（一个 **domain** 插件的读上限）与一个模型 token 预算，与本文 §1「Surface 不得理解任何 domain semantics」冲突。
+
+同时**退休**（`LanguageFramingTests.cs` 中原「reply = request + 4096」那条自洽断言，**删除而非放宽**）——它的前提是一个该文件不再执行的推导。钉住这个数的是 conformance case `conformance: the framing bounds are the ones the protocol declares`（`LanguageConformanceTests.cs:210-219`），它读的是 owner 自己导出的值，比被删掉的那条断言更强。
+
+**二、`请求词` 与 `reply outcome` 两行由 2026-10-13 裁决更正。**
+
+`请求词` 原写 `'ask'（唯一）`，而 `src/language/protocol.ts:102-105` 的 `readWord` 接受三词闭集 `'ask' | 'confirm' | 'screen'`（`'confirm'` 在 HEAD 上已存在，`'screen'` 由 G-1 轮加入）。该行的正确字面取决于 Surface 镜像的是「协议的请求词汇」还是「它自己会写的那一个词」——裁决取后者：**本行现在陈述的是 client 事实**（Surface 只写 `ask`，且按 §1 不 decode 请求），协议的三词闭集写在同一行的括号里，以免读者以为协议只有一个词。
+
+`reply outcome` 原写「四词闭集」，**是错的，而且错在 C# 一侧**：`src/language/types.ts:133` 与 `protocol.ts:127-137` 的结果词是**五个**（`chatted | answered | recorded | refused | failed`，`test/language.test.mjs:2786` 逐字断言「`recorded` 是第五个结果词」），而 C# 的 `LanguageReplyOutcome` 枚举与 `OutcomeWords` 表只有四个，`recorded` 的合法应答会被解码器报成 **unreadable**。本行按事实改为五词闭集，C# 侧补齐第五个词。
+
+**这条分歧不可达**——只有 `confirm` 这个词会产生 `recorded`（`src/language/continuity.ts:273`、`src/cli/confirm-command.ts:49`），而 Surface 只写 `ask`——**而这正是它没被发现的原因**：conformance 的应答语料枚举的是**四种** shape（`node-helpers/conformance.mjs`），第五个词没有任何东西检查。已按裁决把语料补成**五种**，该分支现在有守卫。
+
+**三、本条同时暴露的结构性缺口，经核对后收窄。** 本表列 7 项，而 conformance 的 `RegisterRequests`（`LanguageConformanceTests.cs:117-133`）用**真的 TS decoder** 解 C# 写出的请求，键集错了会 `Assert.NotNull` 失败——因此 `REQUEST_KEYS` **本来就有守卫**，先前「三项无守卫」的说法不成立。真正没有守卫的是**两项：`请求词` 与 `reply outcome`**，**而这两项都已经是错的**。所以准确的说法不是「守卫漏掉了三项」，而是：**漏掉守卫的条目恰好就是已经漂移的那些**。这与 F-1 诊断的缺口同类（「必要但未列出的改动，其镜像面不会有 owner」），只是缺口落在**表的条目**上，而不在表的覆盖范围上。
+
+**四、按 R7.2 保留原文。** 本节正文除上述被裁决的一项外**未改**；本文 §3 开头那句「镜像 `src/language/protocol.ts`」按事实应同时点名 `src/language/types.ts`（`LanguageFraming.cs:12` 逐字写的就是这两个文件，长度上限那两个常量住在 `types.ts`），此处以指针而非改写处理。
 
 - **`protocol.ts:11` 的形状必须保真**：信封**恰好三键**——「an envelope that shrugged at an unknown field would already be an extensible schema」。C# 侧必须同样拒绝多一个键，否则两端对「什么是一条合法请求」不一致。
 - 结构 vs 语义的界线照抄（`protocol.ts:48-57`）：**空或过长的 question 能解码**，由 plugin 拒绝；**不是本协议的信封才 decode 失败**，端点答 `failed`。

@@ -75,12 +75,19 @@ const decodeInputs = [
   '["a"]\n',
 ];
 
-// The four outcomes, as the real encoder writes them, plus lines that are not replies. The malformed
+// The five outcomes, as the real encoder writes them, plus lines that are not replies. The malformed
 // half is where a permissive decoder shows itself: `{"lines":[1]}` renders fine if numbers are
 // stringified, and `"extra"` is what an extensible schema would have accepted.
+//
+// `recorded` is listed even though this client cannot cause it — only the `confirm` word produces one,
+// and the Surface writes only `ask`. Leaving it out is what let the C# decoder go without it for as
+// long as it did: this array is the *only* place the two sides' reply vocabularies are compared, so a
+// word missing here is a word nothing checks. A corpus that enumerated the shapes this client happens
+// to need would be a corpus that agrees with the client rather than with the protocol.
 const replyShapes = [
   { outcome: 'chatted', lines: [] },
   { outcome: 'answered', lines: ['桌面没有变化。'] },
+  { outcome: 'recorded', lines: ['已记下。'] },
   {
     outcome: 'refused',
     lines: ['这个问题我答不了。', '  引号 " 和反斜杠 \\ 和制表符 \t', '  全角　空格 和 emoji 🙂'],

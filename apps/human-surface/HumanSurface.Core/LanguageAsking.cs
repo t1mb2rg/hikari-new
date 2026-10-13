@@ -1,22 +1,42 @@
 namespace HumanSurface.Core;
 
-/// <summary>Hikari's own verdict on a question, in the four words its protocol defines.</summary>
+/// <summary>Hikari's own verdict on a question, in the five words its protocol defines.</summary>
 /// <remarks>
+/// <para>
 /// Carried through untouched. <c>src/cli/ask.ts:15-20</c> states the rule this type exists to obey:
-/// those four "are the language plugin's statement about what happened and this file has no standing
+/// those five "are the language plugin's statement about what happened and this file has no standing
 /// to merge, rename or re-derive any of them." <c>chatted</c> in particular is not an error and not a
 /// lesser <c>answered</c> — it is a conversation, and a Surface that drew it differently would be
-/// drawing the one distinction this endpoint was split in four to keep.
+/// drawing the one distinction this endpoint was split in five to keep.
+/// </para>
+/// <para>
+/// The members are in <c>src/language/protocol.ts</c>'s order rather than in the order they were added,
+/// for the reason <see cref="LanguageFraming"/> gives for existing at all: a reviewer reads the two
+/// side by side. Nothing here depends on their numeric values — both this file and its tests go by
+/// name, because "a mapping that went by enum order would agree with a decoder that had shuffled them
+/// as long as both sides shuffled the same way".
+/// </para>
+/// <para>
+/// <b><c>Recorded</c> was missing here until 2026-10-13.</b> The protocol has had five words since
+/// `recorded` was added to it; this enum and the decoder's word table had four, which made this file's
+/// own summary a false statement about the protocol and made the decoder report a valid reply as
+/// unreadable. It is unreachable from the Surface — only the <c>confirm</c> word produces one, and this
+/// client writes only <c>ask</c> — and that is precisely why nothing caught it: the conformance reply
+/// corpus enumerated four shapes, so the fifth word was checked by nothing. The fix is the word and not
+/// a guard on the word, because a client has no standing to decide which of the protocol's outcomes it
+/// is willing to be told.
+/// </para>
 /// </remarks>
 public enum LanguageReplyOutcome
 {
     Chatted,
     Answered,
+    Recorded,
     Refused,
     Failed,
 }
 
-/// <summary>The lines Hikari answered with, and which of the four things happened.</summary>
+/// <summary>The lines Hikari answered with, and which of the five things happened.</summary>
 public sealed record LanguageReply(LanguageReplyOutcome Outcome, IReadOnlyList<string> Lines);
 
 /// <summary>Why the endpoint did not answer a question.</summary>

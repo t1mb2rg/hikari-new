@@ -144,6 +144,7 @@ import type { ServiceContract } from '../runtime/contracts.js';
 import type { PluginContext, PluginDefinition } from '../runtime/plugin.js';
 import { chronicleService } from '../chronicle/index.js';
 import type { ChronicleService } from '../chronicle/index.js';
+import { desktopContentReadService, renderContentRead } from '../desktop-content-read/index.js';
 import { desktopSessionAwarenessPeekService } from '../desktop-session-awareness/index.js';
 import { repositoryCiRelevanceService } from '../repository-ci-relevance/index.js';
 import { workFocusCurrentService } from '../work-focus/index.js';
@@ -169,7 +170,7 @@ import {
 } from './model.js';
 import { createExposureReader, createRepositoryExposureReader } from './read.js';
 import type { ExposureReader } from './read.js';
-import type { LanguageReply, LanguageRequest } from './types.js';
+import type { LanguageReply, LanguageRequest, LanguageWord } from './types.js';
 
 /**
  * What the composition must tell this plugin: where its endpoint goes, which model to ask, and how much
@@ -258,7 +259,16 @@ function buildLanguagePlugin(
     // would make this a place other plugins reach in. Chronicle is a store, and this plugin is a client
     // of it in one direction — it appends one family and reads that family back, never a sibling's.
     // There is nothing on the other side of it to reach in through.
-    requires: [...variant.requires, chronicleService],
+    //
+    // The second entry is here, outside the variant, for the same reason Chronicle is — and the coupling
+    // it creates is new and is stated rather than discovered later. `requires` is a hard dependency:
+    // there is no optional form of it, so on a Windows machine where `desktop-content-read` could not
+    // start, Language goes to `waiting` rather than answering questions without the screen word. That is
+    // the fail-closed direction this file already takes for Chronicle and it is taken for the same
+    // reason, but it is a real consequence: one plugin's failure is now visible as another's absence.
+    // The alternative — a `screen` word that silently could not be honored — is the failure mode the
+    // whole slice exists to avoid, so the hard edge is where it belongs.
+    requires: [...variant.requires, chronicleService, desktopContentReadService],
     // Outside the variant, and these are the only entries either variant has. A reader checking that
     // the two agree reads `variant.requires` against `variant.exposures` and never has to account for
     // either of these, because speaking is not a read: nothing here is offered to a model, and no
@@ -332,12 +342,21 @@ function buildLanguagePlugin(
       // dialogue turn — see `answer.ts` for why the decisions live in a plain function instead of this
       // closure. Nothing below this line decides what a question means; this is the wiring, and the
       // wiring is the whole of it.
+      // The window body's own reader, and it is the same shape as the exposure reader above: the Service
+      // gives back a fact and the owner's renderer turns it into lines, so the words a human reads about
+      // their screen are `desktop-content-read`'s and not this plugin's. `contracts.ts` in that module
+      // argues why the Service returns the read rather than the lines; the rendering call sits here,
+      // where the wiring is, for the reason `makeReader`'s does — this is the file that knows which
+      // renderer belongs to which Service.
+      const contentRead = context.services.get(desktopContentReadService);
+
       const answerer = createAnswerer({
         step: (request) => model.step(request),
         read,
         now: () => new Date().toISOString(),
         exposures: variant.exposures,
         decisions: () => continuity.current(),
+        readScreen: async () => renderContentRead(await contentRead.read()),
       });
 
       const endpoint = await listenLanguageEndpoint(
@@ -379,19 +398,28 @@ function buildLanguagePlugin(
  * state it by handing this function an answerer, a continuity over a recording append, and a request
  * whose word is `ask`: zero appends is the assertion.
  *
- * Two branches and no default, because there is no third word to fall through to — `decodeLanguageRequest`
- * is the runtime boundary that decides what a word is, and it refuses anything that is not one of these
- * two. A `switch` with a default here would be a second statement of the vocabulary, in the one place
- * where being wrong about it means writing something nobody asked to keep.
+ * The table is keyed by the whole vocabulary rather than being a chain of comparisons, and the difference
+ * is which one the compiler can check. `decodeLanguageRequest` is the runtime boundary that decides what
+ * a word is, and it refuses anything that is not one of these three — so there is no `default` arm here
+ * and there must not be one, because a fall-through would be a second statement of the vocabulary in the
+ * one place where being wrong about it means writing something nobody asked to keep or reading a window
+ * nobody authorized. Keying a `Record<LanguageWord, …>` states the same thing in the type: a fourth word
+ * fails to compile here, at the point where somebody would have to decide what it does.
  */
 export function languageRequestHandler(
   answerer: Answerer,
   continuity: DecisionContinuity,
 ): (request: LanguageRequest) => Promise<LanguageReply> {
-  return (request) =>
-    request.word === 'confirm'
-      ? confirmDecision(continuity, request.text)
-      : answerer.answer(request.text);
+  const acts: Readonly<Record<LanguageWord, (text: string) => Promise<LanguageReply>>> = {
+    ask: (text) => answerer.answer(text),
+    confirm: (text) => confirmDecision(continuity, text),
+    // The one word that reaches `answerScreen`, and therefore the one word that can authorize a read of
+    // the window in front of this person. Nothing else in this plugin calls that method, and the model
+    // never sees this word — see `types.ts` for what the word is and `answer.ts` for what it opens.
+    screen: (text) => answerer.answerScreen(text),
+  };
+
+  return (request) => acts[request.word](request.text);
 }
 
 // The read-back, with the failure folded into "no record" rather than propagated. See the call site for

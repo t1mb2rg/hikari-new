@@ -914,6 +914,19 @@ test('exposure 的描述写明它不推进时间线，也写明它不含哪些�
     desktopContextReadExposure.description.includes('输入活动不等于'),
     '描述必须写明输入活动不等于专注程度',
   );
+  // The fifth, and it is not a fifth inference. The four above refuse a conclusion drawn from facts the
+  // reading *does* carry; this one refuses a reading the offer never carried. It has its own assertion
+  // for the same reason the other four do — none of them implies it. A model that picked this name,
+  // correctly concluded that `changed` is not importance, and then assumed it had also been shown the
+  // window is wrong about the shape of what it holds, and this sentence is the only place it is told.
+  assert.ok(
+    desktopContextReadExposure.description.includes('不含窗口正文'),
+    '描述必须写明这一项不含窗口正文，否则读到它会被当成读过了窗口内容',
+  );
+  assert.ok(
+    desktopContextReadExposure.description.includes('不等于 Hikari 读过了窗口里的内容'),
+    '描述必须写明读到这项 reading 不等于 Hikari 读过窗口里的内容',
+  );
 });
 
 // Reads through whatever contract the exposure names, resolved by the Runtime rather than by the test

@@ -91,10 +91,39 @@ const FOCUS_NONE = '你当前还没有明确声明任何关注对象。';
 // the lengths are stated here and why `test/language.test.mjs` measures them with the terminal's own
 // `displayWidth` instead of a second counter: shortening either line is free, and widening the first one
 // fails a test rather than a narrow window.
-const SYNTHESIS_LABEL: readonly string[] = [
-  '（下面不是读回来的内容。',
-  'Hikari 自己说的、没有核实过的话；你以前说的也一样。）',
-];
+const SYNTHESIS_LABEL_FIRST = '（下面不是读回来的内容。';
+
+/**
+ * Which materials a composed section's page was carrying. A closed set of three, and the third is the
+ * one the two-row form of this table used to lose.
+ *
+ * The second line of the label exists to mark, for each source of material, that a sentence drawing on
+ * it is not a reading. A page can carry both the record and the window body at once — they are
+ * independent, a person with statements on file who asks about their screen has both — and a table with
+ * a row per source has no row for that page. Taking the body's row there would drop the sentence that
+ * tells the reader a claim about their own past words is not the record, which is the exact loss the
+ * paragraph above calls the reason the line cannot be shortened; taking the record's row would drop the
+ * mirror-image sentence for the body. So the material is two independent questions about the page, and
+ * this is their four-way answer with the empty one excluded.
+ */
+export type SynthesisMaterial = 'record' | 'screen' | 'both';
+
+// The second line, per material. Written as a table keyed by the whole closed set rather than as tests,
+// so that a fourth material fails to compile here instead of silently falling into one of these.
+//
+// Only the material varies the wording, and only in the clause after the semicolon. What precedes it is
+// identical in all three and says the thing that does not depend on the page: these are the model's own
+// words and none of it was verified. A clause that changed with what the model wrote would be this file
+// forming an opinion about a sentence, which the paragraph above forbids.
+//
+// The lengths matter and are measured rather than estimated: `test/language.test.mjs` asserts each of
+// these against the terminal's own `displayWidth` at 80 columns, so shortening is free and a clause long
+// enough to be clipped on an ordinary window fails a test rather than a reader's terminal.
+const SYNTHESIS_LABEL_REST: Readonly<Record<SynthesisMaterial, string>> = {
+  record: 'Hikari 自己说的、没有核实过的话；你以前说的也一样。）',
+  screen: 'Hikari 自己说的、没有核实过的话；它读到的窗口正文也一样。）',
+  both: 'Hikari 自己说的、没有核实过的话；你以前说的、和它读到的窗口正文也一样。）',
+};
 
 /**
  * One capability's reading, rendered, with the name it was read under.
@@ -111,6 +140,20 @@ export interface GroundedBlock {
   readonly name: string;
   readonly lines: readonly string[];
 }
+
+// The name the window body is read under, and it is a name rather than a flag for a reason that shows up
+// in three places at once. It is what the block is carried as, so the answer's layout needs no new shape;
+// it is what `advanceDialogue` records, so a follow-up naming the screen reads in the vocabulary the
+// other blocks use; and it is what the door's second condition asks about, which is the load-bearing one
+// — a question about the page is a question about the names on it, and a boolean threaded from the
+// caller would have been a question about the caller instead.
+//
+// Named after the module that read the window rather than after the topic, the same rule
+// `REPOSITORY_CI_ATTENTION_BLOCK` below follows and for the same reason. It is deliberately not a name
+// any exposure has: an exposure sharing it would put a reading of that capability on the same page the
+// door is watching for a body, and the condition would then be true for the wrong reason. `exposure.ts`
+// is where that set is enumerated and it is the only thing this name has to stay clear of.
+export const SCREEN_BLOCK_NAME = 'desktop_content_read';
 
 /**
  * The grounded answer, as lines a human reads: the blocks in the order they were read.
@@ -170,6 +213,12 @@ export function renderAnswer(blocks: readonly GroundedBlock[], contextUsed: Dial
  * judgement line, in an outcome a client is entitled to treat as owner-rendered. The split happens
  * before the escape and not after, which is the order `tui-render.ts` records having once had backwards.
  *
+ * `material` chooses the second line and nothing else. It is passed rather than derived from `spoken`,
+ * which is the same rule the paragraph above states in the other direction: what the label says about
+ * the page must not be a reading of the sentence the page is being decorated with. It is passed as a
+ * value rather than as the two booleans the caller asked, so that the four-way answer is decided where
+ * the page is known and this function is handed a settled fact.
+ *
  * It stays out of this module's barrel, and that is deliberate rather than incidental. The two
  * functions the barrel does export from this file are the proactive spoken ones, and the exception this
  * function exists under is scoped to *answering a question*: the material it composes is a record and a
@@ -180,8 +229,12 @@ export function renderAnswer(blocks: readonly GroundedBlock[], contextUsed: Dial
  * and can never reach this function. The barrel is what makes that a property of the public surface
  * rather than a note to remember: a caller holding the plugin's exports has no name to call.
  */
-export function renderSynthesis(spoken: string): readonly string[] {
-  return [...SYNTHESIS_LABEL, ...spoken.trim().split(/\r\n|\r|\n/).map(oneLine)];
+export function renderSynthesis(spoken: string, material: SynthesisMaterial): readonly string[] {
+  return [
+    SYNTHESIS_LABEL_FIRST,
+    SYNTHESIS_LABEL_REST[material],
+    ...spoken.trim().split(/\r\n|\r|\n/).map(oneLine),
+  ];
 }
 
 // The name the block below is read under. It is bookkeeping and never reaches a line — `GroundedBlock`

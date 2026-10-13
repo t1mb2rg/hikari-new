@@ -232,7 +232,11 @@ export const MODEL_TIMEOUT_MS = 15_000;
 // `finish_reason = length` anyway has that reported honestly (see `truncatedLines`) rather than retried
 // or resized; and a capability's tool result is not bounded by this and could not be — the ceiling
 // applies to what the model generates, not to what it is shown.
-const MODEL_MAX_TOKENS = 4096;
+// The largest thing this build will let a model say, and it is exported because a second thing now
+// depends on it: an answer that carries a window read also carries the model's own sentence, so the
+// bound on what this plugin's reply can be is derived from this number in `types.ts` rather than
+// restated there. A copy would be a copy that stops matching the call below.
+export const MODEL_MAX_TOKENS = 4096;
 
 /**
  * The secret, read once from the environment variable the operator named.

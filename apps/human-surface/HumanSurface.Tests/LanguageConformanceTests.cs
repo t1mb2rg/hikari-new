@@ -174,7 +174,7 @@ internal static class LanguageConformanceTests
                 Assert.Equal(DecodedLanguageReplyKind.Reply, ours.Kind,
                     $"{what}, which TypeScript accepts");
 
-                // By name rather than by position: the four words are the protocol, and a mapping that
+                // By name rather than by position: the five words are the protocol, and a mapping that
                 // went by enum order would agree with a decoder that had shuffled them as long as both
                 // sides shuffled the same way.
                 Assert.Equal(Enum.Parse<LanguageReplyOutcome>(replyCase.Node.Outcome, ignoreCase: true),

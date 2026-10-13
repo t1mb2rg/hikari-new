@@ -18,10 +18,18 @@
 // reason and are the most valuable of the set: the attribution rule is the part of this slice a
 // reviewer has to be able to check, and it is pure precisely so that they can check it anywhere.
 //
-// There is no Service to export, and there is nothing missing: by the Contract Creation Gate this
-// plugin provides none, because nothing inside the composition calls it. Its one input arrives as an
-// occurrence it subscribes to, and its one output leaves through a named pipe.
+// `desktopContentReadService` is exported, and the sentence it replaces said the opposite. The
+// paragraph used to end "this plugin provides none, because nothing inside the composition calls it";
+// the first half of that was always a consequence of the second, and the second stopped being true
+// when G-1's ruling put the read inside Language as material. `contracts.ts` holds the argument,
+// including what providing the contract does not say — it says the read can be asked for, and not who
+// may ask, which is the request word's business and not this barrel's.
+//
+// Its input still arrives as an occurrence it subscribes to, and its output still leaves through a
+// named pipe; what changed is that a second caller now exists inside the composition.
 
+export { desktopContentReadService } from './contracts.js';
+export type { DesktopContentReadService } from './contracts.js';
 export { contentReadEndpointPath } from './endpoint-path.js';
 export { DesktopContentReadError } from './errors.js';
 export { createDesktopContentReadPlugin, desktopContentReadPlugin } from './plugin.js';

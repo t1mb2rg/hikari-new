@@ -19,6 +19,7 @@ import {
   decodeContentReadRequest,
   DESKTOP_CONTENT_READ_PROTOCOL_VERSION,
   desktopContentReadPlugin,
+  desktopContentReadService,
   encodeContentReadReply,
   encodeContentReadRequest,
   isAdmissibleSample,
@@ -375,6 +376,178 @@ test('正文里的控制字符被转义，不能冒充打印它的界面', () =>
   assert.equal(lines.filter((line) => line.includes('第一行')).length, 1);
 });
 
+test('注入 fixture：窗口身份与正文都伪造不出 Hikari 自己的行与字段', () => {
+  // The test above pins the escapes. This one pins the property they exist for, and it is written as a
+  // property rather than as a list of expected lines so that it constrains a renderer it has never seen.
+  //
+  // The threat is not a body that looks odd. It is a body — or a window title, or a process name, which
+  // is the same road by a different field — that *is* one of this surface's own lines: a second
+  // `  读取时间：` above the real one, a `  窗口来源：` naming somewhere the read never went, a `  结果：`
+  // contradicting the result printed below it. `presentation.ts` renders transcriptions of bytes an
+  // application this repository did not write chose, and the whole reason that output is worth printing
+  // is that a human can check Hikari's account against it. A field the content could forge would make
+  // the check agree with the forgery.
+  //
+  // Built from code points rather than written as escapes, for the reason `desktop-session-observe`'s
+  // own title fixture records: an escape in a source literal is exactly the ambiguity under test, so a
+  // fixture that leans on one cannot tell the two cases apart.
+  const BS = String.fromCodePoint(0x5c);
+  const LF = String.fromCodePoint(0x0a);
+  const CR = String.fromCodePoint(0x0d);
+  const C1 = String.fromCodePoint(0x9b);
+
+  // Three injection sites and three different forged fields, each appearing exactly once in the
+  // rendering, so that "this fragment is on exactly one line" is a statement about that site rather than
+  // a coincidence of two fragments being equal.
+  const bodyForged = ['  读取时间：1999-01-01T00:00:00.000Z', '  窗口来源：somewhere-else', '  结果：refused'];
+  const titleForged = '  窗口观测时间：1999-01-01T00:00:00.000Z';
+  const processForged = '  进程名：notepad';
+  const body = `正文${LF}${bodyForged.join(LF)}`;
+
+  const hostile = windowIdentity(
+    sample({
+      title: `真标题${LF}${titleForged}`,
+      processName: `pwsh${CR}${C1}${processForged}`,
+    }),
+  );
+  const read = decideContentRead(
+    walked({
+      regions: [
+        {
+          id: 'window-client-area',
+          viewportRelation: 'inside',
+          notVisibleBecause: null,
+          nodes: [{ text: body, channel: 'text', depth: 1 }],
+        },
+      ],
+    }),
+    hostile,
+  );
+
+  const lines = renderContentRead(read);
+
+  // 1. One element is one line, stated as a comparison rather than as a number. The benign fixture below
+  //    has the same shape and different bytes, so any input that could add or drop a line changes one
+  //    count and not the other. A hardcoded total would also catch that, and would additionally fail
+  //    every time this surface legitimately grows a field — which is the kind of failure a test is
+  //    allowed to have, but it is not the property being asserted here.
+  const benign = renderContentRead(
+    decideContentRead(
+      walked({
+        regions: [
+          {
+            id: 'window-client-area',
+            viewportRelation: 'inside',
+            notVisibleBecause: null,
+            nodes: [{ text: '正文', channel: 'text', depth: 1 }],
+          },
+        ],
+      }),
+      windowIdentity(),
+    ),
+  );
+  assert.equal(
+    lines.length,
+    benign.length,
+    '同样形状的读取必须产生同样多的行：内容不能给这份报告增减一行',
+  );
+
+  // 2. Every forged field is present, and present on the line it was injected into — one line, not four.
+  //    `includes` on the joined text would be satisfied by a forged line, which is the failure mode.
+  for (const forged of [...bodyForged, titleForged, processForged]) {
+    assert.equal(
+      lines.filter((line) => line.includes(forged)).length,
+      1,
+      `${forged} 只应出现在它被注入的那一行上`,
+    );
+    assert.equal(lines.some((line) => line === forged), false, `内容不得产生一行等于 ${forged}`);
+  }
+  assert.equal(
+    lines.filter((line) => line.startsWith('    [text d1] ')).length,
+    1,
+    '三个正文注入片段必须落在同一个节点行里',
+  );
+
+  // 3. Each field name this surface uses appears exactly once, on its own line, carrying the value the
+  //    read holds. This is the assertion that would fail if the escapes were dropped: a surviving
+  //    newline would put the forged `  读取时间：` on a line of its own, above the true one, and these
+  //    `deepEqual`s compare the whole list rather than searching it for the real value.
+  assert.deepEqual(
+    lines.filter((line) => line.startsWith('  读取时间：')),
+    [`  读取时间：${READ_AT}`],
+  );
+  assert.deepEqual(
+    lines.filter((line) => line.startsWith('  窗口来源：')),
+    [`  窗口来源：${read.window.source}`],
+  );
+  assert.deepEqual(
+    lines.filter((line) => line.startsWith('  结果：')),
+    [`  结果：${read.kind}`],
+  );
+  assert.deepEqual(
+    lines.filter((line) => line.startsWith('  窗口观测时间：')),
+    [`  窗口观测时间：${OBSERVED_AT}`],
+  );
+  assert.deepEqual(
+    lines.filter((line) => line.startsWith('  窗口标题：')),
+    [`  窗口标题：真标题${BS}n${titleForged}`],
+  );
+  assert.deepEqual(
+    lines.filter((line) => line.startsWith('  进程名：')),
+    [`  进程名：pwsh${BS}r${BS}u009b${processForged}`],
+  );
+
+  // 4. And the raw bytes are gone from the whole rendering, not just from the node lines — a title and a
+  //    process name reach the terminal by the same road, and they are the fields nothing upstream cleans.
+  for (const raw of [LF, CR, C1]) {
+    assert.equal(
+      lines.some((line) => line.includes(raw)),
+      false,
+      '窗口身份里的控制字符不得原样落到行上',
+    );
+  }
+});
+
+test('已知限制：正文里的转义写法与真实控制字符在渲染上不可区分', () => {
+  // Not a defect this round fixes, and stated rather than left for a reader of the suite to discover.
+  //
+  // `oneLine` escapes control characters and leaves the backslash alone, so a body containing a real
+  // newline and a body containing the two characters `\` `n` render to the same string. That does not
+  // break the invariant the escaping exists for — neither produces a line break, so neither can forge a
+  // line, which is what the fixtures above pin — it costs the surface's *verbatim* claim in the one
+  // direction a checkable transcription cares about, since two different windows can render identically.
+  //
+  // Escaping the backslash would fix the ambiguity and is not obviously the better trade: every
+  // backslash in every window title would double, and a path in a title is the ordinary case rather than
+  // the adversarial one. That decision belongs to whoever owns `terminal-text` across all six of its
+  // rendering callers, not to this slice, so the behaviour is pinned here as it stands and reported
+  // rather than changed.
+  const BS = String.fromCodePoint(0x5c);
+  const LF = String.fromCodePoint(0x0a);
+  const render = (text) =>
+    renderContentRead(
+      decideContentRead(
+        walked({
+          regions: [
+            {
+              id: 'window-client-area',
+              viewportRelation: 'inside',
+              notVisibleBecause: null,
+              nodes: [{ text, channel: 'text', depth: 1 }],
+            },
+          ],
+        }),
+        windowIdentity(),
+      ),
+    ).join('\n');
+
+  assert.equal(
+    render(`a${LF}b`),
+    render(`a${BS}nb`),
+    '真实的换行与字面的反斜杠 n 目前渲染成同一个字符串',
+  );
+});
+
 test('一次合法的最大读取必须装得进客户端的应答上限，而不是被报成「入口无法访问」', () => {
   // This test exists because the constant it pins was chosen by reasoning and the reasoning was wrong.
   // "A rendered read cannot exceed the char bound plus the labelling around it" ignores that rendering
@@ -621,12 +794,20 @@ async function compose(t, { sampleValue = sample(), walk = walked() } = {}) {
   return composed;
 }
 
-test('这个插件不发布也不依赖任何 Service，也不激活在别的插件之后', () => {
-  // Both empty, and both are the reviewed design rather than an omission: the one input arrives as an
-  // occurrence, and nothing in the composition asks this plugin a question. The Contract Creation Gate
-  // has nothing to grant.
+test('这个插件不依赖任何 Service，发布恰好一个读契约，也不激活在别的插件之后', () => {
+  // `requires` is still empty and this is the reviewed design rather than an omission: the one input
+  // arrives as an occurrence, and a subscription to an event is not a Service — `runtime.ts` says so and
+  // `plugin.ts` argues it at the subscription itself.
   assert.deepEqual(desktopContentReadPlugin.requires, []);
-  assert.deepEqual(desktopContentReadPlugin.provides, []);
+  // `provides` was empty until Language became a real caller, and the Contract Creation Gate's condition
+  // is what changed rather than the gate: it admits a capability for an interaction that is already
+  // happening, and asking Hikari about the window in front of you is one. Asserted as an exact list so
+  // that "one" stays a fact about this object — a second contract added later lands here first.
+  assert.deepEqual(desktopContentReadPlugin.provides, [desktopContentReadService]);
+  assert.deepEqual(
+    desktopContentReadPlugin.provides.map((contract) => `${contract.id}@${contract.version}`),
+    ['desktop-content-read.read@1'],
+  );
   assert.equal(desktopContentReadPlugin.id, 'desktop-content-read');
   assert.equal(desktopContentReadPlugin.version, '1.0.0');
 });
@@ -913,11 +1094,23 @@ test('没有引入通用读取 / 窗口选择 / 路由抽象', () => {
   assert.deepEqual(offenders, []);
 });
 
-test('这个模块自己不发布任何 Service', async () => {
+test('这个模块发布的 Service 恰好是那一个读契约', async () => {
+  // The claim used to be "none", and the change is the reviewed one rather than a loosening: the module
+  // now has exactly one caller (Language, for the third word), and one contract came with it. Asserted
+  // as `deepEqual` on the names so that a second one arriving later lands here first, and the id and
+  // version are pinned beside it because a name is not a contract — `desktop-content-read.read@1` is what
+  // the design authorized, and a `@2` under the same export name would pass a name-only check.
   const module = await import('../dist/desktop-content-read/index.js');
   const services = Object.keys(module).filter((name) => /Service$/.test(name));
 
-  assert.deepEqual(services, []);
+  assert.deepEqual(services, ['desktopContentReadService']);
+  assert.equal(module.desktopContentReadService.id, 'desktop-content-read.read');
+  assert.equal(module.desktopContentReadService.version, 1);
+  assert.equal(
+    module.desktopContentReadService,
+    desktopContentReadService,
+    '桶里导出的应当是插件提供的那一个，而不是第二个同名的契约',
+  );
 });
 
 test('读取不通过全局焦点元素走捷径', () => {
@@ -972,9 +1165,32 @@ test('读取入口不依赖 World、来源插件或 Chronicle', () => {
     );
   }
 
-  // The Runtime is imported as a type and never as code, as in the sibling plugin.
+  // The Runtime is imported as a type and never as code, as in the sibling plugin — with one file
+  // excepted, and the exception is the shape every module in this repository has rather than a licence
+  // taken here. `contracts.ts` binds `defineService`, which is the Runtime's *declaration* helper: it
+  // builds a value the contract is and reaches no runtime state. Binding the Runtime itself is the
+  // different, real mistake, and forbidding the helper outright would forbid every `contracts.ts` in the
+  // repository. So the rule is "type-only everywhere, plus `defineService` in the one file whose job it
+  // is", and both halves are asserted.
   const runtimeImports = statements.filter((statement) => statement.specifier.includes('runtime/'));
-  assert.deepEqual(runtimeImports.filter((statement) => !statement.text.startsWith('import type')), []);
+  const codeImports = runtimeImports.filter((statement) => !statement.text.startsWith('import type'));
+  assert.deepEqual(
+    codeImports.map((statement) => statement.text),
+    ["import { defineService } from '../runtime/contracts.js'"],
+  );
+  assert.deepEqual(
+    codeImports.map((statement) => statement.specifier),
+    ['../runtime/contracts.js'],
+  );
+  // And the rest really are types: `PluginDefinition` is what every plugin here names its own shape
+  // with, and every other runtime import in this module has to be `import type`.
+  for (const statement of runtimeImports) {
+    if (codeImports.includes(statement)) continue;
+    assert.ok(
+      statement.text.startsWith('import type'),
+      `从 Runtime 只能取类型，收到：${statement.text}`,
+    );
+  }
 });
 
 test('没有任何一条路径能把正文写到磁盘上', () => {

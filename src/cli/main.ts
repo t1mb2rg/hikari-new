@@ -11,6 +11,7 @@ import { initCommand } from './init.js';
 import { observeCommand } from './observe-command.js';
 import { profileClearCommand, profileSetCommand, profileShowCommand } from './profile-command.js';
 import { relevanceCommand } from './relevance-command.js';
+import { screenCommand } from './screen-command.js';
 import {
   INIT_HINT,
   USAGE,
@@ -55,6 +56,7 @@ function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOut
   if (parsed.command === 'content') return contentCommand(parsed.options);
   if (parsed.command === 'ask') return askCommand(parsed.options);
   if (parsed.command === 'confirm') return confirmCommand(parsed.options);
+  if (parsed.command === 'screen') return screenCommand(parsed.options);
   if (parsed.command === 'profile-set') return profileSetCommand(parsed.options);
   if (parsed.command === 'profile-show') return profileShowCommand(parsed.options);
   if (parsed.command === 'profile-clear') return profileClearCommand(parsed.options);

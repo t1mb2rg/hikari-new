@@ -91,12 +91,18 @@ export function decodeLanguageRequest(line: string): DecodedLanguageRequest {
   return { kind: 'request', request: { word, text } };
 }
 
-// Both words, spelled out here rather than compared inline at the one call site above, so that the
-// envelope's reader has one statement of what a word is. `ask` and `confirm` are the same *shape* of
-// request — a word and a sentence — and this is the function that says so.
+// All three words, spelled out here rather than compared inline at the one call site above, so that the
+// envelope's reader has one statement of what a word is. The three are the same *shape* of request — a
+// word and a sentence — and this is the function that says so.
+//
+// This is the runtime boundary the vocabulary is checked at, and it is the only one. What it decides is
+// whether a word exists; what a word *does* is `plugin.ts`'s, and the two are kept apart so that adding a
+// word means changing both and being told so by the compiler rather than by a request that quietly took
+// the wrong branch.
 function readWord(value: unknown): LanguageWord | undefined {
   if (value === 'ask') return 'ask';
   if (value === 'confirm') return 'confirm';
+  if (value === 'screen') return 'screen';
   return undefined;
 }
 

@@ -64,9 +64,15 @@
 // never asks UIA for the focused element, and never will: `uia.ts` carries the measurement behind that
 // refusal.
 //
-// There is no Service, and by the Contract Creation Gate there should not be: nothing in the
-// composition asks this plugin for anything, and the one thing that does is a client arriving through
-// a pipe. Publishing a Service for that would be publishing one for nobody.
+// There is now a Service, and the gate is what moved rather than this argument. It used to read
+// "nothing in the composition asks this plugin for anything", and that stopped being true when G-1's
+// ruling put the read inside Language as material: `answerScreen` needs the read in-process, and a
+// reply through a pipe is not a thing it can be handed. `contracts.ts` carries the rest of that
+// argument, including what providing the contract does not say.
+//
+// The read below is written once and handed to both callers — the endpoint and the Service — so that
+// the pipe and Language cannot disagree about what a read is or about what "there is no window to
+// read" looks like.
 //
 // Nothing is written down. No Memory, no Experience, no store, no file: a sample lives in this
 // process's memory only for as long as it takes the next one to replace it, and it is gone when the
@@ -76,6 +82,7 @@
 
 import type { PluginDefinition } from '../runtime/plugin.js';
 import { desktopSessionAwarenessAssessedEvent } from '../desktop-session-awareness-loop/index.js';
+import { desktopContentReadService } from './contracts.js';
 import { listenContentReadEndpoint } from './endpoint.js';
 import { contentReadEndpointPath } from './endpoint-path.js';
 import { DesktopContentReadError } from './errors.js';
@@ -88,6 +95,7 @@ import {
   type WindowSample,
 } from './target.js';
 import { createWindowsWalker, decideContentRead, type ContentReadWalker } from './uia.js';
+import type { ContentRead } from './types.js';
 
 export interface DesktopContentReadPluginConfig {
   readonly rootDir: string;
@@ -162,11 +170,12 @@ export function createDesktopContentReadPlugin(
   return {
     id: 'desktop-content-read',
     version: '1.0.0',
-    // Both empty, and both for a reason rather than for symmetry — the header above. The occurrence
-    // this plugin listens for needs no declaration, and there is nothing in the composition that asks
-    // this plugin a question.
+    // `requires` is still empty and for the reason the header gives: the occurrence this plugin
+    // listens for needs no declaration, and the window identity arrives as an event rather than as a
+    // Service. `provides` is no longer empty — see `contracts.ts` for what changed and for what
+    // providing this does not say.
     requires: [],
-    provides: [],
+    provides: [desktopContentReadService],
     config: {
       parse(input: unknown): DesktopContentReadPluginConfig {
         return Object.freeze({ rootDir: readRootDir(input) });
@@ -193,30 +202,42 @@ export function createDesktopContentReadPlugin(
       });
       context.defer(() => samples.clear());
 
+      // The one read, and the reason it is a named value rather than the body of the endpoint handler.
+      // There are two callers now — the pipe and the Service Language holds — and both go through this
+      // function, so there is one place that chooses a sample, one place that decides what an absent
+      // sample is, and no way for the two callers to describe the same failure differently.
+      const readContent = async (): Promise<ContentRead> => {
+        const sample = samples.current;
+        if (sample === undefined) {
+          // Not one of the five kinds, and deliberately: the five are all *about a window*, and this
+          // case has no window to be about. It is a rejection, so the endpoint answers `failed` and
+          // Language reports a read that could not be produced — the vocabulary this repository
+          // already has for "the answer could not be produced" — see `types.ts`.
+          throw new DesktopContentReadError(
+            'Hikari 还没有观测到可以归给人类的窗口，这次读取没有目标。',
+          );
+        }
+
+        const window = toWindowIdentity(sample);
+        // No try/catch around the walk. A walk that threw has failed in a way that is about this
+        // process rather than about the window — the three window-shaped failures
+        // (`refused` / `unreadable` / `empty`) are values the walker returns — so it belongs to the
+        // caller, which is where a `failed` reply is produced.
+        const walk = await walker.walk(sample);
+        return decideContentRead(walk, window);
+      };
+
+      context.services.provide(desktopContentReadService, { read: readContent });
+
       const endpoint = await listenContentReadEndpoint(
         {
           // The request is ignored, and that is the correct reading rather than an oversight: there is
           // one word, it carries no operand, and a request that could name a window would let a caller
           // ask about a window Hikari never observed. See `protocol.ts`.
           async handle() {
-            const sample = samples.current;
-            if (sample === undefined) {
-              // Not one of the five kinds, and deliberately: the five are all *about a window*, and
-              // this case has no window to be about. It is a rejection, so the endpoint answers
-              // `failed`, which is the vocabulary this repository already has for "the answer could not
-              // be produced" — see `types.ts`.
-              throw new DesktopContentReadError(
-                'Hikari 还没有观测到可以归给人类的窗口，这次读取没有目标。',
-              );
-            }
-
-            const window = toWindowIdentity(sample);
-            // No try/catch around the walk. A walk that threw has failed in a way that is about this
-            // process rather than about the window — the three window-shaped failures
-            // (`refused` / `unreadable` / `empty`) are values the walker returns — so it belongs at the
-            // endpoint, which is where a `failed` reply is produced.
-            const walk = await walker.walk(sample);
-            return { outcome: 'ok', lines: renderContentRead(decideContentRead(walk, window)) };
+            // The rendering is here rather than inside `readContent`, because lines are what a pipe
+            // carries and `ContentRead` is what an in-process consumer needs. `contracts.ts` argues it.
+            return { outcome: 'ok', lines: renderContentRead(await readContent()) };
           },
         },
         path,

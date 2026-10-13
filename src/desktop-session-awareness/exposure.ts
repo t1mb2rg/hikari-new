@@ -32,6 +32,16 @@
 // and input activity is not a measurement of attention. A capability that let a model take those steps
 // would be handing it conclusions this plugin never drew.
 //
+// The fifth sentence is a different kind of statement from the four beside it, and the difference is why
+// it was the one missing. The other four refuse an *inference* from facts that are present. The fifth
+// refuses a *reading* that was never taken: this offer carries window identity and this plugin's verdicts
+// about it, and carries no body text, because reading a window's contents happens on another path and
+// under another question entirely. Nothing in the four inferences implies it — a reader who has been told
+// `changed` is not importance has still been told nothing about whether the window's contents arrived —
+// and a model holding this reading while believing it has also seen the screen is wrong in a way no
+// downstream sentence can correct. It is stated here because this description is the only place a model
+// learns what the name it picked actually returns.
+//
 // Deliberately absent, for the reason `work-focus/exposure.ts` records at length: no input schema, no
 // output schema, no authority or side-effect classification, no tags, categories, cost, hints, examples,
 // aliases or discovery keywords. A read capability that takes no arguments needs none of them.
@@ -79,6 +89,6 @@ export interface DesktopContextReadExposure {
 export const desktopContextReadExposure: DesktopContextReadExposure = Object.freeze({
   name: 'desktop_context_read',
   description:
-    '读取 Hikari 当前的桌面会话观察与 awareness assessment，这次读取不会推进 desktop awareness 的时间线。返回的是 Hikari 已经建立的事实与判词本身，不含引申：前台是某个应用不等于用户正在做与之相关的事，stable 不等于什么都没发生，changed 不等于重要，输入活动不等于用户的专注程度。',
+    '读取 Hikari 当前的桌面会话观察与 awareness assessment，这次读取不会推进 desktop awareness 的时间线。返回的是 Hikari 已经建立的事实与判词本身，不含引申：前台是某个应用不等于用户正在做与之相关的事，stable 不等于什么都没发生，changed 不等于重要，输入活动不等于用户的专注程度。它读的是窗口的身份（进程名、窗口标题）与 Hikari 对它的判词，不是窗口里的内容：这一项不含窗口正文，读到它也不等于 Hikari 读过了窗口里的内容。',
   service: desktopSessionAwarenessPeekService,
 });

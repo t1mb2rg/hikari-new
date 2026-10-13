@@ -183,6 +183,17 @@ export interface ConfirmOptions extends CliOptions {
   readonly text: string;
 }
 
+// The third sentence-shaped command, and it is a third interface for the reason the second one was: the
+// paragraph above is what a *confirmation* is not, and a screen question is not that either. The
+// difference between this and `ask` is not in this type — both carry one sentence and nothing about
+// what it means — and saying so is the point. Nothing here is trimmed for the same reason nothing there
+// is, and nothing here names a window, a process or a region: the window is the one Hikari observed, and
+// a command line that could choose a different one would be a second thing deciding what "your screen"
+// refers to. What distinguishes this command is the word it sends, and the word is not in this file.
+export interface ScreenOptions extends CliOptions {
+  readonly text: string;
+}
+
 export interface CommandOutcome {
   readonly exitCode: number;
   readonly stdout: string;
@@ -203,6 +214,7 @@ export type CliCommand =
   | 'content'
   | 'ask'
   | 'confirm'
+  | 'screen'
   | 'profile-set'
   | 'profile-show'
   | 'profile-clear'
@@ -272,6 +284,13 @@ export type ParsedCommandLine =
   | { readonly command: 'focus'; readonly options: FocusOptions }
   | { readonly command: 'ask'; readonly options: AskOptions }
   | { readonly command: 'confirm'; readonly options: ConfirmOptions }
+  // `screen` gets an arm rather than joining `content`, and the two commands are the pair worth telling
+  // apart because they are the only two that touch a window. `content` asks the *resident* to read the
+  // window and render it: the words come back to this terminal and reach no model. `screen` asks with a
+  // model in the loop, so the body leaves the machine along the configured route and what comes back is
+  // an interpretation rather than the read. A command that could do either would have to say which on
+  // the command line, and that flag is exactly what `language/types.ts` refused to put on the word.
+  | { readonly command: 'screen'; readonly options: ScreenOptions }
   // `profile set` carries the *resident's* options, and that is the whole of what it is: the flag
   // surface an operator would have typed to start a resident once, kept. Giving it a reader of its own
   // would be giving the profile format a second opinion about which combinations are legal, and the
@@ -319,6 +338,7 @@ export const USAGE = [
   '  hikari content status --data-dir <path>',
   '  hikari ask --data-dir <path> "<text>"',
   '  hikari confirm --data-dir <path> "<text>"',
+  '  hikari screen --data-dir <path> "<text>"',
   '  hikari profile set --data-dir <path> [与 hikari resident 相同的选项]',
   '  hikari profile show --data-dir <path>',
   '  hikari profile clear --data-dir <path>',
@@ -349,6 +369,12 @@ export const USAGE = [
   '  读到的内容由 Hikari 自己渲染成回答；模型不解释事实，也不替 Hikari 说话。',
   '  端点必须支持 OpenAI 兼容的原生 tool calling（tools / tool_calls / tool 结果消息）；',
   '  不支持的端点会让这次交互失败，Hikari 不会退回另一套协议。',
+  '  hikari screen 授权 Hikari 读一次你正在看的那个窗口的正文，再把读到的东西交给模型解释。',
+  '  它和 hikari ask 一样把你说的话原文发送到 --model-endpoint 指定的模型端点，',
+  '  并且额外把这次读到的窗口正文也发送过去；那个端点可能是远程的。',
+  '  发之前不会另外问你一次——这一条命令就是那次授权，读一次就用掉，不会留到下一次。',
+  '  读哪个窗口不由命令行决定：它是 Hikari 已经观测到的、能归给你的那个前台窗口。',
+  '  正文按原样带过去，Hikari 不替你判断里面写的算不算数，也不会因为窗口里写了什么就去做什么。',
   '  hikari confirm 把你说的这句话原样记在这个数据目录里，常驻重启之后仍然在。',
   '  它记下的是「你明确确认过这句话」这件事，不是 Hikari 核实过的事实，也不构成任何授权：',
   '  没有哪一处会读它来决定能不能做什么，工作焦点也不会因为它被恢复。',
@@ -439,6 +465,13 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   // reader would be a small framework whose second row is a command that does not exist.
   if (head === 'confirm') return readConfirmCommand(rest);
 
+  // `screen` resolves here for the third time and for the same reason, with one difference worth
+  // stating: this operand is a sentence and the *word* is what carries the authorization, so a reader
+  // that could also have produced `ask` would have been a reader able to decide which of the two acts a
+  // person performed. It cannot, and that is the property the grammar is keeping — the word that
+  // reaches the plugin is fixed by which reader ran, and no token can change it.
+  if (head === 'screen') return readScreenCommand(rest);
+
   // `profile` resolves here for the reason `chronicle` does: it is one word of sub-grammar before any
   // options are read, and which sub-word it is decides what the rest of the line means.
   if (head === 'profile') return readProfileCommand(rest);
@@ -468,6 +501,7 @@ interface CommandTokens {
     | 'content'
     | 'ask'
     | 'confirm'
+    | 'screen'
     | 'profile-set'
     | 'profile-show'
     | 'profile-clear'
@@ -630,6 +664,32 @@ function readAskCommand(rest: readonly string[]): ParsedCommandLine {
   }
 
   return { command: 'ask', options: { dataDir, text } };
+}
+
+// The same grammar as `ask` and a third copy of the same four lines, which is the honest shape rather
+// than the one a shared reader would give. What the three commands share is arity — one sentence, in
+// quotes — and that is a rule with three ways of being stated wrongly; what they do not share is what
+// the sentence is for, and a shared reader parameterised by a word would be the first place in this file
+// where a command line could choose which word goes out. The messages differ too and should: an operator
+// who typed `screen` and nothing else is told what `screen` needs, not what a question needs.
+//
+// What is *not* checked here, exactly as for `ask`: whether the sentence is empty, how long is too long,
+// whether a window can be read and whether a resident is there to read it. Every one of those is the
+// language plugin's question, answered on the other side of the pipe with a reason a human can read.
+function readScreenCommand(rest: readonly string[]): ParsedCommandLine {
+  const { dataDir, operands } = readOperandTokens(rest);
+  const [text, ...extra] = operands;
+
+  if (text === undefined) {
+    throw new UsageError('screen 需要一句话；请把整句话用引号括起来。');
+  }
+  if (extra.length > 0) {
+    throw new UsageError(
+      `screen 只接受一句话，收到 ${operands.length} 个；请把整句话用引号括起来。`,
+    );
+  }
+
+  return { command: 'screen', options: { dataDir, text } };
 }
 
 // The same grammar as `readAskCommand`, and the paragraph above applies to it unchanged: one operand,

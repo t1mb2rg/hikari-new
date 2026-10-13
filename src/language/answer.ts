@@ -121,13 +121,15 @@ import {
   renderAnswer,
   renderChat,
   renderSynthesis,
+  SCREEN_BLOCK_NAME,
   truncatedLines,
   unclassifiedLines,
 } from './express.js';
+import type { SynthesisMaterial } from './express.js';
 import type { LanguageExposure } from './exposure.js';
 import type { ExposureReader } from './read.js';
 import type { ModelMessage, ModelRequest, ModelStep, ModelTool } from './model.js';
-import { buildSystemPrompt, promptListsRecord } from './prompt.js';
+import { buildScreenMaterial, buildSystemPrompt, promptListsRecord } from './prompt.js';
 import { readCall, toModelTools } from './tools.js';
 import type { LanguageReply } from './types.js';
 import { MAX_LANGUAGE_TEXT_LENGTH } from './types.js';
@@ -166,10 +168,42 @@ export interface LanguageDependencies {
    * not a reading, and `turn` below is advanced only by reads.
    */
   readonly decisions: () => readonly ConfirmedDecision[];
+  /**
+   * The window body in front of this person, as the lines its owner renders for a human.
+   *
+   * Called only by `answerScreen`, and called by nothing on the `ask` path — which is a property of the
+   * wiring rather than a rule, and the reason a test can state "an unauthorized question performs zero
+   * content reads" as a count rather than as a branch order.
+   *
+   * It returns the owner's rendered lines rather than the read itself, on the argument
+   * `src/language/contracts.ts` makes for every Service in this plugin: the caller supplies the fact,
+   * the owner supplies the words. The lines that come back are the same lines the human will be shown,
+   * because they are the same array — `express.ts` escapes it a second time on the way out, which is a
+   * no-op and is what keeps the two renderings from being able to drift apart.
+   *
+   * A rejection is the read having failed — no window Hikari can attribute to this person, a walk that
+   * threw — and `answerScreen` turns it into a `failed` reply without calling the model.
+   */
+  readonly readScreen: () => Promise<readonly string[]>;
 }
 
 export interface Answerer {
   answer(text: string): Promise<LanguageReply>;
+  /**
+   * The same question, with this person's window body as material.
+   *
+   * A method rather than a flag on `answer`, for the reason `types.ts` gives for the third word:
+   * reading somebody's screen is an act, and a boolean would make it a property of a question — "did
+   * this question carry the authority" — which is precisely what must not be expressible as anything
+   * other than the word the person typed. Nothing about the call is kept anywhere: the authorization is
+   * this method's parameter, it is passed to one private function, and it lives no longer than the
+   * promise this returns.
+   *
+   * What it does that `answer` does not: reads the window *before* the model is called, and fails closed
+   * if that read fails. A read that could not be produced is a `failed` reply with no model call in it,
+   * because there is no version of this question that was asked without the material.
+   */
+  answerScreen(text: string): Promise<LanguageReply>;
 }
 
 // The tool message for a call that was not performed: a capability that does not exist, a capability
@@ -181,156 +215,249 @@ const UNRUN_CALL_RESULT = '这次调用没有执行。';
 export function createAnswerer(dependencies: LanguageDependencies): Answerer {
   let turn: DialogueTurn | null = null;
 
+  // The two refusals both words share, asked before either of them does anything else. It is a function
+  // rather than two copies because the words differ in what they do *after* a question is found
+  // acceptable, and a refusal is the place where they are asked the same question — a refusal reachable
+  // on only one of the two paths would be a second policy about what a question is.
+  const refusalFor = (text: string): LanguageReply | undefined => {
+    if (text.trim() === '') return { outcome: 'refused', lines: emptyQuestionLines() };
+    if (text.length > MAX_LANGUAGE_TEXT_LENGTH) {
+      return { outcome: 'refused', lines: longQuestionLines(MAX_LANGUAGE_TEXT_LENGTH) };
+    }
+    return undefined;
+  };
+
+  // The loop, shared by both words. `screen` is the one thing that differs: `null` for `ask`, and for
+  // `answerScreen` the lines that were read before this function was entered. It is a parameter and
+  // never a closure binding, which is what makes "the authorization cannot outlive the call that carried
+  // it" a property of the code rather than a rule about how the code is used — and it is why a second
+  // `ask` cannot see the previous `screen` body even though this closure is the same object.
+  const respond = async (
+    text: string,
+    now: string,
+    screen: readonly string[] | null,
+  ): Promise<LanguageReply> => {
+    const contextUsed = usableDialogueTurn(turn, now);
+    // Read once and held, because the same list decides two things: what the system message carries,
+    // and whether there is any material for a composed section to be about. Both are decided *here*,
+    // synchronously and before the model is called — and not because calling a dependency twice would
+    // be expensive. `decisions()` hands back a live view of this activation's own store rather than a
+    // copy, and this endpoint serves one connection at a time with no serialization between them: a
+    // `confirm` arriving on another connection while this ask waits on the model pushes onto the very
+    // array this binding points at. Reading its length after the model answered would let the gate see
+    // a record the prompt never listed, and the composed section would then be labelled as drawing on
+    // this person's words in an answer where their words were never shown. `promptListsRecord` rather
+    // than a length test, for the neighbouring reason: what the page carries is what the selection
+    // kept, so the gate has to be a question about the page and not about the store.
+    const confirmed = dependencies.decisions();
+    const recordOnThePage = promptListsRecord(confirmed);
+    const messages: ModelMessage[] = [
+      { role: 'system', content: buildSystemPrompt(contextUsed, confirmed) },
+    ];
+    // The window body, when this request carried the authorization for one, goes here: below the system
+    // message and above the person's own question. The position is argued in `prompt.ts` and the two
+    // consequences at this line are that the question stays byte-for-byte what the person typed, and
+    // that the last user message in the request is still their own turn — which is a property a test can
+    // state about the request rather than an intention a reader has to infer from the order of pushes.
+    if (screen !== null) messages.push({ role: 'user', content: buildScreenMaterial(screen) });
+    messages.push({ role: 'user', content: text });
+    const tools: readonly ModelTool[] = toModelTools(dependencies.exposures);
+
+    // What has been read, in the order it was read. This is the whole of the loop's memory and the
+    // whole of the referent it may leave behind — one list serving both, so that "what was read" has
+    // one home rather than two that could disagree.
+    //
+    // On the authorized path the list does not start empty. The body was read before this function was
+    // entered, so it is the first block on the page, it is what the human will see first, and it is the
+    // reason every step below leaves by the grounded branch. It is *not* a reading in the sense the
+    // referent cares about — `advanceDialogue` is handed its name like any other, which is stated here
+    // because a reader comparing the two lists will find them equal and should know that is intended.
+    const blocks: GroundedBlock[] =
+      screen === null ? [] : [{ name: SCREEN_BLOCK_NAME, lines: screen }];
+    const alreadyRead = (name: string): boolean => blocks.some((block) => block.name === name);
+    // The model's own sentence, on the one path where it survives the loop, and which materials the page
+    // was carrying when it did. `undefined` means the answer is the readings, which is what it was before
+    // either kind of material existed.
+    //
+    // Held as a pair rather than recomputing the label's material where the section is rendered: the page
+    // cannot change between the gate and the assembly, and a second computation would be a second answer
+    // to a question that was already answered — the one place a label could come to describe a page other
+    // than the one the gate opened onto.
+    let synthesis: { spoken: string; material: SynthesisMaterial } | undefined;
+
+    for (;;) {
+      let step: ModelStep;
+      try {
+        step = await dependencies.step({ messages, tools });
+      } catch (error) {
+        return { outcome: 'failed', lines: modelFailureLines(describe(error)) };
+      }
+
+      if (step.toolCalls.length === 0) {
+        // Grounded: the model is done, and what it wrote alongside being done is normally dropped.
+        // This is the branch the one-way door is about, and it is `break` rather than a return
+        // precisely so that the answer is assembled from the readings and not from the model.
+        //
+        // It is also the only place that door opens, and the conditions under it are what keep the
+        // opening narrow. It is *this* break and not the one below: the `stopped` exit leaves with
+        // a step that both wrote and called, and that step's content is not only hidden from the human
+        // but never echoed back to the model either (`messages.push` below carries no content), so
+        // reading it here would surface a sentence the loop deliberately made invisible twice.
+        //
+        // Truncation is excluded because `truncatedLines` records the rule for the chat path and it
+        // does not stop applying here: a partial sentence is something the model did not finish
+        // saying, and the missing half would be invisible exactly where the label says "these are my
+        // words".
+        //
+        // The other condition asks whether the page carried material that is not a reading, because
+        // that is what this section is for: a sentence the model adds to a page of pure readings can
+        // only be a sentence about them, which is the judgement the paragraph at the top of this file
+        // refuses to make. There are two such materials now and they are asked the same way — as
+        // questions about the page rather than about the store or about which word arrived:
+        //
+        //   the record    what the prompt actually listed, not what the store holds. A machine with no
+        //                 record has no route in its prompt and no exception to exercise: it gets an
+        //                 answer byte-for-byte what it got before this existed.
+        //   the body      whether the window block is on the page. It is seeded only by `answerScreen`,
+        //                 so this is true on exactly the authorized path and false everywhere else —
+        //                 and it is asked of `blocks` rather than of the `screen` parameter so that the
+        //                 question stays the one the other condition asks, about the page as built.
+        if (blocks.length > 0) {
+          const screenOnThePage = blocks.some((block) => block.name === SCREEN_BLOCK_NAME);
+          if ((recordOnThePage || screenOnThePage) && !step.truncated) {
+            const spoken = step.content.trim();
+            if (spoken !== '') {
+              // Which materials the label will name. A page can carry both at once, and the last arm is
+              // `record` because the condition just above established that at least one is present.
+              const material: SynthesisMaterial = screenOnThePage
+                ? recordOnThePage
+                  ? 'both'
+                  : 'screen'
+                : 'record';
+              synthesis = { spoken, material };
+            }
+          }
+          break;
+        }
+
+        // Nothing read, so this was a conversational turn — unless it was cut off, in which case what
+        // arrived is a prefix of a sentence and showing it would show a human something the model did
+        // not say.
+        if (step.truncated) return { outcome: 'refused', lines: truncatedLines() };
+
+        const chat = step.content.trim();
+        if (chat === '')
+          return { outcome: 'refused', lines: unclassifiedLines(dependencies.exposures) };
+        return { outcome: 'chatted', lines: renderChat(chat) };
+      }
+
+      // Echoed back with no content, so the model is not told it said something no human saw. The chain
+      // of thought, if the endpoint produced one, goes back on this same message and only here: it is
+      // read off the step, spent on the next request, and left behind with this array when the answer
+      // ends. That the loop holds it for exactly as long as it holds the calls is the whole lifecycle —
+      // there is no second place it is written, which is what keeps it from becoming something this
+      // build keeps.
+      messages.push({
+        role: 'assistant',
+        toolCalls: step.toolCalls,
+        reasoningContent: step.reasoningContent,
+      });
+
+      let stopped = false;
+      for (const call of step.toolCalls) {
+        const exposure = readCall(call, dependencies.exposures);
+        if (exposure === undefined || alreadyRead(exposure.name)) {
+          messages.push({ role: 'tool', toolCallId: call.id, content: UNRUN_CALL_RESULT });
+          stopped = true;
+          continue;
+        }
+
+        let lines: readonly string[];
+        try {
+          lines = await dependencies.read(exposure);
+        } catch (error) {
+          return { outcome: 'failed', lines: groundingFailureLines(describe(error)) };
+        }
+
+        blocks.push({ name: exposure.name, lines });
+        // The model is shown exactly the lines the human will be shown. Not a summary of them, not
+        // the raw contract value behind them — the same array, in the same order, because a model
+        // told something the human was not could answer from a fact nobody else can see.
+        messages.push({ role: 'tool', toolCallId: call.id, content: lines.join('\n') });
+      }
+
+      // Read after the batch, never during: the loop only leaves once every call has a tool message.
+      // See the note at the top — this is the wire invariant, made structural.
+      if (stopped) break;
+    }
+
+    if (blocks.length === 0) {
+      // Reached only when the first batch held no call this build performs — an unknown capability or
+      // a call carrying arguments, in some combination. A duplicate cannot land here: a repeated name
+      // needs a first read of that name to be a repeat, so a batch containing one has already put a
+      // block in `blocks` and leaves by the grounded path instead. And the authorized path cannot land
+      // here either, for the mirror-image reason: its list starts with the body already in it. Nothing
+      // was established, so nothing is answered.
+      return { outcome: 'refused', lines: unclassifiedLines(dependencies.exposures) };
+    }
+
+    // Only a grounded answer moves the referent. A chat reply read nothing, so it has no subject to
+    // lend and — just as importantly — no reason to clear one: a human who says "ayobro" between two
+    // questions about their screen has not changed the subject.
+    turn = advanceDialogue(
+      blocks.map((block) => block.name),
+      now,
+    );
+    // Composed here rather than inside `renderAnswer`, and that placement is deliberate rather than
+    // convenient. `renderAnswer` has two other callers — the proactive surfaces in
+    // `desktop-return-attention` and `repository-ci-attention` — which are not answers to a question
+    // and have no model text to place; giving it a third parameter would put a shape they never use
+    // into the signature of the one function all three share, and would make the composed answer the
+    // thing a reader of `renderAnswer` has to hold in mind while checking the other two.
+    const answer = renderAnswer(blocks, contextUsed);
+    return {
+      outcome: 'answered',
+      lines:
+        synthesis === undefined
+          ? answer
+          : [...answer, ...renderSynthesis(synthesis.spoken, synthesis.material)],
+    };
+  };
+
   return {
     async answer(text: string): Promise<LanguageReply> {
       const now = dependencies.now();
-      if (text.trim() === '') return { outcome: 'refused', lines: emptyQuestionLines() };
-      if (text.length > MAX_LANGUAGE_TEXT_LENGTH) {
-        return { outcome: 'refused', lines: longQuestionLines(MAX_LANGUAGE_TEXT_LENGTH) };
+      const refused = refusalFor(text);
+      if (refused !== undefined) return refused;
+      return respond(text, now, null);
+    },
+
+    // The one path that reads anything outside this plugin's own state, and the order of the two steps
+    // below is the whole of what §5.4-3 asks for: the window is read and the model is called only if it
+    // was. A read that failed is `failed` with zero model calls — fail-closed, because a read that did
+    // not happen leaves nothing for the question to be about, and sending it anyway would be asking a
+    // model about a screen nobody read.
+    //
+    // The refusal is asked first, before the read, and the two orders are different behaviours rather
+    // than two ways of writing the same one: an empty question does not entitle anybody to a window
+    // read, so a request that will be refused never reads.
+    async answerScreen(text: string): Promise<LanguageReply> {
+      const now = dependencies.now();
+      const refused = refusalFor(text);
+      if (refused !== undefined) return refused;
+
+      let screen: readonly string[];
+      try {
+        screen = await dependencies.readScreen();
+      } catch (error) {
+        // The same rendering a failed reading gets, because it is the same kind of failure at the same
+        // layer: the wiring could not produce something the answer is made of. The message never carries
+        // window content — neither this path nor the reading one can produce it, since what failed never
+        // arrived.
+        return { outcome: 'failed', lines: groundingFailureLines(describe(error)) };
       }
 
-      const contextUsed = usableDialogueTurn(turn, now);
-      // Read once and held, because the same list decides two things: what the system message carries,
-      // and whether there is any material for a composed section to be about. Both are decided *here*,
-      // synchronously and before the model is called — and not because calling a dependency twice would
-      // be expensive. `decisions()` hands back a live view of this activation's own store rather than a
-      // copy, and this endpoint serves one connection at a time with no serialization between them: a
-      // `confirm` arriving on another connection while this ask waits on the model pushes onto the very
-      // array this binding points at. Reading its length after the model answered would let the gate see
-      // a record the prompt never listed, and the composed section would then be labelled as drawing on
-      // this person's words in an answer where their words were never shown. `promptListsRecord` rather
-      // than a length test, for the neighbouring reason: what the page carries is what the selection
-      // kept, so the gate has to be a question about the page and not about the store.
-      const confirmed = dependencies.decisions();
-      const recordOnThePage = promptListsRecord(confirmed);
-      const messages: ModelMessage[] = [
-        { role: 'system', content: buildSystemPrompt(contextUsed, confirmed) },
-        { role: 'user', content: text },
-      ];
-      const tools: readonly ModelTool[] = toModelTools(dependencies.exposures);
-
-      // What has been read, in the order it was read. This is the whole of the loop's memory and the
-      // whole of the referent it may leave behind — one list serving both, so that "what was read" has
-      // one home rather than two that could disagree.
-      const blocks: GroundedBlock[] = [];
-      const alreadyRead = (name: string): boolean => blocks.some((block) => block.name === name);
-      // The model's own sentence, on the one path where it survives the loop. `undefined` means the
-      // answer is the readings, which is what it was before this existed.
-      let synthesis: string | undefined;
-
-      for (;;) {
-        let step: ModelStep;
-        try {
-          step = await dependencies.step({ messages, tools });
-        } catch (error) {
-          return { outcome: 'failed', lines: modelFailureLines(describe(error)) };
-        }
-
-        if (step.toolCalls.length === 0) {
-          // Grounded: the model is done, and what it wrote alongside being done is normally dropped.
-          // This is the branch the one-way door is about, and it is `break` rather than a return
-          // precisely so that the answer is assembled from the readings and not from the model.
-          //
-          // It is also the only place that door opens, and the three conditions under it are what keep
-          // the opening narrow. It is *this* break and not the one below: the `stopped` exit leaves with
-          // a step that both wrote and called, and that step's content is not only hidden from the human
-          // but never echoed back to the model either (`messages.push` below carries no content), so
-          // reading it here would surface a sentence the loop deliberately made invisible twice.
-          //
-          // Truncation is excluded because `truncatedLines` records the rule for the chat path and it
-          // does not stop applying here: a partial sentence is something the model did not finish
-          // saying, and the missing half would be invisible exactly where the label says "these are my
-          // words". The record's presence gates it because that is the material this section exists for
-          // — and it is asked as "did the prompt put the record in front of the model" rather than "is
-          // there a record", so that the gate cannot open onto a page that shows nobody's words. A
-          // machine with no record has no route in its prompt and no exception to exercise: it gets an
-          // answer that is byte-for-byte what it got before this existed.
-          if (blocks.length > 0) {
-            if (recordOnThePage && !step.truncated) {
-              const spoken = step.content.trim();
-              if (spoken !== '') synthesis = spoken;
-            }
-            break;
-          }
-
-          // Nothing read, so this was a conversational turn — unless it was cut off, in which case what
-          // arrived is a prefix of a sentence and showing it would show a human something the model did
-          // not say.
-          if (step.truncated) return { outcome: 'refused', lines: truncatedLines() };
-
-          const chat = step.content.trim();
-          if (chat === '')
-            return { outcome: 'refused', lines: unclassifiedLines(dependencies.exposures) };
-          return { outcome: 'chatted', lines: renderChat(chat) };
-        }
-
-        // Echoed back with no content, so the model is not told it said something no human saw. The chain
-        // of thought, if the endpoint produced one, goes back on this same message and only here: it is
-        // read off the step, spent on the next request, and left behind with this array when the answer
-        // ends. That the loop holds it for exactly as long as it holds the calls is the whole lifecycle —
-        // there is no second place it is written, which is what keeps it from becoming something this
-        // build keeps.
-        messages.push({
-          role: 'assistant',
-          toolCalls: step.toolCalls,
-          reasoningContent: step.reasoningContent,
-        });
-
-        let stopped = false;
-        for (const call of step.toolCalls) {
-          const exposure = readCall(call, dependencies.exposures);
-          if (exposure === undefined || alreadyRead(exposure.name)) {
-            messages.push({ role: 'tool', toolCallId: call.id, content: UNRUN_CALL_RESULT });
-            stopped = true;
-            continue;
-          }
-
-          let lines: readonly string[];
-          try {
-            lines = await dependencies.read(exposure);
-          } catch (error) {
-            return { outcome: 'failed', lines: groundingFailureLines(describe(error)) };
-          }
-
-          blocks.push({ name: exposure.name, lines });
-          // The model is shown exactly the lines the human will be shown. Not a summary of them, not
-          // the raw contract value behind them — the same array, in the same order, because a model
-          // told something the human was not could answer from a fact nobody else can see.
-          messages.push({ role: 'tool', toolCallId: call.id, content: lines.join('\n') });
-        }
-
-        // Read after the batch, never during: the loop only leaves once every call has a tool message.
-        // See the note at the top — this is the wire invariant, made structural.
-        if (stopped) break;
-      }
-
-      if (blocks.length === 0) {
-        // Reached only when the first batch held no call this build performs — an unknown capability or
-        // a call carrying arguments, in some combination. A duplicate cannot land here: a repeated name
-        // needs a first read of that name to be a repeat, so a batch containing one has already put a
-        // block in `blocks` and leaves by the grounded path instead. Nothing was established, so nothing
-        // is answered.
-        return { outcome: 'refused', lines: unclassifiedLines(dependencies.exposures) };
-      }
-
-      // Only a grounded answer moves the referent. A chat reply read nothing, so it has no subject to
-      // lend and — just as importantly — no reason to clear one: a human who says "ayobro" between two
-      // questions about their screen has not changed the subject.
-      turn = advanceDialogue(
-        blocks.map((block) => block.name),
-        now,
-      );
-      // Composed here rather than inside `renderAnswer`, and that placement is deliberate rather than
-      // convenient. `renderAnswer` has two other callers — the proactive surfaces in
-      // `desktop-return-attention` and `repository-ci-attention` — which are not answers to a question
-      // and have no model text to place; giving it a third parameter would put a shape they never use
-      // into the signature of the one function all three share, and would make the composed answer the
-      // thing a reader of `renderAnswer` has to hold in mind while checking the other two.
-      const answer = renderAnswer(blocks, contextUsed);
-      return {
-        outcome: 'answered',
-        lines: synthesis === undefined ? answer : [...answer, ...renderSynthesis(synthesis)],
-      };
+      return respond(text, now, screen);
     },
   };
 }
