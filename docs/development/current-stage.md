@@ -1539,46 +1539,66 @@ P4-03 supporting slice（Repository CI Relevance v1）：**已满足**——Func
 - 音视频流式资源框架；
 - 旧 Hikari 大规模迁移。
 
-### 本表的分类与来源（2026-10-13 第一遍补源）
+### 本表的分类与来源（2026-10-13）
 
-> 这一节回应 `docs/architecture/hikari-current.md` §13 待裁决表登记的那一条：本表条目「每条的规范力不同，容易被整体误读为同等强度」。下表逐条给出**类别**（依 `governance-rules-v1.md` R2）与**转写源**。
+> 这一节回应 `docs/architecture/hikari-current.md` §13 待裁决表登记的那一条：本表条目「每条的规范力不同，容易被整体误读为同等强度」。下表逐条给出**类别**与**转写源**。
 >
-> **这是第一遍，只覆盖本清单的后半段**（从「Awareness 的完整实现」到「旧 Hikari 大规模迁移」）。**前半段尚未补源，仍按 R2 默认 NOT-YET**——不要把本节的覆盖范围读成全表。
+> **本轮已覆盖全表**（从「跨 Runtime 通信」到「旧 Hikari 大规模迁移」）。判类的规则是 `governance-rules-v1.md` **R2 规则 4**（Human 裁决，2026-10-13）：**来源只在 phase architecture review 的条目默认落 NOT-YET；只有那份 phase review 明写「这是一个设计默认」并给出理由时，才落 SHOULD。**
 
-| 条目 | 类别 | 转写源 | 逐字依据 |
+| 条目 | 类别 | 转写源 | 逐字依据 / 按规则 4 的判定理由 |
 | --- | --- | --- | --- |
-| Awareness 的完整实现 | **NOT-YET**（**不是 MUST**——见下方判定口径） | 链路形状来自 `principles.md` §14；「本轮只做比较」的范围叙述在台账自身与 P3-04 / P4-03 评审 | 「Awareness 才负责：这件事意味着什么？值不值得在意？是否需要记住、提醒或行动？」——§14 给的是**链路形状**，**不是**「本轮不做」 |
-| 跨 source 的推断 | **MUST**（禁推断的那一半） | `principles.md` §14（Perception 只回答「观察到了什么」，解释归 Awareness）；§1 | 「Perception Provider 只负责"观察到了什么"，不负责决定该不该介入」。**注意**：`governance-rules-v1.md` R4 逐字引的「Perception records what the source says, not what Hikari concludes from it」出自 phase review，**本身不是权威**；R4 引用它只是在说「这条分界已有可引的原则」，权威在前两层 |
-| Input Activity 的在场解读 | **MUST**（主语限定为 Input Activity 自身） | `principles.md` §1（Ownership）；辅助 `phase-3-input-activity-architecture-review.md` §5 | 「Perception Provider 只负责"观察到了什么"，不负责决定该不该介入」；「**Perception records what the source says, not what Hikari concludes from it.**」 |
-| 感知结果的过滤 | **SHOULD**（层级上限；若读作「本阶段不做」则 NOT-YET） | `phase-3-foreground-architecture-review.md`（**历史证据层，不作为权威来源**） | 「感知 Provider 不得因为「现实看起来不像正常用户程序」而过滤现实。」——这句话读起来像禁令，**但它不在前两层，故最高 SHOULD** |
-| 感知自身的后台化 | SHOULD | `phase-3-foreground-architecture-review.md` §6；`phase-3-input-activity-architecture-review.md` §6（Pull-only） | 「没有 `changed`、没有订阅、没有队列、没有速率限制、没有轮询、没有预热、没有保活。」 |
-| 感知的持久化 | SHOULD | `phase-3-input-activity-architecture-review.md` §7 | 「InputActivity 不写 `origin.json`、不写 `chronicle.jsonl`、不追加任何 Fact。」 |
-| 非 Windows 的感知实现 | SHOULD | `phase-3-foreground-architecture-review.md` §10 | 「**仅支持 Windows**。其他平台 Plugin 直接 `failed`，这是设计意图而非缺口。」 |
-| PowerShell 子进程成本的优化 | SHOULD | `phase-3-foreground-architecture-review.md` §15 | 「优化路径（常驻子进程 / 预编译程序集 / 原生绑定）属于新工作，不在当前已批准范围内。」 |
-| 通用 Perception / Sensor 框架 | SHOULD | `phase-3-input-activity-architecture-review.md` §16 | 「**错误的抽象比重复更难撤销**」；重评触发条件逐字为「出现第三个同型 Windows Perception，或 P3-01 因独立需求解冻」 |
-| World 的时间语义 | **NOT-YET**（**不是 MUST**） | 「不比较两套时间轴」只见于 phase review（P3-03 评审 §12、P3-04 评审 §14）；`core-architecture-v0.md` §6.3 管的是另一件事（禁 `GlobalWorldState`） | 「World 的 snapshot 里**同时存在两套时间轴**，且它们不被比较：」——**来源是历史证据层，最高 SHOULD**；§6.3 的「局部视图」句不构成本条来源 |
-| World 的失败分类 | SHOULD | `phase-3-desktop-session-world-architecture-review.md` §6.3 | 「World **不拥有**它所组合的 source 的失败分类学。」 |
-| World 的缓存与后台化 | SHOULD | 同上 §7（Pull-only） | 「**World 是 pull-only 的**：没有 `current()` 调用就没有任何观测发生。」 |
-| World 的持久化 | SHOULD | 同上 §8 | 「World 不写 `origin.json`，不写 `chronicle.jsonl`，不写任何新文件，不创建任何目录。」 |
-| World 的平台实现 | SHOULD | 同上 §11、§15 | 「`process.platform` 0 处」 |
-| 第二个 scope 的 World | SHOULD（**scope 限定**——见上方 2026-10-13 的口径修正，**不得**按通用规则引用） | 同上 §4 | 「**范围写在 Plugin ID 里**——第二个 scope 出现时应当是一个新 Plugin，而不是本 Plugin 的一个配置项」 |
-| facet 抽象 | SHOULD | 同上 §16 | 「任何「用一个泛型 `Facet<T>` 消掉重复」的方案都需要**先把两个 observation 的关系说清楚**，而它们之间**没有**关系」 |
-| 完整 Skill / Tool 体系 | **NOT-YET** | `core-architecture-v0.md` §10（明确延后） | 「以下问题已经知道未来可能需要，但**当前冻结，不继续展开**」 |
-| 音视频流式资源框架 | **NOT-YET** | `core-architecture-v0.md` §10 | 「流式大对象与音视频传输抽象」 |
-| 旧 Hikari 大规模迁移 | **无具名来源** → NOT-YET | — | `docs/` 内「迁移」只命中 chronicle 存储格式的迁移语境，与本条无关 |
+| 跨 Runtime 通信 | NOT-YET | `core-architecture-v0.md` §10（明确延后） | 「以下问题已经知道未来可能需要，但**当前冻结，不继续展开**」 |
+| 节点网络协议 | NOT-YET | 同上 §10 | 「节点之间的连接协议与传输格式；」 |
+| 远程 Provider | NOT-YET | 同上 §10 | 「远程 Provider；」——口径澄清已把 `github-ci` 排除在本条外延之外 |
+| Capability 第二注册表 | NOT-YET | `core-architecture-v0.md` §5.3 | 标题即全句「Capability **暂不**成为第二套运行机制」——**在第二层，但内容是「暂不」，故 NOT-YET** |
+| Provider 智能选择 | NOT-YET | 同上 §10 | 「Provider 的复杂智能选择；」。**邻条是 MUST**：§11 逐字禁「所有 Provider 的通用智能调度器」——若本条被读成后者，升 MUST |
+| 全局状态中心 | **MUST** | `core-architecture-v0.md` §11 + §12 不变量 11 + `principles.md` §17 | §11「GlobalStateManager；」；§12「**不存在中央判断器或超级协调器。**」 |
+| 完整权限系统 | NOT-YET | `core-architecture-v0.md` §10 | 「完整权限系统；」 |
+| Memory / Goal 领域实现，以及 World 层的完整实现 | NOT-YET | 「完整业务实现」的延后只见于 `v0-boundary-review.md` §9（**历史证据层**） | 按规则 4 落 NOT-YET。**邻条是 MUST**：`GlobalWorldState` 由 §11 与 §6.3 单独禁止 |
+| Chronicle 的完整领域实现 | NOT-YET | 同上 `v0-boundary-review.md` §9 | 同上 |
+| Chronicle v1 存储格式的完整性标记 | NOT-YET（**无具名来源**） | 最近的记录是 `phase-2-final-architecture-review.md` §11「记录的限制」 | 该节写「本阶段不做，也不应做」——**本阶段不做 → NOT-YET**；前两层搜「墓碑 / 链式哈希 / 完整性标记」零命中 |
+| 常驻进程之外的守护进程化 | NOT-YET（**无具名来源**） | 仅 `phase-2-cli-architecture-review.md` §15 有一句相邻的机制描述 | 描述不是设计默认声明，按规则 4 落 NOT-YET。全库搜「Windows Service / systemd / pid 文件 / watchdog」无以本条为主语的源文 |
+| 配置文件、环境 Profile、节点配置、用户配置中心 | NOT-YET | `phase-2-cli-architecture-review.md` §15；`operator-tui-v0-implementation-boundary-freeze.md` §1.2 已独立判「**NOT-YET**」 | 「没有配置文件加载、没有环境 Profile 切换。」——**已有第三方按 R2 判过 NOT-YET** |
+| `hikari stop` / `status` / `log` 等运维命令 | NOT-YET | `phase-2-cli-architecture-review.md` §16 | stop / status 已由 P4-02.1 解锁；`log` 仍不做，且没有日志子系统 |
+| 启动失败后的自动重试、自动修复、自动创建 | NOT-YET | 同上 §16 | 「`start` 只做一次启动尝试，失败后**不重试、不修复、不降级**——那属于自动修复，**是本阶段禁止的**」 |
+| Event 自动转 Durable Fact，以及任何「什么值得长期记录」的自动判断 | 前半 **MUST** / 后半 NOT-YET | 前半：`core-architecture-v0.md` §4.2。后半：`phase-2-chronicle-architecture-review.md` §13 | 「Event 用于实时通知，不负责普通查询，也**不自动成为长期事实**。」；后半「Chronicle 不决定『什么值得记录』」只在历史证据层 |
+| 事实的 update / delete / 查询 DSL / 全文搜索 / 向量搜索 | NOT-YET | `phase-2-chronicle-architecture-review.md` §16 | 「没有 `update`、没有 `delete`、没有过滤器、没有条件查询、没有排序参数、没有全文搜索、没有向量搜索。」——历史证据层 → NOT-YET |
+| 事实写入失败后的重试幂等语义 | NOT-YET | 同上 §20 | 「**不属于 P2-02**……这是刻意留给调用方的责任」 |
+| `getOrCreate` / `openOrCreate` 与任何全局身份中心 | 前半 NOT-YET / 后半 **MUST** | 后半：`core-architecture-v0.md` §11 + `principles.md` §17；前半：`phase-2-continuity-architecture-review.md` §9 | §11「GlobalStateManager；」；前半只有历史证据层的「零命中」证据 |
+| 身份迁移、备份、修复、升级 | NOT-YET（**无具名来源**） | 部分相近：`phase-2-chronicle-architecture-review.md` §18，但其主语是 **Chronicle store**，不是身份 | 主语不同，不构成来源 → 按规则 4 NOT-YET |
+| 感知的语义解读（Salience / Importance / freshness / 模型调用 /「什么值得记住」） | **MUST** | `principles.md` §14（Perception ≠ Awareness）；`core-architecture-v0.md` §6.6 | 「**不建立中央 Judgement Domain。**」；§14 把解释明确划给 Awareness |
+| Awareness 的完整实现 | NOT-YET | 链路形状来自 `principles.md` §14；「本轮只做比较」的范围叙述在台账自身与 P3-04 / P4-03 评审 | §14 给的是**链路形状**，**不是**「本轮不做」——按规则 4 落 NOT-YET |
+| 跨 source 的推断 | **MUST**（禁推断的那一半） | `principles.md` §1、§14 | 「Perception Provider 只负责"观察到了什么"，不负责决定该不该介入」。**注意**：R4 逐字引的那句英文出自 phase review，**本身不是权威** |
+| Input Activity 的在场解读 | **MUST**（主语限定为 Input Activity 自身） | `principles.md` §1（Ownership） | 同上那句。R3 逐字用本条做反例：「consumer 的存在不能治好一条 MUST」；**consumer 侧的阈值比较在本条外延之外** |
+| 感知结果的过滤 | SHOULD | `phase-3-foreground-architecture-review.md` | 「感知 Provider **不得**因为「现实看起来不像正常用户程序」而过滤现实。」——源文**明写禁令并给出理由**，故按规则 4 落 SHOULD（而非默认的 NOT-YET） |
+| 感知自身的后台化 | NOT-YET | `phase-3-input-activity-architecture-review.md` §6 | 源文是在**描述当前机制**（「没有 `changed`、没有订阅、没有队列……」），**没有**声明这是一次设计默认 → 规则 4 落 NOT-YET |
+| 感知的持久化 | NOT-YET | 同上 §7 | 同上形状：一句机制描述 |
+| 非 Windows 的感知实现 | SHOULD | `phase-3-foreground-architecture-review.md` §10 | 「仅支持 Windows。其他平台 Plugin 直接 `failed`，**这是设计意图而非缺口**。」——**明写「设计意图」并给出理由** → SHOULD |
+| PowerShell 子进程成本的优化 | NOT-YET | 同上 §15 | 「属于**新工作**，不在当前已批准范围内」——本阶段不做 → NOT-YET |
+| 通用 Perception / Sensor 框架 | NOT-YET | `phase-3-input-activity-architecture-review.md` §16 | 源文自带**重评触发条件**（「出现第三个同型 Windows Perception，或 P3-01 因独立需求解冻」）——这正是 NOT-YET 的形状 |
+| World 的时间语义 | NOT-YET | P3-03 评审 §12、P3-04 评审 §14（历史证据层） | 「World 的 snapshot 里同时存在两套时间轴，且它们不被比较」。**`core-architecture-v0.md` §6.3 管的是另一件事**（禁 `GlobalWorldState`），不构成本条来源 |
+| World 的失败分类 | SHOULD | `phase-3-desktop-session-world-architecture-review.md` §6.3 | 源文**给出设计理由**（把 source 的失败形态提升成 World 公开语义的代价） → SHOULD |
+| World 的缓存与后台化 | SHOULD | 同上 §7 | 「**World 是 pull-only 的**：没有 `current()` 调用就没有任何观测发生。」——设计属性 + 理由 → SHOULD |
+| World 的持久化 | NOT-YET | 同上 §8 | 只是一句机制描述（「不写 `origin.json`，不写 `chronicle.jsonl`……」）→ 规则 4 落 NOT-YET |
+| World 的平台实现 | SHOULD | 同上 §11、§15；`plugin-design-spec.md` §… | 「「运行在 Windows 上」是 World 当前两个 provider 的事实，**不是 World 的事实**」——设计默认 + 理由。**`plugin-design-spec.md` 里的 `MUST` 标签按 R2 规则 3 不产生 MUST**（第三层），故本条最高 SHOULD |
+| 第二个 scope 的 World | NOT-YET | 同上 §4（历史证据层） | 源文是一次**范围决策**，不是设计默认；且 `plugin-design-spec.md` §11 **逐字禁止**把它全局化。见上方 2026-10-13 的口径修正 |
+| facet 抽象 | SHOULD | 同上 §16 | 「重复是**刻意接受**的」——明写「刻意」并给出理由（先要说明两个 observation 的关系，而它们没有关系） → SHOULD |
+| 完整 Skill / Tool 体系 | NOT-YET | `core-architecture-v0.md` §10 | 「完整 Skill 体系；」 |
+| 音视频流式资源框架 | NOT-YET | 同上 §10 | 「流式大对象与音视频传输抽象；」 |
+| 旧 Hikari 大规模迁移 | NOT-YET（**无具名来源**） | — | `docs/` 内「迁移」只命中 chronicle 存储格式的迁移语境，与本条无关 |
 
-**判定口径（这一节怎么判的，以及为什么不能只判一遍）：**
+**判定口径（这张表怎么判的）：**
 
-1. **类别由 `governance-rules-v1.md` R2 决定，而 MUST 有来源层级限制。** R1 的层级逐字是：`principles.md`（长期最高原则）→ `core-architecture-v0.md`（当前冻结核心结构）→ `plugin-design-spec.md`（操作规范）→ **phase architecture reviews（历史证据，不作为权威来源）** → **development docs（阶段记录，不作为权威来源）**。R2 规则 3：「**MUST 只能来自 R1 的前两层**，或 Runtime 已强制的 invariant。写在别处的规则**最高只能是 SHOULD**。」
-2. **由此两个推论，本表据此判**：(a) 来源只在 **phase review** 的条目**最高 SHOULD**，即使那句话读起来像禁令；(b) **`plugin-design-spec.md` 里的 `MUST` 标签本身不产生 MUST**——标签不授予层级，只有前两层的内容有 MUST 效力。
-3. **本节由两遍独立调查交叉核对，两遍在 15 条上判得不同。** 分歧集中在同一个问题上：来源只有 phase review 的条目，该读作「设计默认」（SHOULD）还是「本阶段不做，还没有真实需求」（NOT-YET）。**这个分歧没有被本节单方面裁定**——它取决于每条源文的措辞，而两种读法在那些源文里都站得住。凡属此种情形，表里给的是**层级上限**，备注写明来源层级，读者应按 R2 自行落到 SHOULD 或 NOT-YET。**这条分歧本身就是 `hikari-current.md` §13 那句「每条的规范力不同，容易被整体误读为同等强度」的实测形状。**
-4. **本遍改判了四条**：`Awareness 的完整实现` 与 `World 的时间语义` 初判 MUST，**改判 NOT-YET**（两遍各自把「链路形状」与「禁 `GlobalWorldState`」误当成本条来源，而两句都不是）；`跨 source 的推断` 初判「无具名来源」，**改判 MUST**（`principles.md` §1/§14 就是来源）；`感知结果的过滤` 初判「无具名来源」，**改判 SHOULD-层级上限**（来源是 phase review，不是没有来源）。
-5. **三条仍属「无具名来源 → NOT-YET」**：`旧 Hikari 大规模迁移`，以及前一半里另两条（见下方「尚未覆盖」注）。
+1. **类别由 `governance-rules-v1.md` R2 决定，而 MUST 有来源层级限制。** R1 的层级逐字是：`principles.md`（长期最高原则）→ `core-architecture-v0.md`（当前冻结核心结构）→ `plugin-design-spec.md`（操作规范）→ **phase architecture reviews（历史证据，不作为权威来源）** → **development docs（阶段记录，不作为权威来源）**。R2 规则 3：MUST 只能来自前两层。
+2. **两个推论**：(a) 来源只在 phase review 的条目**最高 SHOULD**，即使那句话读起来像禁令；(b) **`plugin-design-spec.md` 里的 `MUST` 标签本身不产生 MUST**——标签不授予层级。
+3. **规则 4 补上了此前的空档。** 规则 3 说了「最高只能是 SHOULD」，没说「默认是哪一类」；R7.1 说了「引不到源的条目按 NOT-YET 处理」，但它只管**引不到源**，不管**只引得到证据层**。规则 4 把默认定在**可逆的那一类**上，理由是：**用一份 R1 明说「不作为权威来源」的文档去约束未来，是不成立的。**
+4. **规则 4 减少了歧义，但没有消除它。** 残余难度是「明写设计默认 + 理由」本身仍要读措辞——上表凡属此类的条目都写了**按规则 4 的判定理由**，而不是只留一个类别。此前两遍独立调查在同一批条目上判得不同，正是因为当时没有这条规则。
+5. **本表据规则 4 重判了 6 条**（原先按「该源文读起来像规则」给 SHOULD）：感知自身的后台化、感知的持久化、PowerShell 成本优化、通用 Perception/Sensor 框架、World 的持久化、第二个 scope 的 World——**它们的源文都只是在描述机制或记录一次范围决策，没有声明设计默认**。另有 4 条在初判时被判错（两条读起来像 MUST 的其实不是 MUST、两条被判成「无具名来源」的其实有来源），一并更正。
 
 **两处结构性结论，比逐条分类更重要：**
 
-1. **`core-architecture-v0.md` §10 写在 R1 的第二层里，但它是 NOT-YET，不是 MUST。** §10 首句逐字是「以下问题已经知道未来可能需要，但**当前冻结，不继续展开**」——类别由 `governance-rules-v1.md` R2 决定，**不由条目所在的文件决定**。因此引 §10 的那些条目（跨 Runtime 通信 / 节点网络协议 / 远程 Provider / Capability 第二注册表 / Provider 智能选择 / 全局状态中心 / 完整权限系统 / 完整 Skill 体系 / 音视频传输抽象）**不能按 MUST 引**；真正 MUST 的是它们在 **§11** 的同名条目（`GlobalWorldState` / `GlobalStateManager` / 通用智能调度器 / 统一通信层）。
-2. **本条清单的 MUST 集中在两个分界上，而两个分界都不在 development 文档里。** 一个是「源事实 vs 结论」（`principles.md` §1、§14 + `phase-3-input-activity-architecture-review.md` §5），一个是「局部视图 vs `GlobalWorldState`」（`core-architecture-v0.md` §6.3、§11）。这也解释了为什么本表的 MUST 条目数远少于它给人的印象——**大部分条目是 SHOULD，它们的来源是 phase architecture review，不是宪法。**
+1. **`core-architecture-v0.md` §10 写在 R1 的第二层里，但它是 NOT-YET，不是 MUST。** §10 首句逐字是「以下问题已经知道未来可能需要，但**当前冻结，不继续展开**」——**类别由内容决定，不由条目所在的文件决定**。因此引 §10 的那些条目**不能按 MUST 引**；真正 MUST 的是它们在 **§11** 的同名条目（`GlobalWorldState` / `GlobalStateManager` / 通用智能调度器 / 统一通信层）。
+2. **这张清单给人的印象与它的实测构成差得很远。** 39 条里：**MUST 只有 6 条**（全局状态中心、Event 不自动转长期事实、全局身份中心、感知的语义解读、跨 source 的推断、Input Activity 的在场解读），**SHOULD 只有 6 条**，**其余约 27 条是 NOT-YET**（真实需求一出现即自动解除条件）。也就是说：**这份清单读起来像一部禁令集，实际上四分之三是「还没到时候」。** MUST 集中在两个分界上——「源事实 vs 结论」（`principles.md` §1、§14）与「局部视图 vs `GlobalWorldState`」（`core-architecture-v0.md` §6.3、§11）——**而两个分界都不在 development 文档里。**
 
 > 一个附带发现，已就地修正：本清单「第二个 scope 的 World」一条原先读起来像通用规则，而 `plugin-design-spec.md` §11 逐字禁止把它全局化。该条现在带上 scope 限定的口径修正。
 
