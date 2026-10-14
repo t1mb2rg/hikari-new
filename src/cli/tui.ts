@@ -669,13 +669,19 @@ function runTui(initialDataDir: string | undefined): Promise<CommandOutcome> {
       const key = readTuiKey(chunk);
       if (key === 'quit') return finish({ exitCode: 0, stdout: '', stderr: '' });
       if (key === 'next-view') return setView(nextView(state.view));
-      if (key === 'scroll-up' || key === 'scroll-down') {
+      if (key === 'scroll-up' || key === 'scroll-down' || key === 'scroll-line-up' || key === 'scroll-line-down') {
         // A page is what the window can actually show, taken from the renderer rather than guessed: the
         // chrome above and below the body is the renderer's business, and a second copy of that number
         // here is a second copy that goes stale the next time a header line is added.
+        //
+        // The arrow keys move one line instead of one page, and the wheel is why they are bound at all:
+        // a terminal asked for alternate scroll mode spells each notch as an Up or Down (`?1007`, set
+        // with the screen in `tui-render.ts`), so one notch is one line. The page keys keep answering
+        // "the screenful before this". Zero is the newest line; below it is not a position.
         const page = bodyRows(renderOptions());
-        const step = key === 'scroll-up' ? page : -page;
-        state = { ...state, scroll: Math.max(0, state.scroll + step) };
+        const many = key === 'scroll-up' || key === 'scroll-down';
+        const older = key === 'scroll-up' || key === 'scroll-line-up';
+        state = { ...state, scroll: Math.max(0, state.scroll + (many ? page : 1) * (older ? 1 : -1)) };
         draw();
         return;
       }

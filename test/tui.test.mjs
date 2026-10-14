@@ -1045,6 +1045,16 @@ test('退出走的是恢复终端的那条路，而不是别的什么', () => {
   assert.ok(LEAVE_SCREEN.includes('\x1b[?1049l'), '离开备用屏');
   assert.ok(LEAVE_SCREEN.indexOf('\x1b[?25h') < LEAVE_SCREEN.indexOf('\x1b[?1049l'));
 
+  // 滚轮。终端只有被要求之后才会把一次滚轮转成一个方向键（`?1007`，xterm 的 alternate scroll mode）：
+  // 备用屏上面没有可滚的回滚缓冲，所以不要求的时候滚轮一个字节都不产生——人在长回答上转滚轮，看到的
+  // 是一动不动的屏。要回来的时候，这个模式连屏一起交还。
+  assert.ok(ENTER_SCREEN.includes('\x1b[?1007h'), '让终端把滚轮当成方向键');
+  assert.ok(LEAVE_SCREEN.includes('\x1b[?1007l'), '交还滚轮模式');
+  assert.ok(
+    LEAVE_SCREEN.indexOf('\x1b[?1007l') < LEAVE_SCREEN.indexOf('\x1b[?1049l'),
+    '先交还模式，再交还屏',
+  );
+
   // Ctrl+Q is the binding, and it is not a letter. Chat is the default view and its input row is a text
   // field, so `q`, `s`, `x` and `r` have to be ordinary characters — the v0 console's `[q] 退出` bar
   // cannot survive a screen where `q` is the first letter of a word someone is typing.
@@ -1057,6 +1067,10 @@ test('退出走的是恢复终端的那条路，而不是别的什么', () => {
   assert.equal(readTuiKey('\t'), 'next-view');
   assert.equal(readTuiKey('\x1b[5~'), 'scroll-up');
   assert.equal(readTuiKey('\x1b[6~'), 'scroll-down');
+  // 上面那条 `?1007h` 换来的两个字节。在这里它们是滚轮，一次一格；在它们被绑上之前，它们是未绑定的
+  // 转义序列，会被 `editLine` 丢掉——终端即使把滚轮翻译出来了，屏上也仍然什么都不动。
+  assert.equal(readTuiKey('\x1b[A'), 'scroll-line-up');
+  assert.equal(readTuiKey('\x1b[B'), 'scroll-line-down');
 
   // Ctrl+C and Ctrl+D are the terminal's, and they quit rather than being swallowed. Neither stops the
   // resident: leaving the TUI is not stopping Hikari.

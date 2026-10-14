@@ -23,6 +23,12 @@
 // Escape sequences are matched exactly rather than by prefix. In raw mode a chunk is usually one
 // keystroke, but it is not guaranteed to be, and a rule like "any chunk starting with ESC means Left"
 // would turn an unrecognised sequence — or a paste that begins with one — into a cursor jump.
+//
+// Up and Down are bound, and the wheel is why: a terminal asked for alternate scroll mode (`?1007`, set
+// with the alternate screen in `tui-render.ts`) spells a wheel notch as an Up or Down. Nothing else in
+// this file wants those two bytes — there is no history, and a one-line editor has no second line for a
+// caret to move to — and until they were bound here the wheel scrolled nothing even in a terminal that
+// spoke it.
 
 /** The text being composed and where the cursor sits inside it, in UTF-16 code units. */
 export interface LineEdit {
@@ -258,20 +264,27 @@ export function parseSlashCommand(line: string): SlashParse {
 // ---------------------------------------------------------------------------------------------
 
 /**
- * The three keys the TUI itself binds, named so the loop does not spell escape sequences inline.
+ * The keys the TUI itself binds, named so the loop does not spell escape sequences inline.
  *
  * There is deliberately no single-letter key here. Chat is the default view and its input line is a
  * text field, so `q`, `s`, `x` and `r` have to be ordinary characters — the v0 console's `[q] 退出`
  * bar cannot survive a screen where `q` is the first letter of a word someone is typing. What is left
- * is the three keys whose sequences a terminal will not confuse with typing, plus the two control
- * chords.
+ * is the keys whose sequences a terminal will not confuse with typing, plus the two control chords.
+ *
+ * The two `scroll-line-*` names differ from the page keys in how far they go rather than in which way:
+ * the page keys move one windowful, and the arrows — which are also what a wheel notch arrives as —
+ * move one line.
  */
-export type TuiKey = 'next-view' | 'scroll-up' | 'scroll-down' | 'quit';
+export type TuiKey = 'next-view' | 'scroll-up' | 'scroll-down' | 'scroll-line-up' | 'scroll-line-down' | 'quit';
 
 export function readTuiKey(chunk: string): TuiKey | undefined {
   if (chunk === '\t') return 'next-view';
   if (chunk === '\x1b[5~') return 'scroll-up';
   if (chunk === '\x1b[6~') return 'scroll-down';
+  // Up and Down, which is what `?1007` asks a terminal to send for one wheel notch. Listed after the
+  // page keys because that is the order the hint row names them in, not because either pair is ahead.
+  if (chunk === '\x1b[A') return 'scroll-line-up';
+  if (chunk === '\x1b[B') return 'scroll-line-down';
   // Ctrl+Q. Not Ctrl+C, which the terminal owns: a human who reaches for Ctrl+C means "stop this
   // program", and a TUI that swallowed it would be a process they could not interrupt from the
   // keyboard they are already using.

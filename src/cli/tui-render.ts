@@ -39,6 +39,14 @@ import {
 
 const ALT_SCREEN_ON = '\x1b[?1049h';
 const ALT_SCREEN_OFF = '\x1b[?1049l';
+// Alternate scroll mode (xterm's `?1007`), and the whole reason the arrow keys are bound in
+// `tui-input.ts`: it asks the terminal to spell a wheel notch as an Up or Down while the alternate
+// screen is up. Nothing else here produces those two bytes, and without the request a terminal sends
+// nothing at all for the wheel — there is no scrollback above the alternate screen to scroll — so a
+// person turning the wheel on a long answer watched the screen sit still. The mode is the
+// application's state rather than the buffer's, so it is handed back on the way out with the screen.
+const ALT_SCROLL_ON = '\x1b[?1007h';
+const ALT_SCROLL_OFF = '\x1b[?1007l';
 const CURSOR_HIDE = '\x1b[?25l';
 const CURSOR_SHOW = '\x1b[?25h';
 const CLEAR_SCREEN = '\x1b[2J';
@@ -697,9 +705,13 @@ function clipText(text: string, columns: number): string {
  * The keys this screen binds, on the last row.
  *
  * It exists because the alternative is a surface whose only navigation is undiscoverable. `Tab` cycles
- * the views, `PgUp`/`PgDn` scroll and `Ctrl+Q` leaves, and none of those three leaves a mark on the
- * screen that a human could find by looking — so a person who did not read the source would use the
+ * the views, `PgUp`/`PgDn` and the wheel scroll and `Ctrl+Q` leaves, and none of those leaves a mark on
+ * the screen that a human could find by looking — so a person who did not read the source would use the
  * chat line and never learn the rest was there.
+ *
+ * The wheel is named because it is the one gesture a person arrives with already, and because it only
+ * became true here when `?1007` was set: the row is the place a claim about the keyboard is either made
+ * or left to be discovered by accident.
  *
  * It is written in the same muted tone as every other piece of chrome, and it names no single-letter
  * key: the input line is a text field, so `q`, `s` and `r` belong to the sentence being typed. That is
@@ -707,7 +719,7 @@ function clipText(text: string, columns: number): string {
  * because a hint row is exactly where someone would be tempted to put one back.
  */
 function hintLine(): Line {
-  return [span('Tab 切换视图   /help 命令   PgUp/PgDn 翻页   Ctrl+Q 退出', SGR_DIM)];
+  return [span('Tab 切换视图   /help 命令   PgUp/PgDn/滚轮 翻页   Ctrl+Q 退出', SGR_DIM)];
 }
 
 /**
@@ -802,6 +814,6 @@ export function renderAskFrame(
 }
 
 /** What is written to the terminal when the TUI takes the screen, and when it gives it back. */
-export const ENTER_SCREEN = `${ALT_SCREEN_ON}${CURSOR_HIDE}${CLEAR_SCREEN}`;
-export const LEAVE_SCREEN = `${CURSOR_SHOW}${ALT_SCREEN_OFF}`;
+export const ENTER_SCREEN = `${ALT_SCREEN_ON}${ALT_SCROLL_ON}${CURSOR_HIDE}${CLEAR_SCREEN}`;
+export const LEAVE_SCREEN = `${CURSOR_SHOW}${ALT_SCROLL_OFF}${ALT_SCREEN_OFF}`;
 export { SGR_INVERSE };
