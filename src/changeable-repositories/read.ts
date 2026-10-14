@@ -232,9 +232,29 @@ function searchHead(needle: string): string {
   return `以下是「${needle}」在这些仓库里出现的位置，来自你被授权查看的目录。`;
 }
 
-/** The fixed line for one place the needle was found: where it is, and the line itself. */
-function matchLine(match: RepositoryMatch): string {
-  return `${match.path}:${match.line}: ${match.text}`;
+/**
+ * The places the needle was found, grouped by file: the path on its own line, the numbered lines under it,
+ * and a blank line between files.
+ *
+ * Changed on 2026-10-14 from one `path:line: text` line per hit, by a person's decision, and the reason is
+ * on the record there rather than left to whoever reads this diff: seven hits used to print seven absolute
+ * paths, so a reader looking for the two lines they cared about had to read every path to find them. The
+ * information is unchanged — the path is still printed in full, the text is still verbatim, the order is
+ * still the order the walk met them — and what changed is the arrangement: a file's name is said once,
+ * above the lines that are in it. The blank line is what makes two files read as two files.
+ */
+function groupedMatchLines(matches: readonly RepositoryMatch[]): string[] {
+  const lines: string[] = [];
+  let path = '';
+  for (const match of matches) {
+    if (match.path !== path) {
+      path = match.path;
+      if (lines.length > 0) lines.push('');
+      lines.push(match.path);
+    }
+    lines.push(`  ${match.line}: ${match.text}`);
+  }
+  return lines;
 }
 
 // The two bounds say different things and each says only itself. A match bound means the walk stopped with
@@ -308,7 +328,7 @@ export function renderRepositorySearch(result: RepositorySearch): readonly strin
     case 'nothing-declared':
       return [...renderChangeableRepositories(Object.freeze({ repositories: [] }))];
     case 'searched': {
-      const lines: string[] = [searchHead(result.needle), ...result.matches.map(matchLine)];
+      const lines: string[] = [searchHead(result.needle), ...groupedMatchLines(result.matches)];
 
       if (result.truncatedBy === 'matches') {
         lines.push(SEARCH_MORE_MATCHES);

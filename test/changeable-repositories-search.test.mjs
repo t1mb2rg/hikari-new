@@ -28,7 +28,11 @@ import { renderChangeableRepositories } from '../dist/changeable-repositories/st
 const NONE = '这个数据目录里还没有授权任何可改仓库。';
 
 const searchHead = (needle) => `以下是「${needle}」在这些仓库里出现的位置，来自你被授权查看的目录。`;
-const matchLine = (path, line, text) => `${path}:${line}: ${text}`;
+// The hits are grouped by file since 2026-10-14: the path on its own line, the numbered lines under it,
+// and a blank line between files. Both shapes are written out here rather than derived, for the reason
+// every other fixed line is.
+const fileLine = (path) => path;
+const hitLine = (line, text) => `  ${line}: ${text}`;
 const SEARCH_MORE_MATCHES = '出现的地方比一次能返回的多，以上只是开头。';
 const SEARCH_UNFINISHED = '这个仓库里的文件比一次能找的多，以上只是找过的那些。';
 const notFound = (needle) => `这些仓库里没有任何文本提到「${needle}」。`;
@@ -73,7 +77,8 @@ test('the answer opens with the fixed frame, then one line per place, then the c
   assert.equal(result.oversizedFiles, 0);
   assert.deepEqual(lines, [
     searchHead(NEEDLE),
-    matchLine(join(root, 'a.txt'), 2, `${NEEDLE} is here`),
+    fileLine(join(root, 'a.txt')),
+    hitLine(2, `${NEEDLE} is here`),
     READ_CLOSING,
   ]);
   // The frame is not decoration: everything between the first and last line is repository text, and the
@@ -81,15 +86,16 @@ test('the answer opens with the fixed frame, then one line per place, then the c
   assert.equal(lines[lines.length - 1], READ_CLOSING);
 });
 
-test('two mentions in one file are two lines, carrying the line numbers the file has', async (t) => {
+test('two mentions in one file are two lines under one name, carrying the line numbers the file has', async (t) => {
   const root = makeRoot(t);
   writeFileSync(join(root, 'a.txt'), `${NEEDLE} first\nmiddle\n${NEEDLE} again\n`);
 
   const lines = [...renderRepositorySearch(await search([root], NEEDLE))];
 
-  assert.deepEqual(lines.slice(1, 3), [
-    matchLine(join(root, 'a.txt'), 1, `${NEEDLE} first`),
-    matchLine(join(root, 'a.txt'), 3, `${NEEDLE} again`),
+  assert.deepEqual(lines.slice(1, 4), [
+    fileLine(join(root, 'a.txt')),
+    hitLine(1, `${NEEDLE} first`),
+    hitLine(3, `${NEEDLE} again`),
   ]);
 });
 

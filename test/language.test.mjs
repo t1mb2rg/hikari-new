@@ -546,7 +546,7 @@ test('tool_calls 非空时，model 的 content 一个字都不进入回答', asy
   assert.equal(echoed[0].content, undefined, '回填的 assistant 消息不得带 content');
 });
 
-test('一旦读过 capability，之后模型写的散文不进回答，也不报错', async () => {
+test('一旦读过 capability，模型写的话带着标签领在回答前面，而不是被丢掉', async () => {
   const h = harness({ script: [callsTo(toolCall('c1', WORK)), says(CONFABULATION)] });
 
   const reply = await h.answerer.answer('我现在关注什么？');
@@ -554,13 +554,14 @@ test('一旦读过 capability，之后模型写的散文不进回答，也不报
   // Not `refused`, not `failed`. The model returning prose in a grounded state is a normal end of the
   // loop, and reporting it as an error would blame Hikari for something it handled.
   assert.equal(reply.outcome, 'answered');
-  assert.ok(!reply.lines.join('\n').includes(CONFABULATION), 'grounded 状态下模型散文不得进入回答');
-  // Exactly the deterministic block, nothing appended. The one-way door closing is only observable as
-  // the absence of an extra line, so this is a deep comparison rather than a substring search.
-  assert.deepEqual(reply.lines, renderFocus(['hikari-new']));
+  // The label, the sentence verbatim, then the readings — asserted as an order rather than as a substring,
+  // because the label is the only thing on the page telling a reader that the leading line is not a reading.
+  assert.ok(reply.lines[0].includes('不是读回来的内容'), '领在回答前面的是标签');
+  assert.equal(reply.lines[2], CONFABULATION, '模型的话逐字出现，不被改写');
+  assert.deepEqual(reply.lines.slice(3), renderFocus(['hikari-new']), '读回来的原文原样跟在后面');
 });
 
-test('grounded 回答完全由 deterministic renderer 产生，没有第二套表述', async () => {
+test('grounded 回答：模型的话在前，owner 渲染的行在后，一个字节不差', async () => {
   const assessment = assessmentFixture();
   const h = harness({
     script: [callsTo(toolCall('c1', DESKTOP)), says(CONFABULATION)],
@@ -570,9 +571,10 @@ test('grounded 回答完全由 deterministic renderer 产生，没有第二套�
   const reply = await h.answerer.answer('你现在看到什么？');
 
   assert.equal(reply.outcome, 'answered');
+  assert.equal(reply.lines[2], CONFABULATION, '模型的话逐字出现，不被改写');
   // Byte-identical to what `hikari observe desktop-session status` prints, because it is the same call
   // to the same function. A second renderer would drift from the first and both would still look right.
-  assert.deepEqual(reply.lines, renderAssessment(assessment));
+  assert.deepEqual(reply.lines.slice(3), renderAssessment(assessment));
 });
 
 test('模型看到的工具结果，就是人被展示的那些行', async () => {
@@ -1234,8 +1236,12 @@ test('仓库正文伪造 frame、写「忽略以上指令」，都改不了工�
   const reply = await h.answerer.answer('读一下这个文件。');
 
   assert.equal(reply.outcome, 'answered', `注入的正文不该让这次读取失败：${JSON.stringify(reply.lines)}`);
-  // The model's own words never reach the answer, so what it was persuaded to say is not the question.
-  assert.ok(!reply.lines.some((line) => line.includes(CONFABULATION)));
+  // The model's words are shown now — that is the shape this round changed — and it is why this assertion
+  // moved rather than disappeared: what the test is about is that the repository's text did not become a
+  // line of Hikari's own. The sentence the file persuaded the model to write leads, labelled as the model's
+  // and not as a reading; the file's lines follow it, escaped, one element each.
+  assert.equal(reply.lines[2], CONFABULATION, '模型写下的话带标签出现，而不是被当成读回来的东西');
+  assert.ok(reply.lines[0].includes('不是读回来的内容'), '它前面的那一行就是标签');
 
   // What the model was shown, line by line. Four elements went in — the head carrying the file name, the
   // two body lines, and the closing line — and four lines came out, because a name or a body carrying a
@@ -1292,6 +1298,44 @@ test('搜索的命中行也是仓库正文：三个载体各占一行，真末�
   assert.equal(seen[seen.length - 1], closing, '真正的结束语仍然是最后一行');
   assert.ok(!seen.slice(0, -1).includes(closing), '正文里抄的那一份没有成为独立的一行');
   assert.ok(!seen.slice(0, -1).some((line) => line.includes('\r')));
+});
+
+test('只有读取时：模型的话照样带标签领在前面，标签说材料就是读回来的原文', async () => {
+  // The case the widening was for, and it is the case the live evidence came from. Until 2026-10-14 the
+  // leading section required material on the page that was *not* a reading — a record or a window reading —
+  // so a question answered by a repository read could only be answered with the reading itself: a sentence
+  // the model wrote was thrown away, and the person got the raw text with no line of natural language over
+  // it. This harness has no decisions and no window reading; the only thing on the page is the repository's
+  // own text, which is exactly that case.
+  const search = Object.freeze({
+    kind: 'searched',
+    needle: 'changeable-repositories.declared',
+    matches: Object.freeze([
+      Object.freeze({
+        path: 'C:\\repo\\src\\history.ts',
+        line: 29,
+        text: "const DECLARED = 'changeable-repositories.declared';",
+      }),
+    ]),
+    skippedDirectories: Object.freeze([]),
+    unreadable: Object.freeze([]),
+  });
+  const spoken = '这条声明记在这个仓库自己的源码里：`history.ts` 第 29 行就写着它的名字。';
+  const h = harness({
+    repositorySearch: search,
+    script: [callsTo(callFor('a', authorizedRepositorySearchExposure, search.needle)), says(spoken)],
+  });
+
+  const reply = await h.answerer.answer('这个仓库里哪个地方提到了 changeable-repositories.declared？');
+
+  assert.equal(reply.outcome, 'answered');
+  const rendered = renderRepositorySearch(search);
+  assert.ok(reply.lines[0].includes('不是读回来的内容'), '第一行是标签的第一句');
+  assert.ok(reply.lines[1].includes('原文逐字跟在后面'), `第二行说材料就是读回来的原文：${reply.lines[1]}`);
+  assert.ok(!reply.lines[1].includes('你以前说的'), '页面上没有记录，标签不得提它');
+  assert.ok(!reply.lines[1].includes('窗口正文'), '页面上没有窗口正文，标签不得提它');
+  assert.equal(reply.lines[2], spoken, '模型的话在标签之后、读取之前');
+  assert.deepEqual(reply.lines.slice(3), rendered, '读回来的东西逐字跟在它后面');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -1398,9 +1442,12 @@ test('D：最后一轮的 thinking 不进回答、不进 detail，也不跨到�
   const reply = await h.answerer.answer('我现在关注什么？');
 
   assert.equal(reply.outcome, 'answered');
-  assert.deepEqual(reply.lines, renderFocus(['hikari-new']));
+  // The sentence and its label lead, and the readings follow; what must not survive this step is the
+  // reasoning. The two are distinguished by shape rather than by substring: the sentence is a line of the
+  // answer, the reasoning is in no field of it.
+  assert.equal(reply.lines[2], CONFABULATION);
+  assert.deepEqual(reply.lines.slice(3), renderFocus(['hikari-new']));
   assert.ok(!JSON.stringify(reply).includes(FINAL), '最后一轮的推理不得进入回答的任何字段');
-  assert.ok(!JSON.stringify(reply).includes(CONFABULATION));
   assert.equal(h.requests.length, 2, '最后一轮没有 tool_calls，循环在那里结束');
 
   // The next question is the real test of "not across interactions": same answerer, so the same Dialogue
@@ -1432,9 +1479,10 @@ test('E：chatted 路径上 thinking 不进回答，回答仍只有 model 的正
 
 test('F：thinking 不能让 grounded 回答绕过 deterministic renderer', async () => {
   // The one-way door, with a thinking model on the other side of it: once a capability has been read, the
-  // answer is the owner's rendering of what was read — and a chain of thought is a model's prose like any
-  // other, so there is no route by which it becomes the answer. The final step carries the loudest version
-  // of the temptation: a confabulation in the content and a third chain of thought beside it.
+  // answer is the model's own sentence — labelled as such, and leading — over the owner's rendering of what
+  // was read, and a chain of thought is *not* a sentence the loop will show: it is not `content`, so it has
+  // no route into the answer at all. The final step carries the loudest version of the temptation: a
+  // confabulation in the content and a third chain of thought beside it.
   const assessment = assessmentFixture();
   const h = harness({
     script: [
@@ -1448,8 +1496,12 @@ test('F：thinking 不能让 grounded 回答绕过 deterministic renderer', asyn
   const reply = await h.answerer.answer('我现在在干嘛？');
 
   assert.equal(reply.outcome, 'answered');
-  assert.deepEqual(reply.lines, [...renderAssessment(assessment), ...renderFocus(['hikari-new'])]);
-  for (const text of [CONFABULATION, 'R1', 'R2', 'R3']) {
+  assert.equal(reply.lines[2], CONFABULATION, 'content 里的那句话是这一段里唯一被展示的模型文本');
+  assert.deepEqual(reply.lines.slice(3), [
+    ...renderAssessment(assessment),
+    ...renderFocus(['hikari-new']),
+  ]);
+  for (const text of ['R1', 'R2', 'R3']) {
     assert.ok(!reply.lines.join('\n').includes(text), `${text} 不得出现在回答里`);
   }
 });
@@ -3800,8 +3852,18 @@ test('记录这一段说了它是干什么用的：问起以前确认过的话�
   // screen. The second is the sentence the route used to contradict.
   assert.ok(prompt.includes('只在他问到的时候才提'), '要圈出这一段的范围：没问到就不要提');
   assert.ok(
-    prompt.includes('你说的话会跟在读到的内容后面展示'),
-    '也要说出混合问题读了之后会发生什么：话会被展示出来',
+    prompt.includes('你说的话会排在读到的内容前面展示'),
+    '也要说出混合问题读了之后会发生什么：话会被展示出来，而且排在读到的内容前面',
+  );
+
+  // The same two things said in the body, where every machine reads them, because the order changed for
+  // every machine on 2026-10-14: the sentence the model writes now leads the answer instead of trailing it,
+  // and a model told only 「你只负责决定还需要读什么」 would keep writing nothing at all.
+  assert.ok(prompt.includes('你先决定「还需要读什么」'), '正文的职责句要说出读完还要做什么');
+  assert.ok(prompt.includes('你说的话会排在你读到的原文前面'), '并说出它的话排在原文前面');
+  assert.ok(
+    prompt.includes('那些地方不会比你自己更能回答关于你的问题'),
+    '还要有一条：问的是 Hikari 自己时，回话而不去读',
   );
 
   // And the route is a statement about this material rather than a branch on what the person typed: no
@@ -3840,11 +3902,12 @@ const DEPLOYMENT_DECISION = Object.freeze({
   at: '2026-10-01T00:00:00.000Z',
 });
 
-test('有记录时，读过之后说的话跟在读回来的内容后面，并且标明那是谁说的', async () => {
-  // The outcome this round added, asserted as a shape rather than as a substring: a reading, then a label,
-  // then the model's sentence. The order is the entire safety argument — the label leads its section and
-  // the section follows every reading — so a test that only checked the sentence was somewhere in the
-  // answer would pass on an implementation that had laid it between two of the owner's lines.
+test('有记录时，说过的话领在读回来的内容前面，并且标明那是谁说的', async () => {
+  // The shape this round changed, asserted as a shape rather than as a substring: a label, the model's
+  // sentence, then the readings. The order is the whole of the change — a person used to have to read every
+  // raw line to reach the one line that was not raw — and the label is what keeps it honest, so a test that
+  // only checked the sentence was somewhere in the answer would pass on an implementation that had dropped
+  // the label or laid the section between two of the owner's lines.
   //
   // The question is a mixed one and the script says what the model did with it: read the work focus, then
   // say something joining that reading to what this person confirmed before. A scripted model cannot show
@@ -3860,31 +3923,32 @@ test('有记录时，读过之后说的话跟在读回来的内容后面，并�
   const reply = await h.answerer.answer('我们之前确认的部署原则是什么？当前焦点又是什么？');
   assert.equal(reply.outcome, 'answered');
 
-  // The reading first, and byte for byte what the owner rendered. Nothing above it, because a label that
-  // came before the readings would be a section about them rather than an aside after them.
-  const reading = renderFocus([]);
-  assert.deepEqual(reply.lines.slice(0, reading.length), reading, '读回来的内容在最前面，且没有被改动');
-
-  const composed = reply.lines.slice(reading.length);
-  assert.equal(composed.length, 3, '一段：标签两行，然后是模型的话');
+  const composed = reply.lines.slice(0, 3);
+  assert.equal(composed[2], spoken, '模型的话逐字出现，不被改写');
   const label = composed.slice(0, 2);
-  assert.ok(label[0].startsWith('（'), '标签在段首，不在两句之间');
+  assert.ok(label[0].startsWith('（'), '标签在段首，领在模型的话前面');
   assert.ok(label.join('').includes('不是读回来的内容'), '标签要说这不是读回来的');
   // The second claim, which is the only place a reader learns that a sentence about their own past words
   // is not the record itself. A label saying only "not a reading" would leave the stronger-looking claim —
   // this person's own words, therefore a fact — unmarked. It is on the second line, not the first, because
   // the first line is the one that has to survive a narrow window — see the width test below.
   assert.ok(label.join('').includes('没有核实过'), '标签也要说记录本身没有被 Hikari 核实过');
-  assert.equal(composed[2], spoken, '模型的话逐字出现，不被改写');
+  assert.ok(label.join('').includes('你以前说的'), '这一段有记录，标签就要说记录也在这一页上');
+
+  // And every reading follows, whole and in the owner's own rendering — the sentence leads, it does not
+  // replace or reorder anything.
+  const reading = renderFocus([]);
+  assert.deepEqual(reply.lines.slice(3), reading, '读回来的内容原样跟在后面');
 });
 
-test('没有记录时，读过之后说的话仍然不算数', async () => {
-  // The gate, and the reason it is the record rather than the model's own confidence: with no confirmed
-  // statements the only material in the context is the readings, so a sentence added to them is a sentence
-  // *about the readings* — the judgement `answer.ts`'s header says this surface does not have. The same
-  // condition also keeps every machine that has never recorded anything on exactly the behavior it had
-  // before this existed, which is what makes the change checkable against the old tests rather than only
-  // against new ones.
+test('没有记录时，模型的话也领在回答前面，标签只说读回来的原文是全部材料', async () => {
+  // The gate this test used to guard is gone, and what replaced it is worth being precise about. The old
+  // rule admitted the section only where the page carried material that was not a reading, on the argument
+  // that a sentence added to a page of pure readings is a sentence *about* the readings. The rule now is
+  // about the answer's shape: the sentence leads, the readings follow, and the label says on every page who
+  // wrote the leading sentence and that nothing verified it. So the assertion moved from "the sentence is
+  // absent" to "the label tells the truth about what is on this page" — and the sharper half of that is the
+  // label *not* claiming a record that this page does not carry.
   const spoken = '看起来你正在写 Hikari。';
   const h = harness({
     script: [callsTo(toolCall('c1', WORK)), says(spoken)],
@@ -3894,16 +3958,21 @@ test('没有记录时，读过之后说的话仍然不算数', async () => {
 
   const reply = await h.answerer.answer('我在做什么？');
   assert.equal(reply.outcome, 'answered');
-  assert.deepEqual(reply.lines, renderFocus([]), '没有材料可谈时，模型的话不出现');
+
+  const label = reply.lines.slice(0, 2).join('');
+  assert.ok(label.includes('不是读回来的内容'), '标签要说这不是读回来的');
+  assert.ok(!label.includes('你以前说的'), '没有记录时，标签不得提到这个人以前说过的话');
+  assert.equal(reply.lines[2], spoken, '模型的话逐字出现，不被改写');
+  assert.deepEqual(reply.lines.slice(3), renderFocus([]), '读回来的原文原样跟在后面');
 });
 
-test('提问进行中才写进来的记录，不给这一轮开门', async () => {
+test('提问进行中才写进来的记录，不算这一页的材料', async () => {
   // The store reaches the loop as a live view rather than a copy — `continuity.ts` says so in the
   // interface's own words and `plugin.ts` hands that view straight over — and this endpoint serves one
   // connection at a time with nothing serialized between them, so a `confirm` on another connection lands
   // while an ask is waiting on the model. The prompt for that ask was built before the write and lists no
-  // record. If the gate asked about the store instead of about the page it would see the new record, open,
-  // and the answer would carry a section labelled as drawing on this person's words while showing none.
+  // record. The label has to follow the page rather than the store: asking the store would have it announce
+  // material this page does not carry, which is the one thing the label must never do.
   //
   // Written from inside the model call, which is the only moment the race can happen, and the moment a
   // length test cannot cover: the value read before the call and the value read after it are the same
@@ -3939,7 +4008,12 @@ test('提问进行中才写进来的记录，不给这一轮开门', async () =>
 
   const reply = await answerer.answer('我们之前确认的部署原则是什么？当前焦点又是什么？');
   assert.equal(reply.outcome, 'answered');
-  assert.deepEqual(reply.lines, renderFocus([]), 'prompt 里没有记录段时，这一轮也不许出现合成段');
+  // The label is what has to be right here now. The store gained a record while this ask was waiting on the
+  // model and the prompt for this ask was built before that write, so this page carries no record — and a
+  // label naming 「你以前说的」 would be telling a reader about material that is not on the page.
+  const label = reply.lines.slice(0, 2).join('');
+  assert.ok(!label.includes('你以前说的'), 'prompt 里没有记录段时，标签不得提到记录');
+  assert.deepEqual(reply.lines.slice(3), renderFocus([]), '读回来的原文原样跟在后面');
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
@@ -4162,7 +4236,10 @@ test('没有授权字时，窗口正文一次也不会被读，也不会出现�
   const reply = await h.answerer.answer('我现在关注什么？');
   assert.equal(reply.outcome, 'answered');
   assert.equal(h.screenReads.count, 0, 'ask 不得读窗口正文——哪怕正文读得到');
-  assert.deepEqual(reply.lines, renderFocus(['hikari-new']), '回答里只有读回来的东西');
+  // 模型的话带着标签在前面，读回来的那一块原样跟在后面；正文不在这一页上，所以它一行也不出现。
+  assert.ok(reply.lines[0].includes('不是读回来的内容'), '领在回答前面的是标签');
+  assert.equal(reply.lines[2], CONFABULATION, '模型的话逐字出现');
+  assert.deepEqual(reply.lines.slice(3), renderFocus(['hikari-new']), '读回来的东西原样跟在后面');
 
   // 而模型那一侧也一样：这一段根本没上过页面，所以它连一次都没被问过「这是不是材料」。人的那一侧与
   // 模型的那一侧是同一件事的两个观测面，只钉一面会漏掉「读了但没展示」和「展示了但读的是别处」两种。
@@ -4215,8 +4292,8 @@ test('一次授权只用一次：下一轮 ask 不再读窗口，也没有正文
   assert.ok(!after.lines.some((line) => line.includes(SCREEN_LINES[3])), '正文的行也不在回答里');
 });
 
-test('授权那一轮：模型说的话跟在读到的正文后面，并以标签领起', async () => {
-  // T5。位置是这一段的全部安全论证，所以断言的是形状而不是子串：先正文，再标签，再模型的话。一句
+test('授权那一轮：模型说的话领在读到的正文前面，并以标签领起', async () => {
+  // T5。位置是这一段的全部安全论证，所以断言的是形状而不是子串：先标签，再模型的话，再正文。一句
   // 「模型说的话在回答里」在把这句话放在两行正文之间的实现上也会通过。
   const spoken = '你正在看一份部署说明，Hikari 并没有核实过它。';
   const h = harness({ script: [says(spoken)], screen: SCREEN_LINES });
@@ -4224,20 +4301,18 @@ test('授权那一轮：模型说的话跟在读到的正文后面，并以标�
   const reply = await h.answerer.answerScreen('我在看什么？');
   assert.equal(reply.outcome, 'answered');
 
-  assert.deepEqual(reply.lines.slice(0, SCREEN_LINES.length), SCREEN_LINES, '读到的正文在最前面，未被改动');
-
-  const composed = reply.lines.slice(SCREEN_LINES.length);
-  assert.equal(composed.length, 3, '一段：标签两行，然后是模型的话');
-  assert.ok(composed[0].startsWith('（'), '标签领起这一段，不在两句之间');
+  const composed = reply.lines.slice(0, 3);
+  assert.equal(composed[2], spoken, '模型的话逐字出现，不被改写');
+  assert.ok(composed[0].startsWith('（'), '标签领起这一段');
   assert.ok(composed.slice(0, 2).join('').includes('不是读回来的内容'), '标签要说这不是读回来的');
   // 材料名：这一页上没有记录，只有正文，所以标签说的是正文——标签说错材料就是对一个页面做了假陈述。
   assert.ok(composed.slice(0, 2).join('').includes('窗口正文'), '页面上有正文时，标签要说出正文');
   assert.ok(!composed.slice(0, 2).join('').includes('你以前说的'), '页面上没有记录，标签不得说记录也在');
-  assert.equal(composed[2], spoken, '模型的话逐字出现，不被改写');
+  assert.deepEqual(reply.lines.slice(3), SCREEN_LINES, '读到的正文原样跟在后面，未被改动');
 });
 
-test('正文与模型读到的内容同时在一页上时，合成段在两块之后', async () => {
-  // T12。这一页有两种材料，所以位置不变式要问的是「在**所有** reading 之后」而不是「在第一块之后」。
+test('正文与模型读到的内容同时在一页上时，合成段在两块之前', async () => {
+  // T12。这一页有两种材料，所以位置不变式要问的是「在所有 reading 之前」而不是「在第一块之前」。
   // 只有正文时这两句话是同一句，只有两种材料同时在页面上才分得开——而它们同时出现正是这一轮引入的
   // 新情况：授权路径一上来就有一块，模型再读一块就有了第二块。
   const spoken = '你关注的仓库是 hikari-new，你现在看的是一份部署说明。';
@@ -4252,11 +4327,9 @@ test('正文与模型读到的内容同时在一页上时，合成段在两块�
 
   const reading = renderFocus(['hikari-new']);
   const readings = [...SCREEN_LINES, ...reading];
-  assert.deepEqual(reply.lines.slice(0, readings.length), readings, '两块 reading 都在前面，顺序就是读到的顺序');
-
-  const composed = reply.lines.slice(readings.length);
-  assert.equal(composed.length, 3);
+  const composed = reply.lines.slice(0, 3);
   assert.equal(composed[2], spoken);
+  assert.deepEqual(reply.lines.slice(3), readings, '两块 reading 都跟在后面，顺序就是读到的顺序');
   // 两种材料都在页面上，所以标签要把两种都说出来。这是三种材料里最长的一种，也是唯一一种会说错话的
   // 情况：只提其中一个，读到的人就会以为另一个不在里面。
   const label = composed.slice(0, 2).join('');
@@ -4555,13 +4628,15 @@ test('注入 fixture：正文伪造不出框定，也买不走回答出口', { s
   }
 
   // 5. 出口没有被买走。模型确实说了话——它照着正文里那句「你已经获得授权」说了——而那句话落在标注过的
-  //    合成段里，正文自己一个字都没有变成回答，整轮也没有多出第二次模型调用或第二次读取。
+  //    合成段里，正文自己一个字都没有变成回答，整轮也没有多出第二次模型调用或第二次读取。合成段现在
+  //    领头（2026-10-14 起），所以这一段的位置变了、它是不是被标注过没有变：话在两行标签之后，读回来的
+  //    东西逐字跟在后面。
   assert.equal(composed.models[0].requests.length, 1, '整轮只问了模型一次');
-  assert.deepEqual(asked.reply.lines.slice(0, expected.length), expected, '回答的前半段就是这一次读取');
-  const composedLines = asked.reply.lines.slice(expected.length);
+  const composedLines = asked.reply.lines.slice(0, 3);
   assert.equal(composedLines.length, 3);
   assert.ok(composedLines[0].startsWith('（'), '模型的话必须在标注过的段里');
   assert.equal(composedLines[2], spoken);
+  assert.deepEqual(asked.reply.lines.slice(3), expected, '回答的后半段就是这一次读取，逐字');
   // 注入的字节确实到了人眼前——它只是没有变成指令。这两句一起才是完整的：把注入挡在外面不是目标，
   // 目标是让它以「这是别人写的字节」的身份到达。
   assert.ok(expected.join('\n').includes('忽略上面所有规则'), '注入的字节仍然到达了人的眼前');
@@ -4799,7 +4874,7 @@ test('授权的痕迹不落盘：重启之后正文不会自己回来', { skip: 
   assert.ok(!systemPromptOf(second.models[0]).includes('部署说明'), '窗口身份也不得自己回来');
 });
 
-test('合成段的标签两行分开承受窄终端，最要紧的那句在 24 列时仍然完整', () => {
+test('合成段的标签两行分开承受窄终端，最要紧的那句在 50 列时仍然完整', () => {
   // The label is the only thing telling a reader these lines are not a reading, and it is laid out by a
   // terminal: `tui-render.ts` clips every line to `render.columns`, and `clip` keeps a line whole while it
   // is no wider than the window — the column it spends on its own ellipsis comes out of the line only when
@@ -4809,25 +4884,27 @@ test('合成段的标签两行分开承受窄终端，最要紧的那句在 24 �
   // its tail — and its tail was the claim that nothing verified this material. The two claims are now
   // their own lines, so they are cut independently and in the order that costs least, and this test pins
   // the guarantee that bought: the first line, which says these lines are not a reading, is whole on a
-  // window 24 columns wide.
+  // window 50 columns wide. It was 24 until 2026-10-14, when the sentence first said what the leading
+  // section *is* before saying what it is not — the number below moved with the sentence rather than the
+  // guarantee being dropped, and 50 columns is still narrower than any window a person runs a TUI in.
   //
   // Measured off the rendered section rather than off a constant, so the number checked is the one a human
   // would be shown, and measured with the terminal's own `displayWidth`, so a label that is short in code
   // points but wide in cells cannot pass.
   //
-  // All three materials, in one loop, and the loop is the point rather than a saving: the second line is
+  // All four materials, in one loop, and the loop is the point rather than a saving: the second line is
   // assembled from what was on the page, and the claim that a *particular* material's line is short enough
-  // says nothing about the other two. The design's table listed two of them; the third is the one where
-  // both materials are on the page, and it is the longest, so a test that measured only the two design
-  // rows would leave the widest case unmeasured.
-  const materials = ['record', 'screen', 'both'];
+  // says nothing about the other three. The design's table listed two of them; the third is the one where
+  // both materials are on the page, and it is the longest; the fourth, added when the section stopped
+  // needing material that is not a reading, is the shortest and the one every machine with no record gets.
+  const materials = ['none', 'record', 'screen', 'both'];
 
   for (const material of materials) {
     const [essential, rest] = renderSynthesis('好。', material);
 
     const essentialWidth = displayWidth(essential);
     assert.ok(
-      essentialWidth <= 24,
+      essentialWidth <= 50,
       `标签第一行占 ${essentialWidth} 列，比这更窄的窗口就会把它截掉（${material}）`,
     );
     assert.ok(essential.includes('不是读回来的内容'), `第一行就要说这不是读回来的（${material}）`);
@@ -4845,14 +4922,18 @@ test('合成段的标签两行分开承受窄终端，最要紧的那句在 24 �
     );
   }
 
-  // What each material's line names, and the reason there are three rather than one. The line is the only
+  // What each material's line names, and the reason there are four rather than one. The line is the only
   // place a reader learns which material is carrying the model's sentence, so a line that named a material
   // that was not on the page would be a false claim about this page — and the one it would most plausibly
   // drop is the person's own earlier words, which is exactly the claim `express.ts` warns against losing.
+  const [, noneLine] = renderSynthesis('好。', 'none');
   const [, recordLine] = renderSynthesis('好。', 'record');
   const [, screenLine] = renderSynthesis('好。', 'screen');
   const [, bothLine] = renderSynthesis('好。', 'both');
 
+  assert.ok(noneLine.includes('原文逐字跟在后面'), '只有读取时，标签要说材料就是读回来的原文');
+  assert.ok(!noneLine.includes('你以前说的'), '没有记录时，标签不得说这个人以前说过的话');
+  assert.ok(!noneLine.includes('窗口正文'), '没有读窗口时，标签不得提窗口正文');
   assert.ok(recordLine.includes('你以前说的'), '有记录时，标签要说记录也在里面');
   assert.ok(!recordLine.includes('窗口正文'), '没有读窗口时，标签不得提窗口正文');
   assert.ok(screenLine.includes('窗口正文'), '读过窗口时，标签要说正文也在里面');

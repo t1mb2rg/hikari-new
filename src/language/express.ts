@@ -31,12 +31,22 @@
 // rendered, or — in the two cases below — the model's own words. Those two cases are held apart, and
 // the distance between them is the whole of what this file promises about them. `renderChat` prints
 // model words as the entire answer, with no reading beside them for a sentence to be mistaken for, and
-// adds nothing at all — not even a label. `renderSynthesis` prints model words *after* a reading, under
-// a fixed label that says they are not one. That label is this file's voice and it is the only thing this
-// file says there; what it states is a fact about these lines and not about the machine —
+// adds nothing at all — not even a label. `renderSynthesis` prints model words *ahead of* the readings,
+// under a fixed label that says they are not one. That label is this file's voice and it is the only
+// thing this file says there; what it states is a fact about these lines and not about the machine —
 // that they are not readings and that nothing here verified what they say — so neither section asserts
 // anything about what Hikari observed. Neither is ever laid between two readings either: the label leads
-// its section, and that section follows every block rather than joining any.
+// its section, and that section stands ahead of every block rather than joining any.
+//
+// The order is the model's sentence first and the readings after it, and it was the other way round
+// until 2026-10-14. What changed it is a person's decision rather than a measurement, and it is worth
+// keeping straight which one: the readings were always the answer to the question, and a reader who
+// wanted the answer's *sense* had to read the whole page of raw material to find the one sentence that
+// was not raw material. Leading with the model's sentence puts the thing that answers the question
+// where a person looks first, and the readings stay below it, verbatim and complete, which is what
+// lets a reader check the sentence against them. What the move costs is stated where it is paid for:
+// `answer.ts` now opens the door wider than it used to, and the label is doing more work than before
+// because the human reads the unverified sentence *before* the evidence rather than after it.
 //
 // What used to be here and is not: the lead-in. Every answer opened with a sentence in this file's
 // words saying which question had been understood ("你问的是桌面现在是什么状态。"). It is gone, and its
@@ -48,6 +58,13 @@
 // produced and nobody owns. Two grounded blocks are laid out one after another with no connective
 // tissue at all, because a sentence joining them would be this file composing a claim out of two facts
 // it is not allowed to have an opinion about.
+//
+// What leads a grounded answer since 2026-10-14 is therefore not that lead-in returning under another
+// name, and the difference is worth stating because the two look alike from a distance. That sentence
+// was this file's, so it had to name a topic, and naming a topic is the judgement this surface is least
+// entitled to make. This one is nobody's: it is the model's own sentence, marked as the model's by a
+// label that also says nothing verified it. This file supplies the label and the place to stand, and no
+// words at all — the same division of labour as every other line it renders.
 
 // Two owners export a `renderOccurrence`, so the second is imported under the name of the module it
 // belongs to. The first keeps the bare name it has always had, for the reason `contracts.ts` records
@@ -85,17 +102,22 @@ const FOCUS_NONE = '你当前还没有明确声明任何关注对象。';
 // actually being trimmed. So a single 77-column sentence lost its tail on every window narrower than 77,
 // which is where a tmux split and a narrow window both live. The claims are ordered so that what gets
 // lost first is what costs least: the first line is the one that has to survive — these lines are not a
-// reading — and it states that in 24 columns, so a window 24 wide and up carries it whole, where the
-// one-line form needed 77. The second line carries the rest, which is the part a reader loses when there
-// is no room for both. `clip` is the TUI's, but the sentences that get cut are this file's, which is why
-// the lengths are stated here and why `test/language.test.mjs` measures them with the terminal's own
-// `displayWidth` instead of a second counter: shortening either line is free, and widening the first one
-// fails a test rather than a narrow window.
-const SYNTHESIS_LABEL_FIRST = '（下面不是读回来的内容。';
+// reading — and since the section moved ahead of the readings it says so in 29 columns rather than 24:
+// the four words that name the model as the author had to go in front of the claim, because a sentence
+// standing above the evidence has to say whose sentence it is. A window 29 wide and up carries it whole,
+// where the one-line form needed 77. The second line carries the rest, which is the part a reader loses
+// when there is no room for both. `clip` is the TUI's, but the sentences that get cut are this file's,
+// which is why the lengths are stated here and why `test/language.test.mjs` measures them with the
+// terminal's own `displayWidth` instead of a second counter: shortening either line is free, and
+// widening the first one fails a test rather than a narrow window.
+const SYNTHESIS_LABEL_FIRST = '（下面是 Hikari 自己组织的回答，不是读回来的内容。';
 
 /**
- * Which materials a composed section's page was carrying. A closed set of three, and the third is the
- * one the two-row form of this table used to lose.
+ * Which materials a composed section's page was carrying, besides the readings themselves. A closed set
+ * of four, and it has been two different closed sets in two days: it was `'record' | 'screen' | 'both'`
+ * while the door only opened for a page carrying material that was not a reading, and `'none'` was added
+ * on 2026-10-14 together with the wider door — a page of pure readings can now lead with the model's own
+ * sentence, so "no other material at all" became an answer this table has to have.
  *
  * The second line of the label exists to mark, for each source of material, that a sentence drawing on
  * it is not a reading. A page can carry both the record and the window body at once — they are
@@ -103,26 +125,33 @@ const SYNTHESIS_LABEL_FIRST = '（下面不是读回来的内容。';
  * a row per source has no row for that page. Taking the body's row there would drop the sentence that
  * tells the reader a claim about their own past words is not the record, which is the exact loss the
  * paragraph above calls the reason the line cannot be shortened; taking the record's row would drop the
- * mirror-image sentence for the body. So the material is two independent questions about the page, and
- * this is their four-way answer with the empty one excluded.
+ * mirror-image sentence for the body. So the material is one independent question per source, and this
+ * is the four-way answer to them.
  */
-export type SynthesisMaterial = 'record' | 'screen' | 'both';
+export type SynthesisMaterial = 'none' | 'record' | 'screen' | 'both';
 
 // The second line, per material. Written as a table keyed by the whole closed set rather than as tests,
-// so that a fourth material fails to compile here instead of silently falling into one of these.
+// so that a fifth material fails to compile here instead of silently falling into one of these — which is
+// exactly how `'none'` announced itself as missing on the day the door widened.
 //
 // Only the material varies the wording, and only in the clause after the semicolon. What precedes it is
-// identical in all three and says the thing that does not depend on the page: these are the model's own
-// words and none of it was verified. A clause that changed with what the model wrote would be this file
-// forming an opinion about a sentence, which the paragraph above forbids.
+// identical in all four and says the two things that do not depend on the page: these are the model's own
+// words, and none of it was verified. The clause after it is where the section's position is stated — the
+// readings follow — and `'none'` is the row where that is the whole of the second clause, because on that
+// page there is no third source to name. A clause that changed with what the model wrote would be this
+// file forming an opinion about a sentence, which the paragraph above forbids.
 //
 // The lengths matter and are measured rather than estimated: `test/language.test.mjs` asserts each of
 // these against the terminal's own `displayWidth` at 80 columns, so shortening is free and a clause long
-// enough to be clipped on an ordinary window fails a test rather than a reader's terminal.
+// enough to be clipped on an ordinary window fails a test rather than a reader's terminal. That bound is
+// why the wording says 「原文」 rather than 「它读回来的原文」 and 「和窗口正文也一样」 rather than the fuller
+// form it started as in the draft a person approved on 2026-10-14: the four rows are 53, 71, 69 and 75
+// columns, and the draft's `both` row was 93 — over the bound on every ordinary window.
 const SYNTHESIS_LABEL_REST: Readonly<Record<SynthesisMaterial, string>> = {
-  record: 'Hikari 自己说的、没有核实过的话；你以前说的也一样。）',
-  screen: 'Hikari 自己说的、没有核实过的话；它读到的窗口正文也一样。）',
-  both: 'Hikari 自己说的、没有核实过的话；你以前说的、和它读到的窗口正文也一样。）',
+  none: 'Hikari 自己说的、没有核实过的话；原文逐字跟在后面。）',
+  record: 'Hikari 自己说的、没有核实过的话；原文逐字跟在后面，你以前说的也一样。）',
+  screen: 'Hikari 自己说的、没有核实过的话；原文逐字跟在后面，窗口正文也一样。）',
+  both: 'Hikari 自己说的、没有核实过的话；原文逐字跟在后面：你以前说的、窗口正文。）',
 };
 
 /**
@@ -195,9 +224,10 @@ export function renderAnswer(blocks: readonly GroundedBlock[], contextUsed: Dial
 /**
  * What a human is shown when the model, having read something, also said something.
  *
- * A grounded answer is the readings and — when this person's own confirmed words bore on the question —
- * one more section: the model's sentence putting what it read together with what was said before. The
- * label above leads it and every line of the model's text follows.
+ * A grounded answer is the model's sentence, when there is one, and the readings under it: the sentence
+ * answers the question and the readings are what it was written from, in that order since 2026-10-14 —
+ * before that the section trailed the readings, and the decision is recorded here rather than left to
+ * whoever reads the diff. The label above leads it and every line of the model's text follows.
  *
  * The label claims provenance of *form* and not of derivation, and that distinction is the whole reason
  * this function is allowed to exist. "These lines are not a reading" is a fact about this return value,
@@ -207,6 +237,12 @@ export function renderAnswer(blocks: readonly GroundedBlock[], contextUsed: Dial
  * cannot ask the question that would settle it (`answer.ts` records why), so the label says the one
  * thing that is true of every line it precedes, and asks a reader to weigh these as sentences rather
  * than as readings.
+ *
+ * Standing ahead of the readings rather than behind them raises the price of that distinction instead of
+ * changing it, and the price is worth naming where the function is: a reader meets an unverified sentence
+ * first and the evidence second. What keeps that honest is not this function's wording but the page —
+ * every reading is still on it, verbatim, whole and below — and the label says so in the same breath as
+ * it says whose sentence the reader is looking at.
  *
  * Escaped exactly as `renderChat` escapes, and for a heavier reason. The model is not a trusted source
  * of layout either: a reply containing a newline and a colon would otherwise print a line shaped like a

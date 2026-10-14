@@ -358,31 +358,39 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
         // saying, and the missing half would be invisible exactly where the label says "these are my
         // words".
         //
-        // The other condition asks whether the page carried material that is not a reading, because
-        // that is what this section is for: a sentence the model adds to a page of pure readings can
-        // only be a sentence about them, which is the judgement the paragraph at the top of this file
-        // refuses to make. There are two such materials now and they are asked the same way — as
-        // questions about the page rather than about the store or about which word arrived:
+        // The other condition used to ask whether the page carried material that is not a reading, and it
+        // no longer does: it was removed on 2026-10-14 by a person's decision, and what it was for is
+        // worth keeping on the record even so. A sentence the model adds to a page of pure readings can
+        // only be a sentence about them, which is the judgement this file refuses to make — so the older
+        // rule admitted the section only where there was something on the page that was not a reading.
+        // What replaced it is the shape the answer takes: the model's sentence leads and the readings
+        // follow, so a reader always has the material underneath the sentence to check it against,
+        // whether or not a third source is on the page. That moves the work off a gate that admitted
+        // nothing onto a page of readings, and onto a label that says, on every page, whose sentence this
+        // is and that nothing verified it. The two materials are still named below, now for the label's
+        // sake rather than for the gate's:
         //
         //   the record    what the prompt actually listed, not what the store holds. A machine with no
-        //                 record has no route in its prompt and no exception to exercise: it gets an
-        //                 answer byte-for-byte what it got before this existed.
+        //                 record has no route in its prompt and no exception to exercise: it gets its
+        //                 section under the `'none'` row, which is the row this widening added.
         //   the body      whether the window block is on the page. It is seeded only by `answerScreen`,
         //                 so this is true on exactly the authorized path and false everywhere else —
         //                 and it is asked of `blocks` rather than of the `screen` parameter so that the
-        //                 question stays the one the other condition asks, about the page as built.
+        //                 question stays one about the page as built.
         if (blocks.length > 0) {
           const screenOnThePage = blocks.some((block) => block.name === SCREEN_BLOCK_NAME);
-          if ((recordOnThePage || screenOnThePage) && !step.truncated) {
+          if (!step.truncated) {
             const spoken = step.content.trim();
             if (spoken !== '') {
-              // Which materials the label will name. A page can carry both at once, and the last arm is
-              // `record` because the condition just above established that at least one is present.
+              // Which materials the label will name. A page can carry both at once, and it can now carry
+              // neither, which is a fourth row rather than an arm of this tree that never happens.
               const material: SynthesisMaterial = screenOnThePage
                 ? recordOnThePage
                   ? 'both'
                   : 'screen'
-                : 'record';
+                : recordOnThePage
+                  ? 'record'
+                  : 'none';
               synthesis = { spoken, material };
             }
           }
@@ -475,13 +483,19 @@ export function createAnswerer(dependencies: LanguageDependencies): Answerer {
     // and have no model text to place; giving it a third parameter would put a shape they never use
     // into the signature of the one function all three share, and would make the composed answer the
     // thing a reader of `renderAnswer` has to hold in mind while checking the other two.
+    //
+    // The section goes *ahead* of the readings rather than after them (2026-10-14). The order is the
+    // whole of what a reader gets out of it: with the sentence last, a person had to read every raw line
+    // to reach the one line that was not raw, which is what the answers looked like from their side.
+    // Nothing about the readings changes by being below instead of above — the same lines, whole, in the
+    // same order — and the label's second line now says where they are.
     const answer = renderAnswer(blocks, contextUsed);
     return {
       outcome: 'answered',
       lines:
         synthesis === undefined
           ? answer
-          : [...answer, ...renderSynthesis(synthesis.spoken, synthesis.material)],
+          : [...renderSynthesis(synthesis.spoken, synthesis.material), ...answer],
     };
   };
 

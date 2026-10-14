@@ -314,6 +314,8 @@ Language 自己决定把哪些记录与哪些读取放在一起，然后按确�
 | 8 | 禁止项：Universal Message / Central Reasoner / 关键词式领域路由 | `core-architecture-v0.md` §11 | **MUST / 未触碰** | — |
 | 9 | `LanguageReply` 的 `answered` 语义（客户端据此判断手里拿的是哪一种） | `src/language/types.ts` 抬头：「A `answered` reply is a reading; a `chatted` one is a sentence」 | **被收窄**（须与第 3 条同读） | `answered` 仍然**以** owner 渲染的 reading 开头；模型的话（若有）只能出现在**所有** reading 之后、且在固定标签之下；`chatted` 的语义未变 |
 
+> **2026-10-14 修订（上表逐字不改，只加指针）**：第 1 条那条 SHOULD（「grounded 成功后没有自由 prose 出口」）**已被 Human 明确反转**。新的口径是：grounded 回答可以有**一条窄出口**——模型的话带固定标签、**排在所有 reading 之前**、只在这一轮确实读过东西之后出现；读取的原文照旧逐字跟在后面。同一轮也把第 9 条那句「只能出现在所有 reading **之后**」翻成「**之前**」。原文一字未改，反转的理由、批准与落地四处记在 `docs/architecture/answer-shape-v0-boundary-review.md` §7（`governance-rules-v1.md:138`：双向指针）。
+
 两处修正在这张表里必须写明白，因为原稿都写错了：
 
 - **第 7 条原稿引用 `CLAUDE.md` 作为 MUST 出处。** `CLAUDE.md` 是 Hikari 维护的汇总面，按 R1 的推论它**不能授予自己没有的权威**；同一句话在 `principles.md` 与 `core-architecture-v0.md` 里查不到。因此它**不计入 MUST 栏**。这不改变结论——本轮没有建立模型层，这条命题按哪一层读都未被触碰——但把它记成一条「未触碰的 MUST」会让「零 MUST 被触及」这句话承载一个它没有的分量。

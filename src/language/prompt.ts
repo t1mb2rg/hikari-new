@@ -177,20 +177,28 @@ export function buildSystemPrompt(
     '唯一能让 Hikari 了解现实的途径，就是你去读它。所以：',
     '',
     '- 如果为了诚实回答这句话，必须去读 Hikari 现在观察到的东西，就调用工具去读。',
-    '  读回来的内容会被展示给这个人，就是这次回答的全部内容。',
+    '  读回来的原文会逐字跟在你的回答后面，展示给这个人。',
     '- 如果这个人不是在问 Hikari 知道的事情（打招呼、随口聊两句、说一句自己的感受），',
     '  就直接用自然语言回话，什么也不用读。这是允许的，也是应该的。',
+    // Added 2026-10-14, beside the class above rather than inside it: what was missing was not another
+    // kind of small talk but the whole class of questions about Hikari itself, which the line at the end
+    // of this list — 「先决定还需要读什么」 — read as an invitation to go and read. It names no capability
+    // and no domain, for the reason the file header records.
+    '- 如果这个人问的是 Hikari 自己（它还想知道什么、它现在怎么想、它自己觉得），',
+    '  也直接回话，不要为了找材料去读 Hikari 观察到的东西——那些地方不会比你自己更能回答关于你的问题。',
     '',
     // The default is unchanged and stays where it was: a reading is the whole answer, and a sentence
-    // added to one is not a reading. It is written as one duty rather than two because this is the part
-    // of the prompt every machine reads, and the second duty is granted inside the record's own section
-    // below — the only place in this file that puts a second kind of material in front of the model. A
-    // machine with no record therefore reads the same words it read before that section existed, which
-    // is the whole of what the exception costs it.
+    // added to one is not a reading. The second duty used to be granted only inside the record's own
+    // section below, so a machine with no record read exactly the words it read before that section
+    // existed. Since 2026-10-14 the duty is in the body too — the line at the end of this list — because
+    // the model's sentence now leads the answer instead of trailing it, and a person meeting that
+    // sentence first wants the page to say who wrote it. What did not change is the part that carries the
+    // weight: the sentence is never a reading, and the label says so on every page it appears on.
     '不要自己编造事实：读到前台是某个应用，就别说这个人大概在做什么——那不是你读到的。',
-    '读回来的东西是什么就是什么，不要读完之后随手加一句你自己的理解。',
+    '读到的东西是什么就是什么：你可以用你自己的话把它说清楚，但不能说成你没读到的事。',
     '',
-    '你现在只负责决定「还需要读什么」。读回来的内容是什么意思，由 Hikari 自己说。',
+    '你先决定「还需要读什么」，然后把读回来的东西说给这个人听——你说的话会排在你读到的原文前面，',
+    '并标明那是你自己组织的；读到的原文逐字跟在后面。',
     referent,
     continuityParagraph(confirmed),
   ].join('\n');
@@ -236,7 +244,7 @@ function continuityParagraph(confirmed: readonly ConfirmedDecision[]): string {
     // record is still that it is not small talk.
     '你负责的事有两件：决定「还需要读什么」，以及把读到的和他以前说过的一起说清楚。',
     '如果他这一句里确实问了这些，又还问了要读 Hikari 才知道的事，先把要读的读掉，',
-    '再用你自己的话把两半一起说清楚；你说的话会跟在读到的内容后面展示，',
+    '再用你自己的话把两半一起说清楚；你说的话会排在读到的内容前面展示，',
     '并标明那是你自己组织的，不是读回来的事实。',
   ].join('\n');
 }
