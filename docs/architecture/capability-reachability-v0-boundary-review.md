@@ -149,6 +149,12 @@ node dist/cli/main.js ask --data-dir C:\Users\29719\AppData\Local\Hikari\residen
 
 按它走：**先判「描述是不是不清楚」**。§1.4 已经回答了——模型对覆盖范围的判词是错的，所以**不清楚**，第一步就是 owner 自己的文件。
 
+### 3.3 五层链里没有这一层
+
+`docs/architecture/principles.md` §5 把「能力可用」拆成五层：**系统是否拥有某项能力 → 当前 Scope 是否能访问 → 某个行为循环是否能消费 → 模型是否能看到 → 本次动作是否被允许执行**（`:207-227`），并逐字给出 `> Capability existence ≠ Exposure ≠ Authorization ≠ Execution.`（`:225`）与「这几个层次不得合并成一个布尔开关」（`:227`）。
+
+**这五层里没有「模型是否会想到」这一层。** 所以本片处理的东西既不是往那条链上加第六层，也不是在修它——它在那条链**之外**，位置是「模型看得到」之后、模型自己那一步的选择。记下这一点的用处是：**无论本片选 A 还是选 B，那条冻结链一个字都不用动**。
+
 ---
 
 ## 4. 三条路与各自的代价
@@ -173,6 +179,8 @@ node dist/cli/main.js ask --data-dir C:\Users\29719\AppData\Local\Hikari\residen
 - **不用「当用户说…」这种句式**：它说的仍是「它答得了什么」，选择判据仍在模型手里（R-6）→ 不越过 R-6。
 - 与仓库自己的处置顺序一致（§3.2）。
 - 代价：改的是一个域的**公开描述**（模型与人都读得到），必须由 Human 冻结新字面并按 R7.2 另记一节（旧字面一字不改）；描述永久长一句。
+- **这不是第一次改一条 description，形状已经有人走过**：`docs/architecture/desktop-context-understanding-g1-narrow-design.md:346-358` 收窄过 `desktopContextReadExposure.description`——**增补第五句**、在文件头补一段说明「第五句与前四句不是同一类」、并在 `test/desktop-session-awareness.test.mjs` 的同一条测试里加对应断言，沿用该测试已有的理由：*一条覆盖「caveat 还在不在」的断言，会让另外任意几条被删掉而测试仍然通过*。若走 B，**照这个形状做**（含那条测试断言）。
+- 同一片的授权评审另有一条安全条款（`docs/architecture/desktop-context-understanding-g1-authorization-boundary-review.md:340`）：**正文不能进工具的 `description`**——描述是 owner 的固定字符串，任何环境文本进入它就是注入。B 加的那一句必须是常量，与运行时的任何内容无关。
 
 ### C（不推荐）· prompt 里加一条程序性规则
 
