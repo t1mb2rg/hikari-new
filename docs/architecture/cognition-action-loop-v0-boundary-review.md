@@ -343,7 +343,7 @@
 
 **本片到此不写代码。** Human 已于 2026-10-15 给出审阅意见，本版按意见小修（VERDICT = NARROW、第 5 条排除普通去重、跨 owner 读取保留为架构考题、两处过期事实更正、里程碑 1 与 3 分开、L3 触发条件补全、补双向指针）。下一步是**确认里程碑 1 的设计边界**（§8）——确认之后再动代码。
 
-## §8 里程碑 1 的设计边界（待 Human 确认，尚未实现）
+## §8 里程碑 1 的设计边界（Human 已确认 2026-10-15；已实现，落地记录见 §8.8）
 
 > VERDICT = NARROW 允许「里程碑 1 在确认具体设计边界后实现」。这一节就是那份设计边界。**它只提一个方案 + 两个被否掉的备选**，因为它的目标是**最小、可逆、不新增结构**。
 
@@ -393,3 +393,27 @@
 
 - **(A) 新建一个持有身份绑定的插件 + 一条持久事实**：只有当绑定必须**跨重启、跨不同启动参数**存在时才值得。里程碑 3 如果真需要「上次那个仓库是哪个」的持久依据，再按 R5 重开一次设计——**本次不预先建**。
 - **(B) 扩展 `hikari change declare` 带上 GitHub 名**：会把「哪些目录可以改」（授权）与「这个目录是哪个 GitHub 仓库」（身份）合成一个主语，并让 CI 相关性判断依赖可改仓库那份授权。语义上更重，收益不明显——**先不做**。
+
+### 8.8 落地（2026-10-15 深夜，Human 确认之后）
+
+**已实现。四处改动，全部在既有 owner 内部**：`src/repository-ci-relevance/types.ts`（新增 `DeclaredRepositoryPairing`，judgement 的 `relevant` 臂多一个 `via` 判别）、`src/repository-ci-relevance/judgement.ts`（第二条逐字相等的规则 + 两行渲染）、`src/repository-ci-relevance/plugin.ts`（启动配置多一个可选的 `declared`）、`src/cli/resident.ts`（把既有的 `--repository-root` 与 `--repository` 作为配对传给插件）。**没有**新插件、**没有**新契约、**没有**新存储、**没有**模型侧新工具、**没有**碰控制通道协议。
+
+**测试**：`test/repository-ci-relevance.test.mjs` 现有 **32 条**全绿，其中九条是本次新增（真值表六行 + 端到端三条：配对命中并逐字说出两半、配对在但两半都对不上时仍是那一句 `unknown`、配对是启动配置而不是记忆）。真值表新增的两行值得单独点名——「没有配对时本机路径不算命中（v1 行为不变）」与「配对里 GitHub 名对上了、本机根不同，仍然不算命中（两半都要对）」。`test/language.test.mjs` 的两处 judgement fixture 按类型补齐 `via`，135/135。全库 `npm test`：**937 tests / 933 pass / 0 fail / 4 skipped**。
+
+**真机（真实常驻、真实命名管道、真实 GitHub 观测；18 个插件全 `active`）**：
+
+```text
+$ hikari relevance repository-ci status
+Repository CI relevance：relevant
+人声明的配对：G:\work\LAB\code\hikari-new ↔ t1mb2rg/hikari-new（工作焦点指名了前者，CI 观察报告了后者）
+
+$ hikari focus clear && hikari relevance repository-ci status
+Repository CI relevance：unknown
+未能在当前工作焦点与 Repository CI observation 之间建立逐字相等关系。
+```
+
+**`unknown` 的文案未改**（Human 的决定）：第四种成因不为它单独措辞，`relevant` 那边才说明依据——`judgement.ts` 里那句「一句话、在四种成因下都为真」的注释现在覆盖四种，文字一个字没动。
+
+**它证明什么**：一条只存在于人手写的启动参数里的对应关系，可以让两个此前无法相遇的事实（本机路径、GitHub `owner/name`）产生一次有依据的 `relevant`——而整条链上没有任何一处做过推断，两半的相等都是逐字的，对应关系是人说的。
+
+**它不证明什么**（照 §8.4 的标准）：不证明身份问题解决了——配对跨重启不保留、换启动参数即消失（要持久绑定得走 §8.7 的备选 A，按 R5 重开设计）；不证明判断重要——`relevant ≠ salient` 原样成立，这一层仍然无权问「要不要紧」；不证明有任何行动发生——里程碑 2 / 3 未开始。可逆性照 §8.6：把两个参数从启动命令里去掉，判断退回 `unknown`，不需要回滚代码。

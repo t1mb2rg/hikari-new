@@ -444,11 +444,13 @@ export function productionComposition(options: ResidentOptions): Composition {
   // The other branch. The two source plugins are configured with the two values that were given
   // together — a path and an `owner/name` — and nothing here checks that they describe the same
   // repository, because nothing here is entitled to: that correspondence is a judgement about two
-  // sources, and the value that would establish it is a value no one has.
+  // sources, and this file does not make it. The judgement does, in `repository-ci-relevance`, and
+  // what it is given is the same pairing — handed over as what the human wrote, not as a conclusion
+  // reached here.
   //
-  // The relevance plugin is configured with the *data directory* rather than the repository root,
-  // because what it needs a path for is its own endpoint — which belongs to this resident, not to the
-  // repository — and a client asking a question has the data directory and nothing else.
+  // The relevance plugin is also configured with the *data directory* rather than the repository root,
+  // because what it needs that path for is its own endpoint — which belongs to this resident, not to
+  // the repository — and a client asking a question has the data directory and nothing else.
   const chain: Composition = [
     {
       id: gitRepositoryPlugin.id,
@@ -470,7 +472,13 @@ export function productionComposition(options: ResidentOptions): Composition {
     {
       id: repositoryCiRelevancePlugin.id,
       load: (runtime) =>
-        runtime.loadPlugin(repositoryCiRelevancePlugin, { rootDir: options.dataDir }),
+        runtime.loadPlugin(repositoryCiRelevancePlugin, {
+          rootDir: options.dataDir,
+          // The same pair the two source plugins above were given, in the shape the judgement quotes:
+          // the human's sentence, not a check performed here. Passing it is what makes `relevant`
+          // reachable for a local root that a GitHub `owner/name` will never equal.
+          declared: { localRoot: repositoryCi.rootDir, githubRepository: repositoryCi.repository },
+        }),
     },
   ];
 

@@ -27,6 +27,11 @@ import { workFocusCurrentService } from '../dist/work-focus/index.js';
 const NO_PIPES = process.platform === 'win32' ? false : '命名管道只在 Windows 上存在';
 
 const CANONICAL = 't1mb2rg/hikari-new';
+// The local root a human pairs with the GitHub name above when starting a resident. It is a Windows
+// path on purpose: it is the shape a GitHub `owner/name` will never equal, which is the whole reason
+// the second rule exists.
+const LOCAL_ROOT = 'G:\\work\\LAB\\code\\hikari-new';
+const PAIRING = Object.freeze({ localRoot: LOCAL_ROOT, githubRepository: CANONICAL });
 const HEAD_COMMIT = 'a'.repeat(40);
 const OTHER_COMMIT = 'b'.repeat(40);
 const OBSERVED_AT = '2026-02-01T08:30:00.000Z';
@@ -82,8 +87,9 @@ function snapshotOf(repository, commit = HEAD_COMMIT) {
   });
 }
 
-// Every rule v1 has, and the ones it deliberately does not. Each row is a pair of strings and the
-// verdict that pair produces — nothing else is read, so nothing else can appear here.
+// Every rule v1 has, and the ones it deliberately does not. Each row is a pair of strings, the pairing
+// a human may have written, and the verdict that combination produces — nothing else is read, so
+// nothing else can appear here.
 const TRUTH_TABLE = [
   { name: '逐字相同即 relevant', designations: [CANONICAL], repository: CANONICAL, verdict: 'relevant' },
   {
@@ -105,18 +111,64 @@ const TRUTH_TABLE = [
     repository: undefined,
     verdict: 'unknown',
   },
+  {
+    name: '没有配对时本机路径不算命中（v1 行为不变）',
+    designations: [LOCAL_ROOT],
+    repository: CANONICAL,
+    verdict: 'unknown',
+  },
+  {
+    name: '声明过配对时本机路径算命中，且依据标明是人的对应关系',
+    designations: [LOCAL_ROOT],
+    repository: CANONICAL,
+    declared: PAIRING,
+    verdict: 'relevant',
+    via: 'declaration',
+    matched: LOCAL_ROOT,
+  },
+  {
+    name: '配对在，但 CI 观察报告的是另一个仓库（例如 fork）时不算命中',
+    designations: [LOCAL_ROOT],
+    repository: 'someone/hikari-new',
+    declared: PAIRING,
+    verdict: 'unknown',
+  },
+  {
+    name: '配对在，但工作焦点指的不是配对里的那个本机路径时不算命中',
+    designations: ['G:\\work\\other'],
+    repository: CANONICAL,
+    declared: PAIRING,
+    verdict: 'unknown',
+  },
+  {
+    name: '配对里 GitHub 名对上了、本机根不同，仍然不算命中（两半都要对）',
+    designations: [LOCAL_ROOT],
+    repository: CANONICAL,
+    declared: { localRoot: 'G:\\work\\other', githubRepository: CANONICAL },
+    verdict: 'unknown',
+  },
+  {
+    name: '配对在，但工作焦点逐字等于 GitHub 名时仍走第一条规则',
+    designations: [CANONICAL],
+    repository: CANONICAL,
+    declared: PAIRING,
+    verdict: 'relevant',
+  },
 ];
 
 for (const row of TRUTH_TABLE) {
   test(`relevance 判定：${row.name}`, () => {
-    const judgement = judgeRelevance(row.designations, snapshotOf(row.repository));
+    const judgement = judgeRelevance(row.designations, snapshotOf(row.repository), row.declared);
 
     assert.equal(judgement.verdict, row.verdict);
     if (row.verdict === 'relevant') {
       // The equality travels with the verdict. A bare `relevant` would not say which declaration
       // produced it, and with more than one designation declared that is the only thing a human can
       // act on.
-      assert.equal(judgement.designation, row.repository);
+      assert.equal(judgement.designation, row.matched ?? row.repository);
+      // And now which rule produced it, for the same reason: "you named this repository" and "you
+      // named this local root and told this resident it is this repository" are not the same news.
+      assert.equal(judgement.via.kind, row.via ?? 'verbatim');
     } else {
       assert.equal(Object.hasOwn(judgement, 'designation'), false);
     }
@@ -131,7 +183,10 @@ test('v1 的可达判定恰好是 relevant 与 unknown，没有 unrelated', () =
 
   for (const designation of strings) {
     for (const repository of [undefined, ...strings]) {
-      reached.add(judgeRelevance([designation], snapshotOf(repository)).verdict);
+      // With and without a declared pairing: a second rule must not open a third answer either.
+      for (const declared of [undefined, PAIRING]) {
+        reached.add(judgeRelevance([designation], snapshotOf(repository), declared).verdict);
+      }
     }
   }
 
@@ -143,14 +198,14 @@ test('判定不读取本地 HEAD 是什么 commit', () => {
   // table above, while GitHub CI is not observable at all. What is being asked is a question about a
   // name, and every one of these is a different answer to a different question.
   for (const commit of [HEAD_COMMIT, OTHER_COMMIT, 'c'.repeat(40)]) {
-    const judgement = judgeRelevance([CANONICAL], snapshotOf(CANONICAL, commit));
+    const judgement = judgeRelevance([CANONICAL], snapshotOf(CANONICAL, commit), undefined);
     assert.equal(judgement.verdict, 'relevant', `commit ${commit} 不应影响名称判定`);
   }
 });
 
 test('判定不修改交给它的工作焦点集合', () => {
   const designations = Object.freeze(['P4-03', CANONICAL]);
-  judgeRelevance(designations, snapshotOf(CANONICAL));
+  judgeRelevance(designations, snapshotOf(CANONICAL), PAIRING);
   assert.deepEqual([...designations], ['P4-03', CANONICAL]);
 });
 
@@ -199,7 +254,7 @@ function consumer(capture) {
   };
 }
 
-async function compose(t, { designations = () => [], assessment, focusFails = false }) {
+async function compose(t, { designations = () => [], assessment, focusFails = false, declared }) {
   const root = createRoot(t);
   const runtime = new Runtime();
   t.after(() => runtime.shutdown());
@@ -226,7 +281,7 @@ async function compose(t, { designations = () => [], assessment, focusFails = fa
       })),
     ),
   );
-  states.push(await runtime.loadPlugin(repositoryCiRelevancePlugin, { rootDir: root }));
+  states.push(await runtime.loadPlugin(repositoryCiRelevancePlugin, { rootDir: root, declared }));
 
   assert.deepEqual(states, ['active', 'active', 'active'], '测试组合应全部 active');
   return { root, runtime };
@@ -281,8 +336,63 @@ test('端点与 Service 走同一次判定，两边都不缓存', { skip: NO_PIP
   // summary, a second verdict, or a re-rendered string would fail here while every endpoint test above
   // stayed green.
   const judgement = await service.current();
-  assert.deepEqual(judgement, judgeRelevance([CANONICAL], snapshotOf(CANONICAL)));
+  assert.deepEqual(judgement, judgeRelevance([CANONICAL], snapshotOf(CANONICAL), undefined));
   assert.deepEqual((await requestRelevance(root)).reply.lines, renderJudgement(judgement));
+});
+
+test('端点在人声明的配对上给出 relevant，并把那两半原样说出来', { skip: NO_PIPES }, async (t) => {
+  const { root } = await compose(t, {
+    declared: PAIRING,
+    designations: () => Object.freeze([LOCAL_ROOT]),
+    assessment: () => Object.freeze({ snapshot: snapshotOf(CANONICAL), commitComparison: 'same' }),
+  });
+
+  const answer = await requestRelevance(root);
+
+  assert.equal(answer.reply.verdict, 'relevant');
+  // Both halves of what the human wrote, verbatim, and the sentence says which side the work focus
+  // named. A line that said "these are the same repository" would be this plugin asserting the
+  // correspondence; this line says who asserted it.
+  assert.deepEqual(answer.reply.lines, [
+    'Repository CI relevance：relevant',
+    `人声明的配对：${LOCAL_ROOT} ↔ ${CANONICAL}（工作焦点指名了前者，CI 观察报告了后者）`,
+  ]);
+});
+
+test('配对在但两半都对不上时，回答仍是那一句 unknown，不暗示配对参与过', { skip: NO_PIPES }, async (t) => {
+  const { root } = await compose(t, {
+    declared: PAIRING,
+    designations: () => Object.freeze(['P4-03']),
+    assessment: () => Object.freeze({ snapshot: snapshotOf(CANONICAL), commitComparison: 'same' }),
+  });
+
+  const answer = await requestRelevance(root);
+
+  assert.equal(answer.reply.verdict, 'unknown');
+  assert.deepEqual(answer.reply.lines, [
+    'Repository CI relevance：unknown',
+    '未能在当前工作焦点与 Repository CI observation 之间建立逐字相等关系。',
+  ]);
+});
+
+test('配对是启动配置而不是记忆：工作焦点来回移动时它每次都重新生效', { skip: NO_PIPES }, async (t) => {
+  // Unlike the desktop baseline, a pairing is not a thing that gets used up. It is what this resident
+  // was started with, so every question is answered from it afresh — including a question asked after
+  // the focus moved away and came back.
+  let designations = Object.freeze([LOCAL_ROOT]);
+  const { root } = await compose(t, {
+    declared: PAIRING,
+    designations: () => designations,
+    assessment: () => Object.freeze({ snapshot: snapshotOf(CANONICAL), commitComparison: 'same' }),
+  });
+
+  assert.equal((await requestRelevance(root)).reply.verdict, 'relevant');
+
+  designations = Object.freeze([]);
+  assert.equal((await requestRelevance(root)).reply.verdict, 'unknown');
+
+  designations = Object.freeze([LOCAL_ROOT]);
+  assert.equal((await requestRelevance(root)).reply.verdict, 'relevant');
 });
 
 test('判定与 commitComparison 正交：three ways of comparing commits, one verdict', { skip: NO_PIPES }, async (t) => {

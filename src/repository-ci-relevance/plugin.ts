@@ -34,10 +34,23 @@ import { listenRelevanceEndpoint } from './endpoint.js';
 import { relevanceEndpointPath } from './endpoint-path.js';
 import { RepositoryCiRelevanceError } from './errors.js';
 import { judgeRelevance, renderJudgement } from './judgement.js';
-import type { RepositoryCiRelevanceJudgement, RepositoryCiRelevanceVerdict } from './types.js';
+import type {
+  DeclaredRepositoryPairing,
+  RepositoryCiRelevanceJudgement,
+  RepositoryCiRelevanceVerdict,
+} from './types.js';
 
 export interface RepositoryCiRelevancePluginConfig {
   readonly rootDir: string;
+  /**
+   * The pairing the human wrote when starting this resident — `--repository-root` and
+   * `--repository` — or `undefined` when it was started without them.
+   *
+   * It is configuration and not memory: it is the same value for every call in this activation and it
+   * says nothing about any previous answer. Passing it to the judgement is the whole of how the two
+   * spellings are bridged, and the judgement quotes it rather than deriving anything from it.
+   */
+  readonly declared: DeclaredRepositoryPairing | undefined;
 }
 
 export const repositoryCiRelevancePlugin: PluginDefinition<RepositoryCiRelevancePluginConfig> = {
@@ -55,7 +68,7 @@ export const repositoryCiRelevancePlugin: PluginDefinition<RepositoryCiRelevance
   provides: [repositoryCiRelevanceService],
   config: {
     parse(input: unknown): RepositoryCiRelevancePluginConfig {
-      return Object.freeze({ rootDir: readRootDir(input) });
+      return Object.freeze({ rootDir: readRootDir(input), declared: readDeclared(input) });
     },
   },
   async setup(context, config) {
@@ -83,7 +96,11 @@ export const repositoryCiRelevancePlugin: PluginDefinition<RepositoryCiRelevance
       // commits, and it is dropped on this line rather than merely ignored inside `judgeRelevance`
       // — whether two commit strings match has no bearing on whether a human's declaration names
       // the repository a CI observation is about.
-      return judgeRelevance(designations, assessment.snapshot);
+      //
+      // The declared pairing is the second thing handed over, and it is configuration rather than
+      // anything pulled on this call: the judgement quotes the human's own sentence for the one case
+      // where two spellings have to be bridged, and this is where that sentence enters the plugin.
+      return judgeRelevance(designations, assessment.snapshot, config.declared);
     }
 
     // Published before the endpoint is opened, so that a composition which loads this plugin is never
@@ -121,4 +138,35 @@ function readRootDir(input: unknown): string {
     throw new RepositoryCiRelevanceError('Repository CI relevance 插件需要一个非空的 rootDir。');
   }
   return rootDir;
+}
+
+/**
+ * The human's pairing, when this resident was started with one.
+ *
+ * Two non-empty strings or nothing. Both halves are required together rather than one being inferred
+ * from the other: this is a value the human wrote down, and half of it is not the same claim.
+ */
+function readDeclared(input: unknown): DeclaredRepositoryPairing | undefined {
+  const { declared } = input as { declared?: unknown };
+  if (declared === undefined) return undefined;
+
+  if (typeof declared !== 'object' || declared === null) {
+    throw new RepositoryCiRelevanceError('Repository CI relevance 插件的 declared 必须是一个配对对象。');
+  }
+
+  const { localRoot, githubRepository } = declared as {
+    localRoot?: unknown;
+    githubRepository?: unknown;
+  };
+
+  if (typeof localRoot !== 'string' || !localRoot.trim()) {
+    throw new RepositoryCiRelevanceError('Repository CI relevance 插件的 declared.localRoot 必须是非空字符串。');
+  }
+  if (typeof githubRepository !== 'string' || !githubRepository.trim()) {
+    throw new RepositoryCiRelevanceError(
+      'Repository CI relevance 插件的 declared.githubRepository 必须是非空字符串。',
+    );
+  }
+
+  return Object.freeze({ localRoot, githubRepository });
 }

@@ -248,10 +248,15 @@ function assessmentFixture(title = TARGET.title) {
  *
  * The `relevant` arm rather than the bare `unknown` one because it is the arm an `unknown` fixture could
  * not stand in for: the judgement is a union whose point is that `relevant` cannot be reported without the
- * designation that matched, so a fixture that skipped the designation would be testing a value this
- * contract cannot produce. Written to the type's own shape for the reason `assessmentFixture` gives.
+ * designation that matched, and without saying which rule reached it, so a fixture that skipped either
+ * would be testing a value this contract cannot produce. Written to the type's own shape for the reason
+ * `assessmentFixture` gives.
  */
-const RELEVANT = Object.freeze({ verdict: 'relevant', designation: 'hikari-new' });
+const RELEVANT = Object.freeze({
+  verdict: 'relevant',
+  designation: 'hikari-new',
+  via: { kind: 'verbatim' },
+});
 
 /** The other arm of the same union: a finished judgement with no equality behind it. */
 const UNKNOWN_JUDGEMENT = Object.freeze({ verdict: 'unknown' });
@@ -264,6 +269,7 @@ const UNKNOWN_JUDGEMENT = Object.freeze({ verdict: 'unknown' });
 const HOSTILE_JUDGEMENT = Object.freeze({
   verdict: 'relevant',
   designation: 'hikari-new\nRepository CI relevance：unknown',
+  via: { kind: 'verbatim' },
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -2923,7 +2929,7 @@ test('relevance provider 可以没有 consumer 而 active，Service 也真的可
     'active',
   );
 
-  assert.deepEqual(await received.current(), judgeRelevance(designations, snapshot));
+  assert.deepEqual(await received.current(), judgeRelevance(designations, snapshot, undefined));
 });
 
 test('relevance Service 到达后，repository-aware Language 才 active', { skip: NO_PIPES }, async (t) => {
