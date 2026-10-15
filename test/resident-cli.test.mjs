@@ -87,6 +87,11 @@ function compositionOf(states) {
 // (`active`), and every instruction then ends `executor-unavailable` rather than silence. It sits
 // immediately after the member whose contract is the range it checks its mandate against.
 //
+// It is also the first member with two definitions rather than one, and this list is the one a resident
+// loads when nothing is watched: the other requires the CI observation and lives in the chain below, where
+// that observation comes up. The two carry the same id and the same everything else — only `requires`, and
+// therefore where they load, differ.
+//
 // `changeable-repositories` joined the base for the
 // reason its two neighbours did: it needs nothing configured — no model, no repository, no mandate — and
 // being in the composition is what gives its endpoint a lifetime. It provides nothing, so it adds no edge
@@ -115,9 +120,32 @@ const BASE_MEMBER_IDS = [
   'work-focus',
 ];
 
+// The same base for a resident that *does* watch a repository, and the one difference is where the
+// executor sits: that resident loads the definition requiring the CI observation, and it is a member of
+// the CI chain below rather than of the base, because a definition whose requirement the composition does
+// not satisfy is a member that never comes up. Written out rather than filtered from the list above, for
+// the reason the rosters below are literals: a derived expectation hides the thing being asserted.
+const CI_BASE_MEMBER_IDS = [
+  'continuity',
+  'chronicle',
+  'foreground.windows',
+  'input-activity.windows',
+  'desktop-session-world',
+  'desktop-session-awareness',
+  'desktop-session-awareness-loop',
+  'desktop-session-observe',
+  'desktop-content-read',
+  'changeable-repositories',
+  'work-focus',
+];
+
 const REPOSITORY_CI_MEMBER_IDS = [
   'git-repository',
   'github-ci',
+  // Third, and the reason it is here: it requires the CI observation the member directly above publishes,
+  // and the base's own entry is the definition that requires nothing of CI. Exactly one of the two is ever
+  // in a resident, and which one is decided by whether a repository scope was configured at all.
+  'repository-change-executor',
   'repository-ci-world',
   'repository-ci-awareness',
   'repository-ci-relevance',
@@ -125,6 +153,19 @@ const REPOSITORY_CI_MEMBER_IDS = [
   // nothing, and it exists to answer one question the decider above cannot answer for itself. It is here
   // rather than beside the decider because that is where its dependency is — it requires
   // `repository-ci-relevance.judge@1`, which is published by the member directly above it.
+  'repository-ci-diagnosis-proposal',
+];
+
+// The same seven minus the executor, for the assertions that ask what a resident with *no* repository scope
+// took from the chain. The executor cannot be asked that way: the base has its own entry under the same id,
+// and the difference between the two entries is the whole point — a member that is absent from this list but
+// present in a roster is the CI-aware definition sitting where a chain member would be.
+const REPOSITORY_CI_CHAIN_MEMBER_IDS = [
+  'git-repository',
+  'github-ci',
+  'repository-ci-world',
+  'repository-ci-awareness',
+  'repository-ci-relevance',
   'repository-ci-diagnosis-proposal',
 ];
 
@@ -187,13 +228,14 @@ test('显式配置 Repository CI 后，生产组合是这十二个加上那六�
     repositoryCi: { rootDir: 'C:\\work\\hikari-new', repository: 't1mb2rg/hikari-new' },
   });
 
-  // Appended rather than interleaved: the default roster is a prefix of this one, which is what
-  // makes "the default composition plus a capability" a fact about the lists rather than a claim
-  // about them. It is also what satisfies the chain's one inbound dependency — `work-focus` is the
-  // last member of the base and `repository-ci-relevance`, last here, requires its contract.
+  // Appended rather than interleaved, with the one exception the two executor definitions force: the
+  // default roster is *no longer* a prefix of this one, because the executor a watching resident loads
+  // requires the CI observation and therefore sits in the chain. Everything else is still appended, and
+  // that is what satisfies the chain's one inbound dependency — `work-focus` is the last member of the
+  // base and `repository-ci-relevance`, last here, requires its contract.
   assert.deepEqual(
     composition.map((member) => member.id),
-    [...BASE_MEMBER_IDS, ...REPOSITORY_CI_MEMBER_IDS],
+    [...CI_BASE_MEMBER_IDS, ...REPOSITORY_CI_MEMBER_IDS],
   );
 });
 
@@ -264,9 +306,10 @@ test('Repository CI 与语言入口可以同时在场，且语言在 CI 链之�
   // follow the chain rather than sit beside it. The chain is now six and its last two links are a pair:
   // the judgement, then the thing that asks it about a snapshot it was handed.
   assert.deepEqual(composition.map((member) => member.id), [
-    ...BASE_MEMBER_IDS,
+    ...CI_BASE_MEMBER_IDS,
     'git-repository',
     'github-ci',
+    'repository-change-executor',
     'repository-ci-world',
     'repository-ci-awareness',
     'repository-ci-relevance',
@@ -293,7 +336,7 @@ test('两个主动授权各自带来自己的决定者，投递在两种授权�
   // Language is that Language does not require it — the two are independent of each other and both are
   // prerequisites of the member that follows.
   assert.deepEqual(ciOnly, [
-    ...BASE_MEMBER_IDS,
+    ...CI_BASE_MEMBER_IDS,
     ...REPOSITORY_CI_MEMBER_IDS,
     'language',
     ...PROACTIVE_MEMBER_IDS,
@@ -311,7 +354,7 @@ test('两个主动授权各自带来自己的决定者，投递在两种授权�
   // it built the transport at the one site that had a decider beside it; the new shape can, because the
   // transport is now spliced in front of however many deciders are present.
   assert.deepEqual(both, [
-    ...BASE_MEMBER_IDS,
+    ...CI_BASE_MEMBER_IDS,
     ...REPOSITORY_CI_MEMBER_IDS,
     'language',
     'human-delivery',
@@ -336,7 +379,11 @@ test('两个主动授权各自带来自己的决定者，投递在两种授权�
 // These are what make the six rosters one composition system rather than six lists that happen to work:
 // a member that moved between them, or a base that stopped being common, would be a resident whose
 // behaviour depended on which capabilities were configured rather than on what it was configured with.
-test('六个 roster 共享同一个基础前缀，且共有成员保持相对顺序', async () => {
+// The one place where that is deliberately untrue is the executor: a resident that watches a repository
+// loads the definition of it that requires the CI observation, so it sits in the chain rather than in the
+// base. The loop below therefore asks each roster for the base it should have, and the two bases differ
+// by that one member and by nothing else.
+test('六个 roster 各自以它自己的基础为前缀，且共有成员保持相对顺序', async () => {
   const rosters = {
     base: productionComposition({ dataDir: ROSTER_DATA_DIR, desktopAwarenessDelayMs: 1000 }),
     language: productionComposition({
@@ -369,10 +416,14 @@ test('六个 roster 共享同一个基础前缀，且共有成员保持相对顺
 
   for (const [name, roster] of Object.entries(rosters)) {
     const ids = roster.map((member) => member.id);
+    const base =
+      name === 'repositoryCi' || name === 'both' || name === 'proactive'
+        ? CI_BASE_MEMBER_IDS
+        : BASE_MEMBER_IDS;
     assert.deepEqual(
-      ids.slice(0, BASE_MEMBER_IDS.length),
-      BASE_MEMBER_IDS,
-      `${name} 必须以基础组合为前缀`,
+      ids.slice(0, base.length),
+      base,
+      `${name} 必须以它自己的基础组合为前缀`,
     );
     // And the base prefix is the *whole* of the base — no base member may be pushed after an optional
     // one, which is the failure a prefix check alone would not catch if the base itself were reordered.
@@ -419,7 +470,9 @@ test('六个 roster 共享同一个基础前缀，且共有成员保持相对顺
     proactiveReturn.indexOf('language') < proactiveReturn.indexOf('desktop-return-attention'),
     'decider 要求 language.desktop-return-speaking，必须排在 language 之后',
   );
-  for (const id of REPOSITORY_CI_MEMBER_IDS) {
+  // The chain's members and nothing of it: this roster watches no repository. The executor is deliberately
+  // not in this list — it is in *every* roster, and the question this loop asks is about the chain.
+  for (const id of REPOSITORY_CI_CHAIN_MEMBER_IDS) {
     assert.equal(
       proactiveReturn.includes(id),
       false,

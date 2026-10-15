@@ -17,6 +17,7 @@ import {
   REPOSITORY_CHANGE_FACT_TYPES,
   REPOSITORY_CHANGE_TOOLS,
   containTarget,
+  createRepositoryChangeExecutorPlugin,
   createRepositoryChangeRunner,
   executeRepositoryChange,
   findTool,
@@ -29,6 +30,10 @@ import {
   resultFactDraft,
   toModelTools,
 } from '../dist/repository-change-executor/index.js';
+import { changeableRepositoriesReadService } from '../dist/changeable-repositories/index.js';
+import { chronicleService } from '../dist/chronicle/index.js';
+import { gitHubCiService } from '../dist/github-ci/index.js';
+import { requestRepositoryChange } from '../dist/cli/act.js';
 
 const MANDATE_FACT_TYPE = 'repository-change-executor.mandate';
 const RESULT_FACT_TYPE = 'repository-change-executor.result';
@@ -114,9 +119,41 @@ test('判定本身没有把 unknown 变成 unchanged 的分支', () => {
 test('push 被观察为「未推送的提交变少」，而不是「之后为零」', () => {
   assert.equal(judgeOutcome(snapshotOf({ unpushed: 5 }), snapshotOf({ unpushed: 2 })).outcome, 'changed');
   assert.equal(judgeOutcome(snapshotOf({ unpushed: 5 }), snapshotOf({ unpushed: 2 })).pushed, true);
-  assert.equal(judgeOutcome(snapshotOf({ unpushed: 0 }), snapshotOf({ unpushed: 0 })).pushed, false);
   // Zero afterwards but nothing was ever unpushed: no push was observed.
   assert.equal(judgeOutcome(snapshotOf({ unpushed: 0 }), snapshotOf({ unpushed: 0 })).outcome, 'unchanged');
+  assert.equal(judgeOutcome(snapshotOf({ unpushed: 0 }), snapshotOf({ unpushed: 0 })).pushed, false);
+});
+
+test('push：同步仓库里 commit 再 push，计数 0→0，只有「新提交在远端上」看得见', () => {
+  // The shape a count alone cannot see, and the one an ordinary "改掉它然后提交推上去" starts from: the
+  // repository is already in sync, so the commit raises the count and the push lowers it back to zero
+  // inside one run. A record that answered "did not push" here would be a record that lies about a step
+  // nobody can take back.
+  const before = snapshotOf({ head: 'a'.repeat(40), onRemote: true });
+  assert.equal(judgeOutcome(before, snapshotOf({ head: 'b'.repeat(40), onRemote: true })).pushed, true);
+  assert.equal(judgeOutcome(before, snapshotOf({ head: 'b'.repeat(40), onRemote: true })).outcome, 'changed');
+
+  // The same move without the push: a new local commit no remote has. `false` here is a real answer, and
+  // it is the difference between "it did not push" and "nobody could tell".
+  assert.equal(judgeOutcome(before, snapshotOf({ head: 'b'.repeat(40), onRemote: false })).pushed, false);
+
+  // And when the remote list could not be read at all, the answer is the third one.
+  assert.equal(judgeOutcome(before, snapshotOf({ head: 'b'.repeat(40), onRemote: undefined })).pushed, undefined);
+});
+
+test('三态：两侧都读不到时，pushed 是「无法核对」而不是「没推」', () => {
+  const unreadable = snapshotOf({
+    readable: false,
+    head: undefined,
+    statusDigest: undefined,
+    unpushed: undefined,
+    onRemote: undefined,
+  });
+  const judgement = judgeOutcome(snapshotOf({}), unreadable);
+
+  assert.equal(judgement.outcome, 'unknown');
+  assert.equal(judgement.readable, false);
+  assert.equal(judgement.pushed, undefined);
 });
 
 test('containment：声明根之内是 inside，之外的一切都不是', () => {
@@ -126,6 +163,57 @@ test('containment：声明根之内是 inside，之外的一切都不是', () =>
   assert.equal(containTarget(root, '../outside.ts').kind, 'outside');
   assert.equal(containTarget(root, 'src/../../outside.ts').kind, 'outside');
   assert.equal(containTarget(root, '').kind, 'outside');
+});
+
+test('containment：.git 不是工作区的一部分，写在里面的路径一律不是 inside', () => {
+  const root = join(tmpdir(), 'hikari-contain-git');
+  mkdirSync(root, { recursive: true });
+
+  // Two ways a path into `.git` would have handed back a capability the tool table exists to withhold:
+  // `hooks/pre-commit` runs on the executor's very next `git commit` (so the executor would have a shell
+  // it was never given, without committing anything), and `refs/remotes/…` is what the outcome judgement
+  // reads to answer "was this pushed" (so the thing being judged could write its own judge).
+  assert.equal(containTarget(root, '.git/hooks/pre-commit').kind, 'outside');
+  assert.equal(containTarget(root, '.git/config').kind, 'outside');
+  assert.equal(containTarget(root, '.git/refs/remotes/origin/main').kind, 'outside');
+  assert.equal(containTarget(root, '.git').kind, 'outside');
+  // Folded, and per segment rather than as a prefix of the whole path.
+  assert.equal(containTarget(root, '.GIT/hooks/pre-commit').kind, 'outside');
+  assert.equal(containTarget(root, 'sub/.git/config').kind, 'outside');
+  // A file whose *name* starts with `.git` is not the directory.
+  assert.equal(containTarget(root, '.gitignore').kind, 'inside');
+});
+
+test('containment：经链接落进 .git 的路径也被拒（字面上没有 .git 的那个词）', (t) => {
+  const root = mkdtempSync(join(tmpdir(), 'hikari-contain-gitlink-'));
+  mkdirSync(join(root, '.git', 'hooks'), { recursive: true });
+
+  // A directory link inside the root that points at `.git`: the target is spelled `escape/hooks/...`,
+  // and only the resolved path contains `.git`. Creating a link needs a privilege or developer mode on
+  // Windows, so the test is skipped where it cannot be made rather than being written around.
+  let linked = true;
+  try {
+    symlinkSync(join(root, '.git'), join(root, 'escape'), 'junction');
+  } catch {
+    linked = false;
+  }
+
+  if (!linked) {
+    t.skip('此平台上无法创建链接，跳过');
+    return;
+  }
+
+  assert.equal(containTarget(root, 'escape/hooks/pre-commit').kind, 'outside');
+});
+
+test('工具：写 .git 里的文件被拒，而且磁盘上什么都没发生', async () => {
+  const dir = makeRepository('t1mb2rg/write-into-git');
+
+  const answer = await perform('write_file', { path: '.git/hooks/pre-commit', content: 'whatever' }, dir);
+
+  assert.equal(answer.ok, false);
+  assert.equal(answer.content.includes('.git'), true);
+  assert.equal(existsSync(join(dir, '.git', 'hooks', 'pre-commit')), false);
 });
 
 test('containment：绝对路径一律拒绝，即使它指在根里面', () => {
@@ -822,4 +910,210 @@ test('没有推送就不去问 CI，但记录里仍然写清「有没有人被�
   // `ciChecked` is about whether anyone was asked, and it stays true even though the question was never
   // put — the distinction the file keeps is between "no number" and "nobody looked".
   assert.equal(execution.result.evidence.ciChecked, true);
+});
+
+// ---------------------------------------------------------------------------
+// 插件：整条路真的能跑起来
+// ---------------------------------------------------------------------------
+
+/**
+ * The whole way through: a real plugin, activated, answering one instruction over its own pipe.
+ *
+ * This exists because of the mistake every other test in this file could not see. The unit tests all built
+ * their runner by hand — `createRepositoryChangeRunner(fakeModel, …)` — so none of them passed through
+ * `plugin.ts`, which handed `options.createModel` (a factory) to a parameter that wanted a model. A function
+ * is structurally assignable to an object with a `step` method right up until you call it, so TypeScript was
+ * satisfied and every run in the real composition ended `model-failed` with nothing written and a note the
+ * human never saw. Green tests, dead feature. Only a test that goes in through `setup()` can tell.
+ *
+ * It also pins the *order* of the two writes: the mandate is on disk before anything can move, and the
+ * result after the run ends.
+ */
+test('插件：真插件 + 假工厂跑完一轮，模型没失败、文件真的写下去了、事实按顺序落盘', {
+  skip: process.platform === 'win32' ? false : '执行者入口是命名管道，这个平台上没有地方放它',
+}, async () => {
+  const repository = 't1mb2rg/plugin-e2e';
+  const root = makeRepository(repository);
+  const dataDir = mkdtempSync(join(tmpdir(), 'hikari-plugin-'));
+  const appended = [];
+  const cleanups = [];
+
+  const model = modelAnswering([
+    { toolCalls: [call('1', 'write_file', { path: 'NOTES.md', content: '按指示补的一句话\n' })] },
+    { content: '写好了。' },
+  ]);
+
+  const plugin = createRepositoryChangeExecutorPlugin({
+    dataDir,
+    // The factory is what is under test: it has to be *called*. Handing it over uncalled is the one defect
+    // that made every production run fail while every test stayed green.
+    createModel: () => model,
+    runTimeoutMs: 20_000,
+  });
+
+  const services = new Map([
+    [changeableRepositoriesReadService, readDeclaring([root])],
+    [
+      chronicleService,
+      {
+        append: async (fact) => {
+          appended.push(fact);
+          return { ...fact };
+        },
+      },
+    ],
+    [gitHubCiService, { current: async () => ({ latestRun: { kind: 'absent' } }) }],
+  ]);
+
+  await plugin.setup(
+    {
+      pluginId: plugin.id,
+      services: { get: (contract) => services.get(contract) },
+      events: {},
+      defer: (cleanup) => cleanups.push(cleanup),
+    },
+    undefined,
+  );
+
+  try {
+    const answer = await requestRepositoryChange(dataDir, repository, '在仓库里补一条说明');
+
+    assert.equal(answer.kind, 'answered');
+    // `ok` is this protocol's word for *something moved*. With the factory passed instead of called, the
+    // reply was `failed` and the file below was never created.
+    assert.equal(answer.outcome, 'ok');
+    assert.equal(existsSync(join(root, 'NOTES.md')), true);
+
+    assert.deepEqual(
+      appended.map((fact) => fact.type),
+      [MANDATE_FACT_TYPE, RESULT_FACT_TYPE],
+    );
+  } finally {
+    await Promise.all(cleanups.map((cleanup) => cleanup()));
+  }
+});
+
+test('插件：同一个工厂出两个定义，接 CI 的那个多要一个 CI 契约，另一个不多要', () => {
+  // This is the boundary decision of the freeze's §5 risk 3, pinned: a deployment that watches a
+  // repository loads the definition that requires the CI observation, and a deployment that watches
+  // nothing loads the one that requires only the two contracts it always needed. A single definition
+  // with a hard CI requirement is what made every resident without a repository scope fail to come up.
+  const dataDir = mkdtempSync(join(tmpdir(), 'hikari-definitions-'));
+
+  const watching = createRepositoryChangeExecutorPlugin({ dataDir, watchesCi: true });
+  const watchingNothing = createRepositoryChangeExecutorPlugin({ dataDir });
+
+  assert.deepEqual(watching.requires, [
+    changeableRepositoriesReadService,
+    chronicleService,
+    gitHubCiService,
+  ]);
+  assert.deepEqual(watchingNothing.requires, [changeableRepositoriesReadService, chronicleService]);
+  assert.equal(watching.id, watchingNothing.id, '同一个 id：至多一个被加载');
+  assert.equal(watching.provides.length, 0, '两个定义都不新增对外 contract');
+});
+
+test('插件 + CI：推上去的那一笔，CI run 号来自组合加载的观测，而不是执行者自己的说法', {
+  skip: process.platform === 'win32' ? false : '执行者入口是命名管道，这个平台上没有地方放它',
+}, async () => {
+  const repository = 't1mb2rg/plugin-ci';
+  const remote = mkdtempSync(join(tmpdir(), 'hikari-remote-'));
+  git(remote, ['init', '-q', '--bare', '-b', 'main']);
+
+  const root = makeRepository(repository);
+  // Same shape as the execution-level push test: the origin keeps its GitHub spelling because the
+  // declaration is read from it, and the real push goes to a local bare repository, which is what
+  // `rev-list --not --remotes` can actually see.
+  git(root, ['remote', 'add', 'local', remote]);
+  git(root, ['push', '-q', '-u', 'local', 'main']);
+
+  const dataDir = mkdtempSync(join(tmpdir(), 'hikari-plugin-ci-'));
+  const appended = [];
+  const cleanups = [];
+
+  const model = modelAnswering([
+    { toolCalls: [call('c1', 'read_ci', {})] },
+    { toolCalls: [call('c2', 'write_file', { path: 'NOTES.md', content: '按指示补的一句话\n' })] },
+    { toolCalls: [call('c3', 'git_commit', { message: '补一条说明' })] },
+    { toolCalls: [call('c4', 'git_push', {})] },
+    { content: '写好了，也推上去了。' },
+  ]);
+
+  const observation = {
+    observedAt: '2026-10-16T00:00:00.000Z',
+    source: 'github-ci',
+    repository,
+    latestRun: {
+      kind: 'reported',
+      run: {
+        id: 42,
+        workflow: 'test',
+        headBranch: 'main',
+        headSha: 'deadbeef',
+        status: 'completed',
+        conclusion: { kind: 'reported', value: 'success' },
+      },
+    },
+  };
+
+  let asked = 0;
+  const services = new Map([
+    [changeableRepositoriesReadService, readDeclaring([root])],
+    [
+      chronicleService,
+      {
+        append: async (fact) => {
+          appended.push(fact);
+          return { ...fact };
+        },
+      },
+    ],
+    [
+      gitHubCiService,
+      {
+        current: async () => {
+          asked += 1;
+          return observation;
+        },
+      },
+    ],
+  ]);
+
+  const plugin = createRepositoryChangeExecutorPlugin({
+    dataDir,
+    createModel: () => model,
+    runTimeoutMs: 30_000,
+    // The composition root's word, and the whole of what makes this the CI-aware definition.
+    watchesCi: true,
+  });
+
+  await plugin.setup(
+    {
+      pluginId: plugin.id,
+      services: { get: (contract) => services.get(contract) },
+      events: {},
+      defer: (cleanup) => cleanups.push(cleanup),
+    },
+    undefined,
+  );
+
+  try {
+    const answer = await requestRepositoryChange(dataDir, repository, '把这一笔推上去');
+
+    assert.equal(answer.kind, 'answered');
+    assert.equal(answer.outcome, 'ok', answer.lines.join(' ｜ '));
+
+    const result = appended.find((fact) => fact.type === RESULT_FACT_TYPE);
+    assert.ok(result, `结果事实必须落盘：${JSON.stringify(appended)}`);
+    assert.equal(result.payload.outcome, 'changed');
+    assert.equal(result.payload.pushed, true, JSON.stringify(result.payload));
+    assert.equal(result.payload.ciRunId, 42, JSON.stringify(result.payload));
+    assert.equal(result.payload.ciChecked, true);
+    // Twice, and both are the observation: once for the model's own `read_ci`, once for the number the
+    // record carries. A definition that wired only one of the two would be caught right here.
+    assert.equal(asked, 2, '模型问一次、记录问一次，都走同一个 CI 观测');
+    assert.ok(existsSync(join(root, 'NOTES.md')), '这一轮真的写了文件');
+  } finally {
+    await Promise.all(cleanups.map((cleanup) => cleanup()));
+  }
 });

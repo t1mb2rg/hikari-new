@@ -319,25 +319,36 @@ export function productionComposition(options: ResidentOptions): Composition {
     // The action half, and the only member of this composition that can change something outside this
     // process. It sits immediately after the member it depends on for its range: an instruction naming a
     // repository that was never declared is refused before anything starts, and the declaration only
-    // exists while that member is up. It is in the base rather than behind a flag for the reason the
-    // member above is — its endpoint's lifetime *is* its activation, so being here is what gives the
-    // ingress its lifetime — and for one more: a resident that wired no model still owes the person an
-    // answer rather than a silence, and every instruction then ends `executor-unavailable`, which is a
-    // fact about this deployment the person standing at the pipe can act on.
+    // exists while that member is up. It is in the base whenever this deployment watches no CI — a
+    // resident with no repository scope at all, or one whose repository was given without CI configured —
+    // and the reason it is here rather than behind a flag is that its endpoint's lifetime *is* its
+    // activation: being here is what gives the ingress its lifetime. It is also here for a second reason:
+    // a resident that wired no model still owes the person an answer rather than a silence, and every
+    // instruction then ends `executor-unavailable`, which is a fact about this deployment the person
+    // standing at the pipe can act on.
+    //
+    // A resident that *does* watch a repository loads the executor in the CI chain below instead, with the
+    // one difference that chain makes: that definition requires the CI observation and reads the run
+    // number a push led to, because there it exists to be read. Exactly one of the two is ever loaded —
+    // this condition and the chain's are the same one — and both are the same plugin otherwise.
     //
     // The id is written out rather than imported as a constant because this plugin is a factory: what it
     // returns is the definition, and the roster this composition produces is asserted against the same
     // literal in `test/resident-cli.test.mjs`.
-    {
-      id: 'repository-change-executor',
-      load: (runtime) =>
-        runtime.loadPlugin(
-          createRepositoryChangeExecutorPlugin({
-            dataDir: options.dataDir,
-            createModel: changeExecutorModel(options.model),
-          }),
-        ),
-    },
+    ...(options.repositoryCi === undefined
+      ? ([
+          {
+            id: 'repository-change-executor',
+            load: (runtime) =>
+              runtime.loadPlugin(
+                createRepositoryChangeExecutorPlugin({
+                  dataDir: options.dataDir,
+                  createModel: changeExecutorModel(options.model),
+                }),
+              ),
+          },
+        ] satisfies Composition)
+      : []),
     // The last member of the base, and the one a person writes through rather than reads from: it is
     // where a person declares what they are working on, and the member above is where a person reads
     // what Hikari sees. It requires Chronicle — it admits a durable fact about its own concern when a
@@ -490,6 +501,22 @@ export function productionComposition(options: ResidentOptions): Composition {
     {
       id: gitHubCiPlugin.id,
       load: (runtime) => runtime.loadPlugin(gitHubCiPlugin, { repository: repositoryCi.repository }),
+    },
+    {
+      // The executor's CI-aware definition, here rather than in the base because this is the composition
+      // where the observation it requires comes up — and the base's own executor entry is the definition
+      // that requires nothing of CI. The condition that chose between them is the same condition that
+      // decided whether this chain is loaded at all, so exactly one of the two is ever in a resident: the
+      // one that is loaded is the one whose requirement the rest of the composition already satisfies.
+      id: 'repository-change-executor',
+      load: (runtime) =>
+        runtime.loadPlugin(
+          createRepositoryChangeExecutorPlugin({
+            dataDir: options.dataDir,
+            createModel: changeExecutorModel(options.model),
+            watchesCi: true,
+          }),
+        ),
     },
     {
       id: repositoryCiWorldPlugin.id,

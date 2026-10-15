@@ -43,6 +43,9 @@ export function containTarget(root: string, target: string): ContainmentVerdict 
   if (isAbsolute(target)) {
     return { kind: 'outside', reason: `路径必须是相对的：${target} 是绝对路径。` };
   }
+  if (reachesGitDirectory(target)) {
+    return { kind: 'outside', reason: `路径落在仓库的 .git 目录里：${target}` };
+  }
 
   const rootReal = realPathOf(root);
   if (rootReal === undefined) {
@@ -59,7 +62,37 @@ export function containTarget(root: string, target: string): ContainmentVerdict 
     return { kind: 'outside', reason: `路径落在人类声明的仓库之外：${target}` };
   }
 
+  // Asked again of the resolved path, because a link *inside* the root can point into `.git` without the
+  // spelling of the target ever containing the word: `escape/config` is not a `.git` path as written, and
+  // `escape -> .git` makes it one as resolved.
+  if (reachesGitDirectory(resolved)) {
+    return { kind: 'outside', reason: `路径经链接落到仓库的 .git 目录里：${target}` };
+  }
+
   return { kind: 'inside', absolute, canonical: resolved };
+}
+
+/**
+ * The one directory inside a repository that is not part of the work being asked for.
+ *
+ * `write_file` can name anything under the declared root, and `.git` is where git keeps the two things
+ * that decide what git does next: `hooks/` is executed by the very next `git commit` this executor runs,
+ * and `refs/remotes/` is what the outcome judgement reads to answer "was this pushed". Either one is a
+ * way for the thing being judged to write the judge — and `hooks/` would hand back exactly the
+ * capability the tool table exists to withhold, since it has no shell and no way to run a command. A
+ * hook takes effect the moment it is written and never needs to be committed.
+ *
+ * The rule is per path *segment*, folded, so `.GIT/config` and `sub/.git/x` are refused the way `.git/x`
+ * is, and a file whose *name* merely starts with `.git` (`…/.gitignore`) is not caught by it.
+ *
+ * What this does not cover: a linked worktree, whose `.git` is a file pointing at a directory elsewhere.
+ * The rule still refuses that file itself, and reaching the real directory would take an absolute path,
+ * which the check above already refuses.
+ */
+const GIT_DIRECTORY = '.git';
+
+function reachesGitDirectory(value: string): boolean {
+  return value.split(/[\\/]+/u).some((segment) => segment.toLowerCase() === GIT_DIRECTORY);
 }
 
 /**

@@ -60,12 +60,27 @@ export interface ExecuteRepositoryChangeInput {
    */
   readonly readCi?: () => Promise<number | undefined>;
   readonly budgets?: GitBudgets;
+  /**
+   * How a draft reaches the record, when this call is the one that owns the writing.
+   *
+   * Absent means this call writes nothing and only returns the drafts, which is the shape the deciding
+   * tests use. Present means the two facts are written *at their own moments* — the mandate before the run
+   * starts and the result after it ends — rather than both after the call returns. The ordering is why
+   * this is a callback instead of "return them and let the caller write them": only this function knows
+   * when a run has begun, and the mandate has to be on disk before that.
+   *
+   * It answers with a sentence when the write failed rather than throwing, because a broken pen is a fact
+   * about the run and not an exception in it.
+   */
+  readonly record?: ((draft: FactDraft) => Promise<string | undefined>) | undefined;
 }
 
 export interface RepositoryChangeExecution {
   readonly result: RepositoryChangeResult;
   /** The drafts to admit, in the order they are to be written. Empty only when there was no mandate. */
   readonly facts: readonly FactDraft[];
+  /** The sentence for a fact that could not be written, when that happened. */
+  readonly recordError: string | undefined;
 }
 
 export async function executeRepositoryChange(
@@ -89,6 +104,25 @@ export async function executeRepositoryChange(
 
   const mandateFact = mandateFactDraft({ repository, mandate });
   const facts: FactDraft[] = [mandateFact];
+
+  // Written before anything can move, and a write that fails stops the run rather than being reported at
+  // the end of one: a run that dies has to leave behind what was asked of it, and a run that started with
+  // no such record could push — irreversibly — while the only account of what was asked for lived in a
+  // process that is about to be killed.
+  const mandateError = await writeFact(input, mandateFact);
+  if (mandateError !== undefined) {
+    return settle({
+      repository,
+      mandate,
+      outcome: 'unchanged',
+      halt: 'record-unwritable',
+      evidence: emptyEvidence(),
+      report: undefined,
+      facts,
+      recordError: mandateError,
+      lines: [`没有改动 ${repository}：这次请求没能先写进事实史。`, mandateError],
+    });
+  }
 
   const roots = await input.read.roots();
   const scope = await resolveDeclaredRoot(repository, roots, input.budgets);
@@ -142,20 +176,25 @@ export async function executeRepositoryChange(
   const after = await readSnapshot(root, input.budgets);
 
   const judgement = judgeOutcome(before, after);
-  const halt: RepositoryChangeHalt | undefined =
-    judgement.outcome === 'changed'
-      ? undefined
-      : ran.halt !== undefined
-        ? ran.halt
-        : judgement.outcome === 'unknown'
-          ? 'outcome-unreadable'
-          : undefined;
 
-  // A determinate change stays determinate. If git says the tree or the tip moved, that happened —
-  // and a runner that also timed out does not make it not have happened. What the timeout costs is the
-  // run's own account, which is why `unknown` is the answer in the other direction: a run that failed
-  // and left no trace is not evidence that nothing was touched, and §5.2 forbids filing it that way.
-  const outcome = judgement.outcome === 'changed' ? 'changed' : halt !== undefined ? 'unknown' : judgement.outcome;
+  // §5.2 verbatim. `unchanged` means *确定没改*, and the ruling offers it in two ways: nothing was started
+  // at all (the refusals above), or a run that ended normally is followed by a comparison that says nothing
+  // moved. A run that did not end normally — it failed, timed out, or could not call its model — is the case
+  // the same ruling files under `unknown`, because the process was interrupted rather than finished, even
+  // when the two snapshots happen to agree: the comparison is evidence about the tree, not about whether
+  // anything else the run did had already been undone. A comparison that could not be read is `unknown` for
+  // the reason the ruling gives, and it is the one collapse that must not happen — which is why readability
+  // is checked before the run's ending is.
+  const moved = judgement.outcome === 'changed';
+  const endedCleanly =
+    judgement.readable &&
+    judgement.outcome === 'unchanged' &&
+    ran.report !== undefined &&
+    ran.report.stopped === undefined;
+  const outcome = moved ? 'changed' : endedCleanly ? 'unchanged' : 'unknown';
+  const halt: RepositoryChangeHalt | undefined = moved
+    ? undefined
+    : (ran.halt ?? (endedCleanly ? undefined : 'outcome-unreadable'));
 
   // §8's fifth ruling: once a push has been observed, the evidence has to name the CI run that followed
   // it, because push is the one step in this slice a local rollback cannot undo. Read here, afterwards,
@@ -163,7 +202,7 @@ export async function executeRepositoryChange(
   // the self-description §3.3 forbids recording as a verified fact. A read that fails leaves the number
   // absent rather than inventing one, and `ciChecked` says whether anyone was asked at all.
   let ciRunId: number | undefined;
-  if (judgement.pushed && input.readCi !== undefined) {
+  if (judgement.pushed === true && input.readCi !== undefined) {
     try {
       ciRunId = await input.readCi();
     } catch {
@@ -181,14 +220,14 @@ export async function executeRepositoryChange(
     ciChecked: input.readCi !== undefined,
   };
 
-  facts.push(
-    resultFactDraft({
-      repository,
-      outcome,
-      halt,
-      evidence,
-    }),
-  );
+  const resultFact = resultFactDraft({
+    repository,
+    outcome,
+    halt,
+    evidence,
+  });
+  facts.push(resultFact);
+  const recordError = await writeFact(input, resultFact);
 
   return settle({
     repository,
@@ -198,8 +237,29 @@ export async function executeRepositoryChange(
     evidence,
     report: ran.report,
     facts,
+    recordError,
     lines: describe({ repository, root, outcome, halt, evidence, before, after }),
   });
+}
+
+/**
+ * Hand one draft to the record, or do nothing when this call is not the one writing.
+ *
+ * The failure comes back as a sentence rather than as a throw: whatever went wrong, the run has already
+ * happened, and the honest answer to the human is what happened plus what could not be written down.
+ */
+async function writeFact(
+  input: ExecuteRepositoryChangeInput,
+  draft: FactDraft,
+): Promise<string | undefined> {
+  if (input.record === undefined) return undefined;
+
+  try {
+    return await input.record(draft);
+  } catch (error) {
+    const detail = error instanceof Error && error.message !== '' ? error.message : String(error);
+    return `这条记录没能写进事实史（${draft.type}）：${detail}`;
+  }
 }
 
 /** The outcome of the runner call, as three separate things rather than one caught exception. */
@@ -279,13 +339,17 @@ function describe(input: {
     } else {
       lines.push('HEAD 没有变，变的是工作区。');
     }
-    if (evidence.pushed) {
+    if (evidence.pushed === true) {
       lines.push('执行者把它推送到了远端——这一步不能收回。');
       lines.push(
         evidence.ciRunId === undefined
           ? '推送之后没有读到 CI run（这个仓库可能没有配置 CI，或者这次没能读到）。'
           : `推送之后的 CI run：#${evidence.ciRunId}`,
       );
+    } else if (evidence.pushed === undefined) {
+      // Not "it did not push": the comparison itself could not be made, and a push is the one thing here
+      // that cannot be taken back, so this line says what is unknown rather than picking a comfortable side.
+      lines.push('是否已经推到远端：无法核对（改动前后读不到仓库状态）。');
     }
     return lines;
   }
@@ -318,6 +382,8 @@ function haltSentence(halt: RepositoryChangeHalt): string {
       return '原因：执行者超出了这次的时间预算，已被中止。';
     case 'outcome-unreadable':
       return '原因：改动前后读不到仓库状态，因此无法比对。';
+    case 'record-unwritable':
+      return '原因：这次请求没能先写进事实史，所以没有开始。';
   }
 }
 
@@ -325,8 +391,11 @@ function emptyEvidence(): RepositoryChangeEvidence {
   return {
     headBefore: undefined,
     headAfter: undefined,
-    dirtyBefore: false,
-    dirtyAfter: false,
+    // `undefined` and not `false`: nothing looked at the tree, and `false` is the answer a *look* gives
+    // about a clean tree. The halt paths here never looked, and a record that said "clean" would be
+    // claiming an observation that never happened.
+    dirtyBefore: undefined,
+    dirtyAfter: undefined,
     pushed: false,
     ciRunId: undefined,
     ciChecked: false,
@@ -345,6 +414,7 @@ function settle(input: {
   readonly evidence: RepositoryChangeEvidence;
   readonly report: RepositoryChangeRunReport | undefined;
   readonly facts: FactDraft[];
+  readonly recordError?: string | undefined;
   readonly lines: readonly string[];
 }): RepositoryChangeExecution {
   return {
@@ -358,5 +428,6 @@ function settle(input: {
       lines: input.lines,
     },
     facts: input.facts,
+    recordError: input.recordError,
   };
 }

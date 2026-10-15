@@ -118,7 +118,9 @@ export function resultFactDraft(input: ResultFactInput): FactDraft {
       headAfter: evidence.headAfter ?? null,
       dirtyBefore: evidence.dirtyBefore ?? null,
       dirtyAfter: evidence.dirtyAfter ?? null,
-      pushed: evidence.pushed,
+      // `null` and not `false` when the comparison could not be made: the field says the question was not
+      // answered, rather than answering it in the direction that hides a push that cannot be taken back.
+      pushed: evidence.pushed ?? null,
       ciRunId: evidence.ciRunId ?? null,
       ciChecked: evidence.ciChecked,
     },

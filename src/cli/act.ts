@@ -24,8 +24,16 @@ import {
 } from '../repository-change-executor/index.js';
 import { RESIDENT_HINT } from './options.js';
 
-/** How long a client waits for a run to finish before it stops waiting. */
-const REPLY_TIMEOUT_MS = 30 * 60 * 1000;
+/**
+ * How long a client waits for a run to finish before it stops waiting.
+ *
+ * Strictly longer than the server's own budget (`DEFAULT_RUN_TIMEOUT_MS`, thirty minutes), and the gap is
+ * the whole reason this number is not that one. With equal budgets the two clocks race: a run that reaches
+ * its limit can have the client give up first, and the person then reads "no answer" about a run that is
+ * still finishing — one that may commit and push before it does. A shorter server budget than the client's
+ * means the answer that arrives is the server's, and the server always has one.
+ */
+const REPLY_TIMEOUT_MS = 35 * 60 * 1000;
 
 export type RepositoryChangeAnswer =
   | { kind: 'answered'; outcome: 'ok' | 'failed'; lines: readonly string[] }

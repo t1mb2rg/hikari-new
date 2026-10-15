@@ -45,7 +45,12 @@ export type RepositoryChangeHalt =
   | 'executor-unavailable'
   | 'executor-failed'
   | 'executor-timed-out'
-  | 'outcome-unreadable';
+  | 'outcome-unreadable'
+  // The request arrived and a run would have started, but the sentence could not be written down first.
+  // This one halts *before* anything can move, deliberately: §2.7 of the review puts the mandate fact
+  // ahead of the run because a run that dies has to leave behind what was asked for, and an irreversible
+  // change with no record of what it was asked to do is the one thing this slice must not produce.
+  | 'record-unwritable';
 
 /**
  * What the executor says it did.
@@ -106,8 +111,15 @@ export interface RepositoryChangeEvidence {
   readonly dirtyBefore: boolean | undefined;
   /** As above, and for the same reason `headAfter` is: two looks, each with its own three answers. */
   readonly dirtyAfter: boolean | undefined;
-  /** Whether a push actually happened, as git reports it, not as the executor reports it. */
-  readonly pushed: boolean;
+  /**
+   * Whether a push actually happened, as git reports it, not as the executor reports it.
+   *
+   * `undefined` is the third answer and not a synonym for `false`: it means the question could not be
+   * asked — a repository whose state could not be read at all. Writing `false` there would turn "nobody
+   * knows" into "it certainly did not happen", which is exactly the claim §8's fifth ruling exists to
+   * keep the record from making (and it would skip the CI read that ruling requires).
+   */
+  readonly pushed: boolean | undefined;
   /** The run number pushed to GitHub, when a push happened and CI could be read. */
   readonly ciRunId: number | undefined;
   /** False when a push happened but no run could be read; the record must say so rather than stay silent. */

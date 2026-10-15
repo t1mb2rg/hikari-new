@@ -172,3 +172,14 @@ hikari act --data-dir <path> --repository <owner/name> "<人的原句>"
 6. CLI 动词 + 常驻组合 + 接线断言
 7. Functional Review → Architecture Review → `detect_changes` → commit / push / CI
 8. 真机三条（组合 active / fail-closed / 拿不到模型 → `unknown`），**逐轮授权后才做**
+
+## §8 冻结之后的实施记录（2026-10-16）
+
+本节的每一条都是**实施中被真实运行打出来、再由 Human 裁决或由既有冻结文本直接决定**的，**不改 §1–§7 的边界决定**，只把「初稿没写到、但边界要求的东西必须真的可达」这几处补齐。
+
+1. **§4「不可回退」那一行与配置绑定（Human 裁决取 A）**。它的验收「记录里必须同时有『它 push 了』与 CI run 号」只有**确实在盯仓库**的常驻才可能满足。初稿把这个义务写给了执行者，实施时发现：若执行者的 `requires` 里带一条硬 CI 依赖，**所有**常驻（包括压根没配 `--repository` 的）都得先起 `github-ci` 成员——实测让 15 条既有常驻测试从约 1 秒变成 30 秒超时（`常驻没有应答控制通道`）。因此执行者有**两份 definition**、同一个 id、`provides` 都为空、只有 `requires` 与加载位置不同：不盯仓库的那份在 base（`requires: [changeable-repositories.read@1, chronicle]`，记录如实说「没有 CI」），盯仓库的那份排在 `github-ci` 之后（`requires` 里多一条 `github-ci.current@1`），CI 观测一上来就把 run 号交给事实路径；模型自述用的 `read_ci` 工具仍然只在配了 CI 观察者时存在。**§4 那一行据此读作**：在盯仓库的常驻里必须满足，在不盯仓库的常驻里「没有 CI」是正确记录。
+2. **§2.4 containment 补一个洞**：`write_file` 的判据原本只问「在不在仓库根之下」，`.git/hooks/pre-commit`、`.git/config`、`.git/refs/remotes/*` 都被放行——前者等于让 git 在下一次 commit 时执行人写下的脚本（§6 排除的 shell 能力），后者能伪造 §2.6 判 push 时要读的地方。现在任何一段名为 `.git` 的路径（含经链接落进去的）逐字被拒。
+3. **§2.6 push 判据补一个洞**：只看「未推送数量是否下降」在**同步仓库**里看不见 push（`commit + push` 计数 `0 → 0`）。现在多读一条 `git branch --remotes --contains HEAD`；并且 `pushed` 是**三态**——读不到时写「无法核对」（事实里 `null`），不写「确定没推」，也不因此去读 CI。
+4. **§2.7 的落盘时机收紧**：mandate 事实必须在**任何事之前**写进 Chronicle；写不进去就不启动（`record-unwritable`），因此停机不会留下「工作区改了但没人要求过」的窗口。
+5. **§2.2 的客户端超时必须严格大于服务端预算**：`hikari act` 的回执超时从 30 分钟改为 35 分钟。相等会让两个钟赛跑，人可能读到「没有下文」而那一轮仍在跑、可能已经 push。
+6. **仍未闭环（照实记）**：无命名管道的主机上，执行者插件构造会抛错，而常驻**无条件**加载它；CLI 侧已按兄弟客户端（`hikari change`）的口径回答「执行者入口依赖 Windows 命名管道，本机没有。」，但 Linux 上未实跑，因此只算「口径一致」，不算已验证。

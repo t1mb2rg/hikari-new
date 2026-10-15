@@ -317,6 +317,19 @@
 > **验证数字**：`npm run build` exit 0；`npm test` **1008 tests / 1004 pass / 0 fail / 4 skipped**（第一批后是 969/965/0/4）；`test/repository-change-executor.test.mjs` **47/47**、`test/repository-change-endpoint.test.mjs` **13/13**。CI 上还抓到过一次真问题：Windows runner 的 `%TEMP%` 是 **8.3 短名**，而 `git rev-parse --show-toplevel` 回长名，两侧字符串永不相等 → 范围判定误判 `not-declared`；已用 `fs.realpathSync.native` 归一化并在测试里留一条专钉短名/长名同一性的用例。
 >
 > **它不证明**：**没有任何一次真实写入发生过**（`changed` 的任务路径在真机上从未跑过，只在单测里跑过——那条测试真的 push 到一个本机 bare 仓库）；**未**验证 2b(ii)（跨历史的认知连续性），也**不得**据此宣布认知实验通过。**里程碑 3 的实际写入、commit、push 仍需逐轮单独授权**（评审 §5.1 ①，`:299` 那条未变）。
+>
+> **口径更新（2026-10-16 · 里程碑 3 的修复闭环之后）**：上面那条「已实现、已交付」写得**过早**——写下它的时候，两轮独立只读评审还没跑完，而它们各自指出的阻断项，我随后**自己复现**了才动手。以下逐条记录「问题 → 现状」，**不把偏差追认成设计**：
+>
+> ① **containment 放行 `.git`**：判据原本只问「在不在仓库根之下」，于是 `.git/hooks/pre-commit`、`.git/config`、`.git/refs/remotes/*` 都是 `inside`——前者能让 `write_file` 写下的脚本在**下一次 `git_commit`** 里被 git 自己执行（正是工具表明确排除的 shell 能力），后者能伪造 push 判据要读的地方。现在 `containment.ts` 逐字拒绝任何一段名为 `.git` 的路径（绝对路径一次、解析链接后一次），三类测试钉住：单元、真写入（断言磁盘上什么都没发生）、junction 逃逸。
+> ② **push 判据在同步仓库里看不到 push**：原来只看「未推送数量是否下降」，于是同步仓库里 `commit + push`（计数 `0 → 0`）被记成「没推」。现在多读一条 `git branch --remotes --contains HEAD`：计数不可比时由「新提交是否已在远端」回答 `isPushObserved`，读不到则答「**无法核对**」。
+> ③ **`pushed` 是三态**：不可读时不再写 `false`（那是「确定没推」），而是 `undefined` → 事实里 `null`（「无法核对」），且**不**触发 CI 读取。
+> ④ **mandate 在任何事之前落盘**：过去它只先进内存、落盘发生在最长 30 分钟的执行**之后**；现在写不进事实史就 `record-unwritable`、**不启动**，停机也不再留下「工作区改了但没人要求过」的窗口。
+> ⑤ **§8 第 5 条的 CI run 号必须真的可达，且与 scope 绑定**：执行者的 CI 依赖由 `watchesCi` 开关决定——**有** repository scope 的常驻加载 requires 含 `github-ci.current@1` 的那一份 definition（排在 `github-ci` 之后），**没有** scope 的常驻加载原来那份（`requires` 不含 CI）。于是「push 之后要记 CI run 号」这条验收**只在确实在盯仓库的常驻里成立**；不盯仓库的常驻里，记录如实说「没有 CI」。这一组合边界由 Human 裁决取 A，记在 `docs/architecture/authorized-repository-action-v0-implementation-boundary-freeze.md`。
+> ⑥ **`hikari act` 的回执超时 30min → 35min**：必须**严格大于**服务端预算，否则两个钟赛跑、人会读到「没有下文」而那一轮仍在跑、可能已经 push。
+>
+> **验证数字（修复闭环后）**：`npm run build` exit 0；`npm test` **1018 tests / 1014 pass / 0 fail / 4 skipped**；`test/repository-change-executor.test.mjs` **57/57**（含一条「真插件 + 假模型工厂跑完一轮」的端到端用例——它正是用来定案「工厂被当实例传」那条 finding 的——以及一条「真 bare remote + 假 CI 服务」的 push 后读 run 号用例）；`test/resident-cli.test.mjs` **45 pass / 0 fail / 1 skipped**。
+>
+> **仍未闭环**：无命名管道的主机上执行者插件构造会抛错，而常驻**无条件**加载它（CLI 侧已按平台回「执行者入口依赖 Windows 命名管道，本机没有。」；Linux 上未实跑，因此这条只算「已按兄弟客户端的口径处理」，不算已验证）。
 
 ---
 
