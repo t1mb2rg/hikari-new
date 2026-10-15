@@ -33,6 +33,11 @@ import { requestRepositoryChange } from '../dist/cli/act.js';
 const REPOSITORY = 't1mb2rg/demo-repository';
 const MANDATE = '把 README 里那句过时的话改掉，然后提交推上去。';
 
+// The endpoint is a Windows named pipe, so every test that actually opens one is skipped elsewhere — the
+// same guard the sibling endpoint suites use. What is *not* skipped is the half that runs everywhere: the
+// envelopes, the line framing, and the client's answer when there is no pipe to connect to at all.
+const NO_PIPES = process.platform === 'win32' ? false : '命名管道只在 Windows 上存在';
+
 function dataDir() {
   return mkdtempSync(join(tmpdir(), 'hikari-act-'));
 }
@@ -150,7 +155,7 @@ test('行框定：超长的行断开的是这一次读取，不是一个被截�
 // 两端：一个真的常驻，一个真的问题
 // ---------------------------------------------------------------------------
 
-test('端点：人问一句，常驻答一句，句子逐字回来', async () => {
+test('端点：人问一句，常驻答一句，句子逐字回来', { skip: NO_PIPES }, async () => {
   const dir = dataDir();
   const endpoint = await listenRepositoryChangeEndpoint(
     {
@@ -174,13 +179,13 @@ test('端点：人问一句，常驻答一句，句子逐字回来', async () =>
   }
 });
 
-test('端点：没有常驻在听是 absent，不是失败', async () => {
+test('端点：没有常驻在听是 absent，不是失败', { skip: NO_PIPES }, async () => {
   const answer = await requestRepositoryChange(dataDir(), REPOSITORY, MANDATE);
 
   assert.equal(answer.kind, 'absent');
 });
 
-test('端点：关掉之后就不再有人应答，且答案与「从来没起过」一样', async () => {
+test('端点：关掉之后就不再有人应答，且答案与「从来没起过」一样', { skip: NO_PIPES }, async () => {
   const dir = dataDir();
   const endpoint = await listenRepositoryChangeEndpoint(
     { handle: async () => ({ protocol: EXECUTOR_PROTOCOL, outcome: 'ok', lines: ['ok'] }) },
@@ -196,7 +201,7 @@ test('端点：关掉之后就不再有人应答，且答案与「从来没起�
   assert.equal(after.kind, 'absent');
 });
 
-test('端点：宿主自己在处理时炸了，这次对话结束，而不是替它编一句失败', async () => {
+test('端点：宿主自己在处理时炸了，这次对话结束，而不是替它编一句失败', { skip: NO_PIPES }, async () => {
   const dir = dataDir();
   const endpoint = await listenRepositoryChangeEndpoint(
     {
@@ -223,7 +228,7 @@ test('端点：宿主自己在处理时炸了，这次对话结束，而不是�
 // 管道名：同一个数据目录永远是同一个名字，不同目录不是
 // ---------------------------------------------------------------------------
 
-test('管道名：由数据目录的规范路径决定，不含用户的目录名', () => {
+test('管道名：由数据目录的规范路径决定，不含用户的目录名', { skip: NO_PIPES }, () => {
   const first = repositoryChangeEndpointPath(dataDir());
   const second = repositoryChangeEndpointPath(dataDir());
 

@@ -1400,7 +1400,10 @@ test('act 没有常驻在听时说的是「没有常驻」，不是执行失败'
   // report and no executor to blame; what the person needs is to be told which state they are in.
   const result = runCli('act', '--data-dir', root, '--repository', 't1mb2rg/hikari-new', '改点什么');
   assert.equal(result.code, 1);
-  assert.match(result.stderr, /常驻/);
+  // Two truthful answers for "nobody is listening", and which one is right depends on the platform: a host
+  // without named pipes never has this endpoint at all, and the client says that instead of pretending it
+  // looked and found nobody.
+  assert.match(result.stderr, process.platform === 'win32' ? /常驻/ : /命名管道/);
 });
 
 test('模型参数只属于 resident，没有拓宽别的命令', (t) => {

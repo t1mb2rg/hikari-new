@@ -39,6 +39,9 @@ export function requestRepositoryChange(
 ): Promise<RepositoryChangeAnswer> {
   const path = repositoryChangeEndpointPath(rootDir);
   if (path === undefined) {
+    // The same sentence every sibling client in this CLI prints on a host without named pipes. It is a
+    // different answer from `absent` on purpose: `absent` says "this data directory has no resident", and
+    // on this platform there is no endpoint to have — the person is told which of the two they are in.
     return Promise.resolve({
       kind: 'unavailable',
       detail: '执行者入口依赖 Windows 命名管道，本机没有。',
