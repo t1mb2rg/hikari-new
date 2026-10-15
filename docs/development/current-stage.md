@@ -301,6 +301,10 @@
 > **同日两件阶段裁决（Human，2026-10-15）**：① **支持**把「执行者的第一片」纳入本阶段——依据是 `docs/architecture/hikari-nervous-system-stage-v0.md:205-207` 的 Action 条目按 R2 属 **NOT-YET**（「不在本阶段」），而它要求的那个真实需求已经出现；同一条同时明确**不创建 P4-04、不开始 Salience research**。② 确认上述 `(iii)` 裁决有效。**这两条都没有解除任何 MUST**：实验按不变量 7 / 8 的要求**走** Action 边界，因此它是**遵守** MUST，不是改 MUST。
 >
 > **未交付（必须与上面一起读）**：**没有**新建插件、Service、存储、事实族或 CLI 词；**未改**任何冻结裁决；**未实现**里程碑 1——它的设计边界是该评审 §8（**默认方案**：把人启动常驻时**成对**写下的 `--repository-root` / `--repository` 读进 `repository-ci-relevance`，让判断在被声明过的配对上引用**人自己的对应关系**，两条比较仍然逐字、不新增任何推断；备选「新插件持持久绑定」「扩展 `change declare`」先不做），**等 Human 确认后才动代码**。
+>
+> **口径更新（2026-10-15 · 里程碑 1 落地之后）**：上面说「**未实现**里程碑 1」「**没有写一行代码**」在当时为真；**里程碑 1（「事实正确相遇」）现已实现、已提交、已推送、CI 通过**——commit **`ec09976`**，CI Runtime Tests **#38741963171 success**（`npm test` 937 tests / 933 pass / 4 skipped / 0 fail）。它**不是**新插件、**不是**新 Service、**不是**新事实族、**不是**新 CLI 词：只在 `repository-ci-relevance` 这个既有 owner 内部加了**第二条逐字相等**的规则——人在启动常驻时**成对**写下的 `--repository-root` / `--repository`，让「本机路径」与「GitHub `owner/name`」这两半此前无法相遇的事实产生一次有依据的 `relevant`（判断多了 `via: { kind: 'declaration' }`，回答里逐字引出那两半，并写明哪一半是工作焦点指名的）。**两半的相等都是逐字的，对应关系是人说的**：这个包里没有任何一处推断「两个拼法指同一个仓库」；`unknown` 的第四种成因（没有配对）**没有单独措辞**（Human 的决定，文案一个字未改）。**真机已验证**（真实常驻、18 个插件全 `active`、真实命名管道）：配对命中时为 `relevant` 并逐字引出两半，`focus clear` 之后退回 `unknown`。**它不证明**身份问题已解决，也不证明跨 owner 读回持久事实会改变行为——那是里程碑 3 / 5。
+>
+> **里程碑 2 的 L2 评审已落盘（等 Human 确认后才实现）**：`docs/architecture/repository-ci-diagnosis-proposal-v0-boundary-review.md`（**VERDICT = NARROW**）。要点：**依赖方向反转**——不新建第二条主动链；「对这一次已确认相关的失败，我有没有依据提出一次具体的复查建议」做成一个**被既有播报者询问**的领域判断（新 owner `repository-ci-diagnosis-proposal`：`provides` 一条真实契约、**零配置**、不轮询、不去重、不投递、不写新事实）。播报、去重、投递、回执仍然只有一份，都在 `repository-ci-attention`。为此**要动两处既有契约**：attention 的**输入边界**（`requires` 从 `github-ci` 换成 `repository-ci-awareness`，一个周期只取**一份** assessment）与**表达**（第三条有界 speaking 契约，**不引入 `speak(string)`**）。验收只有 Human 锁定的四项：Attention 输入变化 / 单次证据获取 / Diagnosis 领域语义 / Language 与回执。**明确不做**：通用 Salience、中央 Judgement、跨领域排序、第二条链。
 
 ---
 
