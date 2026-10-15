@@ -20,6 +20,7 @@
 // the run was.
 
 import { execFile } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 
 /** One git invocation, and the four things that can come back. */
 export type GitRun =
@@ -190,7 +191,33 @@ export async function isRepositoryRoot(
   if (inside.kind !== 'ok' || inside.stdout.trim() !== 'true') return false;
   const top = await runGit(root, ['rev-parse', '--show-toplevel'], budgets, signal);
   if (top.kind !== 'ok') return false;
-  return normalizePath(top.stdout.trim()) === normalizePath(root);
+  return settledPath(top.stdout.trim()) === settledPath(root);
+}
+
+/**
+ * A path put through the filesystem before it is compared to another one.
+ *
+ * Folding case and separators is not enough on its own, and the case that proves it is the one this
+ * build actually ran into: on a Windows runner `%TEMP%` is often an 8.3 short name
+ * (`C:\Users\RUNNER~1\AppData\Local\Temp\...`) while git answers `--show-toplevel` with the long
+ * spelling of the same directory. The two name one place and no amount of case folding makes them
+ * equal, so both sides are asked of the filesystem first — which is the same move `containment.ts`
+ * makes, for the same reason, one directory up.
+ *
+ * A path that cannot be resolved is compared as it was spelled. That is not a fallback that hides
+ * anything: a root that is not there is a fact `resolveDeclaredRoot` reports as "not a working tree",
+ * and turning it into a silent mismatch here would move that sentence somewhere a human cannot read it.
+ */
+export function settledPath(value: string): string {
+  try {
+    // `.native`, not the JavaScript walker: on Windows the JavaScript one hands back the spelling it
+    // was given, so one directory reached through its 8.3 short name stayed a different string from the
+    // same directory reached by its long name. CI's temp directory is `RUNNER~1`, which is how
+    // `rev-parse --show-toplevel` answered with a different root than the one it was asked about.
+    return normalizePath(realpathSync.native(value));
+  } catch {
+    return normalizePath(value);
+  }
 }
 
 /**
@@ -198,8 +225,8 @@ export async function isRepositoryRoot(
  *
  * Windows answers `--show-toplevel` with forward slashes and a drive letter whose case is whatever git
  * felt like; a declared root written by a human can differ in both without naming a different place.
- * Only case and separators are folded — nothing here resolves symlinks or short names, because that is
- * `containment.ts`'s job and doing it twice would give two answers to one question.
+ * Only case and separators are folded here — nothing in this function resolves symlinks or short
+ * names, because that is `settledPath`'s job and doing it twice would give two answers to one question.
  */
 export function normalizePath(value: string): string {
   return value.replace(/\\/gu, '/').replace(/\/+$/u, '').toLowerCase();

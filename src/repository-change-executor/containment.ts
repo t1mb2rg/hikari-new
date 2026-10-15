@@ -99,7 +99,11 @@ export function isInside(root: string, candidate: string): boolean {
 /** `realpathSync` as an answer rather than as a throw: a path that is not there is a fact, not an error. */
 export function realPathOf(value: string): string | undefined {
   try {
-    return realpathSync(value);
+    // `.native` for the same reason `settledPath` uses it: the JavaScript walker does not turn a
+    // Windows 8.3 short name into the long one, and containment compares a declared root against paths
+    // that may have been reached either way. `dev`/`ino` would also settle identity, but this answers
+    // the same question in one call and is what the rest of this package already compares strings from.
+    return realpathSync.native(value);
   } catch {
     return undefined;
   }

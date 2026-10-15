@@ -63,6 +63,27 @@ export interface RepositoryChangeRunReport {
   readonly notes: readonly string[];
   /** Set when a tool call was refused by this build's boundaries rather than by the repository. */
   readonly refusedCalls: readonly string[];
+  /**
+   * Where the loop stopped before it ran out of things to do, and why.
+   *
+   * `undefined` means the run ended because the model said it was done. The implementation freeze's
+   * §2.5 asks for "which step it stopped at, and why" to reach the record, and this is the only place
+   * that knows: stopping on the step budget and stopping because the model finished both leave a
+   * repository that may or may not have changed, and the difference is what a human reads next.
+   */
+  readonly stopped: RepositoryChangeStopped | undefined;
+}
+
+/**
+ * Why a run that started ended without the model saying it was done.
+ *
+ * These are the executor's own account — `outcome.ts` never reads them, and none of them decides which
+ * of the three outcomes happened. They explain a run whose repository may be untouched, and that
+ * explanation is exactly why they are not allowed to be evidence.
+ */
+export interface RepositoryChangeStopped {
+  readonly atStep: number;
+  readonly reason: 'step-budget' | 'step-timeout' | 'run-budget' | 'model-failed';
 }
 
 export interface RepositoryChangeToolUse {

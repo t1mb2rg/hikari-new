@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -46,6 +46,23 @@ function makeRepository(repository = 't1mb2rg/demo-repository') {
 
 function git(dir, args) {
   execFileSync('git', ['-C', dir, ...args], { stdio: 'pipe' });
+}
+
+/**
+ * The 8.3 spelling of a path, or the path itself when the volume has no shorter name for it.
+ *
+ * This exists because the failure it guards against happened: on a Windows runner `%TEMP%` came back
+ * as `C:\Users\RUNNER~1\...` while git answered `--show-toplevel` with the long spelling of the same
+ * directory, and a comparison that only folded case and separators called them two different places.
+ * The probe is `cmd`'s own `%~s` modifier rather than anything this build computes, so the test asks
+ * the platform for a short name instead of inventing one.
+ */
+function shortPathOf(dir) {
+  // Quoted `for` variables are read back as relative to the current drive by `cmd`, which is how this
+  // probe first produced `G:\"C:\...\"` — a string that is neither path. Unquoted, with the result
+  // checked by the caller rather than trusted, it answers what the platform actually calls the folder.
+  const out = execFileSync('cmd', ['/c', `for %I in (${dir}) do @echo %~sI`], { encoding: 'utf8' });
+  return out.trim().replace(/^"|"$/gu, '');
 }
 
 /** The read half, as the executor sees it. `read`/`search` throw so a call to them is a failure. */
@@ -136,8 +153,25 @@ test('repositoryNameFromUrl：认四种 GitHub 拼写，不认别的', () => {
 test('范围：声明里的根按 origin 的仓库名逐字命中才算 declared', async () => {
   const dir = makeRepository('t1mb2rg/declared-one');
   const resolution = await resolveDeclaredRoot('t1mb2rg/declared-one', [dir]);
-  assert.equal(resolution.kind, 'declared');
+  assert.equal(resolution.kind, 'declared', resolution.kind === 'not-declared' ? resolution.reason : '');
   assert.equal(resolution.root, dir);
+});
+
+test('范围：同一目录的短名与长名是同一个根（Windows 的 8.3 名字）', async (t) => {
+  if (process.platform !== 'win32') {
+    t.skip('8.3 短名只在 Windows 上有意义');
+    return;
+  }
+  const dir = makeRepository('t1mb2rg/short-name');
+  const short = shortPathOf(dir);
+  if (short === dir || !existsSync(short)) {
+    t.skip('这个卷没有给这个目录取短名，这条比较无处可测');
+    return;
+  }
+
+  // 声明写的是短名，git 回答的是长名：一个目录的两个拼写，不能因此变成两个地方。
+  const resolution = await resolveDeclaredRoot('t1mb2rg/short-name', [short]);
+  assert.equal(resolution.kind, 'declared', resolution.kind === 'not-declared' ? resolution.reason : '');
 });
 
 test('范围：没有声明、或者声明的根本不是它，都是 not-declared 并且说得出理由', async () => {
