@@ -14,6 +14,12 @@
 
 ## §0 结论
 
+**VERDICT = NARROW**（Human 2026-10-15 审阅意见，逐字采纳）
+
+> 同意开展**有界**的架构可行性实验；**里程碑 1 可以在确认具体设计边界后实现**；**里程碑 2、3 仍需分别确认 owner、契约、权限和执行证据**。
+
+本片不修宪法（§5.0），但会越过 owner 边界、给既有 contract 添 consumer（§5.4、§5.7），因此按 R5 落 **L2**——产物是本文件 + 这个 verdict。**这个 verdict 的作用域是这次有界实验，不是三个里程碑一起放行**（§5.7）。
+
 **这条闭环今天缺的不是一个中心，是三格没人认领的事实。** 而且它比听起来小：
 
 1. **卡住「事实相遇」的，是一条没人声明过的绑定，不是一套认知整合机制。** `src/repository-ci-relevance/judgement.ts:53-64` 逐字拒绝把 `hikari-new` 认成 `t1mb2rg/hikari-new`，理由写得是对的（「两个字符串看起来像，不等于来源已证明它们指同一件事」）。问题在下一句：**它没有权做这个判断，而有权做这个判断的 owner 今天不存在。** 所以第一步的最小形态是「人显式声明一次身份 + 一个消费者读它」，不是框架。
@@ -47,6 +53,7 @@
 - **`hikari ask` 一个字都不写**：跑前 3 行，跑后仍 3 行。（`src/cli/options.ts:405` 逐字：「只有 confirm 会写，hikari ask 不写任何东西」。）
 - **没有每回合日志**：本代常驻 stdout 只有一行「Hikari 常驻已启动。」；`resident.log` 里是**上一代（Python）Hikari** 的启动行。每回合唯一的痕迹是进程内 `DialogueTurn`：只记工具名，5 分钟 TTL，进程一退就没。
 - **没有钟**：见 1.3 第 4 问。
+- **有两条主动线，不是一条**：`repository-ci-attention`（服务那一侧）与 `desktop-return-attention`（人自己机器那一侧）。**CI 投递结果的回流已经部分实现**——`repository-ci-attention.delivered` 下次激活会被读回（§1.5）。所以本实验**不得**把「反馈为零」当作基线来描述成果。
 - **18 个插件全部 `active`**：真相的所有者是齐的，缺的是相遇。
 
 ### 1.3 五个探针的实测回答（2026-10-15 晚，用他自己的常驻与模型，跑完已停）
@@ -69,7 +76,7 @@
 
 ### 1.5 本代已经跑通的**半条闭环**（这条最关键，它改变了实验的形状）
 
-`repository-ci-attention` 是全仓库唯一一个**不被问就说话**的插件（`src/repository-ci-attention/plugin.ts:1`），它今天已经完整走过：**看 → 判断 → 说话 → 投递 → 记回系统 → 下次激活读回来**：
+`repository-ci-attention` 是**第一条**不被问就说话的主动线（`src/repository-ci-attention/plugin.ts:1` 自称 "The one plugin in this repository that speaks without being asked"——**这句话今天已经过期**：`src/desktop-return-attention/plugin.ts:1-2` 自称 "The second plugin in this repository that speaks without being asked, and the first whose subject is the human's own machine rather than a service somewhere else."）。它今天已经完整走过：**看 → 判断 → 说话 → 投递 → 记回系统 → 下次激活读回来**：
 
 - **它拥有什么 / 不拥有什么**（`:3-7` 逐字）：own——「when Hikari looks at the CI of the repository an operator named, and whether what it found is something it has not already said」；not own——「what CI is (that is `github-ci`), how a failure is worded (that is `language`), whether a human is there to receive it (that is `human-delivery`), or what a durable fact is (that is `chronicle`). **It requires all four and provides nothing**」（`:92-93`：四个 service，`provides: []`）。
 - **授权的既有定义**（`:84-85` 逐字）：「The composition grants the first by having a repository scope, the next two by loading the two providers, and the last by loading the store — **which is the whole of what "authorization" means here**」（引 `principles.md` §5：能力存在不等于许可）。
@@ -78,6 +85,11 @@
 - **它拒绝越界的地方**（`judgement.ts:11-12` 逐字）：「Neither of them is allowed to ask whether the failure *matters*: **`relevant ≠ salient`**, and the moment this file grew a notion of importance it would have become the generic attention framework the ruling forbids.」
 
 **它为什么不需要身份关联？** 因为这条路上每一个字符串都是 **GitHub 自己的拼法**：`types.ts:31`「GitHub's own `owner/name` spelling, exactly as `github-ci` reported it」；`judgement.ts:97` 的键就是 `failureKey(observation.repository, run.id)`。**同一种拼法之间不需要推断，所以这里从来没有出现过 `unknown`。**
+
+**第二条主动线（`desktop-return-attention`）多给了两个证据**（Human 审阅意见点出过期事实后，我亲自读了 `src/desktop-return-attention/plugin.ts:1-22`）：
+
+- **这个形状是可复制的**：`:10-11` 逐字「The shape is `repository-ci-attention`'s, deliberately and almost line for line, because the two are the same kind of thing」——第二条主动线几乎是照抄第一条长出来的。这既是「领域自治成本可控」的正面证据，也**正是 §3 第 5 条必须排除「普通去重」的原因**。
+- **两条线的防重复机制不一样**：`repository-ci-attention` 用一条**落盘事实**（`delivered`）在下次激活时早退；`desktop-return-attention` 的重复规则「falls out of the temporal state instead of being enforced against a record」（`:14-16`）。**同一种「别重复说」在这个仓库里已经有两种实现**，所以「第二次不说了」本身**不能**用来证明认知成长。
 
 **这给出了本实验的准确形状**：闭环不是从零建，它已经有一半——**在「GitHub 拼法」这一侧全部跑通，在「人的本机路径」那一侧没有入口**。缺的两步因此非常具体：
 
@@ -122,7 +134,21 @@
 
 **这次要证明的是跨 owner 的连续性**：回执先例已经有了（`repository-ci-attention.delivered`），但它**只服务它自己**（`plugin.ts:9-13`：Reading is owner-local）。实验要看到的是那条事实能被**它自己之外的**消费者读出并改变判断——这一条才是「统一认知」在可验证意义上的最小形态。
 
+**这一条是本次实验最值得观察的架构压力点，本文件不预先规定怎么实现**（Human 2026-10-15 审阅意见，逐字采纳：「我希望这一步保留为真正的架构考题」）。两个方向都还在桌面上：
+
+- **(a) 由事实的语义 owner 提供一个有界的读取能力**——谁解释这条事实，谁负责把它讲给别的领域听；
+- **(b) 由消费者自己读 Chronicle，但只解释它需要的那一部分**——`repository-ci-attention` 今天是这么做的（`plugin.ts:9-13`：「Reading is owner-local: this module, and only this module, knows what a `repository-ci-attention.delivered` fact means」）。
+
+**最终选哪一个，由具体交互需求决定。** 明确**不允许**的是：任何消费者随意解释**别人的**事实——那会把「owner 才知道自己的事实意味着什么」这条既有纪律拆掉。这个问题答成什么样，正是判断「领域自治能否以合理成本形成跨领域连续认知」的第一批硬证据。
+
 **证据的形状不是我们新发明的**：§5.1 ② 那条 2026-10-13 裁决已经写死了配套要求——**证据栏必须包含 push 之后的 CI run 号，且记录必须写明「它 push 了」**（因为一旦 push，本地回退不等于世界回退）。
+
+**里程碑 1 与里程碑 3 必须分开**（Human 2026-10-15 审阅意见，逐字采纳）：
+
+- **里程碑 1 解决的是认知问题**：「本地路径与 GitHub 仓库的关系有什么可靠依据」。它产生的是**身份关联**。
+- **里程碑 3 才做行动目标解析**：拿这条关系去解析「这次动作落在哪个仓库上」，并**重新检查**授权范围与仓库的实际当前状态。绑定事实可以复用，但**不得因为曾经建立过绑定就跳过最新状态检查**。
+- 依据是 `core-architecture-v0.md:423` 不变量 9 逐字：「**改变现实必须基于当前状态，而不是旧判断。**」在 commit / push / CI 回执这条路径上尤其要紧：一旦 push，本地回退不等于世界回退。
+- 在 §5.2 那条链上，这两件事落在**不同的两步**：里程碑 1 是 **Normalize / Resolve**（把名字归一成可判断的目标）；里程碑 3 还要过 **Monotonic Guards**（用当前状态而不是旧判断再校一次）。
 
 **不做什么**：不把「结果」存在聊天记录里冒充经验。
 
@@ -134,9 +160,15 @@
 | 2 | **能够自主形成局部决定** | ⚠️ 有一条主动线（CI 播报），但它被明令**不得**判断重要性（`judgement.ts:11-12`） | CI 失败时**没有本轮提问**也会产生一条提议；判据：从常驻日志/事实里能看出这次决定不是由一次 `ask` 触发的，且这个「该不该提」的判断有一个说得出的 owner |
 | 3 | **可以完成受约束的真实行动** | ⚠️ 只有「投递字节」，没有任何会改变外部世界的动作 | 动作有**明文的 mandate**（人的原句）、**明确的范围**（已声明的可改仓库）、**真实的执行结果**；判据：动作前后系统外部状态可分别观测（`git` 状态 + push 之后的 CI run 号），且失败也算证据 |
 | 4 | **行动结果能够反馈** | ✅ 有先例：`repository-ci-attention.delivered`（下次激活读回，但只服务它自己） | 动作产生一条事实；判据：进程重启后这条事实仍在，且能被**它自己之外的**消费者读出并引用 |
-| 5 | **过去真正改变后续行为** | ❌ | 第二次同类情形下，它的**行为与第一次不同**，且这个不同能追溯到第 4 步那条事实；判据：删掉那条事实，行为退回第一次的形态（可对照实验） |
+| 5 | **过去真正改变后续行为** | ❌ | **出现一个新的 CI run，它的失败与过去某次有可验证的关联**；Hikari 因为**读到了此前行动的结果**而选择了**不同的后续处理方式**；判据：在**克隆的数据副本**里移除那条事实、其余输入不变，行为退回基线 |
 
 第 5 条的判据是这次实验里最值钱的一条：**它把「记得」从叙述变成可对照的因果。**
+
+**但第 5 条必须先排除「普通去重」造成的假成功**（Human 2026-10-15 审阅意见，逐字采纳）：
+
+- 「第一次通知了、第二次不通知」**不能**当证据：那正是 `repository-ci-attention` 今天已经会做的事（`deliveredFailures` 早退，§1.5），而 `desktop-return-attention` 甚至用了另一种实现（时间状态，不靠记录）。**同一个 run 不重复播报是既有功能，不是认知成长。**
+- 所以判据必须落在**新 run + 可验证的关联 + 不同的处理方式**上：变化的是**它怎么处理**，不是「它有没有再说一遍」。
+- **对照实验只在克隆的数据副本里做**：生产 Chronicle 是追加式历史（`src/chronicle/store.ts:24-26`），**不得为了实验删除生产事实**；实验用可重复的测试环境与数据副本。
 
 ## §4 架构失败判据（何时该回头改原则）
 
@@ -178,6 +210,8 @@
 
 ### 5.1 两件必须由 Human 拍板的事（阶段裁决，不是修宪）
 
+> **2026-10-15 Human 审阅意见（两问已答）**：① **支持**本次有界实验纳入第一条执行路径；② 既有 10 月 13 日的 Action 授权「已得到源码与文档支持」——**确认有效**。**但里程碑 3 的实际写入、commit 和 push 仍需单独授权**（§7 第 0 条）。
+
 **① 把「行动第一片」纳入本阶段。**
 
 - 现状，逐字（`docs/architecture/hikari-nervous-system-stage-v0.md:205-207`）：
@@ -202,9 +236,11 @@
 - 同文件 `:194` 说明这条形状的参照实现是一个**真实工作的 agent**：原句作为这一轮唯一的 mandate 到达 → 工具集事先承认、模型加不了工具 → 模型自决调用顺序与改法、无逐动作的人在环 → 安全来自「能力集有限 + 动作大多可回退 + 边界处停下来问 + 账本完整」→ 模型不能自己扩权。**`:194` 逐字：「本片照抄这个形状。」**
 - 同文件 `:235-245` §8ter.1 又加了一条配套不变量（见 5.6 的层级说明）与「机械兜底」的对应物：**可改仓库的声明（范围）+ git（可回退）+ 执行者的进程边界（只能在那个目录里、只能做那三个动词）**。
 - **风险（侦察发现，我复核）**：这条裁决在 `docs/development/current-stage.md` 里**零引用**。按 R7「**发生过的裁决必须落纸**」，它已经落在那份评审里；但阶段记录没有指向它，所以它的有效性需要一个明确回答。
-- **要 Human 答的一句**：这条 (iii) 裁决是否仍然有效？（若有效，§5.3 顺手补上双向指针。）
+- **要 Human 答的一句**：这条 (iii) 裁决是否仍然有效？（若有效，§5.3 顺手补上双向指针。）**已答（2026-10-15）：有效——§5.3 的指针照做。**
 
-### 5.2 已经不需要新建的东西（侦察的正面结论）
+### 5.2 已经有材料的部分（侦察的正面结论）
+
+> **本节只说哪些材料已经存在**，**不构成对 §2.4 那个跨 owner 读取问题的裁定**，也不预先宣布「三个缺口都不需要新机制」。按 Human 2026-10-15 审阅意见，那一步**保留为真正的架构考题**，由具体交互需求决定。
 
 这三条让实验比原以为的小：
 
@@ -248,13 +284,14 @@
 
 ### 5.3 一条要补的指针（R7）
 
-`docs/architecture/authorized-repository-action-v0-boundary-review.md:187` 的那条裁决今天在 `docs/development/current-stage.md` 里没有任何引用。按 R7「**修订必须留下双向指针**」，若 5.1 ② 确认有效，本片顺手补上：阶段记录指向该条裁决，该裁决指向本阶段记录。**这是文档工作，不需要新裁决。**
+`docs/architecture/authorized-repository-action-v0-boundary-review.md:187` 的那条裁决今天在 `docs/development/current-stage.md` 里没有任何引用。按 R7「**修订必须留下双向指针**」，5.1 ② 已确认它有效，本次一并补上（本版已做）：阶段记录指向该条裁决，该裁决指向本阶段记录。**这是文档工作，不需要新裁决。**
 
 ### 5.4 「把两半串起来」这件事本身没有被裁决过（本文件的定位）
 
 - 侦察的空白结论：认知侧每一半都有裁决（关联规则 `docs/development/current-stage.md:55`：v1 冻结且刻意极窄——**逐字相等**；ingress 不是 Judgement `:47`），行动侧也有（`principles.md` §8、不变量 7/8），**但没有任何条款裁决过「把它们串成一次闭环」**。
 - 按 R4 四问（Q1 回答新问题 / Q2 在备选项之间做选择 / Q3 解释上游不封闭的词表 / Q4 决定人等都没给出的事），这很可能触发 **Q1 与 Q2** → 落 **L2**（一份 Boundary Review + 明确 verdict）。**本文件即那次 L2 评审。**
-- 级别由 R5 决定：**不是 L3**——L3 的条件是「触及 R2 的 MUST」，而 §5.0 已说明本实验是在**遵守** MUST。
+- 级别由 R5 决定：**当前设计预计不是 L3**——它不触及 R2 的 MUST（§5.0 已说明本实验是在**遵守** MUST），也不引入 `CLAUDE.md:162` 那组架构级判据（Runtime public API / 新通信平面 / 跨 Runtime / 新全局状态中心 / 难撤回的 public contract）。
+- **但这不能预先保证后续实现都只需 L2**（Human 2026-10-15 审阅意见，逐字采纳）。R5 的规则是「**级别由 R2 中该改动触及的最高类别决定——不由 diff 大小决定**」，所以**每个里程碑按它自己的设计重新判级**；最需要重判的是里程碑 3——它第一次引入真实副作用，若它的设计需要新的公共契约或新的状态中心，级别就跟着升。
 
 ### 5.5 明确不做（照抄既有纪律，防止实验顺手扩权）
 
@@ -286,20 +323,73 @@
 | --- | --- | --- | --- |
 | 人显式声明一条绑定（里程碑 1） | NOT-YET（关联规则仍冻结为逐字相等；声明不新增推断） | **L2** | 一份评审（本文件）+ 明确 verdict |
 | 补上播报之后那一步（里程碑 2） | SHOULD / 新 consumer | **L2** | 同上；owner 必须写得出来（§4 第 3 条） |
-| 执行者第一片（里程碑 3） | 第一次**使用** MUST 所要求的 Action 边界 | **L2**（不触 MUST） | 定义 + 实现 + 功能评审 + 架构评审 |
-| 阶段纳入（5.1 ①） | 阶段裁决 | — | **Human 的一句话** |
+| 执行者第一片（里程碑 3） | 第一次**使用** MUST 所要求的 Action 边界 | **L2（动笔前按 R5 重判）** | 定义 + 实现 + 功能评审 + 架构评审 |
+| 阶段纳入（5.1 ①） | 阶段裁决 | — | **Human 的一句话**（已答：支持纳入有界实验） |
 | 补双向指针（5.3） | 文档纪律（R7） | — | 本片顺手做 |
+
+**VERDICT = NARROW 的作用域**：它同意的是**这次有界实验**，不是三个里程碑一起放行——里程碑 1 在它自己的设计边界被确认后实现；里程碑 2、3 各自在**确认 owner、契约、权限与执行证据**之后再动。
 
 按 `docs/development/current-stage.md:2191-2207` 的四段式执行：**Boundary Review → 实现+测试 → Architecture Review → 文档/契约更新**；并且照那条纪律——「如果真实实现暴露当前边界不成立，**不允许用隐藏依赖或临时特例绕过，应暂停实现并重新审查架构**」。
 
-## §7 落地顺序（等 §5.1 两问的回答）
+## §7 落地顺序
 
-1. **Human 回答 §5.1 的两问**（① 阶段纳入；② (iii) 裁决是否仍有效）。在此之前不动代码。
-2. **里程碑 1**：人显式声明那条绑定 → 重跑 §3 第 1 条判据（`unknown` → 有依据的判断）。
-3. **里程碑 2**：补上被留空的那一步 → §3 第 2 条判据（不是被 `ask` 触发）。
-4. **里程碑 3**：执行者的第一片，按 §5.1 ② 已裁决的形状（原句即 mandate；证据栏含 push 之后的 CI run 号）→ §3 第 3、4 条判据。
-5. **对照实验**：删掉第 4 步那条事实，看行为是否退回第一次的形态 → §3 第 5 条判据。
-6. **重跑**：§1.3 的五问 + §6 四条反假判据。
-7. **结论**：闭环成立 → 第二个场景（时间，§0 第 5 条）；或按 §4 回头正式审查原则。
+0. **§5.1 两问已由 Human 回答**（2026-10-15 审阅意见）：① 支持把第一条执行路径纳入本阶段的有界实验；② (iii) 裁决**仍然有效**。**但里程碑 3 的实际写入、commit、push 仍需逐轮单独授权。**
+1. **先把里程碑 1 的设计边界确认下来**（谁的声明、哪个 owner、什么契约、`unknown` 怎么变成有依据的判断、失败时长什么样）→ 确认后实现 → 重跑 §3 第 1 条判据。
+2. **里程碑 2**：补上被留空的那一步 → §3 第 2 条判据（不是被 `ask` 触发）；**动笔前先确认 owner**（§4 第 3 条）。
+3. **里程碑 3**：执行者的第一片，按 §5.1 ② 已裁决的形状（原句即 mandate；证据栏含 push 之后的 CI run 号）→ §3 第 3、4 条判据；**动笔前按 R5 重判级别，并重新检查授权范围与仓库的当前状态**（§2.4）。
+4. **对照实验**：在**克隆的数据副本**里移除第 3 步那条事实（生产 Chronicle 只追加、不删除），其余输入不变，看行为是否退回第一次的形态 → §3 第 5 条判据；**并排除「普通去重」解释**。
+5. **重跑**：§1.3 的五问 + §6 四条反假判据。
+6. **结论**：闭环成立 → 第二个场景（时间，§0 第 5 条）；或按 §4 回头正式审查原则。
 
-**本片到此不写代码。** 这份文件交 Human 审；拿到 §5.1 两问的回答之后，才从里程碑 1 开始。
+**本片到此不写代码。** Human 已于 2026-10-15 给出审阅意见，本版按意见小修（VERDICT = NARROW、第 5 条排除普通去重、跨 owner 读取保留为架构考题、两处过期事实更正、里程碑 1 与 3 分开、L3 触发条件补全、补双向指针）。下一步是**确认里程碑 1 的设计边界**（§8）——确认之后再动代码。
+
+## §8 里程碑 1 的设计边界（待 Human 确认，尚未实现）
+
+> VERDICT = NARROW 允许「里程碑 1 在确认具体设计边界后实现」。这一节就是那份设计边界。**它只提一个方案 + 两个被否掉的备选**，因为它的目标是**最小、可逆、不新增结构**。
+
+### 8.1 一句话
+
+**那条没人声明过的绑定，其实已经被声明过——只是从来没有被这个判断读到。** 人启动常驻时写的 `--repository-root <本机路径>` 与 `--repository <owner/name>` 是**成对出现**的（`src/cli/options.ts:1102-1115` 的 `readRepositoryCiPairing`：缺一个就是用法错误；写进 `launch.json`，见 `src/cli/launch-profile.ts:166`、`:205`），**它们就是人自己的身份声明**。今天这两半被喂给了两个不同的插件（`src/cli/resident.ts:456` → `git-repository` 拿本机路径；`:460` → `github-ci` 拿 GitHub 名），**而没有任何消费者把「这两半指同一个仓库」这件事读进去**——`repository-ci-relevance` 的配置里只有管道目录（`plugin.ts:39-41` 的 `{ rootDir }`）。
+
+### 8.2 要改的是什么（四处，全部在既有 owner 内部）
+
+1. **`src/cli/resident.ts`**：把已经算好的那个配对（`:456`/`:460` 用的是同一个 `repositoryCi`）多传一份给 relevance 插件。
+2. **`src/repository-ci-relevance/plugin.ts`**：配置从 `{ rootDir }` 变成 `{ rootDir, localRoot, githubRepository }`；`judge()` 多取一个输入，仍是一次判断、两条入口共用（`:76-87` 那条「同一个 `judge`」的结构不动）。
+3. **`src/repository-ci-relevance/judgement.ts`**：`judgeRelevance(designations, snapshot, declared)` 多**一条规则**——当**某条 designation 与 `declared.localRoot` 逐字相等**、**且 `observation.repository` 与 `declared.githubRepository` 逐字相等**时，判 `relevant`，并在结果里标明**依据是哪一条**（`via: 'declaration'` 与既有的 `via: 'verbatim'`）。今天 `types.ts` 里的判断形状只有 `verdict` + `designation`（`judgement.ts:63`），这个 `via` 字段是它唯一的形状变化。
+4. **`renderJudgement`**：`relevant` 多一种理由行，把**人写下的那句对应关系**原样说出来（例：「人声明的配对：`G:\work\LAB\code\hikari-new` ↔ `t1mb2rg/hikari-new`（工作焦点指名了前者，CI 观察报告了后者）」）。
+
+### 8.3 为什么这不是「加了一条推断」（这一节是这次设计的全部要害）
+
+`judgement.ts:53-57` 拒绝的八件事（trimming / case folding / basename / 拆 owner 与 name / 改写 URL / fork 检测 / 别名表 / 问模型）都有一个共同点：**它们是这一层在断言两个不同字符串指同一个仓库**。这次新增的规则**不做那个断言**——两条比较仍然**逐字**，唯一的桥是**人自己写下的那条对应关系**，这一层只是**引用它**。
+
+用那八条自己的标准检验：新规则里没有一条相似性、没有一条改写、没有一次问模型；**如果人没写过这条配对，判断还是 `unknown`**（8.5 第 1 条）。
+
+同时它保住这个插件自己的章程（`plugin.ts:24-27` 逐字）：没有 watcher、没有循环、没有缓存、不写任何东西——**配对是输入，不是记忆**；两次相隔一秒的调用仍然是两次独立判断（配对的来源是启动配置，不是上一次的答案）。
+
+### 8.4 它证明什么、不证明什么（诚实标注）
+
+- **证明**：一次跨两个名字空间的相遇，可以**只靠人显式声明的对应关系**完成，不需要任何推断，也不需要新中心——这正是 §3 第 1 条要测的东西。
+- **不证明**：不证明「跨 owner 的持久事实会被读回并改变行为」（那是里程碑 3/5，§3 第 4、5 条）；**也不解决 §2.4 那个跨 owner 读取问题**——本方案**不新建任何事实**，所以它天然不碰那道题（这也是选它的理由之一：先证明最小的一步，再让真正的架构考题留在它该在的里程碑）。
+- **不改变**「`relevant` 是唯一能有依据的肯定判断」这个形态：`unknown` 仍然是一个完成的判断，不是缺失。
+
+### 8.5 失败与边界（都必须有测试）
+
+| 情形 | 结果 |
+| --- | --- |
+| 没配置配对（常驻没带那两个参数） | **`unknown`**（与今天一致；配对缺失就是「没人声明过」） |
+| 配对在，但工作焦点的任何一条都不等于 `localRoot` | **`unknown`** |
+| 工作焦点等于 `localRoot`，但 CI 观察报告的仓库不是声明的那个（例如 fork） | **`unknown`**（这正是「不是靠相似性」的证据） |
+| 工作焦点逐字等于 GitHub 名（老规则） | 仍然 **`relevant`**（`via: 'verbatim'`，行为不变） |
+
+一处**待你顺手定的小决定**：`unknown` 的文案今天是一句话，且刻意在三种成因下都为真（`judgement.ts:69-74` 写了理由）。加了配对之后「没人声明过配对」是第四种成因——**我倾向不改 `unknown` 文案**（保持一句话、不为某一种成因单独说话），`relevant` 那边才说明依据。你若希望 `unknown` 也说清是哪种，我再改。
+
+### 8.6 验证方式（确认后照此做）
+
+- 单测：`test/repository-ci-relevance.test.mjs` 增四条（对应 8.5 的四行），并保留既有的「Service 与 endpoint 给出同一个判断」的钉法（`plugin.ts:18-22`）。
+- 真机：`hikari relevance`（`src/cli/relevance.ts`）在有 / 无配对两种启动下各跑一次，正反两面都留输出；`npm test` 全绿 + `npm run build` + CI。
+- 可逆性：**把两个参数从启动命令里去掉，判断就退回 `unknown`**——一行配置，不需要回滚代码。
+
+### 8.7 两个备选（记录下来，先不做）
+
+- **(A) 新建一个持有身份绑定的插件 + 一条持久事实**：只有当绑定必须**跨重启、跨不同启动参数**存在时才值得。里程碑 3 如果真需要「上次那个仓库是哪个」的持久依据，再按 R5 重开一次设计——**本次不预先建**。
+- **(B) 扩展 `hikari change declare` 带上 GitHub 名**：会把「哪些目录可以改」（授权）与「这个目录是哪个 GitHub 仓库」（身份）合成一个主语，并让 CI 相关性判断依赖可改仓库那份授权。语义上更重，收益不明显——**先不做**。

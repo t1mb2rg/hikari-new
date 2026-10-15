@@ -293,6 +293,14 @@
 > **本次没有动的**：那扇门本身（读取仍然一次性、不可回头）；读到的原文逐字出现这一点；`src/runtime/`（0 diff）；**两个 surface 一个字都不用改**——`human-surface-v0-implementation-boundary-freeze.md:120` 与 `hikari-tui-v1-implementation-boundary-freeze.md:100` 要求「逐行原样、不总结、不改写」，改动全部发生在语言层。
 
 > **未做**：**matched A/B 真机**（同一句问句改前/改后各跑若干次，看第一眼看到什么、回答是否回应问句）仍由 Human 跑；他提的「**呼出一个仪表板**」属于呈现层的新面，需要单独立项，不在本片。
+>
+> **认知—行动闭环 v0（有界实验的**设计**，**未实现**；**工作标签，不占用阶段编号**——**不是** P4-04）**：`docs/architecture/cognition-action-loop-v0-boundary-review.md`（L2 评审，**VERDICT = NARROW**）只定义这个实验，**没有写一行代码**。它要测的是「**事实 → 有依据的相遇 → 判断 → 行动 / 验证 / 反馈**」这条链的**第二、三、四层**，三阶里程碑 = 相关 CI 失败（`repository-ci-attention` 今天已经在做）→ 形成一次有依据的局部决定 → 完成一次受约束的真实行动（`principles.md` §8 那条 Action 链的**第一遍**，含回执）。**不新建认知中心、不预设架构结论、不为结论绕过任何冻结**——真挡路的地方按 R5 正式走 Boundary Review（本文件就是那次 L2）。
+>
+> **它在 2026-10-15 激活了一条既有裁决，反指针已双向补上**：`docs/architecture/authorized-repository-action-v0-boundary-review.md` §8 第 5 条（2026-10-13 的 `(iii)`：**commit + push + 看 CI**，且证据栏必须包含 push 之后的 CI run 号、记录必须写明「它 push 了」）经 Human 确认**仍然有效**，是该实验里程碑 2–3 唯一要用的授权形态；**但里程碑 3 的实际写入、commit 和 push 仍需单独授权**（同上评审 §5.1 ①）。
+>
+> **同日两件阶段裁决（Human，2026-10-15）**：① **支持**把「执行者的第一片」纳入本阶段——依据是 `docs/architecture/hikari-nervous-system-stage-v0.md:205-207` 的 Action 条目按 R2 属 **NOT-YET**（「不在本阶段」），而它要求的那个真实需求已经出现；同一条同时明确**不创建 P4-04、不开始 Salience research**。② 确认上述 `(iii)` 裁决有效。**这两条都没有解除任何 MUST**：实验按不变量 7 / 8 的要求**走** Action 边界，因此它是**遵守** MUST，不是改 MUST。
+>
+> **未交付（必须与上面一起读）**：**没有**新建插件、Service、存储、事实族或 CLI 词；**未改**任何冻结裁决；**未实现**里程碑 1——它的设计边界是该评审 §8（**默认方案**：把人启动常驻时**成对**写下的 `--repository-root` / `--repository` 读进 `repository-ci-relevance`，让判断在被声明过的配对上引用**人自己的对应关系**，两条比较仍然逐字、不新增任何推断；备选「新插件持持久绑定」「扩展 `change declare`」先不做），**等 Human 确认后才动代码**。
 
 ---
 
