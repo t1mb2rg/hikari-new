@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -140,6 +140,38 @@ test('containment：子目录不因为名字前缀相同就算在里面', () => 
   mkdirSync(root, { recursive: true });
   assert.equal(containTarget(root, 'sub-file.ts').kind, 'inside');
   assert.notEqual(containTarget(root, '..').kind, 'inside');
+});
+
+test('containment：从根里的一条链接绕出去算 outside，而不是算在里面', () => {
+  // The classic bypass, and the one no `..`-based check catches: every segment of `escape/secret.txt` is
+  // under the root as *written*, and the path contains nothing that looks like an escape — but one of the
+  // segments is a link, so the file the operating system would open is not under the root at all. A
+  // junction is used on Windows because it can be made without elevation, which is what the sibling read
+  // suite does for the same reason.
+  const root = mkdtempSync(join(tmpdir(), 'hikari-contain-link-'));
+  const outside = mkdtempSync(join(tmpdir(), 'hikari-contain-away-'));
+  writeFileSync(join(outside, 'secret.txt'), 'not yours\n');
+  symlinkSync(outside, join(root, 'escape'), process.platform === 'win32' ? 'junction' : 'dir');
+
+  assert.equal(containTarget(root, 'escape/secret.txt').kind, 'outside');
+  assert.equal(containTarget(root, 'escape').kind, 'outside');
+  // Next to it, an ordinary name is still inside: this is about the link, not about refusing whatever
+  // happens to exist on disk.
+  assert.equal(containTarget(root, 'plain.txt').kind, 'inside');
+});
+
+test('工具：通过链接写到根目录外面被拒，磁盘上什么都没发生', async () => {
+  const dir = makeRepository('t1mb2rg/refuses-link-write');
+  const outside = mkdtempSync(join(tmpdir(), 'hikari-link-target-'));
+  symlinkSync(outside, join(dir, 'escape'), process.platform === 'win32' ? 'junction' : 'dir');
+
+  const written = await perform('write_file', { path: 'escape/written.txt', content: 'nope' }, dir);
+
+  assert.equal(written.refused, true);
+  assert.equal(existsSync(join(outside, 'written.txt')), false);
+  // And reading through the same link is refused too, so the link is not a way to look outside either.
+  const read = await perform('read_file', { path: 'escape/secret.txt' }, dir);
+  assert.equal(read.refused, true);
 });
 
 test('repositoryNameFromUrl：认四种 GitHub 拼写，不认别的', () => {
