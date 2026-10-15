@@ -44,6 +44,7 @@ import { Runtime } from '../index.js';
 import type { PluginDefinition, PluginState } from '../index.js';
 import { repositoryCiAttentionPlugin } from '../repository-ci-attention/index.js';
 import { repositoryCiAwarenessPlugin } from '../repository-ci-awareness/index.js';
+import { repositoryCiDiagnosisProposalPlugin } from '../repository-ci-diagnosis-proposal/index.js';
 import { repositoryCiRelevancePlugin } from '../repository-ci-relevance/index.js';
 import { repositoryCiWorldPlugin } from '../repository-ci-world/index.js';
 import { oneLine } from '../terminal-text/index.js';
@@ -479,6 +480,15 @@ export function productionComposition(options: ResidentOptions): Composition {
           // reachable for a local root that a GitHub `owner/name` will never equal.
           declared: { localRoot: repositoryCi.rootDir, githubRepository: repositoryCi.repository },
         }),
+    },
+    {
+      // The diagnosis question, loaded after the one contract it requires. It owns no cadence, no store
+      // and no transport — nothing here decides when it is asked, because `repository-ci-attention`
+      // decides that, and it is a member of this chain rather than a second proactive line for exactly
+      // that reason. What this entry does is make the answer reachable from inside the composition,
+      // which is the whole of what "loading it" means.
+      id: repositoryCiDiagnosisProposalPlugin.id,
+      load: (runtime) => runtime.loadPlugin(repositoryCiDiagnosisProposalPlugin),
     },
   ];
 

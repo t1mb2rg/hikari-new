@@ -30,6 +30,7 @@
 
 import { defineService } from '../runtime/contracts.js';
 
+import type { RepositoryCiWorldSnapshot } from '../repository-ci-world/index.js';
 import type { RepositoryCiRelevanceJudgement } from './types.js';
 
 export interface RepositoryCiRelevanceService {
@@ -46,5 +47,35 @@ export interface RepositoryCiRelevanceService {
 
 export const repositoryCiRelevanceService = defineService<RepositoryCiRelevanceService>(
   'repository-ci-relevance.current',
+  1,
+);
+
+/**
+ * The same judgement, about a snapshot the caller already holds.
+ *
+ * A second way in was added because a second caller exists, and the caller's requirement is the reason
+ * the shape is this one. `repository-ci-diagnosis-proposal` is asked about a failure while
+ * `repository-ci-attention` is in the middle of announcing it, and that cycle has already acquired one
+ * Repository CI assessment. If the diagnosis layer reached for `current()` it would acquire a second
+ * snapshot — a second walk of the git repository and a second GitHub read — and the failing run and the
+ * commit it is compared against could then describe two different moments with nothing to detect it.
+ *
+ * So the snapshot comes in. Everything else stays exactly as it was: the designations are still pulled
+ * fresh from `work-focus.current@1` on this call (a focus set is a human's statement about now, and a
+ * caller holding a snapshot is not holding a focus), the declared pairing is still the activation's
+ * configuration, the comparison is the same `judgeRelevance`, and the judgement returned is the same
+ * shape the endpoint renders. `current()` is untouched — it is the caller that has no snapshot that
+ * wants it, and nothing about this addition changes what it answers.
+ *
+ * The designation the judgement matched on travels back inside the judgement, which is what lets a
+ * caller quote the exact string that made the difference rather than re-reading a focus set that may
+ * have moved since.
+ */
+export interface RepositoryCiRelevanceJudgeService {
+  judge(snapshot: RepositoryCiWorldSnapshot): Promise<RepositoryCiRelevanceJudgement>;
+}
+
+export const repositoryCiRelevanceJudgeService = defineService<RepositoryCiRelevanceJudgeService>(
+  'repository-ci-relevance.judge',
   1,
 );

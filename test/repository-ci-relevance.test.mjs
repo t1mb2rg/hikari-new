@@ -13,6 +13,7 @@ import {
   judgeRelevance,
   relevanceEndpointPath,
   renderJudgement,
+  repositoryCiRelevanceJudgeService,
   repositoryCiRelevancePlugin,
   repositoryCiRelevanceService,
 } from '../dist/repository-ci-relevance/index.js';
@@ -215,9 +216,22 @@ test('relevance 声明自己提供这个 Service，且不要求任何 consumer',
   // that says the contract the repository-aware Language variant names is one this plugin offers. A
   // `provides` emptied — with or without the `provide()` call going with it — is a Language variant that
   // stays `waiting` for a contract nobody publishes, and the resident then refuses to start.
-  assert.deepEqual(repositoryCiRelevancePlugin.provides, [repositoryCiRelevanceService]);
+  // The second entry is the milestone-2 addition, and its caller is a domain module rather than a
+  // composition member: `repository-ci-diagnosis-proposal` asks this one about a snapshot a caller
+  // supplied. It is a second contract rather than a second method on the first because the two have
+  // different callers and different inputs — `current()` acquires nothing and answers about now,
+  // `judge()` acquires nothing and answers about what it was handed — and one contract carrying both
+  // would have made "read the world" and "read this" the same request. A `provides` emptied — with or
+  // without the `provide()` call going with it — is a Language variant that stays `waiting` for a
+  // contract nobody publishes, and the resident then refuses to start.
+  assert.deepEqual(repositoryCiRelevancePlugin.provides, [
+    repositoryCiRelevanceService,
+    repositoryCiRelevanceJudgeService,
+  ]);
   assert.equal(repositoryCiRelevanceService.id, 'repository-ci-relevance.current');
   assert.equal(repositoryCiRelevanceService.version, 1);
+  assert.equal(repositoryCiRelevanceJudgeService.id, 'repository-ci-relevance.judge');
+  assert.equal(repositoryCiRelevanceJudgeService.version, 1);
 
   // And nothing in its own requirements names a consumer, which is what lets it be `active` in a
   // composition nobody is asking: the Runtime reconciles requirements, not demand.

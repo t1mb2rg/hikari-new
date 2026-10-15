@@ -28,8 +28,9 @@
 
 import type { PluginDefinition } from '../runtime/plugin.js';
 import { repositoryCiAwarenessService } from '../repository-ci-awareness/index.js';
+import type { RepositoryCiWorldSnapshot } from '../repository-ci-world/index.js';
 import { workFocusCurrentService } from '../work-focus/index.js';
-import { repositoryCiRelevanceService } from './contracts.js';
+import { repositoryCiRelevanceJudgeService, repositoryCiRelevanceService } from './contracts.js';
 import { listenRelevanceEndpoint } from './endpoint.js';
 import { relevanceEndpointPath } from './endpoint-path.js';
 import { RepositoryCiRelevanceError } from './errors.js';
@@ -60,12 +61,17 @@ export const repositoryCiRelevancePlugin: PluginDefinition<RepositoryCiRelevance
   // contract, so a composition that loaded this plugin without one fails to activate instead of
   // failing later, on the first question a human happens to ask.
   requires: [workFocusCurrentService, repositoryCiAwarenessService],
-  // The one thing this plugin gives the rest of the composition, and it grants nobody anything: a
-  // consumer still has to name this contract in its own `requires`, and the Runtime is what hands it
-  // over. Providing it is also what lets this plugin be `active` with no consumer at all — the Runtime
+  // The two things this plugin gives the rest of the composition, and neither grants anybody anything: a
+  // consumer still has to name these contracts in its own `requires`, and the Runtime is what hands them
+  // over. Providing them is also what lets this plugin be `active` with no consumer at all — the Runtime
   // reconciles requirements, not demand, so a resident whose Language is the base variant runs this
   // plugin exactly as it always did. That is a property of the Runtime and not a case this file handles.
-  provides: [repositoryCiRelevanceService],
+  //
+  // Two entries and not one, because two callers with two different inputs are answered here. `current()`
+  // is for a caller that wants the judgement about now and has no snapshot to bring; `judge@1` is for a
+  // caller that already holds one. Both reach the same `judgeGiven` below, which is why they are two
+  // contracts over one comparison rather than two comparisons that agree today.
+  provides: [repositoryCiRelevanceService, repositoryCiRelevanceJudgeService],
   config: {
     parse(input: unknown): RepositoryCiRelevancePluginConfig {
       return Object.freeze({ rootDir: readRootDir(input), declared: readDeclared(input) });
@@ -96,17 +102,34 @@ export const repositoryCiRelevancePlugin: PluginDefinition<RepositoryCiRelevance
       // commits, and it is dropped on this line rather than merely ignored inside `judgeRelevance`
       // — whether two commit strings match has no bearing on whether a human's declaration names
       // the repository a CI observation is about.
-      //
-      // The declared pairing is the second thing handed over, and it is configuration rather than
-      // anything pulled on this call: the judgement quotes the human's own sentence for the one case
-      // where two spellings have to be bridged, and this is where that sentence enters the plugin.
-      return judgeRelevance(designations, assessment.snapshot, config.declared);
+      return judgeGiven(assessment.snapshot);
+    }
+
+    // The comparison itself, and the one place it is made. `current()` arrives here with a snapshot this
+    // plugin acquired; `judge@1` arrives with one a caller already held. Both then pull the focus set
+    // fresh, because a focus set is a human's statement about now and neither caller is holding one.
+    //
+    // The declared pairing is the second thing handed over, and it is configuration rather than anything
+    // pulled on this call: the judgement quotes the human's own sentence for the one case where two
+    // spellings have to be bridged, and this is where that sentence enters the plugin.
+    async function judgeGiven(snapshot: RepositoryCiWorldSnapshot): Promise<RepositoryCiRelevanceJudgement> {
+      const designations = await focus.current();
+
+      return judgeRelevance(designations, snapshot, config.declared);
     }
 
     // Published before the endpoint is opened, so that a composition which loads this plugin is never
     // briefly a composition where the contract exists and nothing answers for it. A failure below
     // disposes this activation's scope, and the registration goes with it.
     context.services.provide(repositoryCiRelevanceService, Object.freeze({ current: judge }));
+
+    // The second way in, published beside the first and holding nothing the first does not. A caller
+    // that has a snapshot asks here; a caller that has none asks there; both reach `judgeGiven`, so there
+    // is no second comparison for a change to land in only one of them.
+    context.services.provide(
+      repositoryCiRelevanceJudgeService,
+      Object.freeze({ judge: judgeGiven }),
+    );
 
     const endpoint = await listenRelevanceEndpoint(
       {

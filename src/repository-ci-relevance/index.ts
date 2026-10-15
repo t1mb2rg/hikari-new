@@ -61,5 +61,7 @@ export type {
 } from './types.js';
 export { repositoryCiRelevanceService } from './contracts.js';
 export type { RepositoryCiRelevanceService } from './contracts.js';
+export { repositoryCiRelevanceJudgeService } from './contracts.js';
+export type { RepositoryCiRelevanceJudgeService } from './contracts.js';
 export { repositoryCiRelevanceReadExposure } from './exposure.js';
 export type { RepositoryCiRelevanceReadExposure } from './exposure.js';

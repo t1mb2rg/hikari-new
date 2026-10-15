@@ -27,15 +27,20 @@
 // cosmetic `provides` the design spec's MUST forbids.
 
 import { chronicleService } from '../chronicle/index.js';
-import { gitHubCiService } from '../github-ci/index.js';
 import { humanDeliveryService } from '../human-delivery/index.js';
 // By path, not through `language/index.js`, and the reason is structural rather than stylistic.
 // `language`'s barrel reaches `express.ts`, which reaches this package's barrel for `renderOccurrence`,
 // which reaches this file — so a bare `../language/index.js` here would close a runtime import cycle
-// through the very contract it is importing. The other three imports above take barrels happily, because
+// through the very contract it is importing. The other imports above take barrels happily, because
 // none of those packages reaches back into this one. `contracts.ts` is a leaf that imports only the
 // Runtime and this package's own types, which is what makes it safe to name directly.
-import { languageSpeakingService } from '../language/contracts.js';
+import { languageDiagnosisSpeakingService, languageSpeakingService } from '../language/contracts.js';
+import { repositoryCiAwarenessService } from '../repository-ci-awareness/index.js';
+// The same leaf rule as `language/contracts.js` above, and it is load-bearing here for a second reason:
+// this package's `types.ts` is imported by that package's `types.ts`, so a barrel import would put the
+// cycle on the path rather than merely near it.
+import { repositoryCiDiagnosisProposalService } from '../repository-ci-diagnosis-proposal/contracts.js';
+import type { RepositoryCiDiagnosisProposal } from '../repository-ci-diagnosis-proposal/types.js';
 import type { PluginDefinition } from '../runtime/plugin.js';
 
 import { deliveryFactDraft, failureKey, readDeliveredFailures } from './facts.js';
@@ -78,23 +83,50 @@ function parseConfig(input: unknown): RepositoryCiAttentionPluginConfig {
 export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttentionPluginConfig> = {
   id: 'repository-ci-attention',
   version: '1.0.0',
-  // Four requirements, and each one is a different question this plugin cannot answer itself: what
-  // happened, how to say it, whether anyone is listening, and what it has said before. The composition
-  // grants the first by having a repository scope, the next two by loading the two providers, and the
-  // last by loading the store — which is the whole of what "authorization" means here
-  // (`principles.md` §5: a capability existing is not a permission).
+  // Six requirements, and each one is a different question this plugin cannot answer itself: what
+  // happened, whether a specific follow-up is worth suggesting, how to say it, how to say the
+  // suggestion, whether anyone is listening, and what it has said before.
+  //
+  // The first two changed in the milestone-2 slice, and the change is the point of it. It used to
+  // require `github-ci` and call `current()` for itself. Now it requires the *world* — one assessment,
+  // acquired once per cycle — because the two things this cycle speaks about must come out of one
+  // acquirement: the failing run, and the commit the human's working tree reports to compare it
+  // against. Two reads would let those describe two different moments, and nothing downstream could
+  // tell. The GitHub CI observation it used to fetch is inside that assessment, unchanged and still
+  // `github-ci`'s.
+  //
+  // `repository-ci-diagnosis-proposal` is required rather than optional, and there is no optional
+  // `requires` to reach for either. The composition that holds this plugin is one where a red CI run
+  // should be told to a human, and asking whether there is something specific worth suggesting is part
+  // of telling it now. A composition without that module is one where this plugin falls back to the
+  // plain announcement — which is why `languageDiagnosisSpeakingService` is required beside it rather
+  // than being reached for only when a suggestion appears: the two speaking contracts are two halves of
+  // one decision, and a plugin that could only express one of them would have to decide before asking.
+  //
+  // The composition grants the first by having a repository scope, the middle four by loading the
+  // providers, and the last by loading the store — which is the whole of what "authorization" means
+  // here (`principles.md` §5: a capability existing is not a permission).
   //
   // Chronicle is required rather than optional, and there is no optional `requires` to reach for. A
   // composition that holds this plugin and no store is one where this plugin cannot do the thing it
   // now exists to do, and `waiting` is the honest state for that — the alternative is a plugin that
   // silently degrades on every activation and never says so. The resident that loads this one already
   // loads the store, and loads it first (`src/cli/resident.ts:226` before `:342`).
-  requires: [gitHubCiService, languageSpeakingService, humanDeliveryService, chronicleService],
+  requires: [
+    repositoryCiAwarenessService,
+    repositoryCiDiagnosisProposalService,
+    languageSpeakingService,
+    languageDiagnosisSpeakingService,
+    humanDeliveryService,
+    chronicleService,
+  ],
   provides: [],
   config: { parse: parseConfig },
   setup(context, config) {
-    const ci = context.services.get(gitHubCiService);
+    const awareness = context.services.get(repositoryCiAwarenessService);
+    const diagnosis = context.services.get(repositoryCiDiagnosisProposalService);
     const speaking = context.services.get(languageSpeakingService);
+    const suggestionSpeaking = context.services.get(languageDiagnosisSpeakingService);
     const delivery = context.services.get(humanDeliveryService);
     const chronicle = context.services.get(chronicleService);
 
@@ -166,17 +198,54 @@ export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttention
           }
         }
 
-        const observation = await ci.current();
+        // One assessment, and the failing run comes out of it. This replaced a call to `github-ci`'s own
+        // `current()`, and the difference is the whole of why the cycle now reads the way it does: the
+        // commit comparison the suggestion rests on is a fact about *this* snapshot, so the run being
+        // announced and the commit it is compared against cannot describe two different moments. The
+        // observation itself is unchanged and still `github-ci`'s — it is simply already inside what was
+        // acquired.
+        const assessment = await awareness.current();
 
         // Checked again on the far side of the await. An activation can end while a request is in
         // flight, and an occurrence that arrives afterwards is one this activation must not take on —
         // the work being already underway does not make the result its to speak.
         if (stopped) return;
 
-        const occurrence = detectNewFailure(observation, handledFailures, deliveredFailures);
+        // A facet that is not there is silence, and it was silence before this slice too: the observation
+        // this replaced carried an unavailable run in that case, and `detectNewFailure` answered
+        // `undefined` for it. Nothing is announced about a CI nobody could read, and nothing is recorded
+        // either — which is what lets the next cycle try again.
+        const githubCi = assessment.snapshot.githubCi;
+        if (githubCi.kind !== 'available') return;
+
+        const occurrence = detectNewFailure(githubCi.observation, handledFailures, deliveredFailures);
         if (occurrence === undefined) return;
 
-        // Recorded before the two calls below, and that order is the whole of the delivery-failure
+        // The suggestion is asked for before anything is recorded, and it is asked for as an addition
+        // rather than as a gate. Two decisions are in these lines and both are deliberate.
+        //
+        // The order first. `handledFailures.add` sits immediately after the judgement because nothing
+        // used to happen between them. There is an await in between now, and an activation that ended
+        // during it would have marked a failure handled with nothing having been said — a silent drop, and
+        // the one failure direction this file refuses everywhere else. Marking therefore happens after the
+        // answer arrives: a cycle that ends here says nothing and remembers nothing, which is the honest
+        // pair.
+        //
+        // The catch second, and it is the same one-sided degradation the history read above is written
+        // for: a diagnosis module that is unreachable, misconfigured or broken must not be able to stop
+        // Hikari from telling a human that CI is red. What it costs is stated rather than hidden — when
+        // this swallows, the announcement below is the plain one, and nothing records that a suggestion
+        // was skipped, because there is no surface in v1 to record it through.
+        let proposal: RepositoryCiDiagnosisProposal | undefined;
+        try {
+          proposal = await diagnosis.propose({ occurrence, assessment });
+        } catch {
+          proposal = undefined;
+        }
+
+        if (stopped) return;
+
+        // Recorded before the delivery below, and that order is the whole of the delivery-failure
         // policy. The judgement has been made; delivery is a separate plane with its own answer, and
         // none of its three outcomes may roll this back. Recording afterwards would mean a transport
         // that is down turns every cycle into a fresh attempt, which is a retry loop nobody wrote — and
@@ -195,12 +264,23 @@ export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttention
         // asserted in the tests: a decider that re-wrote the answer on its way to the transport would
         // be a second expression surface, and the one nobody reviews.
         //
+        // Which of the two speaking contracts is used is decided here and nowhere else, and the decision
+        // is one comparison: a suggestion exists, or it does not. When it does not, the announcement is
+        // the same call it has always been — same owner, same occurrence, same rendering — so "there was
+        // nothing specific to suggest" reaches a human as the plain message rather than as a sentence
+        // about having nothing to say. The absence is not something this plugin can express, and that is
+        // the point of the type it tests rather than a gap in it.
+        //
         // The outcome was awaited and discarded; it is now read, and the difference is the point of
         // this slice. Reading it does **not** make delivery govern anything here: no branch below
         // re-decides the judgement, reorders anything, or retries. The only question it answers is
         // whether this owner has a fact worth admitting — and the three outcomes still differ in
         // exactly one way, which is whether the next activation will remember this.
-        const outcome = await delivery.deliver(speaking.speak(occurrence));
+        const outcome = await delivery.deliver(
+          proposal === undefined || proposal.kind === 'insufficient-evidence'
+            ? speaking.speak(occurrence)
+            : suggestionSpeaking.speak(proposal),
+        );
 
         // Not checked before the append, and deliberately. An activation that ended while the bytes
         // were going out does not make the delivery un-happen, and refusing to record it would lose a

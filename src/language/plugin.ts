@@ -152,7 +152,11 @@ import { workFocusCurrentService } from '../work-focus/index.js';
 
 import type { Answerer } from './answer.js';
 import { createAnswerer } from './answer.js';
-import { languageDesktopReturnSpeakingService, languageSpeakingService } from './contracts.js';
+import {
+  languageDesktopReturnSpeakingService,
+  languageDiagnosisSpeakingService,
+  languageSpeakingService,
+} from './contracts.js';
 import { confirmDecision, createDecisionContinuity, readConfirmedDecisions } from './continuity.js';
 import type { ConfirmedDecision, DecisionContinuity } from './continuity.js';
 import { listenLanguageEndpoint } from './endpoint.js';
@@ -160,7 +164,7 @@ import { languageEndpointPath } from './endpoint-path.js';
 import { LanguageError } from './errors.js';
 import { LANGUAGE_EXPOSURES, LANGUAGE_REPOSITORY_EXPOSURES } from './exposure.js';
 import type { LanguageExposure } from './exposure.js';
-import { renderSpokenOccurrence, renderSpokenReturn } from './express.js';
+import { renderSpokenOccurrence, renderSpokenProposal, renderSpokenReturn } from './express.js';
 import {
   REASONING_EFFORTS,
   createHttpModel,
@@ -275,7 +279,11 @@ function buildLanguagePlugin(
     // either of these, because speaking is not a read: nothing here is offered to a model, and no
     // exposure points at it. See the file header for why a variant axis for them would be the
     // cross-product refused there.
-    provides: [languageSpeakingService, languageDesktopReturnSpeakingService],
+    provides: [
+      languageSpeakingService,
+      languageDesktopReturnSpeakingService,
+      languageDiagnosisSpeakingService,
+    ],
     config: {
       parse(input: unknown): LanguagePluginConfig {
         return readConfig(input);
@@ -373,11 +381,15 @@ function buildLanguagePlugin(
       // that has already given up on the provider. (The Runtime does roll a failed activation's scope
       // back, so this is belt and braces rather than the guarantee. The guarantee is that one.)
       //
-      // The two entries are separate statements and neither is derived from the other: this activation
-      // offers both or it does not come up. There is no flag, no list to extend and no place where a
-      // third could be added without writing a third line here and a third contract in `contracts.ts`,
-      // which is deliberate — the pair is a fact about which owners Language can express for, and it is
-      // written where a reader can count it.
+      // The entries are separate statements and none is derived from another: this activation offers all
+      // of them or it does not come up. There is no flag, no list to extend and no place where a fourth
+      // could be added without writing a fourth line here and a fourth contract in `contracts.ts`, which
+      // is deliberate — the set is a fact about which owners Language can express for, and it is written
+      // where a reader can count it.
+      //
+      // The third arrived with the Repository CI diagnosis proposal, and it is a third rather than a
+      // widening of the first. `language.speaking@1` speaks an occurrence and this speaks a suggestion;
+      // a caller holding one is not holding the other, which is the property the split exists to keep.
       //
       // Each method is the renderer itself, not a lambda that calls it. `speak` is a pure function of
       // its argument and this file adds nothing to it — not a timestamp, not a prefix, not a
@@ -385,6 +397,7 @@ function buildLanguagePlugin(
       // closure for a later edit to grow a decision in.
       context.services.provide(languageSpeakingService, { speak: renderSpokenOccurrence });
       context.services.provide(languageDesktopReturnSpeakingService, { speak: renderSpokenReturn });
+      context.services.provide(languageDiagnosisSpeakingService, { speak: renderSpokenProposal });
     },
   };
 }

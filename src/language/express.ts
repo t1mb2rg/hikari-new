@@ -75,6 +75,8 @@ import type { DesktopSessionAwarenessAssessment } from '../desktop-session-aware
 import { renderAssessment } from '../desktop-session-observe/index.js';
 import { renderOccurrence } from '../repository-ci-attention/index.js';
 import type { RepositoryCiAttentionOccurrence } from '../repository-ci-attention/index.js';
+import { renderProposal } from '../repository-ci-diagnosis-proposal/index.js';
+import type { RepositoryCiDiagnosisSuggestion } from '../repository-ci-diagnosis-proposal/index.js';
 import { oneLine } from '../terminal-text/index.js';
 
 import type { DialogueTurn } from './dialogue.js';
@@ -336,6 +338,33 @@ const DESKTOP_RETURN_ATTENTION_BLOCK = 'desktop-return-attention';
 export function renderSpokenReturn(occurrence: DesktopReturnOccurrence): readonly string[] {
   return renderAnswer(
     [{ name: DESKTOP_RETURN_ATTENTION_BLOCK, lines: renderDesktopReturnOccurrence(occurrence) }],
+    null,
+  );
+}
+
+// The third owner's name, and the third distinct literal. Three now rather than two, and the reason is
+// the same reason it was two: the block a human reads is attributed to the module that formed the
+// judgement, so that a reader can tell which domain decided this was worth saying.
+const REPOSITORY_CI_DIAGNOSIS_BLOCK = 'repository-ci-diagnosis-proposal';
+
+/**
+ * A suggestion about a CI failure, said out loud.
+ *
+ * The argument is the suggestion arm only — `types.ts` in the owning package excludes the absence, and
+ * that exclusion is what this function relies on rather than re-checks. There is no branch here for
+ * "nothing to suggest" because a value of that shape cannot reach this line: the caller decides which
+ * case it holds, and the plain announcement of the failure is `language.speaking@1`'s job, a different
+ * call with a different owner's material.
+ *
+ * What this file adds is the block and nothing else. The lines are `renderProposal`'s, the strength of
+ * the claim is `renderProposal`'s — the sentence that says a commit difference is only a string
+ * comparison, and the sentence that says the run's log has not been read, both belong to the module that
+ * made the judgement. This file does not soften them, sharpen them, or move them; a paraphrase here
+ * would be Language deciding how much of its own inference Hikari is allowed to admit to.
+ */
+export function renderSpokenProposal(suggestion: RepositoryCiDiagnosisSuggestion): readonly string[] {
+  return renderAnswer(
+    [{ name: REPOSITORY_CI_DIAGNOSIS_BLOCK, lines: renderProposal(suggestion) }],
     null,
   );
 }

@@ -76,6 +76,7 @@ import {
   decisionFactDraft,
   findExposure,
   languageDesktopReturnSpeakingService,
+  languageDiagnosisSpeakingService,
   languageEndpointPath,
   languagePlugin,
   languageRequestHandler,
@@ -1865,7 +1866,7 @@ test('CLI 的等待上界高于 loop 合法能花掉的时间', () => {
 // The boundary, stated as a type and as a roster.
 // ---------------------------------------------------------------------------------------------
 
-test('Language 的 requires 是三个读加上 Chronicle，provides 恰好是两个发言入口', () => {
+test('Language 的 requires 是三个读加上 Chronicle，provides 恰好是三个发言入口', () => {
   assert.equal(languagePlugin.id, 'language');
   assert.equal(languagePlugin.version, '1.0.0');
 
@@ -1909,17 +1910,25 @@ test('Language 的 requires 是三个读加上 Chronicle，provides 恰好是两
     desktopContentReadService,
   ]);
 
-  // `provides` was empty until a composition member needed to speak unprompted, and it now holds two.
-  // Both are asserted as an exact list rather than a `some(...)`, and the claim the exactness makes has
-  // grown rather than loosened: not "it offers speaking", but "it offers exactly the two speaking
-  // capabilities two named owners asked for, and nothing else". The Contract Creation Gate admits a
-  // capability for an interaction that is already happening, so each entry is one that is; a third would
-  // have to be one that is not. Why there are two rather than one — and what was refused instead — is
-  // argued in `contracts.ts`. What this test asserts is that the argument did not leak into Language
-  // gaining anything else along the way.
+  // `provides` was empty until a composition member needed to speak unprompted, and it now holds three.
+  // All are asserted as an exact list rather than a `some(...)`, and the claim the exactness makes has
+  // grown rather than loosened: not "it offers speaking", but "it offers exactly the speaking
+  // capabilities named owners asked for, and nothing else". The Contract Creation Gate admits a
+  // capability for an interaction that is already happening, so each entry is one that is; a fourth
+  // would have to be one that is not. Why there are two rather than one — and what was refused instead
+  // — is argued in `contracts.ts`. What this test asserts is that the argument did not leak into
+  // Language gaining anything else along the way.
+  //
+  // The third is the milestone-2 answer and it widened this list for the same reason the second did:
+  // an owner that is already speaking became able to say something it could not say before. The
+  // announcement and the suggestion are two materials with two types, and the alternative — one
+  // contract taking a union of them — would make "there is nothing to suggest" a thing a caller could
+  // hand to a renderer, which is the one sentence this slice must not be able to produce
+  // (`repository-ci-diagnosis-proposal-v0-boundary-review.md` §2.5).
   assert.deepEqual(languagePlugin.provides, [
     languageSpeakingService,
     languageDesktopReturnSpeakingService,
+    languageDiagnosisSpeakingService,
   ]);
 
   const keys = languagePlugin.requires.map((contract) => `${contract.id}@${contract.version}`);
@@ -1932,7 +1941,11 @@ test('Language 的 requires 是三个读加上 Chronicle，provides 恰好是两
   ]);
 
   const provided = languagePlugin.provides.map((c) => `${c.id}@${c.version}`);
-  assert.deepEqual(provided, ['language.speaking@1', 'language.desktop-return-speaking@1']);
+  assert.deepEqual(provided, [
+    'language.speaking@1',
+    'language.desktop-return-speaking@1',
+    'language.diagnosis-speaking@1',
+  ]);
 });
 
 test('Language 不依赖 Repository CI，因此 CI 缺席时它不会失败', () => {
@@ -2160,14 +2173,18 @@ test('repository-aware Language 的 requires 是 base 那两个加上 relevance 
     chronicleService,
     desktopContentReadService,
   ]);
-  // The same two, and not variant-specific additions: speaking is not a way of *reading*, so neither
-  // belongs on the axis the two variants differ along. A variant that offered one while the other did not
-  // would be a cross product between "what this deployment can read" and "whether it can talk", which is
-  // the shape `exposure.ts` exists to refuse. The second line is the whole claim in one step — a variant's
-  // `provides` is not derived from the base's, and the equality is checked rather than assumed.
+  // The same three, and not variant-specific additions: speaking is not a way of *reading*, so none of
+  // them belongs on the axis the two variants differ along. A variant that offered one while the other did
+  // not would be a cross product between "what this deployment can read" and "whether it can talk", which
+  // is the shape `exposure.ts` exists to refuse. The second line is the whole claim in one step — a
+  // variant's `provides` is not derived from the base's, and the equality is checked rather than assumed.
+  // The third entry is the milestone-2 addition and it widened both variants in the same commit for the
+  // reason just given: an owner that could already speak unprompted became able to say one more thing,
+  // and "which deployment is this" has no bearing on that.
   assert.deepEqual(repositoryLanguagePlugin.provides, [
     languageSpeakingService,
     languageDesktopReturnSpeakingService,
+    languageDiagnosisSpeakingService,
   ]);
   assert.deepEqual(repositoryLanguagePlugin.provides, [...languagePlugin.provides]);
 

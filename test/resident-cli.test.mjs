@@ -113,6 +113,11 @@ const REPOSITORY_CI_MEMBER_IDS = [
   'repository-ci-world',
   'repository-ci-awareness',
   'repository-ci-relevance',
+  // The sixth, and the first member of this chain that is not an ingress: it reads nothing and watches
+  // nothing, and it exists to answer one question the decider above cannot answer for itself. It is here
+  // rather than beside the decider because that is where its dependency is — it requires
+  // `repository-ci-relevance.judge@1`, which is published by the member directly above it.
+  'repository-ci-diagnosis-proposal',
 ];
 
 const ROSTER_DATA_DIR = join(tmpdir(), 'hikari-resident-roster');
@@ -167,7 +172,7 @@ test('默认生产组合恰好是这十一个成员，按加载顺序', () => {
   );
 });
 
-test('显式配置 Repository CI 后，生产组合是这十一个加上那五个', () => {
+test('显式配置 Repository CI 后，生产组合是这十一个加上那六个', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
@@ -245,8 +250,10 @@ test('Repository CI 与语言入口可以同时在场，且语言在 CI 链之�
   });
 
   // A literal, for the reason the three tests above give, and it states the whole rule: the base, then
-  // the entire Repository CI chain, then the language member — which is the plugin that requires the
-  // last link of that chain.
+  // the entire Repository CI chain, then the language member — which is the plugin that requires a
+  // contract from the middle of that chain, `repository-ci-relevance.current@1`, and therefore has to
+  // follow the chain rather than sit beside it. The chain is now six and its last two links are a pair:
+  // the judgement, then the thing that asks it about a snapshot it was handed.
   assert.deepEqual(composition.map((member) => member.id), [
     ...BASE_MEMBER_IDS,
     'git-repository',
@@ -254,6 +261,7 @@ test('Repository CI 与语言入口可以同时在场，且语言在 CI 链之�
     'repository-ci-world',
     'repository-ci-awareness',
     'repository-ci-relevance',
+    'repository-ci-diagnosis-proposal',
     'language',
   ]);
 });
@@ -364,14 +372,22 @@ test('六个 roster 共享同一个基础前缀，且共有成员保持相对顺
 
   // Relative order, checked on the pair the reordering actually moved. `repository-ci-relevance` is
   // required by the repository-aware language member, so it has to precede it in the one roster that
-  // holds both; in the roster that holds only the chain, it is last.
+  // holds both; in the roster that holds only the chain, the judgement is no longer the last member —
+  // the suggestion that asks it for a verdict is, and that is the new fact this line pins.
   const both = rosters.both.map((member) => member.id);
   assert.ok(
     both.indexOf('repository-ci-relevance') < both.indexOf('language'),
     'language 依赖 repository-ci-relevance，必须排在它之后',
   );
   assert.equal(both.at(-1), 'language', 'language 是唯一被依赖决定位置而排到最后的成员');
-  assert.equal(rosters.repositoryCi.map((member) => member.id).at(-1), 'repository-ci-relevance');
+  assert.equal(
+    rosters.repositoryCi.map((member) => member.id).at(-1),
+    'repository-ci-diagnosis-proposal',
+  );
+  assert.ok(
+    both.indexOf('repository-ci-relevance') < both.indexOf('repository-ci-diagnosis-proposal'),
+    'diagnosis-proposal 要求 relevance.judge，必须排在它之后',
+  );
 
   // The fifth roster, where the pair at the end is a different relation. `human-delivery` is not moved
   // by anything — it requires nothing — so its position after Language is a choice about reading order

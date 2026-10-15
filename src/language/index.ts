@@ -82,9 +82,14 @@
 
 export { createAnswerer } from './answer.js';
 export type { Answerer, LanguageDependencies } from './answer.js';
-export { languageDesktopReturnSpeakingService, languageSpeakingService } from './contracts.js';
+export {
+  languageDesktopReturnSpeakingService,
+  languageDiagnosisSpeakingService,
+  languageSpeakingService,
+} from './contracts.js';
 export type {
   LanguageDesktopReturnSpeakingService,
+  LanguageDiagnosisSpeakingService,
   LanguageSpeakingService,
 } from './contracts.js';
 export { languageEndpointPath } from './endpoint-path.js';
@@ -97,7 +102,7 @@ export {
 } from './continuity.js';
 export type { ConfirmedDecision, DecisionContinuity, SelectedDecisions } from './continuity.js';
 export { LanguageError } from './errors.js';
-export { renderSpokenOccurrence, renderSpokenReturn } from './express.js';
+export { renderSpokenOccurrence, renderSpokenProposal, renderSpokenReturn } from './express.js';
 // The transport's own per-call bound, for the reason the endpoint derivation is exported: a client
 // asking a question has to wait longer than the server can legitimately take, and `cli/ask.ts` cannot
 // size its wait against a number it would otherwise have to copy. It is the owner's number, so it

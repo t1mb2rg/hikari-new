@@ -48,6 +48,7 @@ import type { ServiceContract } from '../runtime/contracts.js';
 import { defineService } from '../runtime/contracts.js';
 import type { DesktopReturnOccurrence } from '../desktop-return-attention/types.js';
 import type { RepositoryCiAttentionOccurrence } from '../repository-ci-attention/types.js';
+import type { RepositoryCiDiagnosisSuggestion } from '../repository-ci-diagnosis-proposal/types.js';
 
 /**
  * Language's human-facing expression of a Repository CI failure, offered to a composition member.
@@ -95,3 +96,27 @@ export interface LanguageDesktopReturnSpeakingService {
 
 export const languageDesktopReturnSpeakingService: ServiceContract<LanguageDesktopReturnSpeakingService> =
   defineService<LanguageDesktopReturnSpeakingService>('language.desktop-return-speaking', 1);
+
+/**
+ * Language's human-facing expression of a Repository CI diagnosis suggestion.
+ *
+ * The third of these, and it is separate from `language.speaking@1` for a reason that is not symmetry.
+ * That contract speaks an *occurrence*: something was observed and it is being told. This one speaks a
+ * *suggestion*: something was worked out about the observation and a next step is being proposed. A
+ * caller holding one must not be able to reach the other, because the two are different claims — and
+ * the difference is visible in the words: the occurrence's rendering reports what CI said, the
+ * suggestion's rendering states the inference, names the facts it rests on, and says where it stops.
+ *
+ * The argument excludes `insufficient-evidence`. Handing a renderer "there is nothing to suggest" is how
+ * a renderer ends up with a generic fallback sentence, and a generic fallback sentence here would be
+ * this domain producing text in a case where its honest answer is that it has no suggestion. The caller
+ * announces the failure plainly instead — the same announcement, with the same owner, that existed
+ * before this contract did.
+ */
+export interface LanguageDiagnosisSpeakingService {
+  /** The suggestion, as the lines a human reads. Never rejects; a pure function of its argument. */
+  speak(suggestion: RepositoryCiDiagnosisSuggestion): readonly string[];
+}
+
+export const languageDiagnosisSpeakingService: ServiceContract<LanguageDiagnosisSpeakingService> =
+  defineService<LanguageDiagnosisSpeakingService>('language.diagnosis-speaking', 1);

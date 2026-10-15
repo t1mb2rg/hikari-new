@@ -207,3 +207,78 @@ attention: 只有 delivered 才写既有的 delivered 回执     ← 没有新�
 - 不新增事实 kind；不给 2b(i) 预建没有消费者的接口。
 - 不让判断自动扩张执行权限（本片只说，不做）。
 - 不修改任何冻结文档；不为让实验好看而绕过通道。
+
+## §9 实现状态（2a 已落地）
+
+**落地时间**：2026-10-15。`npm run build` 通过；全量测试 **944 tests / 940 pass / 0 fail / 4 skipped**（实现前 937 / 933 / 0 / 4，新增 7 条）。
+
+### §9.1 逐条对应 §7 的落地顺序
+
+| 步骤 | 落地物 | 验收对应 |
+| --- | --- | --- |
+| 1 | `src/repository-ci-attention/plugin.ts`：`requires` 是六条（`repository-ci-awareness` / `repository-ci-diagnosis-proposal` / `language.speaking` / `language.diagnosis-speaking` / `human-delivery.deliver` / `chronicle`）；一个周期只调一次 `awareness.current()`，失败信息取自那一份 assessment 的 `githubCi` facet | ①② |
+| 2 | `src/repository-ci-relevance/contracts.ts` 增加 `repository-ci-relevance.judge@1`（判定的是交出去的那份 snapshot）；`plugin.ts` 里 `current` 与 `judge` 走同一个 `judgeGiven` 实现，不是两份判定 | ② |
+| 3 | 新包 `src/repository-ci-diagnosis-proposal/`：`types.ts` / `contracts.ts` / `judgement.ts`（纯函数 `judgeProposal`）/ `render.ts` / `plugin.ts`（零配置，`provides` 恰好一条，不轮询、不去重、不投递、不写事实） | ③④ |
+| 4 | `src/language/`：第三条有界 speaking 契约 `language.diagnosis-speaking@1` + `renderSpokenProposal`；`express.ts` 里这个 block 的名字是 `repository-ci-diagnosis-proposal` | ④ |
+| 5 | 真机一次（§9.3） | — |
+| 6 | 本 §9 与 `docs/development/current-stage.md` 的口径更新 | — |
+
+**`indeterminate` 的处理是 §2.4 与 §2.6 的调和，不是新增判词**：`commitComparison === 'indeterminate'` 时新 owner 给 `insufficient-evidence`，于是走**原有的普通通知**——「领域判断控制的是有没有资格提出具体诊断，不是有没有资格报告已经发生的事实」这句话在代码里就是这一个分支。
+
+### §9.2 与 §2.3 的两处偏差（照实记录，不追认成设计）
+
+1. **新 owner 的 `requires` 不是空的。** §2.3 的表写的是「requires：无」，实现是逐字 `[repository-ci-relevance.judge@1]`。理由是 §2.4 与 §3.2 合起来要求的：建议必须依据「与 occurrence **同一份** snapshot 的 relevance 判定」，而唯一能保证「同一份」的做法，是让拿着那份 snapshot 的调用者把它**交出去判**；若改成新 owner 自己再取一次，验收 ② 当场失败。依赖方向未变（仍指回 relevance），变的是这条边少了一个消费者——attention 不必再依赖 relevance。
+2. **「既有测试一字不改」在字面上不成立。** attention 的既有**行为**测试一条未改（逐字相同）；改的是三处元数据与测试自己的假组合——`requires` 断言（四条 → 六条）、speaking 假件多提供一条契约、`compose()` 多收两个假件。输入边界变了，钉输入边界的断言必然跟着变；能在这场改动里被削弱的只有**行为**断言，而它们没有被碰。
+
+### §9.3 四项验收的证据
+
+| 验收 | 证据 | 观察面 |
+| --- | --- | --- |
+| ① Attention 输入变化 → 原有主动通知行为保持可用 | attention 的既有**行为**测试逐字未改、全绿；`没有建议时走原来的表达面，一个字都没有多出来`；`diagnosis 挂掉时朝「说」降级：通知照发，只是没有建议` | 运行 |
+| ② 单次证据获取 | `一个周期只取得一份 assessment，而且被问的就是那一份`——断言假 awareness 的 `counts.assessments === ci.counts.calls`，且 `diagnosis.asked[0].assessment` 与 `awareness.seen[0]` **同一性**相等；`repository-ci-relevance.judge@1` 的存在让 relevance 不再自己采集 | 运行 |
+| ③ Diagnosis 领域语义 | `三种 commitComparison 得到三种不同的结果，每一种都点出自己的依据`（`different` → `check-commit-alignment`、`same` → `inspect-run-steps`、`indeterminate` → `insufficient-evidence`，三条输出互不相同、各带自己的依据行）；`relevance 说 unknown 时没有建议：这一层不替它决定相关性`；**真机**上 `different` 那一条真的说出来了 | 运行 + 真机 |
+| ④ Language 与回执 | `有建议时走第二个表达面：送出去的还是 Language 写的那几行`（`delivery.delivered[0] === speaking.suggestions[0].lines`、`speaking.spoken.length === 0`）；`新的 diagnosis 模块里没有跟着进来通用机制`；**真机上恰好一条消息、恰好一条既有事实族回执** | 运行 + 真机 |
+
+#### §9.3.1 真机一次（2026-10-15）
+
+真实进程、真实命名管道、真实 `api.github.com`（`github-ci` 用的是内置 `fetch`，不是 `gh`）。`http://127.0.0.1:9/v1` 是一个永远连不上的假端点，只为让 `language` 满足它自己的配置——这条路径不需要模型，播报由 `renderSpokenOccurrence` / `renderSpokenProposal` 这种纯渲染完成。
+
+```text
+node dist/cli/main.js resident --data-dir <TEMP>\hikari-livediag2-a1 \
+  --repository-root <TEMP>\hikari-livediag-repo --repository CJX0712/world-class-ai \
+  --model-endpoint http://127.0.0.1:9/v1 --model live-check-stub \
+  --desktop-awareness-delay-ms 1000 --proactive-ci-delay-ms 5000
+node dist/cli/main.js subscribe --data-dir <TEMP>\hikari-livediag2-a1
+node dist/cli/main.js focus declare CJX0712/world-class-ai --data-dir <TEMP>\hikari-livediag2-a1
+```
+
+失败是**真实的**：公开已归档仓库 `CJX0712/world-class-ai` 最新一条 run 就是 `failure`（run `38280563949`，`main`，headSha `533e7e58a20fb0b221a15e2a3f45d44f2d830ee8`）。本机那个仓库是临时造的（`git init` + 一次提交，HEAD `868ad424`，remote 指向同一个 GitHub 名），于是 `commitComparison` 是 `different`，真机走的是 `check-commit-alignment` 那一条。
+
+投递到的消息（`hikari subscribe` 的原文，逐字）：
+
+```text
+Repository CI 诊断建议：check-commit-alignment
+仓库：CJX0712/world-class-ai，运行：38280563949，这次运行用的提交：533e7e58a20fb0b221a15e2a3f45d44f2d830ee8
+依据：工作焦点命中「CJX0712/world-class-ai」，且人声明的配对把本机路径与 GitHub 名绑在一起。
+这次运行用的提交与工作树报告的提交逐字不同——这是一个字符串比较，不代表差异就是失败的原因。
+可以先确认正在看的是同一次提交。
+```
+
+同一时刻的 Chronicle（`facts.jsonl` 那两行，逐字）：
+
+```json
+{"factId":"6814212f-bc22-4d41-b94b-8dc6bbb76be8","type":"work-focus.declared","version":1,"occurredAt":"2026-10-15T15:06:38.637Z","recordedAt":"2026-10-15T15:06:38.638Z","source":{"kind":"work-focus.endpoint"},"payload":{"designation":"CJX0712/world-class-ai"}}
+{"factId":"445cf63f-28f2-46bf-908f-14ad22bf85d2","type":"repository-ci-attention.delivered","version":1,"occurredAt":"2026-10-15T15:06:39.714Z","recordedAt":"2026-10-15T15:06:39.714Z","source":{"kind":"repository-ci-attention.delivery"},"payload":{"repository":"CJX0712/world-class-ai","runId":38280563949}}
+```
+
+**这条真机证明了什么、没证明什么**
+
+- 证明了：新 owner 在真实 Runtime 里被真实 attention 询问（一条真实契约、零配置）；建议走的是 Language 的**第三条**有界契约；这条消息到人手里**恰好一次**；落下去的回执仍是**既有**那一个事实族（`repository-ci-attention.delivered` / `source.kind = repository-ci-attention.delivery`，payload 仍是 `{repository, runId}`）——没有第二个投递者、没有新事实 kind、没有 `speak(string)`。
+- **没证明**：`same` 与 `indeterminate` 两条分支只有结构化测试，**没有**真机；`indeterminate` 意味着依据不足，真机不触发建议正是它的设计意图。
+- 三次尝试（三个全新数据目录）输出逐字相同。`focus` 必须在 attention 第一个周期之前落下去，这是**时序竞争**；赛不过时那一次会退化成普通通知（正是 ① 的行为），换一个干净目录即可重来——这不是产品行为，是本轮取证手法的限制。
+
+### §9.4 §5 的代价仍然成立
+
+- 同一个 run 仍然只有**一次**表达机会：本轮真机上，之后的周期因为该 run 已被处理而不再说话（去重仍在 attention，新 owner 没有任何自己的历史）。
+- 2a **不证明**跨历史的认知连续性：真机看到的依据全部来自**当次**采集的那一份 assessment。「昨天说过什么、今天是否还记得」属于 2b，未做。
+- 不得因为这次真机就宣布「认知已验证」：它证明的是一条有依据的建议能走到人面前，并留下一个既有形状的回执。
