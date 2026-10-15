@@ -7,6 +7,7 @@ import { confirmCommand } from './confirm-command.js';
 import { contentCommand } from './content-command.js';
 import { statusCommand, stopCommand } from './control-command.js';
 import { changeCommand } from './change-command.js';
+import { actCommand } from './act-command.js';
 import { focusCommand } from './focus-command.js';
 import { initCommand } from './init.js';
 import { observeCommand } from './observe-command.js';
@@ -53,6 +54,11 @@ function execute(parsed: ParsedCommandLine): CommandOutcome | Promise<CommandOut
   if (parsed.command === 'subscribe') return subscribeCommand(parsed.options);
   if (parsed.command === 'focus') return focusCommand(parsed.options);
   if (parsed.command === 'change') return changeCommand(parsed.options);
+  // `act` is the one command in this list that can change something on this machine and on a remote, so
+  // its arm is worth naming here rather than lumping it with `change`: `change` says which directories may
+  // be touched and touches nothing, and this one does the touching. Which repository is part of the
+  // instruction rather than a setting, and the arm is what carries it there whole.
+  if (parsed.command === 'act') return actCommand(parsed.options);
   if (parsed.command === 'relevance') return relevanceCommand(parsed.options);
   if (parsed.command === 'observe') return observeCommand(parsed.options);
   if (parsed.command === 'content') return contentCommand(parsed.options);

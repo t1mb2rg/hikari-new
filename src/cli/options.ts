@@ -174,6 +174,23 @@ export interface ChangeOptions extends CliOptions {
   readonly repositories: readonly string[];
 }
 
+// `act` is the first command in this file whose operand and option are *both* part of one instruction:
+// the sentence is what the human asked for, and `--repository` is which repository they are asking about.
+//
+// The repository is a flag rather than something this file finds inside the sentence, and that is not a
+// matter of convenience. The range check — is this repository one the human declared changeable? — has to
+// happen before anything starts, and a range derived by reading the sentence would be a range this slice
+// inferred rather than one a person named. So the person names it, and the sentence says what to do there.
+//
+// The sentence is kept byte for byte, as `focus` and `confirm` keep theirs, and for the same reason: it is
+// the mandate that everything downstream is measured against, and a CLI that trimmed or reflowed it would
+// be rewriting the thing the record is supposed to preserve. What the sentence means is a model's question,
+// asked with the repository in hand.
+export interface ActOptions extends CliOptions {
+  readonly repository: string;
+  readonly mandate: string;
+}
+
 // The one operand is the human's sentence, carried exactly as they typed it. Nothing here trims it,
 // folds it, lowercases it or inspects it for intent: what a sentence means is the language plugin's
 // question, asked with a model, and a CLI that formed its own idea of what was being asked would be
@@ -302,6 +319,12 @@ export type ParsedCommandLine =
   // operands are the address of a question put to one plugin's endpoint, and the type is what keeps that
   // address from being reassembled somewhere else.
   | { readonly command: 'change'; readonly options: ChangeOptions }
+  // `act` gets an arm for the reason `change` did, and one more: it carries a repository *and* a sentence,
+  // and the two are read as one instruction. The arm is what keeps the range — which repository — attached
+  // to the mandate rather than assembled from two command lines somewhere else. What it does *not* carry is
+  // any execution configuration: the model is the resident's, decided when the resident started, and a
+  // client that could name an endpoint would be a second way to send a human's sentence somewhere.
+  | { readonly command: 'act'; readonly options: ActOptions }
   | { readonly command: 'ask'; readonly options: AskOptions }
   | { readonly command: 'confirm'; readonly options: ConfirmOptions }
   // `screen` gets an arm rather than joining `content`, and the two commands are the pair worth telling
@@ -363,6 +386,7 @@ export const USAGE = [
   '  hikari ask --data-dir <path> "<text>"',
   '  hikari confirm --data-dir <path> "<text>"',
   '  hikari screen --data-dir <path> "<text>"',
+  '  hikari act --data-dir <path> --repository <owner/name> "<text>"',
   '  hikari profile set --data-dir <path> [与 hikari resident 相同的选项]',
   '  hikari profile show --data-dir <path>',
   '  hikari profile clear --data-dir <path>',
@@ -399,6 +423,10 @@ export const USAGE = [
   '  发之前不会另外问你一次——这一条命令就是那次授权，读一次就用掉，不会留到下一次。',
   '  读哪个窗口不由命令行决定：它是 Hikari 已经观测到的、能归给你的那个前台窗口。',
   '  正文按原样带过去，Hikari 不替你判断里面写的算不算数，也不会因为窗口里写了什么就去做什么。',
+  '  hikari act 把你这一句话当作这一轮唯一的指令交给常驻里的执行者：',
+  '  它读你用 hikari change 声明过可改的那个仓库，按自己的判断改文件、提交，必要时推送，',
+  '  并把这一次的账留在 Chronicle 里。--repository 指定落笔的仓库，与声明对不上就什么都不动。',
+  '  改动发生在你的磁盘上和那个远端上：推送之后本地回退不等于世界回退，记录里会写明它推送了。',
   '  hikari confirm 把你说的这句话原样记在这个数据目录里，常驻重启之后仍然在。',
   '  它记下的是「你明确确认过这句话」这件事，不是 Hikari 核实过的事实，也不构成任何授权：',
   '  没有哪一处会读它来决定能不能做什么，工作焦点也不会因为它被恢复。',
@@ -465,6 +493,12 @@ export function parseCommandLine(argv: readonly string[]): ParsedCommandLine {
   // of the two it was reading for, and that flag is exactly the knowledge the two arm types keep in one
   // place each.
   if (head === 'change') return readChangeCommand(rest);
+
+  // `act` resolves here for the same reason, and it is the only command whose operand is also the thing
+  // the rest of the slice is measured against. A sentence is not an option, so a token list could not
+  // carry it; and the repository has to be read *with* it rather than by the option reader alone, because
+  // the two together are one instruction rather than two settings.
+  if (head === 'act') return readActCommand(rest);
 
   // `relevance` resolves here for the same reason `focus` does, and for one more. It has operands —
   // a domain and a question — so a token list could not carry them; and reading them here rather than
@@ -606,6 +640,65 @@ function readChangeCommand(rest: readonly string[]): ParsedCommandLine {
   const { dataDir, operands } = readOperandTokens(tokens);
   readChangeArity(word, operands);
   return { command: 'change', options: { dataDir, word, repositories: operands } };
+}
+
+// One instruction: a repository and a sentence. Both belong to the same act, so the reader takes them
+// together rather than handing a token list to the option reader — the same reason `change` and `focus`
+// resolve above, and one more: `--repository` is not a setting of this command, it is half of what the
+// person asked for. A reader that could finish the options without it would be able to describe an
+// instruction that is not addressed to anything.
+//
+// The sentence is not trimmed, not folded, and not inspected for intent — the same rule `ask` and
+// `confirm` state, and the reason is stronger here than either: this sentence *is* the mandate, and every
+// claim the action slice makes about what was asked depends on it arriving exactly as it was typed. Not
+// even emptiness is decided here; a human who typed nothing gets the plugin's own answer, which is the
+// only place that knows what an empty mandate means.
+function readActCommand(rest: readonly string[]): ParsedCommandLine {
+  let dataDir: string | undefined;
+  let repository: string | undefined;
+  const operands: string[] = [];
+
+  for (let index = 0; index < rest.length; index += 1) {
+    const token = rest[index];
+    if (token === undefined) continue;
+
+    if (token === '--data-dir' || token === '--repository') {
+      const value = rest[index + 1];
+      const missing = token === '--data-dir' ? '一个路径' : '一个 owner/name';
+
+      if (token === '--data-dir' && dataDir !== undefined) {
+        throw new UsageError('--data-dir 只能指定一次。');
+      }
+      if (token === '--repository' && repository !== undefined) {
+        throw new UsageError('--repository 只能指定一次。');
+      }
+      if (value === undefined) throw new UsageError(`${token} 需要${missing}。`);
+      if (!value.trim()) throw new UsageError(`${token} 不能是空的。`);
+
+      if (token === '--data-dir') dataDir = value;
+      else repository = value;
+      index += 1;
+      continue;
+    }
+
+    if (token.startsWith('-')) throw new UsageError(`未知参数：${token}`);
+    operands.push(token);
+  }
+
+  if (dataDir === undefined) throw new UsageError('缺少必填参数：--data-dir');
+  if (repository === undefined) {
+    throw new UsageError('act 需要 --repository <owner/name>；这条指令要落在哪个仓库上必须由你指定。');
+  }
+
+  const [mandate, ...extra] = operands;
+  if (mandate === undefined) {
+    throw new UsageError('act 需要一句话；请把整句话用引号括起来。');
+  }
+  if (extra.length > 0) {
+    throw new UsageError(`act 只接受一句话，收到 ${operands.length} 个；请把整句话用引号括起来。`);
+  }
+
+  return { command: 'act', options: { dataDir, repository, mandate } };
 }
 
 interface OperandTokens {

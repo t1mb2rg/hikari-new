@@ -80,7 +80,14 @@ function compositionOf(states) {
 // There are two production compositions and they are pinned one per test rather than merged into a
 // count. The count is not the invariant — what a running Hikari is, is — and a merge would have made
 // the default roster something you read off a diff between two lists instead of off the list.
-// Eleven members, and the eleventh is the newest. `changeable-repositories` joined the base for the
+// Twelve members, and the twelfth is the newest: `repository-change-executor`, which joined the base for
+// the reason `changeable-repositories` did — being in the composition is what gives its endpoint a
+// lifetime — and with one difference worth stating, because it is the first member of the base whose
+// usefulness depends on configuration it does not require: a resident with no model wired still loads it
+// (`active`), and every instruction then ends `executor-unavailable` rather than silence. It sits
+// immediately after the member whose contract is the range it checks its mandate against.
+//
+// `changeable-repositories` joined the base for the
 // reason its two neighbours did: it needs nothing configured — no model, no repository, no mandate — and
 // being in the composition is what gives its endpoint a lifetime. It provides nothing, so it adds no edge
 // to the chain, and it is placed before `work-focus` rather than after so that the claim those earlier
@@ -104,6 +111,7 @@ const BASE_MEMBER_IDS = [
   'desktop-session-observe',
   'desktop-content-read',
   'changeable-repositories',
+  'repository-change-executor',
   'work-focus',
 ];
 
@@ -160,7 +168,7 @@ const RETURN_MEMBER_IDS = ['human-delivery', 'desktop-return-attention'];
 // entire suite green on both platforms. The tests that would have noticed end to end are the ones
 // that need a named pipe, and CI runs on a host that has none — so the member that only exists to
 // be an ingress could have disappeared from production with nothing going red.
-test('默认生产组合恰好是这十一个成员，按加载顺序', () => {
+test('默认生产组合恰好是这十二个成员，按加载顺序', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
@@ -172,7 +180,7 @@ test('默认生产组合恰好是这十一个成员，按加载顺序', () => {
   );
 });
 
-test('显式配置 Repository CI 后，生产组合是这十一个加上那六个', () => {
+test('显式配置 Repository CI 后，生产组合是这十二个加上那六个', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
@@ -204,7 +212,7 @@ test('显式配置 Repository CI 后，生产组合是这十一个加上那六�
 // shared by two rosters keep their relative order, and the repository-aware language member follows the
 // whole chain it depends on. `不要修改 Runtime readiness semantics 来人为保存旧 invariant` — the
 // invariant was given up instead, and this file is where that is written down rather than assumed.
-test('给了模型端点与模型之后，生产组合是这十一个加上 language', () => {
+test('给了模型端点与模型之后，生产组合是这十二个加上 language', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
@@ -231,6 +239,7 @@ test('给了模型端点与模型之后，生产组合是这十一个加上 lang
       'desktop-session-observe',
       'desktop-content-read',
       'changeable-repositories',
+      'repository-change-executor',
       'work-focus',
       'language',
     ],
@@ -1330,6 +1339,68 @@ test('subscribe 只接受 --data-dir，别的都在用法层被拒绝', (t) => {
     assert.equal(result.code, 2, `${argv.join(' ')} 应是用法错误`);
     assert.match(result.stderr, /用法：/);
   }
+});
+
+test('act 要一个数据目录、一个仓库和一句话，缺哪个都是用法错误', (t) => {
+  const root = createRoot(t);
+
+  // All three parts are checked in the same place and for the same reason: the sentence *is* the mandate
+  // and the repository is what the range is measured against, so a missing half must be refused here
+  // rather than travel to a resident and die there. The repository is a separate argument on purpose — a
+  // range this CLI had parsed out of the sentence would be a range it inferred rather than one a person
+  // named, and the review's first invariant is that the mandate reaches the record unrewritten.
+  for (const argv of [
+    ['act'],
+    ['act', '--data-dir', root],
+    ['act', '--data-dir', root, '--repository', 't1mb2rg/hikari-new'],
+  ]) {
+    const result = runCli(...argv);
+    assert.equal(result.code, 2, `${argv.join(' ')} 应是用法错误`);
+    assert.match(result.stderr, /用法：/);
+  }
+});
+
+test('act 的一句话是一个操作数，不是第二个选项', (t) => {
+  const root = createRoot(t);
+
+  const two = runCli('act', '--data-dir', root, '--repository', 't1mb2rg/hikari-new', '第一句', '第二句');
+  assert.equal(two.code, 2);
+  assert.match(two.stderr, /只接受一句话/);
+});
+
+test('act 是客户端，不能配置执行者或模型', (t) => {
+  const root = createRoot(t);
+
+  // Same reason `subscribe` refuses the proactive flags: a client that could name an endpoint or a model
+  // would be a second way to send a person's sentence somewhere, and the resident decided that when it
+  // started.
+  for (const argv of [
+    [
+      'act',
+      '--data-dir',
+      root,
+      '--repository',
+      't1mb2rg/hikari-new',
+      '改点什么',
+      '--model-endpoint',
+      'http://127.0.0.1:11434/v1/chat/completions',
+    ],
+    ['act', '--data-dir', root, '--repository', 't1mb2rg/hikari-new', '改点什么', '--model', 'local-model'],
+  ]) {
+    const result = runCli(...argv);
+    assert.equal(result.code, 2, `${argv.join(' ')} 不应接受模型配置`);
+    assert.match(result.stderr, /未知参数/);
+  }
+});
+
+test('act 没有常驻在听时说的是「没有常驻」，不是执行失败', (t) => {
+  const root = createRoot(t);
+
+  // The whole answer of a client with nobody listening. Nothing was attempted, so there is no result to
+  // report and no executor to blame; what the person needs is to be told which state they are in.
+  const result = runCli('act', '--data-dir', root, '--repository', 't1mb2rg/hikari-new', '改点什么');
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /常驻/);
 });
 
 test('模型参数只属于 resident，没有拓宽别的命令', (t) => {

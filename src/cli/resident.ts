@@ -27,6 +27,7 @@ import { MessageChannel } from 'node:worker_threads';
 import { ChronicleNotInitializedError, chroniclePlugin } from '../chronicle/index.js';
 import { NotInitializedError, continuityPlugin } from '../continuity/index.js';
 import { changeableRepositoriesPlugin } from '../changeable-repositories/index.js';
+import { createRepositoryChangeExecutorPlugin } from '../repository-change-executor/index.js';
 import { desktopContentReadPlugin } from '../desktop-content-read/index.js';
 import { desktopReturnAttentionPlugin } from '../desktop-return-attention/index.js';
 import { desktopSessionAwarenessPlugin } from '../desktop-session-awareness/index.js';
@@ -38,8 +39,14 @@ import { gitHubCiPlugin } from '../github-ci/index.js';
 import { gitRepositoryPlugin } from '../git-repository/index.js';
 import { humanDeliveryPlugin } from '../human-delivery/index.js';
 import { inputActivityPlugin } from '../input-activity/index.js';
-import { languagePlugin, repositoryLanguagePlugin } from '../language/index.js';
-import type { LanguagePluginConfig } from '../language/index.js';
+import {
+  createHttpModel,
+  languagePlugin,
+  readModelCredential,
+  REASONING_EFFORTS,
+  repositoryLanguagePlugin,
+} from '../language/index.js';
+import type { LanguageModel, LanguagePluginConfig, ReasoningEffort } from '../language/index.js';
 import { Runtime } from '../index.js';
 import type { PluginDefinition, PluginState } from '../index.js';
 import { repositoryCiAttentionPlugin } from '../repository-ci-attention/index.js';
@@ -309,6 +316,28 @@ export function productionComposition(options: ResidentOptions): Composition {
       load: (runtime) =>
         runtime.loadPlugin(changeableRepositoriesPlugin, { rootDir: options.dataDir }),
     },
+    // The action half, and the only member of this composition that can change something outside this
+    // process. It sits immediately after the member it depends on for its range: an instruction naming a
+    // repository that was never declared is refused before anything starts, and the declaration only
+    // exists while that member is up. It is in the base rather than behind a flag for the reason the
+    // member above is — its endpoint's lifetime *is* its activation, so being here is what gives the
+    // ingress its lifetime — and for one more: a resident that wired no model still owes the person an
+    // answer rather than a silence, and every instruction then ends `executor-unavailable`, which is a
+    // fact about this deployment the person standing at the pipe can act on.
+    //
+    // The id is written out rather than imported as a constant because this plugin is a factory: what it
+    // returns is the definition, and the roster this composition produces is asserted against the same
+    // literal in `test/resident-cli.test.mjs`.
+    {
+      id: 'repository-change-executor',
+      load: (runtime) =>
+        runtime.loadPlugin(
+          createRepositoryChangeExecutorPlugin({
+            dataDir: options.dataDir,
+            createModel: changeExecutorModel(options.model),
+          }),
+        ),
+    },
     // The last member of the base, and the one a person writes through rather than reads from: it is
     // where a person declares what they are working on, and the member above is where a person reads
     // what Hikari sees. It requires Chronicle — it admits a durable fact about its own concern when a
@@ -508,6 +537,38 @@ export function productionComposition(options: ResidentOptions): Composition {
   // exactly what the build before the proactive slices produced — the mandates are appended here, they
   // do not rearrange anything already in the list.
   return [...base, ...chain, language, ...proactive];
+}
+
+// The model the executor drives, or `undefined` when this operator configured none.
+//
+// It is the *same* transport Language uses, reached through Language's own barrel, and that is the point:
+// one build has one way of talking to an endpoint, and a second implementation inside the executor would
+// be a second thing to keep in step with the first — including the two request bounds and the rule that
+// every `tool_call_id` is answered. What differs is what the model is offered and what the loop does with
+// the answer, and both of those belong to the executor.
+//
+// The credential is a variable *name* in `ModelOptions` and a value here, resolved at the one moment a
+// connection is built. An effort the language plugin would refuse is left out rather than passed through:
+// this file is a composition root and not a second opinion about which efforts exist, and a resident whose
+// operator typed a value Language rejects does not become ready in the first place, so the executor's
+// omission cannot be the difference between two compositions that disagree about what was configured.
+function changeExecutorModel(model: ModelOptions | undefined): (() => LanguageModel) | undefined {
+  if (model === undefined) return undefined;
+
+  const credential = readModelCredential(model.credentialEnv);
+  const effort = model.reasoningEffort;
+  const reasoningEffort: ReasoningEffort | undefined =
+    effort !== undefined && Object.hasOwn(REASONING_EFFORTS, effort)
+      ? (effort as ReasoningEffort)
+      : undefined;
+
+  return () =>
+    createHttpModel({
+      endpoint: model.endpoint,
+      model: model.model,
+      credential,
+      reasoningEffort,
+    });
 }
 
 export interface ResidentIo {

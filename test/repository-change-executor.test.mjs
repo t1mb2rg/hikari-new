@@ -17,10 +17,12 @@ import {
   REPOSITORY_CHANGE_FACT_TYPES,
   REPOSITORY_CHANGE_TOOLS,
   containTarget,
+  createRepositoryChangeRunner,
   executeRepositoryChange,
   findTool,
   judgeOutcome,
   mandateFactDraft,
+  performTool,
   readToolArguments,
   repositoryNameFromUrl,
   resolveDeclaredRoot,
@@ -418,4 +420,374 @@ test('执行：执行者说它 push 了不算数，只有 git 说才算数', asy
   assert.equal(execution.result.evidence.pushed, false);
   assert.equal(execution.result.outcome, 'unchanged');
   assert.equal(execution.result.report.pushed, true);
+});
+
+// --- 工具：模型能做的动作，一个一个地做 ---
+
+const BUDGETS = { timeoutMs: 10_000, maxBytes: 1024 * 1024 };
+
+/** One call to one tool, with the shape `performTool` insists on and nothing else spelled out twice. */
+function perform(name, values, root, extra = {}) {
+  return performTool({
+    tool: findTool(name, REPOSITORY_CHANGE_TOOLS),
+    values,
+    root,
+    readCi: undefined,
+    budgets: BUDGETS,
+    signal: undefined,
+    ...extra,
+  });
+}
+
+test('工具：读文件给出带行号的文本，范围就是那个工作目录', async () => {
+  const dir = makeRepository('t1mb2rg/reads');
+  const answer = await perform('read_file', { path: 'README.md' }, dir);
+
+  assert.equal(answer.ok, true);
+  assert.equal(answer.content.includes('1  # demo'), true);
+});
+
+test('工具：越界读被拒，答案里说的是范围而不是磁盘', async () => {
+  const dir = makeRepository('t1mb2rg/refuses-read');
+  const outside = join(dir, '..', 'anything.txt');
+  const answer = await perform('read_file', { path: outside }, dir);
+
+  assert.equal(answer.ok, false);
+  assert.equal(answer.refused, true);
+  assert.equal(answer.content.includes('不在这次运行被允许改的那个工作目录里'), true);
+});
+
+test('工具：越界写被拒，而且磁盘上什么都没发生', async () => {
+  const dir = makeRepository('t1mb2rg/refuses-write');
+  const outside = join(dir, '..', `written-${Date.now()}.txt`);
+  const answer = await perform('write_file', { path: outside, content: 'nope' }, dir);
+
+  assert.equal(answer.refused, true);
+  assert.equal(existsSync(outside), false);
+});
+
+test('工具：写文件在工作目录里真的落笔', async () => {
+  const dir = makeRepository('t1mb2rg/writes');
+  const answer = await perform('write_file', { path: 'notes/today.md', content: '# 今天\n' }, dir);
+
+  assert.equal(answer.ok, true);
+  assert.equal(existsSync(join(dir, 'notes', 'today.md')), true);
+});
+
+test('工具：列目录把子目录和文件分开，且顺序是稳定的', async () => {
+  const dir = makeRepository('t1mb2rg/lists');
+  mkdirSync(join(dir, 'src'));
+  writeFileSync(join(dir, 'zeta.txt'), 'z\n');
+
+  const answer = await perform('list_directory', { path: '.' }, dir);
+
+  assert.equal(answer.ok, true);
+  assert.equal(answer.content.includes('src/'), true);
+  assert.equal(answer.content.includes('zeta.txt'), true);
+  assert.equal(answer.content.indexOf('README.md') < answer.content.indexOf('src/'), true);
+});
+
+test('工具：git_status 与 git_diff 说的是仓库自己的话', async () => {
+  const dir = makeRepository('t1mb2rg/git-tools');
+  writeFileSync(join(dir, 'new.txt'), 'hello\n');
+
+  const status = await perform('git_status', {}, dir);
+  const diff = await perform('git_diff', {}, dir);
+
+  assert.equal(status.ok, true);
+  assert.equal(status.content.includes('?? new.txt'), true);
+  assert.equal(diff.ok, true);
+  assert.equal(diff.content.includes('工作区与 HEAD 没有差异'), true);
+});
+
+test('工具：read_ci 没接就如实说没接，不假装读过', async () => {
+  const dir = makeRepository('t1mb2rg/no-ci');
+  const answer = await perform('read_ci', {}, dir);
+
+  assert.equal(answer.ok, false);
+  assert.equal(answer.content.includes('没有接 CI 读取'), true);
+});
+
+test('工具：接上 read_ci 时把它给的话原样带回来', async () => {
+  const dir = makeRepository('t1mb2rg/with-ci');
+  const answer = await perform('read_ci', {}, dir, { readCi: async () => 'run #7 failure' });
+
+  assert.equal(answer.ok, true);
+  assert.equal(answer.content.includes('run #7 failure'), true);
+});
+
+test('工具：二进制文件不会被当成文本交出去', async () => {
+  const dir = makeRepository('t1mb2rg/binary');
+  writeFileSync(join(dir, 'blob.bin'), Buffer.from([0x00, 0x01, 0x02, 0x00]));
+
+  const answer = await perform('read_file', { path: 'blob.bin' }, dir);
+
+  assert.equal(answer.ok, false);
+  assert.equal(answer.content.includes('不是文本文件'), true);
+});
+
+test('工具：push 没有上游时如实失败，不 force 也不猜远端', async () => {
+  const dir = makeRepository('t1mb2rg/no-upstream');
+  const answer = await perform('git_push', {}, dir);
+
+  assert.equal(answer.ok, false);
+  assert.equal(answer.content.includes('git push'), true);
+});
+
+// --- 模型循环：它决定顺序，边界决定它能在哪里落笔 ---
+
+/** A model whose answers are written out in advance, and which keeps what it was shown. */
+function modelAnswering(turns) {
+  const seen = [];
+  let index = 0;
+  return {
+    seen,
+    async step(request) {
+      seen.push(request.messages.map((message) => message.role));
+      const turn = turns[Math.min(index, turns.length - 1)];
+      index += 1;
+      return {
+        content: turn.content ?? '',
+        toolCalls: turn.toolCalls ?? [],
+        reasoningContent: undefined,
+        truncated: false,
+      };
+    },
+    dispose() {},
+  };
+}
+
+const call = (id, name, args) => ({ id, name, arguments: JSON.stringify(args) });
+
+function runWith(model, root, options = {}) {
+  const runner = createRepositoryChangeRunner(model, {
+    stepBudget: 6,
+    stepTimeoutMs: 5_000,
+    runBudgetMs: 60_000,
+    budgets: BUDGETS,
+    readCi: undefined,
+    ...options,
+  });
+  return runner.run({
+    repository: 't1mb2rg/loops',
+    root,
+    mandate: '把 README 里的话补上',
+    signal: new AbortController().signal,
+  });
+}
+
+test('循环：模型不调工具就结束，没有停止原因', async () => {
+  const dir = makeRepository('t1mb2rg/loop-done');
+  const model = modelAnswering([{ content: '看过了，不需要改。' }]);
+  const report = await runWith(model, dir);
+
+  assert.equal(report.stopped, undefined);
+  assert.equal(report.steps, 1);
+  assert.deepEqual(report.toolCalls, []);
+  assert.equal(report.notes.some((note) => note.includes('不需要改')), true);
+});
+
+test('循环：工具的答案回到会话里，带着它自己的 tool_call_id', async () => {
+  const dir = makeRepository('t1mb2rg/loop-round-trip');
+  const model = modelAnswering([
+    { content: '', toolCalls: [call('c1', 'git_status', {})] },
+    { content: '干净。' },
+  ]);
+  const report = await runWith(model, dir);
+
+  assert.deepEqual(report.toolCalls, [{ name: 'git_status', outcome: 'ok' }]);
+  assert.deepEqual(model.seen, [
+    ['system', 'user'],
+    ['system', 'user', 'assistant', 'tool'],
+  ]);
+  assert.equal(report.stopped, undefined);
+});
+
+test('循环：越界的路径被拒，拒绝进了报告也回到了模型面前', async () => {
+  const dir = makeRepository('t1mb2rg/loop-refusal');
+  const model = modelAnswering([
+    { content: '', toolCalls: [call('c1', 'write_file', { path: '../escape.txt', content: 'x' })] },
+    { content: '那我换个做法。' },
+  ]);
+  const report = await runWith(model, dir);
+
+  assert.deepEqual(report.toolCalls, [{ name: 'write_file', outcome: 'refused' }]);
+  assert.deepEqual(report.refusedCalls, ['write_file']);
+  assert.equal(existsSync(join(dir, '..', 'escape.txt')), false);
+});
+
+test('循环：模型失败时停下，并说明是模型失败', async () => {
+  const dir = makeRepository('t1mb2rg/loop-model-failed');
+  const model = {
+    async step() {
+      throw new Error('endpoint said 500');
+    },
+    dispose() {},
+  };
+  const report = await runWith(model, dir);
+
+  assert.equal(report.stopped.reason, 'model-failed');
+  assert.equal(report.notes.some((note) => note.includes('endpoint said 500')), true);
+});
+
+test('循环：步数用尽时说是步数用尽，而不是装作做完了', async () => {
+  const dir = makeRepository('t1mb2rg/loop-steps');
+  const model = modelAnswering([{ content: '', toolCalls: [call('c1', 'git_status', {})] }]);
+  const report = await runWith(model, dir, { stepBudget: 2 });
+
+  assert.equal(report.stopped.reason, 'step-budget');
+  assert.equal(report.stopped.atStep, 2);
+  assert.equal(report.toolCalls.length, 2);
+});
+
+test('循环：一步迟迟不回来时不再等它，也不把这次运行说成失败', async () => {
+  const dir = makeRepository('t1mb2rg/loop-timeout');
+  const model = {
+    step: () => new Promise(() => {}),
+    dispose() {},
+  };
+  const report = await runWith(model, dir, { stepTimeoutMs: 30 });
+
+  assert.equal(report.stopped.reason, 'step-timeout');
+  assert.equal(report.pushed, false);
+});
+
+test('循环：表外的工具名被拒，并告诉它有哪些工具', async () => {
+  const dir = makeRepository('t1mb2rg/loop-unknown-tool');
+  const model = modelAnswering([
+    { content: '', toolCalls: [call('c1', 'run_shell', { command: 'rm -rf /' })] },
+    { content: '好吧。' },
+  ]);
+  const report = await runWith(model, dir);
+
+  assert.deepEqual(report.toolCalls, [{ name: 'run_shell', outcome: 'refused' }]);
+  assert.deepEqual(report.refusedCalls, ['run_shell']);
+  assert.equal(report.stopped, undefined);
+});
+
+test('循环：参数不是 JSON 时被拒，没有替它猜', async () => {
+  const dir = makeRepository('t1mb2rg/loop-bad-args');
+  const model = modelAnswering([
+    { content: '', toolCalls: [{ id: 'c1', name: 'read_file', arguments: '{oops' }] },
+    { content: '重来。' },
+  ]);
+  const report = await runWith(model, dir);
+
+  assert.deepEqual(report.toolCalls, [{ name: 'read_file', outcome: 'refused' }]);
+  assert.equal(report.stopped, undefined);
+});
+
+test('循环 + 执行：假模型真的写了一个文件并提交，结果是 changed', async () => {
+  const dir = makeRepository('t1mb2rg/loop-changes-world');
+  const model = modelAnswering([
+    { content: '', toolCalls: [call('c1', 'write_file', { path: 'notes.md', content: '# 记一笔\n' })] },
+    { content: '', toolCalls: [call('c2', 'git_commit', { message: '记一笔' })] },
+    { content: '写好了。' },
+  ]);
+  const runner = createRepositoryChangeRunner(model, {
+    stepBudget: 6,
+    stepTimeoutMs: 5_000,
+    runBudgetMs: 60_000,
+    budgets: BUDGETS,
+    readCi: undefined,
+  });
+  const execution = await executeRepositoryChange({
+    request: { repository: 't1mb2rg/loop-changes-world', mandate: '记一笔' },
+    read: readDeclaring([dir]),
+    runner,
+    runTimeoutMs: 60_000,
+  });
+
+  assert.equal(execution.result.outcome, 'changed');
+  assert.equal(existsSync(join(dir, 'notes.md')), true);
+  assert.equal(execution.result.evidence.headBefore === execution.result.evidence.headAfter, false);
+  // 两份事实都在，且结果那份写的是 changed —— 记录里说的是结果，不是模型的自述。
+  assert.deepEqual(execution.facts.map((fact) => fact.type), [MANDATE_FACT_TYPE, RESULT_FACT_TYPE]);
+  assert.equal(execution.facts[1].payload.outcome, 'changed');
+});
+
+test('推送被观察到之后，Hikari 自己事后去读一次 CI run 号，并把它写进证据', async () => {
+  // A real push, to a bare repository on this machine: the point of this test is that `pushed` is git's
+  // verdict rather than the runner's claim, so the push has to actually happen.
+  const remote = mkdtempSync(join(tmpdir(), 'hikari-remote-'));
+  git(remote, ['init', '-q', '--bare', '-b', 'main']);
+
+  const dir = makeRepository('t1mb2rg/pushed-repository');
+  // `makeRepository` gave it an origin naming the GitHub repository, and the declaration check reads
+  // *that* name. The push goes to a second remote instead, so the origin keeps its GitHub spelling while
+  // the branch really does arrive somewhere: `rev-list --not --remotes` counts every remote, not just the
+  // origin, so this is a real push that leaves the real trace the judgement looks for.
+  git(dir, ['remote', 'add', 'local', remote]);
+  git(dir, ['push', '-q', '-u', 'local', 'main']);
+
+  writeFileSync(join(dir, 'next.md'), '下一件事\n');
+  git(dir, ['add', '-A']);
+  git(dir, ['commit', '-q', '-m', '第二笔']);
+
+  // An executor that only pushes. It reports `pushed: true`, and that report is *not* what settles it.
+  const runner = {
+    async run(request) {
+      git(request.root, ['push', '-q', 'local', 'main']);
+      return { steps: 1, toolCalls: [], pushed: true, notes: [], refusedCalls: [], stopped: undefined };
+    },
+  };
+
+  let asked = 0;
+  const execution = await executeRepositoryChange({
+    request: { repository: 't1mb2rg/pushed-repository', mandate: '把这一笔推上去' },
+    read: readDeclaring([dir]),
+    runner,
+    runTimeoutMs: 60_000,
+    // §8's fifth ruling needs the number to come from outside the executor's own account, which is why it
+    // arrives as this injection rather than being read by the runner's `read_ci` tool.
+    readCi: async () => {
+      asked += 1;
+      return 4242;
+    },
+  });
+
+  assert.equal(
+    execution.result.evidence.pushed,
+    true,
+    `推送应当被 git 观察到：${JSON.stringify(execution.result.evidence)}｜${execution.result.lines.join(' ｜ ')}`,
+  );
+  assert.equal(execution.result.outcome, 'changed');
+  assert.equal(asked, 1, '推送被观察到时才读，且只读一次');
+  assert.equal(execution.result.evidence.ciRunId, 4242);
+  assert.equal(execution.result.evidence.ciChecked, true);
+  assert.ok(
+    execution.result.lines.some((line) => line.includes('4242')),
+    'CI run 号要出现在给人的话里',
+  );
+  assert.ok(
+    execution.result.lines.some((line) => line.includes('不能收回')),
+    '推了就是推了，这一句必须在',
+  );
+});
+
+test('没有推送就不去问 CI，但记录里仍然写清「有没有人被问过」', async () => {
+  const dir = makeRepository('t1mb2rg/quiet-repository');
+
+  let asked = 0;
+  const execution = await executeRepositoryChange({
+    request: { repository: 't1mb2rg/quiet-repository', mandate: '什么也别做' },
+    read: readDeclaring([dir]),
+    runner: {
+      async run() {
+        return { steps: 0, toolCalls: [], pushed: false, notes: [], refusedCalls: [], stopped: undefined };
+      },
+    },
+    runTimeoutMs: 60_000,
+    readCi: async () => {
+      asked += 1;
+      return 1;
+    },
+  });
+
+  assert.equal(execution.result.outcome, 'unchanged');
+  assert.equal(asked, 0, '没有推送就不该去问 CI');
+  assert.equal(execution.result.evidence.ciRunId, undefined);
+  // `ciChecked` is about whether anyone was asked, and it stays true even though the question was never
+  // put — the distinction the file keeps is between "no number" and "nobody looked".
+  assert.equal(execution.result.evidence.ciChecked, true);
 });

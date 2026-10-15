@@ -107,7 +107,24 @@ export { renderSpokenOccurrence, renderSpokenProposal, renderSpokenReturn } from
 // asking a question has to wait longer than the server can legitimately take, and `cli/ask.ts` cannot
 // size its wait against a number it would otherwise have to copy. It is the owner's number, so it
 // travels from the owner.
-export { MODEL_TIMEOUT_MS } from './model.js';
+//
+// `createHttpModel` and `readModelCredential` are exported for a different and narrower reason: there is
+// exactly one model transport in this build, and more than one thing drives it. Language drives it to
+// answer a human; `repository-change-executor` drives it to change a repository, with its own tool set
+// and its own loop, and it must not grow a second way of talking to an endpoint. What travels is the
+// transport, not the vocabulary: the executor's tools are its own, none of them is a Language exposure,
+// and nothing here lets a model reach anything Language would not also have reached.
+export { createHttpModel, MODEL_TIMEOUT_MS, readModelCredential, REASONING_EFFORTS } from './model.js';
+export type {
+  LanguageModel,
+  LanguageModelConnection,
+  ModelMessage,
+  ModelRequest,
+  ModelStep,
+  ModelTool,
+  ModelToolCall,
+  ReasoningEffort,
+} from './model.js';
 export {
   createLanguagePlugin,
   createRepositoryLanguagePlugin,

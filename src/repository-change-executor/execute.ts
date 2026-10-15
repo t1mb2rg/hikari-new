@@ -50,6 +50,15 @@ export interface ExecuteRepositoryChangeInput {
   readonly runner: RepositoryChangeRunner | undefined;
   /** How long the whole runner call may take. Reaching it aborts the runner's signal. */
   readonly runTimeoutMs: number;
+  /**
+   * Reads the CI run that followed a push, if anyone can.
+   *
+   * Absent means nobody was asked, which the evidence records as `ciChecked: false` rather than as "there
+   * was no run" — the two are different claims and only one of them is known here. This is Hikari asking
+   * after the fact, and it is deliberately not the runner's `read_ci` tool: §8's fifth ruling wants the
+   * number in the record from a source outside the executor's own account.
+   */
+  readonly readCi?: () => Promise<number | undefined>;
   readonly budgets?: GitBudgets;
 }
 
@@ -148,14 +157,28 @@ export async function executeRepositoryChange(
   // and left no trace is not evidence that nothing was touched, and §5.2 forbids filing it that way.
   const outcome = judgement.outcome === 'changed' ? 'changed' : halt !== undefined ? 'unknown' : judgement.outcome;
 
+  // §8's fifth ruling: once a push has been observed, the evidence has to name the CI run that followed
+  // it, because push is the one step in this slice a local rollback cannot undo. Read here, afterwards,
+  // and never taken from the runner's own account — a report saying "I pushed and CI is green" would be
+  // the self-description §3.3 forbids recording as a verified fact. A read that fails leaves the number
+  // absent rather than inventing one, and `ciChecked` says whether anyone was asked at all.
+  let ciRunId: number | undefined;
+  if (judgement.pushed && input.readCi !== undefined) {
+    try {
+      ciRunId = await input.readCi();
+    } catch {
+      ciRunId = undefined;
+    }
+  }
+
   const evidence: RepositoryChangeEvidence = {
     headBefore: before.head,
     headAfter: after.head,
     dirtyBefore: before.readable ? isDirty(before) : undefined,
     dirtyAfter: after.readable ? isDirty(after) : undefined,
     pushed: judgement.pushed,
-    ciRunId: undefined,
-    ciChecked: false,
+    ciRunId,
+    ciChecked: input.readCi !== undefined,
   };
 
   facts.push(

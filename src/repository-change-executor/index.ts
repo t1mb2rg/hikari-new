@@ -51,6 +51,37 @@ export {
 
 export { containTarget, foldPath, isInside, realPathOf, type ContainmentVerdict } from './containment.js';
 
+export { repositoryChangeEndpointPath } from './endpoint-path.js';
+
+export { RepositoryChangeError } from './errors.js';
+
+export {
+  listenRepositoryChangeEndpoint,
+  type RepositoryChangeEndpoint,
+  type RepositoryChangeHost,
+} from './endpoint.js';
+
+export {
+  decodeRepositoryChangeReply,
+  decodeRepositoryChangeRequest,
+  encodeRepositoryChangeReply,
+  encodeRepositoryChangeRequest,
+  EXECUTOR_PROTOCOL,
+  MAX_EXECUTOR_REQUEST_LINE,
+  RepositoryChangeLineReader,
+  type DecodedRepositoryChangeReply,
+  type DecodedRepositoryChangeRequest,
+  type RepositoryChangeLineRead,
+  type RepositoryChangeWireReply,
+  type RepositoryChangeWireRequest,
+} from './protocol.js';
+
+export {
+  createRepositoryChangeExecutorPlugin,
+  DEFAULT_RUN_TIMEOUT_MS,
+  type RepositoryChangeExecutorOptions,
+} from './plugin.js';
+
 export { repositoryNameFromUrl, resolveDeclaredRoot, type ScopeResolution } from './scope.js';
 
 export {
@@ -63,6 +94,14 @@ export {
   type ToolArguments,
 } from './tools.js';
 
+export {
+  performTool,
+  type PerformedTool,
+  type PerformToolInput,
+} from './perform.js';
+
+export { createRepositoryChangeRunner, type ModelLoopOptions } from './loop.js';
+
 export type {
   RepositoryChangeEvidence,
   RepositoryChangeHalt,
@@ -72,5 +111,7 @@ export type {
   RepositoryChangeRunReport,
   RepositoryChangeRunRequest,
   RepositoryChangeRunner,
+  RepositoryChangeStopped,
   RepositoryChangeToolUse,
 } from './types.js';
+
