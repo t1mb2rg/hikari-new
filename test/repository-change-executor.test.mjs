@@ -20,11 +20,13 @@ import {
   createRepositoryChangeExecutorPlugin,
   createRepositoryChangeRunner,
   executeRepositoryChange,
+  findPushedCommit,
   findTool,
   judgeOutcome,
   mandateFactDraft,
   performTool,
   readToolArguments,
+  repositoryChangeActionsService,
   repositoryNameFromUrl,
   resolveDeclaredRoot,
   resultFactDraft,
@@ -87,6 +89,26 @@ function readDeclaring(roots) {
 
 function snapshotOf(overrides) {
   return { readable: true, head: 'a'.repeat(40), statusDigest: 'clean', unpushed: 0, ...overrides };
+}
+
+/**
+ * A chronicle that behaves like the real one for the two things these tests need: facts come back with
+ * ids, and the whole store can be read back. The ids are invented here because the real store invents
+ * them too — needing one is exactly why the history contract asks for a `factId` and not a fact.
+ */
+function memoryChronicle(appended) {
+  const stored = [];
+
+  return {
+    append: async (draft) => {
+      const fact = { ...draft, factId: `fact-${stored.length + 1}`, recordedAt: draft.occurredAt };
+      stored.push(fact);
+      appended.push(fact);
+      return fact;
+    },
+    get: async (factId) => stored.find((fact) => fact.factId === factId),
+    read: async () => [...stored],
+  };
 }
 
 test('三态：HEAD 或工作区变了就是 changed，两者都没变才是 unchanged', () => {
@@ -376,6 +398,127 @@ test('事实：结果事实里没有 halt 字段就是「没有 halt」，有就
   });
   assert.equal(with_.payload.halt, 'executor-failed');
   assert.equal(with_.payload.headBefore, null);
+});
+
+// --- 历史读回：这一笔是不是它推上去的 ---
+//
+// The whole rule is three verbatim equalities, so the tests are about the ways a "close enough" would
+// creep in: a folded case, a trimmed space, a `false` read as a claim, a neighbour's fact read as ours,
+// a version nobody has seen. Every one of them has to come back as "my record does not say so".
+
+const COMMIT = 'c'.repeat(40);
+
+/** One durable fact, shaped the way the chronicle stores them, with a payload this family writes. */
+function fact(overrides = {}) {
+  const { payload = {}, ...rest } = overrides;
+
+  return {
+    factId: 'f1',
+    type: RESULT_FACT_TYPE,
+    version: 1,
+    occurredAt: '2026-10-16T13:00:00.000Z',
+    recordedAt: '2026-10-16T13:00:00.000Z',
+    source: { kind: 'repository-change-executor.run' },
+    ...rest,
+    payload: {
+      repository: 't1mb2rg/x',
+      executor: EXECUTOR_IDENTITY,
+      outcome: 'changed',
+      headBefore: null,
+      headAfter: COMMIT,
+      dirtyBefore: false,
+      dirtyAfter: false,
+      pushed: true,
+      ciRunId: null,
+      ciChecked: false,
+      ...payload,
+    },
+  };
+}
+
+/** The same fact with a payload this family would never write — a file can be edited. */
+function factWithRawPayload(factId, payload) {
+  return { ...fact({ factId }), payload };
+}
+
+test('历史：仓库、提交、pushed 三条逐字相等，才算「这一笔是它推的」', () => {
+  const asked = { repository: 't1mb2rg/x', commit: COMMIT };
+  assert.equal(findPushedCommit([fact()], asked).factId, 'f1');
+
+  assert.equal(findPushedCommit([fact()], { repository: 't1mb2rg/y', commit: COMMIT }), undefined);
+  assert.equal(findPushedCommit([fact()], { repository: 't1mb2rg/x', commit: 'd'.repeat(40) }), undefined);
+  // 不折叠大小写、不 trim、不按前缀匹配 —— 相等就是相等。
+  assert.equal(findPushedCommit([fact()], { repository: 'T1MB2RG/X', commit: COMMIT }), undefined);
+  assert.equal(findPushedCommit([fact()], { repository: 't1mb2rg/x ', commit: COMMIT }), undefined);
+  assert.equal(findPushedCommit([fact()], { repository: 't1mb2rg', commit: COMMIT }), undefined);
+  assert.equal(findPushedCommit([fact()], { repository: 't1mb2rg/x', commit: COMMIT.slice(0, 7) }), undefined);
+});
+
+test('历史：pushed 必须是 true —— false 是「没推」，null 是「读不到」，都不是「它推了」', () => {
+  const asked = { repository: 't1mb2rg/x', commit: COMMIT };
+  assert.equal(findPushedCommit([fact({ payload: { pushed: false } })], asked), undefined);
+  assert.equal(findPushedCommit([fact({ payload: { pushed: null } })], asked), undefined);
+  assert.equal(findPushedCommit([fact({ payload: { pushed: 'true' } })], asked), undefined);
+});
+
+test('历史：答案只有时间与事实 id，冻结，并且指向那条事实本身', () => {
+  const record = findPushedCommit([fact({ factId: 'f9', occurredAt: '2026-10-16T13:01:44.000Z' })], {
+    repository: 't1mb2rg/x',
+    commit: COMMIT,
+  });
+
+  assert.deepEqual(record, { occurredAt: '2026-10-16T13:01:44.000Z', factId: 'f9' });
+  assert.equal(Object.isFrozen(record), true);
+});
+
+test('历史：多条都算数时取最近的一条，平局取事实 id 大的那条，且与读到的顺序无关', () => {
+  const asked = { repository: 't1mb2rg/x', commit: COMMIT };
+  const early = fact({ factId: 'b', occurredAt: '2026-10-16T13:00:00.000Z' });
+  const late = fact({ factId: 'a', occurredAt: '2026-10-16T14:00:00.000Z' });
+
+  assert.equal(findPushedCommit([early, late], asked).factId, 'a');
+  assert.equal(findPushedCommit([late, early], asked).factId, 'a');
+
+  const tieB = fact({ factId: 'b', occurredAt: '2026-10-16T13:00:00.000Z' });
+  const tieZ = fact({ factId: 'z', occurredAt: '2026-10-16T13:00:00.000Z' });
+
+  assert.equal(findPushedCommit([tieB, tieZ], asked).factId, 'z');
+  assert.equal(findPushedCommit([tieZ, tieB], asked).factId, 'z');
+});
+
+test('历史：一次「推了、然后中途失败」的运行照样算数 —— outcome 与 halt 不参与这个判断', () => {
+  const record = findPushedCommit(
+    [fact({ payload: { outcome: 'unknown', halt: 'executor-failed' } })],
+    { repository: 't1mb2rg/x', commit: COMMIT },
+  );
+
+  assert.equal(record.factId, 'f1');
+});
+
+test('历史：别人的事实、别的版本、坏掉的 payload 全都跳过，不猜也不抛', () => {
+  const asked = { repository: 't1mb2rg/x', commit: COMMIT };
+
+  const othersFact = {
+    ...fact({ factId: 'neighbour' }),
+    type: 'work-focus.changed',
+  };
+
+  const facts = [
+    othersFact,
+    fact({ factId: 'v2', version: 2 }),
+    factWithRawPayload('not-object', 'a string'),
+    factWithRawPayload('an-array', [1, 2, 3]),
+    factWithRawPayload('missing-head-after', { repository: 't1mb2rg/x', pushed: true }),
+    factWithRawPayload('missing-repository', { headAfter: COMMIT, pushed: true }),
+    fact({ factId: 'good' }),
+  ];
+
+  assert.equal(findPushedCommit(facts, asked).factId, 'good');
+  assert.equal(findPushedCommit([], asked), undefined);
+  assert.equal(
+    findPushedCommit([factWithRawPayload('nothing-right', { repository: 't1mb2rg/x', headAfter: COMMIT, pushed: false })], asked),
+    undefined,
+  );
 });
 
 test('执行：空 mandate 什么都不做，也不留事实', async () => {
@@ -1028,24 +1171,20 @@ test('插件：真插件 + 假工厂跑完一轮，模型没失败、文件真�
     runTimeoutMs: 20_000,
   });
 
+  const provided = new Map();
   const services = new Map([
     [changeableRepositoriesReadService, readDeclaring([root])],
-    [
-      chronicleService,
-      {
-        append: async (fact) => {
-          appended.push(fact);
-          return { ...fact };
-        },
-      },
-    ],
+    [chronicleService, memoryChronicle(appended)],
     [gitHubCiService, { current: async () => ({ latestRun: { kind: 'absent' } }) }],
   ]);
 
   await plugin.setup(
     {
       pluginId: plugin.id,
-      services: { get: (contract) => services.get(contract) },
+      services: {
+        get: (contract) => services.get(contract),
+        provide: (contract, value) => provided.set(contract, value),
+      },
       events: {},
       defer: (cleanup) => cleanups.push(cleanup),
     },
@@ -1065,6 +1204,10 @@ test('插件：真插件 + 假工厂跑完一轮，模型没失败、文件真�
       appended.map((fact) => fact.type),
       [MANDATE_FACT_TYPE, RESULT_FACT_TYPE],
     );
+
+    // The executor's public surface is no longer empty: whoever composes this plugin can ask it the
+    // question the history review is about, without the executor deciding who may ask.
+    assert.equal(typeof provided.get(repositoryChangeActionsService)?.pushedCommit, 'function');
   } finally {
     await Promise.all(cleanups.map((cleanup) => cleanup()));
   }
@@ -1087,7 +1230,10 @@ test('插件：同一个工厂出两个定义，接 CI 的那个多要一个 CI 
   ]);
   assert.deepEqual(watchingNothing.requires, [changeableRepositoriesReadService, chronicleService]);
   assert.equal(watching.id, watchingNothing.id, '同一个 id：至多一个被加载');
-  assert.equal(watching.provides.length, 0, '两个定义都不新增对外 contract');
+  // Both definitions offer the same one contract: what separates them is what they *need*, never what
+  // they provide. So a deployment that watches nothing can still answer "was this commit pushed?".
+  assert.deepEqual(watching.provides, [repositoryChangeActionsService]);
+  assert.deepEqual(watchingNothing.provides, [repositoryChangeActionsService]);
 });
 
 test('插件 + CI：推上去的那一笔，CI run 号来自组合加载的观测，而不是执行者自己的说法', {
@@ -1134,17 +1280,10 @@ test('插件 + CI：推上去的那一笔，CI run 号来自组合加载的观�
   };
 
   let asked = 0;
+  const provided = new Map();
   const services = new Map([
     [changeableRepositoriesReadService, readDeclaring([root])],
-    [
-      chronicleService,
-      {
-        append: async (fact) => {
-          appended.push(fact);
-          return { ...fact };
-        },
-      },
-    ],
+    [chronicleService, memoryChronicle(appended)],
     [
       gitHubCiService,
       {
@@ -1167,7 +1306,10 @@ test('插件 + CI：推上去的那一笔，CI run 号来自组合加载的观�
   await plugin.setup(
     {
       pluginId: plugin.id,
-      services: { get: (contract) => services.get(contract) },
+      services: {
+        get: (contract) => services.get(contract),
+        provide: (contract, value) => provided.set(contract, value),
+      },
       events: {},
       defer: (cleanup) => cleanups.push(cleanup),
     },
@@ -1190,6 +1332,18 @@ test('插件 + CI：推上去的那一笔，CI run 号来自组合加载的观�
     // record carries. A definition that wired only one of the two would be caught right here.
     assert.equal(asked, 2, '模型问一次、记录问一次，都走同一个 CI 观测');
     assert.ok(existsSync(join(root, 'NOTES.md')), '这一轮真的写了文件');
+
+    // And here is the point of the whole slice: the fact this run just wrote is enough for someone who
+    // was not there to establish that *this* commit was pushed — and a commit nobody pushed gets no
+    // answer at all, rather than a guess.
+    const actions = provided.get(repositoryChangeActionsService);
+    assert.ok(actions, '两个定义都提供同一个契约');
+
+    const record = await actions.pushedCommit({ repository, commit: result.payload.headAfter });
+
+    assert.equal(record.factId, result.factId, '答案指向写下这一笔的那条事实');
+    assert.equal(record.occurredAt, result.occurredAt);
+    assert.equal(await actions.pushedCommit({ repository, commit: 'e'.repeat(40) }), undefined);
   } finally {
     await Promise.all(cleanups.map((cleanup) => cleanup()));
   }

@@ -1,11 +1,19 @@
 // The executor, as a plugin.
 //
 // The human who types an instruction reaches this plugin over its own endpoint; that is a client, and it
-// is not a reason to register anything. Nothing inside the composition asks this plugin for a change yet,
-// so **this plugin provides nothing** — and the emptiness is a decision rather than an omission, the same
-// one `changeable-repositories` recorded before its reader arrived: a contract published for a consumer
-// that does not exist is what `plugin-design-spec.md` §16 refuses. The trigger to watch for is a caller
-// inside the composition that needs a change made and is not this plugin's own CLI.
+// is not a reason to register anything. For its first slice this plugin provided **nothing**, and the
+// emptiness was a decision rather than an omission — the same one `changeable-repositories` recorded
+// before its reader arrived: a contract published for a consumer that does not exist is what
+// `plugin-design-spec.md` §16 refuses.
+//
+// A consumer has since arrived, and it is not the one that note was watching for. That note read "a
+// caller inside the composition that needs a change made"; the caller that came needs to *read* — it asks
+// whether a commit a failing CI run ran against is one this executor pushed. The human confirmed that
+// this is the same ruling applied to a second capability rather than the old trigger satisfied by
+// word-play, and the L2 review (`docs/architecture/repository-change-history-readback-v0-boundary-review.md`)
+// records the deviation in full. So this plugin now provides exactly one thing, and it is that question:
+// one repository, one commit, one record or nothing. There is still **no way to make it do anything** —
+// a mandate comes from a person's own sentence and from nowhere else.
 //
 // It requires two things and writes one of them. `changeable-repositories.read@1` is the declaration set:
 // the range check happens against it before anything starts, and a repository that is not in it is a
@@ -41,11 +49,17 @@ import { gitHubCiService } from '../github-ci/index.js';
 import type { LanguageModel } from '../language/model.js';
 import type { PluginDefinition } from '../runtime/plugin.js';
 
+import { repositoryChangeActionsService } from './contracts.js';
 import { listenRepositoryChangeEndpoint } from './endpoint.js';
 import { repositoryChangeEndpointPath } from './endpoint-path.js';
 import { RepositoryChangeError } from './errors.js';
 import { executeRepositoryChange } from './execute.js';
 import type { GitBudgets } from './git.js';
+import {
+  findPushedCommit,
+  type RepositoryChangeActionQuery,
+  type RepositoryChangeActionRecord,
+} from './history.js';
 import { createRepositoryChangeRunner } from './loop.js';
 
 /** How long one run may take, when the composition does not say otherwise. */
@@ -86,7 +100,10 @@ export function createRepositoryChangeExecutorPlugin(
       options.watchesCi === true
         ? [changeableRepositoriesReadService, chronicleService, gitHubCiService]
         : [changeableRepositoriesReadService, chronicleService],
-    provides: [],
+    // The one thing it publishes, and both definitions publish it: what differs between them is what
+    // they *require* of CI, never what they offer. A deployment that watches no repository still has a
+    // history worth asking about — the consumer's question is about commits, not about runs.
+    provides: [repositoryChangeActionsService],
     async setup(context) {
       const path = repositoryChangeEndpointPath(options.dataDir);
       if (path === undefined) {
@@ -99,6 +116,28 @@ export function createRepositoryChangeExecutorPlugin(
       // Pulled once, at activation, and held for the activation — the same lifetime the endpoint has.
       const read = context.services.get(changeableRepositoriesReadService);
       const chronicle = context.services.get(chronicleService);
+
+      // The one answer this plugin gives to anything but the person at the pipe. A named function with
+      // its own signature rather than an inline method, for the reason the other providers in this
+      // repository give: the contract's type has to reach the parameter, and an inline method inside
+      // `Object.freeze` does not give the compiler the context to check it.
+      //
+      // A store that cannot be read is reported as "my record does not say so" and never as an exception.
+      // This reader exists so that one judgement can be better informed; a chronicle that will not open
+      // must not become the reason that judgement fails. What it must not do is answer "no" — the answer
+      // is a record or nothing, and the caller falls back to what it would have said with no history at
+      // all. The asymmetry is the same one the rest of this path takes: toward speaking, never silence.
+      async function pushedCommit(
+        query: RepositoryChangeActionQuery,
+      ): Promise<RepositoryChangeActionRecord | undefined> {
+        try {
+          return findPushedCommit(await chronicle.read(), query);
+        } catch {
+          return undefined;
+        }
+      }
+
+      context.services.provide(repositoryChangeActionsService, Object.freeze({ pushedCommit }));
 
       // The CI observation, on the one definition the composition loads for a deployment that watches a
       // repository. Both readings come from the same service and are wired together or not at all: the

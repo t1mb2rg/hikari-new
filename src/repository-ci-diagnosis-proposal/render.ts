@@ -21,6 +21,11 @@
 //   * the designation is quoted, not re-derived. When relevance matched, it matched on a string, and
 //     that string is printed as the reason this suggestion is about this repository at all. A suggestion
 //     whose basis is not printed is a suggestion a human has to take on faith.
+//
+//   * an origin is not a cause. `inspect-own-action` says the failing run ran against a commit that an
+//     earlier run of Hikari's own record says it pushed, and it names that record — the time and the
+//     fact id — so a reader can go and read it. It does **not** say that action broke anything; the
+//     sentence says so out loud, in the same breath, for the same reason the `different` sentence does.
 
 import type { RepositoryCiDiagnosisEvidence, RepositoryCiDiagnosisSuggestion } from './types.js';
 
@@ -63,6 +68,12 @@ export function renderProposal(suggestion: RepositoryCiDiagnosisSuggestion): rea
         ...lines,
         '这次运行用的提交与工作树报告的提交逐字相同——这个模块没有读过运行日志。',
         '可以先看这次运行自己失败的步骤。',
+      ];
+    case 'inspect-own-action':
+      return [
+        ...lines,
+        `这次运行用的提交，是 Hikari 自己的一次行动推上去的：${suggestion.evidence.ownAction.occurredAt}（记录 ${suggestion.evidence.ownAction.factId}）。`,
+        '这仍然是一个字符串比较，不代表那次行动就是失败的原因——可以先看那次行动自己的记录。',
       ];
   }
 }

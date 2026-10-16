@@ -29,7 +29,20 @@
 // template. A rule set that produced the same sentence in all three cases would pass a test that only
 // checked "a suggestion was produced" and would be exactly the notification template the review rules
 // out — which is why the test asserts the three cases differ and that each names its own evidence.
+//
+// **One of the three arms can be replaced, and only that one.** When the caller also hands in the
+// executor's own answer that *this* commit was pushed by an earlier run of Hikari's, `different` becomes
+// `inspect-own-action`: the difference between the run's commit and the working tree is no longer of
+// unknown origin, so the honest next step is no longer "check which version you are looking at" but
+// "look at that earlier action's own record". `same` and `indeterminate` are deliberately untouched by
+// that material: `same`'s suggestion is still correct with a record in hand — swapping it would only be
+// pasting one more fact onto it — and `indeterminate` still has nothing specific to say.
+//
+// What the new arm must **not** be read as: a cause. Three string equalities say the failing run ran
+// against a commit this executor pushed. They do not say the push broke anything, and no wording derived
+// from here is allowed to imply it.
 
+import type { RepositoryChangeActionRecord } from '../repository-change-executor/index.js';
 import type { RepositoryCiCommitAssessment } from '../repository-ci-awareness/types.js';
 import type { RepositoryCiAttentionOccurrence } from '../repository-ci-attention/types.js';
 import type { RepositoryCiRelevanceJudgement } from '../repository-ci-relevance/types.js';
@@ -59,13 +72,18 @@ function insufficient(missing: RepositoryCiDiagnosisMissing): RepositoryCiDiagno
  * A `relevant` judgement always carries the string it matched on, so `evidence.designation` is filled
  * from the judgement rather than recomputed here. This module does not decide relevance and does not
  * repeat the comparison that decided it.
+ *
+ * `ownAction` is not acquired here either. It is the executor's answer, asked by the caller, or
+ * `undefined` — which means "its record does not say so" and is the only value this rule can act on
+ * besides a record. A caller that could not ask passes nothing and gets exactly today's answer.
  */
 export function judgeProposal(input: {
   readonly occurrence: RepositoryCiAttentionOccurrence;
   readonly assessment: RepositoryCiCommitAssessment;
   readonly relevance: RepositoryCiRelevanceJudgement;
+  readonly ownAction?: RepositoryChangeActionRecord | undefined;
 }): RepositoryCiDiagnosisProposal {
-  const { occurrence, assessment, relevance } = input;
+  const { occurrence, assessment, relevance, ownAction } = input;
 
   // The snapshot is asked for its CI facet even though a failure normally implies one, because
   // "normally" is not a guarantee this layer gets to hold: `unavailable` is a state the World can
@@ -88,7 +106,14 @@ export function judgeProposal(input: {
 
   switch (assessment.commitComparison) {
     case 'different':
-      return Object.freeze({ kind: 'check-commit-alignment', evidence });
+      // The one arm a record can replace. Without one, this is unchanged, word for word and value for
+      // value: the difference is real and its origin is unknown.
+      return ownAction === undefined
+        ? Object.freeze({ kind: 'check-commit-alignment', evidence })
+        : Object.freeze({
+            kind: 'inspect-own-action',
+            evidence: Object.freeze({ ...evidence, ownAction }),
+          });
     case 'same':
       return Object.freeze({ kind: 'inspect-run-steps', evidence });
     case 'indeterminate':

@@ -2,10 +2,19 @@
 //
 // What this package exports is a set of *parts* — a git runner, a containment check, a scope
 // resolution, a tool table, an outcome judgement, two fact drafts, and the one function that puts them
-// in order. It deliberately exports no Service: §3 of the implementation boundary freeze records the
-// ruling that this slice's consumers are the human who typed the word and the record it leaves, and
-// a contract published before either of them arrives would be a contract shaped by nobody. The
-// `provides` array of the plugin is therefore empty, and this file has no `…Service` to export.
+// in order. It exported no Service for its first slice: §3 of the implementation boundary freeze
+// recorded the ruling that this slice's consumers are the human who typed the word and the record it
+// leaves, and a contract published before either of them arrives would be a contract shaped by nobody. A
+// third consumer has since arrived — `repository-ci-diagnosis-proposal`, which asks whether a commit a
+// failing CI run ran against is one this executor pushed — so this package now exports exactly one
+// Service (`contracts.ts`) and the pure rule behind it (`history.ts`), and the review that approved it
+// records why that is the same ruling rather than an exception to it. What it still does not export is
+// any way to make the executor do something: a mandate comes from a person's own sentence.
+
+export {
+  repositoryChangeActionsService,
+  type RepositoryChangeActionsService,
+} from './contracts.js';
 //
 // The public surface is exactly the names below. Anything added here becomes something another module
 // may depend on, so the exports are grouped by concern and each group is the smallest set its own
@@ -39,6 +48,12 @@ export {
   type GitBudgets,
   type GitRun,
 } from './git.js';
+
+export {
+  findPushedCommit,
+  type RepositoryChangeActionQuery,
+  type RepositoryChangeActionRecord,
+} from './history.js';
 
 export {
   isDirty,

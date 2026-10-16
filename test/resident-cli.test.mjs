@@ -363,6 +363,18 @@ test('两个主动授权各自带来自己的决定者，投递在两种授权�
   ]);
   assert.equal(both.filter((id) => id === 'human-delivery').length, 1);
 
+  // The implication this slice added, asserted as a relation rather than as one more literal: the
+  // diagnosis asks the executor's own record, so a roster holding the diagnosis and not the executor is
+  // a composition that cannot come up — and the executor has to precede it, or the contract it provides
+  // arrives after the member that requires it.
+  for (const roster of [ciOnly, both]) {
+    assert.ok(roster.includes('repository-change-executor'));
+    assert.ok(
+      roster.indexOf('repository-change-executor') < roster.indexOf('repository-ci-diagnosis-proposal'),
+      '执行者必须排在诊断之前',
+    );
+  }
+
   // Neither mandate, neither member — including the transport, which on its own is a pipe nothing writes
   // to: the cosmetic `provides` the design spec's MUST forbids.
   for (const absent of [...PROACTIVE_MEMBER_IDS, ...RETURN_MEMBER_IDS]) {

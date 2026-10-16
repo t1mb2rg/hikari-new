@@ -17,8 +17,10 @@ import { gitHubCiService } from '../dist/github-ci/index.js';
 import { humanDeliveryService } from '../dist/human-delivery/index.js';
 import { languageDiagnosisSpeakingService, languageSpeakingService } from '../dist/language/index.js';
 import { repositoryCiAwarenessService } from '../dist/repository-ci-awareness/index.js';
-import { judgeProposal } from '../dist/repository-ci-diagnosis-proposal/index.js';
+import { judgeProposal, renderProposal } from '../dist/repository-ci-diagnosis-proposal/index.js';
 import { repositoryCiDiagnosisProposalService } from '../dist/repository-ci-diagnosis-proposal/index.js';
+import { repositoryCiDiagnosisProposalPlugin } from '../dist/repository-ci-diagnosis-proposal/index.js';
+import { repositoryChangeActionsService } from '../dist/repository-change-executor/index.js';
 import {
   deliveryFactDraft,
   detectNewFailure,
@@ -1398,6 +1400,87 @@ test('三种 commitComparison 得到三种不同的结果，每一种都点出�
   assert.equal('evidence' in indeterminate, false);
 });
 
+test('历史：只有 different 那一支会被记录换掉，另外两支逐字不动', () => {
+  // ② and ③ of the L2 review's acceptance table, and the whole of its §2.3. The record arrives as an
+  // argument — this module never fetches it — and the two negative claims are the ones worth pinning:
+  // without a record the answer is exactly today's, and the arms a record has no business touching do
+  // not move even when one is in hand.
+  const occurrence = Object.freeze({
+    repository: REPOSITORY,
+    runId: 41,
+    workflow: 'CI',
+    headBranch: 'main',
+    headSha: HEAD_SHA,
+    conclusion: 'failure',
+    observedAt: OBSERVED_AT,
+  });
+  const assessmentFor = (commitComparison) =>
+    Object.freeze({
+      snapshot: Object.freeze({
+        snapshotAt: OBSERVED_AT,
+        gitRepository: Object.freeze({ kind: 'unavailable' }),
+        githubCi: Object.freeze({ kind: 'available', observation: Object.freeze({}) }),
+      }),
+      commitComparison,
+    });
+  const relevance = Object.freeze({
+    verdict: 'relevant',
+    designation: `local root = ${REPOSITORY}`,
+    via: Object.freeze({ kind: 'verbatim' }),
+  });
+  const ask = (commitComparison, ownAction) =>
+    judgeProposal({ occurrence, assessment: assessmentFor(commitComparison), relevance, ownAction });
+
+  assert.equal(ask('different', undefined).kind, 'check-commit-alignment', '没有记录就是今天这一支');
+  assert.equal(
+    ask('different', undefined).evidence.ownAction,
+    undefined,
+    '这一支的证据里不该多出一个字段',
+  );
+
+  const record = Object.freeze({ occurredAt: '2026-10-16T13:01:44.000Z', factId: 'fact-7' });
+  const own = ask('different', record);
+
+  assert.equal(own.kind, 'inspect-own-action');
+  assert.equal(own.evidence.ownAction.factId, 'fact-7');
+  assert.equal(own.evidence.ownAction.occurredAt, '2026-10-16T13:01:44.000Z');
+  // The record replaces the *suggestion*; the material it was made of still travels with it.
+  assert.equal(own.evidence.headSha, HEAD_SHA);
+  assert.equal(own.evidence.commitComparison, 'different');
+  assert.equal(own.evidence.designation, `local root = ${REPOSITORY}`);
+
+  // 逐字不动：同样的输入，一条记录在场也不改变这两支。
+  assert.deepEqual(ask('same', record), ask('same', undefined));
+  assert.deepEqual(ask('indeterminate', record), ask('indeterminate', undefined));
+  assert.equal(ask('same', record).kind, 'inspect-run-steps');
+  assert.equal(ask('indeterminate', record).kind, 'insufficient-evidence');
+});
+
+test('历史：新的一支自己写句子，引那条记录，并且明说它不知道成因', () => {
+  // The renderer is the last place the inference's strength can be lost, so the sentence is checked
+  // rather than described: it names the record it is about, and it refuses the causal reading in words
+  // a human reads, not only in a comment above it.
+  const lines = renderProposal(
+    Object.freeze({
+      kind: 'inspect-own-action',
+      evidence: Object.freeze({
+        repository: REPOSITORY,
+        runId: 41,
+        headSha: HEAD_SHA,
+        commitComparison: 'different',
+        designation: `local root = ${REPOSITORY}`,
+        ownAction: Object.freeze({ occurredAt: '2026-10-16T13:01:44.000Z', factId: 'fact-7' }),
+      }),
+    }),
+  );
+  const text = lines.join('\n');
+
+  assert.ok(text.includes('fact-7'), '要引那条记录的事实 id，人才找得到它');
+  assert.ok(text.includes('2026-10-16T13:01:44.000Z'), '要引那条记录发生的时间');
+  assert.match(text, /不代表那次行动就是失败的原因/);
+  assert.equal(/因为|导致|造成的/.test(text), false, '成因不许被暗示，连词也不许');
+});
+
 test('relevance 说 unknown 时没有建议：这一层不替它决定相关性', () => {
   // The other two ways into `insufficient-evidence`, and both of them are the same refusal: this module
   // does not establish relevance, and it does not invent a job to do when relevance was not established.
@@ -1538,6 +1621,31 @@ test('diagnosis 挂掉时朝「说」降级：通知照发，只是没有建议'
   assert.equal(speaking.spoken.length, 1, '降级之后走的必须是普通播报面');
   assert.equal(speaking.suggestions.length, 0);
   assert.equal(delivery.delivered[0], speaking.spoken[0].lines);
+});
+
+test('历史：诊断的 requires 多了一条，而它仍然不自己读事实史', () => {
+  // ⑦ of the acceptance table, at the level a roster cannot see: the diagnosis asks the executor's own
+  // record through one contract, and it does not reach for the store. The source scan is the mechanical
+  // half of that claim — a module that read `chronicle` directly would pass every behavioural test above
+  // and still be the thing the review's §2.4 forbids: a consumer interpreting another owner's facts.
+  assert.deepEqual(
+    repositoryCiDiagnosisProposalPlugin.requires.map((contract) => `${contract.id}@${contract.version}`),
+    ['repository-ci-relevance.judge@1', 'repository-change-executor.actions@1'],
+  );
+  assert.deepEqual(
+    repositoryCiDiagnosisProposalPlugin.provides.map((contract) => `${contract.id}@${contract.version}`),
+    ['repository-ci-diagnosis-proposal.propose@1'],
+  );
+
+  const offenders = sourceFiles(DIAGNOSIS_SOURCE).filter((file) =>
+    /\bchronicleService\b|\bopenChronicle\b|\.read\(\)/.test(readFileSync(file, 'utf8')),
+  );
+
+  assert.deepEqual(
+    offenders.map((file) => relative(DIAGNOSIS_SOURCE, file).replaceAll('\\', '/')),
+    [],
+    '诊断不许自己读事实史——它只能问那条事实的 owner',
+  );
 });
 
 test('新的 diagnosis 模块里没有跟着进来通用机制', () => {
