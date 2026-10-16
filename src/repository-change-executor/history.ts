@@ -13,17 +13,29 @@
 // facts, the way `judgement.ts` is a pure function over a snapshot, so CI can test it without a pipe, a
 // process or a store. `plugin.ts` supplies the facts; this file decides what they say.
 //
-// **What "this commit" means is three verbatim equalities, and the verbatimness is the whole discipline:**
+// **What "this commit" means: two verbatim equalities and one case-insensitive one, and the split is a
+// decision that is recorded rather than folded in.**
 //
-//   1. the repository, spelled by whoever asked, equals the record's own `repository` field;
+//   1. the repository, compared **without regard to case**, equals the record's own `repository` field;
 //   2. the commit, as reported by the source that asked, equals the record's `headAfter` — the commit the
 //      run left `HEAD` at;
 //   3. the record says the run **pushed** (`pushed === true`, the three-state field's strongest value).
 //
-// No trimming, no case folding, no prefix matching, no walking the commit graph, and no "close enough".
-// A string equality is a string equality and it is not a claim about causation: that the failing run ran
-// a commit this executor pushed does **not** mean the push caused the failure, and no renderer is allowed
-// to make it sound like one (`repository-ci-diagnosis-proposal/render.ts` carries the same rule).
+// The commit id and the push claim are compared verbatim: those are the claims being made. The repository
+// is not, and that is an **amendment** (2026-10-16) to §2.2 of
+// `docs/architecture/repository-change-history-readback-v0-boundary-review.md`, which said "verbatim" for
+// all three and listed case folding among the failure conditions. Reproductions showed why verbatim is
+// wrong for this one field: the two sides are spelled by different authorities — the run's repository is
+// the GitHub API's canonical `full_name`, the record's is the local remote URL's spelling (and therefore
+// the mandate's) — and GitHub itself treats owner and repository names as case-insensitive. A verbatim
+// comparison drops the association silently, and a silent drop is indistinguishable from "there is no
+// such record": a false negative that hides a true one, with a sentence that reads as if the run's commit
+// had come from somewhere else. Nothing else about the comparison moved.
+//
+// Still no trimming, no prefix matching, no walking the commit graph, and no "close enough". A string
+// equality is a string equality and it is not a claim about causation: that the failing run ran a commit
+// this executor pushed does **not** mean the push caused the failure, and no renderer is allowed to make
+// it sound like one (`repository-ci-diagnosis-proposal/render.ts` carries the same rule).
 //
 // **Why `headAfter` and not the recorded `ciRunId`:** a commit that is re-run is a new run id, so an id
 // equality would miss the very case this is for — the same pushed commit, run again, failing now. The
@@ -108,7 +120,17 @@ export function findPushedCommit(
       readonly pushed?: unknown;
     };
 
-    if (fields.repository !== query.repository) continue;
+    // The repository is the one field compared without regard to case, and the reason is where the two
+    // sides come from. The run's repository is what the GitHub API reports as the canonical `full_name`;
+    // the record carries the spelling the local remote URL used, and therefore the spelling the mandate
+    // used. GitHub itself treats owner and repository names as case-insensitive, so the same repository
+    // legitimately arrives spelled two ways — and a verbatim comparison would drop the association
+    // silently, which reads exactly like "there is no such record" (a false negative that hides a true
+    // one). The commit id and `pushed === true` below stay verbatim: those are the claims being made.
+    const repositoryMatches =
+      typeof fields.repository === 'string' &&
+      fields.repository.toLowerCase() === query.repository.toLowerCase();
+    if (!repositoryMatches) continue;
     if (fields.headAfter !== query.commit) continue;
     // `true` and only `true`. `false` is "I did not push it" and `null` is "I could not tell" — neither
     // is the claim this reader is looking for, and treating the second as the first would turn an

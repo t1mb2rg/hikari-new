@@ -441,14 +441,17 @@ function factWithRawPayload(factId, payload) {
   return { ...fact({ factId }), payload };
 }
 
-test('历史：仓库、提交、pushed 三条逐字相等，才算「这一笔是它推的」', () => {
+test('历史：仓库（不论大小写）、提交、pushed 三条都相等，才算「这一笔是它推的」', () => {
   const asked = { repository: 't1mb2rg/x', commit: COMMIT };
   assert.equal(findPushedCommit([fact()], asked).factId, 'f1');
 
   assert.equal(findPushedCommit([fact()], { repository: 't1mb2rg/y', commit: COMMIT }), undefined);
   assert.equal(findPushedCommit([fact()], { repository: 't1mb2rg/x', commit: 'd'.repeat(40) }), undefined);
-  // 不折叠大小写、不 trim、不按前缀匹配 —— 相等就是相等。
-  assert.equal(findPushedCommit([fact()], { repository: 'T1MB2RG/X', commit: COMMIT }), undefined);
+  // 仓库名是唯一不逐字比的一栏，理由是两侧的来源不同：运行那一侧是 GitHub API 报的规范 `full_name`，
+  // 记录那一侧是本机 remote URL 的拼写（也就是 mandate 的拼写），而 GitHub 自己就不区分 owner/repo 的
+  // 大小写。逐字比会让这种情况静默地少说一句话 —— 而那看起来和「没有这条记录」一模一样。
+  assert.equal(findPushedCommit([fact()], { repository: 'T1MB2RG/X', commit: COMMIT }).factId, 'f1');
+  // 其余仍然是相等：不 trim、不按前缀匹配、不看提交前缀。
   assert.equal(findPushedCommit([fact()], { repository: 't1mb2rg/x ', commit: COMMIT }), undefined);
   assert.equal(findPushedCommit([fact()], { repository: 't1mb2rg', commit: COMMIT }), undefined);
   assert.equal(findPushedCommit([fact()], { repository: 't1mb2rg/x', commit: COMMIT.slice(0, 7) }), undefined);
@@ -508,6 +511,11 @@ test('历史：别人的事实、别的版本、坏掉的 payload 全都跳过�
     fact({ factId: 'v2', version: 2 }),
     factWithRawPayload('not-object', 'a string'),
     factWithRawPayload('an-array', [1, 2, 3]),
+    // 这一组是「守卫真的在」的证据：`payload` 不是对象时，函数在读到任何一个字段之前就要退出。
+    // 少了 null/undefined 这两种形状，那条 `payload === null` 的守卫删掉也没有测试会红。
+    factWithRawPayload('null-payload', null),
+    factWithRawPayload('undefined-payload', undefined),
+    factWithRawPayload('number-payload', 42),
     factWithRawPayload('missing-head-after', { repository: 't1mb2rg/x', pushed: true }),
     factWithRawPayload('missing-repository', { headAfter: COMMIT, pushed: true }),
     fact({ factId: 'good' }),
