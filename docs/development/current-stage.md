@@ -342,6 +342,22 @@
 > **它不证明**：模型端点是我自己起的**假模型**（一个按 OpenAI chat-completions 形状应答的本地进程），**不是**真 LLM；`--repository` 指的 `m3-local/sandbox` 在 GitHub 上**并不存在**，所以 §4 那条「push 之后的 GitHub CI run 号」**仍未在真机上满足**——它需要一个人指定的、真实存在的 GitHub 靶子。2b(ii) 同样未验证。
 >
 > **验证数字（真机测试这一轮之后）**：`npm run build` exit 0；`npm test` **1019 tests / 1015 pass / 0 fail / 4 skipped**；`test/repository-change-executor.test.mjs` **58/58**。
+>
+> **口径更新（2026-10-16 · 真机补验之后）**：上面 `:319` 把「只有单测证据」的几条如实标了出来。这一段是**补验**的结果——七场，全部是真实进程、真实命名管道、真实 HTTP 端点、真实 `hikari act`（沙箱在 `%TEMP%\hikari-m4`，靶子是本机克隆 + 本机 bare 远端）。**它抓到并修掉了一处真的偏差。**
+>
+> **补验通过的（对着冻结 §4 逐条）**：
+> ① **没声明就 `act`**：act 说「没有改动 …：它不在人类声明的可改仓库里。／人类还没有声明任何可改仓库。」，exit 1；**假模型端点一次都没有被调用**——这是「一个子进程都不起」的直接证据；事实史里只留下 mandate，没有 result。
+> ② **相对路径逃出根**：模型收到逐字拒绝「…不在这次运行被允许改的那个工作目录里：路径落在人类声明的仓库之外：…」；文件没有落盘；result = `unchanged`。
+> ③ **绝对路径写到根外**：逐字「路径必须是相对的：… 是绝对路径。」；文件没有落盘。
+> ④ **表外工具名**：逐字「没有名叫 run_shell 的工具。这个执行者只有这些工具：read_file、list_directory、git_status、git_diff、read_ci、write_file、git_commit、git_push。」——是「没听说过」，不是「拒绝」；动作没有发生。
+> ⑤ **正常结束但什么都没动**：act exit 1「没有改动 …」；result = `unchanged`，`dirtyBefore`/`dirtyAfter` 都是 `false`。
+> ⑥ **常驻没配模型**：act exit 1「没有改动 …：这次常驻没有配置执行者。」；没有子进程、没有文件改动。
+>
+> **补验抓到的那一处偏差（已修，并用真机复验）**：模型第一步真的写了 `PROBE-halfway.md`，第二步端点返回 500 失联。修之前 result 记的是 `outcome: "changed"`、act 说「已按你的原句在 … 上产生改动」——**这跟冻结不符**：冻结 §2.6 的三态表写着 `changed` =「循环结束且工作区或 `HEAD` 变了」，`unknown` =「超时、被杀、**模型或 git 失败**、无法核对」；边界评审 §5.2 更直接，`changed` 要「执行者正常结束且证据齐备」，`unknown` 覆盖「超时、被杀、**执行者中途失联**」。`execute.ts` 的判据只把「正常结束」这道门用在了 `unchanged` 上，`changed` 只看 git——于是**一次半途而废的运行被说成了「已按你的原句产生改动」**。修之后判据是：不可读、或者循环没有正常结束 → `unknown`（`halt` 说得出原因），只有正常结束才在 `changed`/`unchanged` 之间选。真机复验的输出是「无法确定 t1mb2rg/hikari-new 是否被改动。／原因：执行者中途失败。／记录里写的是这一条，而不是「没有改动」。」，事实里 `outcome: "unknown"`、`halt: "executor-failed"`，而 `dirtyAfter: true` **仍然留在证据里**——「工作区确实变了」这件事没有被丢掉，丢掉的只是「这次运行做完了」这个不成立的说法。回归测试：`test/repository-change-executor.test.mjs` 的「执行：循环没跑完就是 unknown —— 即使工作区真的被改过了」。
+>
+> **两处仍如实的缺口（不在这一片修）**：① 拒绝启动的那几条（没声明 / 没模型 / 路径不是仓库根 / mandate 为空）**不写 result 事实**，Chronicle 里只留下 mandate——人从 act 输出能看到原因，但只读事实史看不出「这一次被拒绝了」；② 证据栏里没有「停在哪一步、为什么停」（`RepositoryChangeRunReport.stopped` 进了 `report`，没进事实）。
+>
+> **验证数字（补验这一轮之后）**：`npm run build` exit 0；`npm test` **1020 tests / 1016 pass / 0 fail / 4 skipped**；`test/repository-change-executor.test.mjs` **59/59**；`detect_changes --scope all` → 2 个文件、**无索引符号重叠**（与既存先例一致，不是没跑）。
 
 ---
 

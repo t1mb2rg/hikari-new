@@ -506,6 +506,41 @@ test('执行：执行者失败而仓库没有痕迹 —— 是 unknown，绝不�
   assert.equal(execution.result.lines.some((line) => line.startsWith('没有改动')), false);
 });
 
+// 这一条来自真机：模型先真的写了一个文件，然后端点消失（500）。工作区确实变了，但循环没有正常结束。
+// §5.2 的 `changed` 要求「执行者正常结束且证据齐备」，所以这一条只能是 unknown —— 只看工作区变没变，
+// 会把一次半途而废的运行说成「已按你的原句产生改动」。
+test('执行：循环没跑完就是 unknown —— 即使工作区真的被改过了', async () => {
+  const dir = makeRepository('t1mb2rg/stopped-halfway');
+  const execution = await executeRepositoryChange({
+    request: { repository: 't1mb2rg/stopped-halfway', mandate: '改一下' },
+    read: readDeclaring([dir]),
+    runner: {
+      run: async () => {
+        writeFileSync(join(dir, 'halfway.md'), '写到一半\n');
+        return {
+          steps: ['write_file'],
+          toolCalls: 1,
+          pushed: false,
+          notes: ['模型在第 1 步失败了：模型端点的应答是 500。'],
+          refusedCalls: [],
+          stopped: { atStep: 1, reason: 'model-failed' },
+        };
+      },
+    },
+    runTimeoutMs: 5_000,
+  });
+
+  assert.equal(execution.result.outcome, 'unknown');
+  assert.equal(execution.result.halt, 'executor-failed');
+  assert.equal(execution.facts[1].payload.outcome, 'unknown');
+  // 工作区确实变了这件事仍然在证据里 —— 不知道的是「这次运行有没有做完」，不是「有没有动过」。
+  assert.equal(execution.result.evidence.dirtyBefore, false);
+  assert.equal(execution.result.evidence.dirtyAfter, true);
+  assert.equal(execution.result.lines[0].startsWith('无法确定'), true);
+  assert.equal(execution.result.lines.some((line) => line.startsWith('已按你的原句')), false);
+  assert.equal(execution.result.lines.some((line) => line.includes('中途失败')), true);
+});
+
 test('执行：超出时间预算也是 unknown，并且说的是「被中止」', async () => {
   const dir = makeRepository('t1mb2rg/timed-out');
   const execution = await executeRepositoryChange({

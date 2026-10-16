@@ -180,24 +180,24 @@ export async function executeRepositoryChange(
 
   const judgement = judgeOutcome(before, after);
 
-  // §5.2 verbatim. `unchanged` means *确定没改*, and the ruling offers it in two ways: nothing was started
-  // at all (the refusals above), or a run that ended normally is followed by a comparison that says nothing
-  // moved. A run that did not end normally — it failed, timed out, or could not call its model — is the case
-  // the same ruling files under `unknown`, because the process was interrupted rather than finished, even
-  // when the two snapshots happen to agree: the comparison is evidence about the tree, not about whether
-  // anything else the run did had already been undone. A comparison that could not be read is `unknown` for
-  // the reason the ruling gives, and it is the one collapse that must not happen — which is why readability
-  // is checked before the run's ending is.
+  // §5.2 verbatim, in the ruling's own words. `changed` means 确定改了 and asks for a run that "正常结束且证据
+  // 齐备"; `unknown` covers "超时、被杀、执行者中途失联"; `unchanged` is offered for two things only — nothing was
+  // started at all (the refusals above), or a run that ended normally and is followed by a comparison saying
+  // nothing moved. So a loop that stopped early is `unknown` **even when the tree did move**: the comparison is
+  // evidence about the tree, not about whether the run finished what it was told to do, and a真机 test caught
+  // exactly that shape — one file written, then the model endpoint went away, and the first version of this
+  // line called it `changed` on the strength of the write alone. Readability is checked before the run's
+  // ending because `unknown` collapsing into `unchanged` is the one thing the ruling forbids outright.
   const moved = judgement.outcome === 'changed';
-  const endedCleanly =
-    judgement.readable &&
-    judgement.outcome === 'unchanged' &&
-    ran.report !== undefined &&
-    ran.report.stopped === undefined;
-  const outcome = moved ? 'changed' : endedCleanly ? 'unchanged' : 'unknown';
-  const halt: RepositoryChangeHalt | undefined = moved
-    ? undefined
-    : (ran.halt ?? (endedCleanly ? undefined : 'outcome-unreadable'));
+  const ranToEnd = ran.report !== undefined && ran.report.stopped === undefined;
+  const outcome: RepositoryChangeResult['outcome'] =
+    !judgement.readable || !ranToEnd ? 'unknown' : moved ? 'changed' : 'unchanged';
+  // Which sentence the human gets is decided by the same facts: a run that stopped early says so, and only a
+  // comparison that could not be read gets to blame readability.
+  const halt: RepositoryChangeHalt | undefined =
+    outcome === 'unknown'
+      ? (ran.halt ?? (judgement.readable ? 'executor-failed' : 'outcome-unreadable'))
+      : undefined;
 
   // §8's fifth ruling: once a push has been observed, the evidence has to name the CI run that followed
   // it, because push is the one step in this slice a local rollback cannot undo. Read here, afterwards,
