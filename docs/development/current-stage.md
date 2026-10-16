@@ -330,6 +330,18 @@
 > **验证数字（修复闭环后）**：`npm run build` exit 0；`npm test` **1018 tests / 1014 pass / 0 fail / 4 skipped**；`test/repository-change-executor.test.mjs` **57/57**（含一条「真插件 + 假模型工厂跑完一轮」的端到端用例——它正是用来定案「工厂被当实例传」那条 finding 的——以及一条「真 bare remote + 假 CI 服务」的 push 后读 run 号用例）；`test/resident-cli.test.mjs` **45 pass / 0 fail / 1 skipped**。
 >
 > **仍未闭环**：无命名管道的主机上执行者插件构造会抛错，而常驻**无条件**加载它（CLI 侧已按平台回「执行者入口依赖 Windows 命名管道，本机没有。」；Linux 上未实跑，因此这条只算「已按兄弟客户端的口径处理」，不算已验证）。
+>
+> **口径更新（2026-10-16 · 真机测试第一轮之后）**：上面 `:319` 那句「没有任何一次真实写入发生过」现在**不再为真**——但要说清它到底证明了什么、没证明什么。
+>
+> **两段真机**（真实进程、真实命名管道、真实 git 子进程；靶子是本机 bare 远端 + 一份私有工作仓库）：
+> ① **带 `--repository-root/--repository` 的常驻**（CI 感知那一份 definition）：执行者真的改了工作区、真的提交、真的推（`git push` 到本机 bare 远端）。磁盘上的事实是 `pushed: true`、`ciChecked: false`、`ciRunId: null`，并且 **mandate 事实早于 result 事实落盘**（`06:55:42.412` → `06:55:43.519`）——`§2.7` 那条「启动之前写」在真机上看得到。
+> ② **同一份 CLI、同一个动词、没有 scope 的常驻**：执行者换成 `requires` 不含 CI 的那一份 definition，组合里没有 `git-repository`/`github-ci`/四个 `repository-ci-*`。两段合起来把 Human 裁决 A 的**两种 definition 分别跑成了 `active`**。
+>
+> **真机抓到的那一个缺陷（已修）**：`ciChecked` 原本记的是「这个部署接没接 CI 读取」，于是「我去问了、但没问出答案」（真机上 GitHub 返回 404）被写成 `true`，读起来像「这个仓库上没有 CI」。现在它记的是「**真的问到了答案**」：读到 run 号、或 CI 服务明确回答「没有 run」，才算 `true`；读失败一律 `false`，话照实说「没有人问出答案」，不冒充「没有 CI」。新增用例见 `test/repository-change-executor.test.mjs` 的「去问了 CI 却没问出答案」。
+>
+> **它不证明**：模型端点是我自己起的**假模型**（一个按 OpenAI chat-completions 形状应答的本地进程），**不是**真 LLM；`--repository` 指的 `m3-local/sandbox` 在 GitHub 上**并不存在**，所以 §4 那条「push 之后的 GitHub CI run 号」**仍未在真机上满足**——它需要一个人指定的、真实存在的 GitHub 靶子。2b(ii) 同样未验证。
+>
+> **验证数字（真机测试这一轮之后）**：`npm run build` exit 0；`npm test` **1019 tests / 1015 pass / 0 fail / 4 skipped**；`test/repository-change-executor.test.mjs` **58/58**。
 
 ---
 

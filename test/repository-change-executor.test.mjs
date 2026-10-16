@@ -885,7 +885,48 @@ test('推送被观察到之后，Hikari 自己事后去读一次 CI run 号，�
   );
 });
 
-test('没有推送就不去问 CI，但记录里仍然写清「有没有人被问过」', async () => {
+test('去问了 CI 却没问出答案：ciChecked 是 false，记录不冒充「这个仓库没有 CI」', async () => {
+  // 真机测试（2026-10-16）里抓到的那一种：`m3-local/sandbox` 在 GitHub 上不存在，`github-ci` 的
+  // `acquire()` 在 `GET /repos/...` 上拿到 404 就抛错。读失败不是答案，所以它不能借用「这个仓库没有
+  // CI」那句话——那是只有问到了答案才配说的话。
+  const remote = mkdtempSync(join(tmpdir(), 'hikari-remote-'));
+  git(remote, ['init', '-q', '--bare', '-b', 'main']);
+
+  const dir = makeRepository('t1mb2rg/unreadable-ci-repository');
+  git(dir, ['remote', 'add', 'local', remote]);
+  git(dir, ['push', '-q', '-u', 'local', 'main']);
+
+  writeFileSync(join(dir, 'next.md'), '下一件事\n');
+  git(dir, ['add', '-A']);
+  git(dir, ['commit', '-q', '-m', '第二笔']);
+
+  let asked = 0;
+  const execution = await executeRepositoryChange({
+    request: { repository: 't1mb2rg/unreadable-ci-repository', mandate: '把这一笔推上去' },
+    read: readDeclaring([dir]),
+    runner: {
+      async run(request) {
+        git(request.root, ['push', '-q', 'local', 'main']);
+        return { steps: 1, toolCalls: [], pushed: true, notes: [], refusedCalls: [], stopped: undefined };
+      },
+    },
+    runTimeoutMs: 60_000,
+    readCi: async () => {
+      asked += 1;
+      throw new Error('GET /repos/t1mb2rg/unreadable-ci-repository answered HTTP 404');
+    },
+  });
+
+  assert.equal(execution.result.evidence.pushed, true);
+  assert.equal(asked, 1, '推了才问，而且只问一次');
+  assert.equal(execution.result.evidence.ciRunId, undefined);
+  assert.equal(execution.result.evidence.ciChecked, false, '读失败不是答案');
+  const lines = execution.result.lines.join(' ｜ ');
+  assert.ok(lines.includes('没有人问出答案'), `应当说清没有人问出答案：${lines}`);
+  assert.ok(!lines.includes('这个仓库上没有 CI'), `读失败不能冒充「没有 CI」：${lines}`);
+});
+
+test('没有推送就不去问 CI，记录里的 ciChecked 也就没有答案', async () => {
   const dir = makeRepository('t1mb2rg/quiet-repository');
 
   let asked = 0;
@@ -907,9 +948,10 @@ test('没有推送就不去问 CI，但记录里仍然写清「有没有人被�
   assert.equal(execution.result.outcome, 'unchanged');
   assert.equal(asked, 0, '没有推送就不该去问 CI');
   assert.equal(execution.result.evidence.ciRunId, undefined);
-  // `ciChecked` is about whether anyone was asked, and it stays true even though the question was never
-  // put — the distinction the file keeps is between "no number" and "nobody looked".
-  assert.equal(execution.result.evidence.ciChecked, true);
+  // `ciChecked` records an answer, not an arrangement: with nothing pushed there is no CI question to
+  // answer, so it is false for the same reason a failed read leaves it false — nobody has a number, and
+  // "there is no CI" is not a claim this run is in a position to make.
+  assert.equal(execution.result.evidence.ciChecked, false);
 });
 
 // ---------------------------------------------------------------------------

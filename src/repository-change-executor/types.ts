@@ -120,9 +120,15 @@ export interface RepositoryChangeEvidence {
    * keep the record from making (and it would skip the CI read that ruling requires).
    */
   readonly pushed: boolean | undefined;
-  /** The run number pushed to GitHub, when a push happened and CI could be read. */
+  /** The run number pushed to GitHub, when a push happened and CI answered with one. */
   readonly ciRunId: number | undefined;
-  /** False when a push happened but no run could be read; the record must say so rather than stay silent. */
+  /**
+   * Whether the CI question was actually answered — with a run number, or with "there is no run".
+   *
+   * A read that failed is not an answer, and it is not the claim "this repository has no CI", so it leaves
+   * this `false` next to a missing number: nobody has a number either way, and the answer the question did
+   * or did not get decides which sentence the human is told.
+   */
   readonly ciChecked: boolean;
 }
 

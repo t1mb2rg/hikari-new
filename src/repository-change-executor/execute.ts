@@ -53,10 +53,13 @@ export interface ExecuteRepositoryChangeInput {
   /**
    * Reads the CI run that followed a push, if anyone can.
    *
-   * Absent means nobody was asked, which the evidence records as `ciChecked: false` rather than as "there
-   * was no run" — the two are different claims and only one of them is known here. This is Hikari asking
-   * after the fact, and it is deliberately not the runner's `read_ci` tool: §8's fifth ruling wants the
-   * number in the record from a source outside the executor's own account.
+   * Absent means nobody can read CI here at all. Present and failing is a third case, and the evidence
+   * keeps it apart from "there was no run": `ciChecked` says an answer was actually obtained, so a failed
+   * read leaves it `false` with no run number — the same thing the record holds when nobody can read CI.
+   * In both of those cases nobody has a number, and neither of them is the claim "this repository has no
+   * CI". That claim is made only when the read answered. This is Hikari asking after the fact, and it is
+   * deliberately not the runner's `read_ci` tool: §8's fifth ruling wants the number in the record from a
+   * source outside the executor's own account.
    */
   readonly readCi?: () => Promise<number | undefined>;
   readonly budgets?: GitBudgets;
@@ -200,13 +203,17 @@ export async function executeRepositoryChange(
   // it, because push is the one step in this slice a local rollback cannot undo. Read here, afterwards,
   // and never taken from the runner's own account — a report saying "I pushed and CI is green" would be
   // the self-description §3.3 forbids recording as a verified fact. A read that fails leaves the number
-  // absent rather than inventing one, and `ciChecked` says whether anyone was asked at all.
+  // absent rather than inventing one, and `ciChecked` records that an answer was obtained: a failing read
+  // is not an answer, so it stays `false`, and the record never turns "nobody could ask" into "there is
+  // no CI".
   let ciRunId: number | undefined;
+  let ciChecked = false;
   if (judgement.pushed === true && input.readCi !== undefined) {
     try {
       ciRunId = await input.readCi();
+      ciChecked = true;
     } catch {
-      ciRunId = undefined;
+      ciChecked = false;
     }
   }
 
@@ -217,7 +224,7 @@ export async function executeRepositoryChange(
     dirtyAfter: after.readable ? isDirty(after) : undefined,
     pushed: judgement.pushed,
     ciRunId,
-    ciChecked: input.readCi !== undefined,
+    ciChecked,
   };
 
   const resultFact = resultFactDraft({
@@ -341,10 +348,15 @@ function describe(input: {
     }
     if (evidence.pushed === true) {
       lines.push('执行者把它推送到了远端——这一步不能收回。');
+      // Three cases, and the record's own field decides which one this is: a number, an answer that says
+      // there is no run, and no answer at all. The last one must not borrow the second one's sentence —
+      // "this repository has no CI" is a claim only a question that was answered can support.
       lines.push(
-        evidence.ciRunId === undefined
-          ? '推送之后没有读到 CI run（这个仓库可能没有配置 CI，或者这次没能读到）。'
-          : `推送之后的 CI run：#${evidence.ciRunId}`,
+        evidence.ciRunId !== undefined
+          ? `推送之后的 CI run：#${evidence.ciRunId}`
+          : evidence.ciChecked
+            ? '推送之后没有读到 CI run：这个仓库上没有 CI。'
+            : '推送之后没有读到 CI run（没有人问出答案：这个常驻可能没有在盯仓库，或者这次没能问到）。',
       );
     } else if (evidence.pushed === undefined) {
       // Not "it did not push": the comparison itself could not be made, and a push is the one thing here
