@@ -2,6 +2,11 @@
 //
 // 它由 Hikari 的执行者在真机上写下、提交并推送（mandate 来自人），实验结束后由人删掉。
 // 删掉它的那一次推送会让 CI 回到绿色 —— 两条 run 都留在 GitHub 上，作为这次实验的证据。
+//
+// 每一次实验写的这一行都不同 —— 否则 `git_commit` 会因为「没有改动」而什么都不提交，
+// 整个实验就变成了「执行者什么都没做」（2026-10-16 第一次跑 A 就是这么失败的）。
+const 这一笔真机实验 = "2026-10-16T16:08:40.878Z";
+
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
