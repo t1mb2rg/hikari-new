@@ -367,6 +367,8 @@
 > - **原始输出**：`%TEMP%\hikari-m4\probe-results3.txt`（沙箱本地文件，未入库）。
 >
 > **仍未闭环（与上一轮相同，未变）**：Linux 上没有命名管道时插件构造会抛错（仍未在 Linux 实跑）；模型端点是假端点；拒绝启动的几条不写 result 事实；证据栏里没有「停在哪一步、为什么停」。
+>
+> **口径更新（2026-10-16 · 进入里程碑 3 的后半）**：上面几条「仍未闭环」之外，里程碑 3 的后半——那份留白的架构考题（跨 owner 的持久事实，是由它的语义 owner 讲给对方听，还是由消费者自己去读）——**已由 Human 点名进入 L2 评审**：`docs/architecture/repository-change-history-readback-v0-boundary-review.md`（VERDICT = NARROW）。第一个真实消费者是**仓库 CI 诊断**（Human 的消费者取向逐字：「先以「历史结果改变下一次领域判断」为真实消费者；「人问过去发生了什么」保留为后续自然扩展，不在本轮抢先建设」）；那一步要新增执行者的第一条 `provides`（`repository-change-executor.actions@1`，一个 `pushedCommit({repository, commit})`），并只改诊断 `different` 那一支。**那一份是设计文档：代码未动，Human 确认之后才动。**
 
 ---
 
