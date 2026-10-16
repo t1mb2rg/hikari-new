@@ -369,6 +369,14 @@
 > **仍未闭环（与上一轮相同，未变）**：Linux 上没有命名管道时插件构造会抛错（仍未在 Linux 实跑）；模型端点是假端点；拒绝启动的几条不写 result 事实；证据栏里没有「停在哪一步、为什么停」。
 >
 > **口径更新（2026-10-16 · 进入里程碑 3 的后半）**：上面几条「仍未闭环」之外，里程碑 3 的后半——那份留白的架构考题（跨 owner 的持久事实，是由它的语义 owner 讲给对方听，还是由消费者自己去读）——**已由 Human 点名进入 L2 评审**：`docs/architecture/repository-change-history-readback-v0-boundary-review.md`（VERDICT = NARROW）。第一个真实消费者是**仓库 CI 诊断**（Human 的消费者取向逐字：「先以「历史结果改变下一次领域判断」为真实消费者；「人问过去发生了什么」保留为后续自然扩展，不在本轮抢先建设」）；那一步要新增执行者的第一条 `provides`（`repository-change-executor.actions@1`，一个 `pushedCommit({repository, commit})`），并只改诊断 `different` 那一支。**那一份是设计文档：代码未动，Human 确认之后才动。**
+>
+> **口径更新（2026-10-16 · 行动记录的读回已实现）**：上面那份设计已经落地（commit `6834c04`，CI run `38914797470` 双绿）。执行者的公开面第一次不是空的——`repository-change-executor.actions@1`，一个 `pushedCommit({repository, commit})`，答的是 `{occurredAt, factId}` 或者 `undefined`；后者是「我的记录没有这么说」，**故意不区分**「没有这条事实」与「有事实但没说推过」。判据在纯函数 `findPushedCommit` 里（`src/repository-change-executor/history.ts`）：只读 `version === 1` 的 `.result` 事实，三条逐字相等（`repository` / `headAfter === commit` / `pushed === true`），payload 形状不认识就跳过而不抛，同一提交多条取最近的；`outcome` 与 `halt` 不参与相等——**没有推过就没有那个提交**，所以在这个问题上「没推」的两种理由本来就是同一件事。
+>
+> 消费它的仍然是**诊断 owner 自己**：`requires` 多一条边，读到记录时把 `commitComparison === 'different'` 那一支分成两支，说得出「这次运行用的提交，是 Hikari 自己的一次行动推上去的（时间 + factId）」，并且**明说这仍然是一个字符串比较，不代表那次行动就是失败的原因**；`same` 与 `indeterminate` 两支逐字不动（渲染与证据形状都有测试钉住）。它仍然不自己读 Chronicle——这条不是靠注释，是靠源码扫描钉住的。
+>
+> **已验**：`npm run build` exit 0；`npm test` **1029 tests / 1025 pass / 0 fail / 4 skipped**；`test/repository-ci-attention.test.mjs` 51/51；`test/repository-change-executor.test.mjs` 65/65；`detect_changes --scope all` → 9 个文件、2 个符号（都是测试里的辅助函数）、risk low。
+>
+> **未验（还没做，别把它算成做了）**：评审 §5 的 ④⑤⑥ 三条**要真机**——写一次真行动 → 重启常驻 → 让同一个运行再次成为「新的失败」→ 建议里出现同一条 `factId` 与 `occurredAt`；以及在生产数据的**副本**里移掉那条事实后行为退回基线、并排除「普通去重」这条假成功。它们需要**一次真的失败的 CI 运行、而且跑在 Hikari 自己推上去的那个提交上**——`hikari-new` 的 workflow 只在 push 到 `main`（或 PR）时跑，所以这要一次真实推送（临时分支 + 一个故意失败的提交，事后可删），**得由 Human 点头才做**。拿桩去跑只能证明「引用出现在测试的桩里」，而那正是评审列的失败情形。
 
 ---
 
