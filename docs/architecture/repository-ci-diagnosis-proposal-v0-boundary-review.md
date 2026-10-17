@@ -286,7 +286,7 @@ R7.2 双向指针：本节的读数已同步进 `docs/development/current-stage.
 
 **结论**：修订把 §2.10 的两个 2/3 补成 3/3，但它的价值不在数字，而在于它把一条原则钉死了——**结构性关系归代码，语义判断归模型**。2b(i) 仍未实现。
 
-R7.2 双向指针：本节的修订与回归同时写进了 `docs/architecture/ci-diagnosis-model-supplement-v0-boundary-review.md` §5（材料契约的原则条款）。
+R7.2 双向指针：本节的修订与回归同时写进了 `docs/architecture/ci-diagnosis-model-supplement-v0-boundary-review.md` §5（材料契约的原则条款）。同一天，该文件的 **§10** 冻结了模型补位的设计与契约（同一条通知 + 可选补充段、只开放 `commit-comparison-indeterminate` 一支、预算与开关都是显式参数且无插件默认值、取消语义两分、两段验收）；**实现未开始**，本文件 §2.7 的「2b(i) 只保留需求」仍然成立。
 
 ## §3 实现前必须关闭的三个答案
 
