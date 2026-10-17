@@ -167,6 +167,8 @@ attention: 只有 delivered 才写既有的 delivered 回执     ← 没有新�
 
 留档（`%TEMP%\hikari-2bi-probe\`）：`cases.mjs`（18 例夹具 + 两套口径）、`run.mjs`、`out/results.jsonl` 与 54 份逐字 transcript、`out/recheck.txt`（权威判定）、`MEMO.md`（含完整结果表与端点探活）。
 
+R7.2 双向指针：本节的读数已同步进 `docs/development/current-stage.md` 的「认知—行动闭环 v0」块（2026-10-17 的口径更新）。
+
 ## §3 实现前必须关闭的三个答案
 
 ### 3.1 Attention 如何取得唯一 assessment
