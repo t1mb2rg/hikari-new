@@ -51,7 +51,10 @@ import { Runtime } from '../index.js';
 import type { PluginDefinition, PluginState } from '../index.js';
 import { repositoryCiAttentionPlugin } from '../repository-ci-attention/index.js';
 import { repositoryCiAwarenessPlugin } from '../repository-ci-awareness/index.js';
-import { repositoryCiDiagnosisProposalPlugin } from '../repository-ci-diagnosis-proposal/index.js';
+import {
+  repositoryCiDiagnosisProposalPlugin,
+  repositoryCiDiagnosisSupplementPlugin,
+} from '../repository-ci-diagnosis-proposal/index.js';
 import { repositoryCiRelevancePlugin } from '../repository-ci-relevance/index.js';
 import { repositoryCiWorldPlugin } from '../repository-ci-world/index.js';
 import { oneLine } from '../terminal-text/index.js';
@@ -431,8 +434,15 @@ export function productionComposition(options: ResidentOptions): Composition {
       : [
           {
             id: repositoryCiAttentionPlugin.id,
+            // The logger is the resident's, and it is a value rather than a stream the plugin reaches
+            // for. Everything this plugin writes through it is a property of this process — a failed
+            // cycle, a supplement that was not attached — and a line is the smallest honest way to make
+            // the difference between "quiet" and "broken" visible to whoever runs this build.
             load: (runtime: Runtime) =>
-              runtime.loadPlugin(repositoryCiAttentionPlugin, { delayMs: proactiveCiDelayMs }),
+              runtime.loadPlugin(repositoryCiAttentionPlugin, {
+                delayMs: proactiveCiDelayMs,
+                log: (line: string) => PROCESS_IO.err(`${line}\n`),
+              }),
           },
         ]),
     ...(proactiveReturn === undefined
@@ -545,6 +555,20 @@ export function productionComposition(options: ResidentOptions): Composition {
       // which is the whole of what "loading it" means.
       id: repositoryCiDiagnosisProposalPlugin.id,
       load: (runtime) => runtime.loadPlugin(repositoryCiDiagnosisProposalPlugin),
+    },
+    {
+      // The model-written supplement, loaded after the materials reader it requires and beside the
+      // judgement it can only ever be added to. It is loaded with **no model**, and that is this
+      // slice's honest state rather than an omission: the operator's endpoint, budget and token flags
+      // land together in the next one, so today the plugin is present, reachable, and answers
+      // `undefined` to everything. What that buys is the part that is not the model — the boundary, the
+      // material eligibility, the refusal to attach anything whose citations cannot be checked — all of
+      // which are exercised by the tests and none of which needs an endpoint to be wrong.
+      id: repositoryCiDiagnosisSupplementPlugin.id,
+      load: (runtime) =>
+        runtime.loadPlugin(repositoryCiDiagnosisSupplementPlugin, {
+          log: (line: string) => PROCESS_IO.err(`${line}\n`),
+        }),
     },
   ];
 

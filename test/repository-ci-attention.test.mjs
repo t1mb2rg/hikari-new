@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import test from 'node:test';
@@ -13,13 +14,19 @@ import {
   resolveChroniclePath,
 } from '../dist/chronicle/index.js';
 import { continuityPlugin, initializeHikari, restoreHikari } from '../dist/continuity/index.js';
-import { gitHubCiService } from '../dist/github-ci/index.js';
+import { gitHubCiService, gitHubCiRunMaterialsService } from '../dist/github-ci/index.js';
 import { humanDeliveryService } from '../dist/human-delivery/index.js';
 import { languageDiagnosisSpeakingService, languageSpeakingService } from '../dist/language/index.js';
 import { repositoryCiAwarenessService } from '../dist/repository-ci-awareness/index.js';
 import { judgeProposal, renderProposal } from '../dist/repository-ci-diagnosis-proposal/index.js';
 import { repositoryCiDiagnosisProposalService } from '../dist/repository-ci-diagnosis-proposal/index.js';
 import { repositoryCiDiagnosisProposalPlugin } from '../dist/repository-ci-diagnosis-proposal/index.js';
+import { repositoryCiDiagnosisSupplementPlugin } from '../dist/repository-ci-diagnosis-proposal/index.js';
+import { repositoryCiDiagnosisSupplementService } from '../dist/repository-ci-diagnosis-proposal/index.js';
+import {
+  REPOSITORY_CI_SUPPLEMENT_LABEL,
+  createRepositoryCiDiagnosisSupplement,
+} from '../dist/repository-ci-diagnosis-proposal/index.js';
 import { repositoryChangeActionsService } from '../dist/repository-change-executor/index.js';
 import {
   deliveryFactDraft,
@@ -68,6 +75,8 @@ const DELIVERY_PROVIDER = 'test.delivery-provider';
 const CHRONICLE_PROVIDER = 'test.chronicle-provider';
 const AWARENESS_PROVIDER = 'test.awareness-provider';
 const DIAGNOSIS_PROVIDER = 'test.diagnosis-provider';
+const SUPPLEMENT_PROVIDER = 'test.supplement-provider';
+const MATERIALS_PROVIDER = 'test.materials-provider';
 
 // Written out here rather than taken from the module, for the reason `work-focus.test.mjs` writes out
 // its own wording constants: a test that took the fact type from `facts.ts` would agree with whatever
@@ -471,7 +480,7 @@ test('渲染整条值时也过一遍 oneLine，而不是只过今天需要的那
 // The boundary, as a contract and as a roster.
 // ---------------------------------------------------------------------------------------------
 
-test('Attention 的 requires 恰好是那六个问题，provides 为空', () => {
+test('Attention 的 requires 恰好是那七个问题，provides 为空', () => {
   assert.equal(repositoryCiAttentionPlugin.id, 'repository-ci-attention');
   assert.equal(repositoryCiAttentionPlugin.version, '1.0.0');
 
@@ -504,9 +513,17 @@ test('Attention 的 requires 恰好是那六个问题，provides 为空', () => 
   //   one method, it holds nothing between calls, and it answers about the material handed to it — which
   //   is why it is safe for a decider to depend on: it cannot decide *when* anything happens, because it
   //   has no clock and no loop.
+  //
+  // The seventh is the supplement, and it is the narrowing rather than a widening: the decider does not
+  // gain a model, it gains the right to *ask one module* whether there is one optional paragraph to
+  // append to a message it was going to send anyway. Everything expensive, fallible and slow — reading
+  // materials, calling a model, validating citations — lives behind that entry, in a module whose only
+  // method returns either a paragraph or nothing. A decider that held an endpoint could decide *not* to
+  // deliver; one that holds this cannot, because the entry cannot report a delivery decision at all.
   assert.deepEqual(repositoryCiAttentionPlugin.requires, [
     repositoryCiAwarenessService,
     repositoryCiDiagnosisProposalService,
+    repositoryCiDiagnosisSupplementService,
     languageSpeakingService,
     languageDiagnosisSpeakingService,
     humanDeliveryService,
@@ -517,6 +534,7 @@ test('Attention 的 requires 恰好是那六个问题，provides 为空', () => 
     [
       'repository-ci-awareness.current@1',
       'repository-ci-diagnosis-proposal.propose@1',
+      'repository-ci-diagnosis-proposal.supplement@1',
       'language.speaking@1',
       'language.diagnosis-speaking@1',
       'human-delivery.deliver@1',
@@ -687,6 +705,46 @@ function diagnosisProvider({ answer } = {}) {
   return { definition, asked };
 }
 
+// The supplement, as a fake, for the reason every other capability here is a fake: the tests that are
+// not about supplements must not need a model endpoint, and "the supplement is absent" is the default
+// every one of them wants. The tests that *are* about supplements load the real plugin instead.
+function supplementProvider({ attach } = {}) {
+  const asked = [];
+  const definition = {
+    id: SUPPLEMENT_PROVIDER,
+    version: '1.0.0',
+    provides: [repositoryCiDiagnosisSupplementService],
+    setup(context) {
+      context.services.provide(repositoryCiDiagnosisSupplementService, {
+        async attach(request) {
+          asked.push(request);
+          if (attach !== undefined) return attach(request);
+          return undefined;
+        },
+      });
+    },
+  };
+  return { definition, asked };
+}
+
+// The materials reader, as a fake: a supplement test chooses the材料 the model would have been given,
+// and the real `github-ci` slice is exercised in its own file against a fake GitHub.
+function materialsProvider(materials) {
+  const definition = {
+    id: MATERIALS_PROVIDER,
+    version: '1.0.0',
+    provides: [gitHubCiRunMaterialsService],
+    setup(context) {
+      context.services.provide(gitHubCiRunMaterialsService, {
+        getRunMaterials() {
+          return Promise.resolve(materials);
+        },
+      });
+    },
+  };
+  return { definition };
+}
+
 // A diagnosis module that is broken or unreachable. The whole point of it as a test fixture is that
 // nothing about it is graceful: it rejects every time, and the behaviour under test is that the
 // announcement still goes out. A dependency of a suggestion is not a dependency of the announcement.
@@ -806,7 +864,7 @@ function chronicleProvider({ seed = [], failReads = 0, failAppends = 0 } = {}) {
 // every test written before this slice stand unchanged.
 async function compose(
   runtime,
-  { ci, speaking, delivery, chronicle = chronicleProvider(), awareness, diagnosis, delayMs },
+  { ci, speaking, delivery, chronicle = chronicleProvider(), awareness, diagnosis, supplement, materials, delayMs },
 ) {
   await runtime.loadPlugin(ci.definition);
   await runtime.loadPlugin(speaking.definition);
@@ -814,6 +872,8 @@ async function compose(
   await runtime.loadPlugin(chronicle.definition);
   await runtime.loadPlugin((awareness ?? awarenessProvider()).definition);
   await runtime.loadPlugin((diagnosis ?? diagnosisProvider()).definition);
+  if (materials !== undefined) await runtime.loadPlugin(materials.definition);
+  await runtime.loadPlugin((supplement?.definition ?? supplementProvider().definition), supplement?.config);
   return loadDecider(runtime, delayMs);
 }
 
@@ -1273,7 +1333,7 @@ test('这次改动没有改写任何既有协议，只换了一个来源并加�
   // bent to make room for this slice" has a mechanical form: the versions are what they were. Four of
   // these are older than the slice, two of them are its own additions, and none of the four changed.
   const ids = repositoryCiAttentionPlugin.requires.map((contract) => `${contract.id}@${contract.version}`);
-  assert.equal(ids.length, 6);
+  assert.equal(ids.length, 7);
   for (const unchanged of ['language.speaking@1', 'human-delivery.deliver@1', 'chronicle@1']) {
     assert.ok(ids.includes(unchanged), `${unchanged} 不该因为这次改动而变版本`);
   }
@@ -1291,6 +1351,7 @@ test('这次改动没有改写任何既有协议，只换了一个来源并加�
 
   assert.ok(ids.includes('repository-ci-awareness.current@1'), '新的证据来源应当是 awareness');
   assert.ok(ids.includes('repository-ci-diagnosis-proposal.propose@1'), '新的问题是 diagnosis 的');
+  assert.ok(ids.includes('repository-ci-diagnosis-proposal.supplement@1'), '补充段来自 supplement');
   assert.ok(ids.includes('language.diagnosis-speaking@1'), '第二个表达面是 Language 的第三条契约');
   assert.equal(languageDiagnosisSpeakingService.id, 'language.diagnosis-speaking');
   assert.equal(languageDiagnosisSpeakingService.version, 1);
@@ -1696,6 +1757,7 @@ async function realComposition(root, { ci, speaking, delivery, delayMs, beforeDe
   await runtime.loadPlugin(delivery.definition);
   await runtime.loadPlugin(awarenessProvider().definition);
   await runtime.loadPlugin(diagnosisProvider().definition);
+  await runtime.loadPlugin(supplementProvider().definition);
 
   // A seam for the one failure the rest of the file cannot reach: the store opening successfully and
   // then going bad before the decider's first cycle reads it. `openChronicle` parses the whole file, so
@@ -1957,6 +2019,7 @@ test('真实 Chronicle：启动时 store 就已经坏了，decider 停在 waitin
   // different reason, and a test that cannot tell those apart is not testing this one.
   await runtime.loadPlugin(awarenessProvider().definition);
   await runtime.loadPlugin(diagnosisProvider().definition);
+  await runtime.loadPlugin(supplementProvider().definition);
   t.after(() => runtime.shutdown());
 
   assert.equal(await runtime.loadPlugin(repositoryCiAttentionPlugin, { delayMs: 2 }), 'waiting');
@@ -1967,4 +2030,324 @@ test('真实 Chronicle：启动时 store 就已经坏了，decider 停在 waitin
   await elapsed(20);
   assert.equal(ci.counts.calls, 0);
   assert.equal(delivery.delivered.length, 0);
+});
+
+// ---------------------------------------------------------------------------------------------
+// The supplement at the product level: the module that ships, in the real cycle, against a real socket.
+//
+// The tests above fake the supplement, and they should: each is about one thing the decider does, and a
+// fake is what keeps it about one thing. These are the other half. What is faked here is only the world
+// outside the module — one materials answer and one HTTP endpoint — and every test asserts the same two
+// things, because they are the whole of the ruling: exactly one message leaves, and the deterministic
+// sentence is never the casualty. The log lines are asserted verbatim because an operator reading a log
+// to find out why a paragraph is missing has only those bytes to go on.
+// ---------------------------------------------------------------------------------------------
+
+function materialsFixture(overrides = {}) {
+  return {
+    requestedAt: OBSERVED_AT,
+    repository: REPOSITORY,
+    runId: 41,
+    headSha: HEAD_SHA,
+    identity: 'confirmed',
+    jobs: {
+      kind: 'present',
+      value: [
+        {
+          id: 7,
+          name: 'test',
+          status: 'completed',
+          conclusion: 'failure',
+          steps: [
+            { name: 'Run actions/checkout@v4', conclusion: 'success' },
+            { name: 'Build and test', conclusion: 'failure' },
+          ],
+          runId: 41,
+          headSha: HEAD_SHA,
+        },
+      ],
+    },
+    changedFiles: {
+      kind: 'present',
+      value: {
+        files: [
+          {
+            filename: 'test/ci-failure-probe.test.mjs',
+            status: 'added',
+            additions: 4,
+            deletions: 0,
+            patch: { kind: 'present', value: { text: '+test("失败", () => {});', cut: false } },
+          },
+        ],
+        totalFiles: 1,
+        omittedFiles: 0,
+      },
+    },
+    log: {
+      kind: 'present',
+      value: {
+        text: 'Run npm test\nFAIL test/ci-failure-probe.test.mjs\n##[error]Process completed with exit code 1.',
+        window: 'failing-step',
+        step: 'Build and test',
+        bytesRead: 4_096,
+        droppedBytes: 0,
+        truncated: false,
+        totalBytes: 140_464,
+        ansiStripped: true,
+      },
+    },
+    ...overrides,
+  };
+}
+
+function chatCompletion(content) {
+  return { choices: [{ message: { role: 'assistant', content } }] };
+}
+
+// A real socket rather than a stubbed `fetch`, because the module under test decides what a transport
+// failure *is* (a rejected fetch, a non-2xx status, a body that will not parse), and a stub that
+// answers promises would let every one of those look the same.
+async function modelEndpoint(handle) {
+  const seen = [];
+  const server = createServer((request, response) => {
+    let body = '';
+    request.setEncoding('utf8');
+    request.on('data', (chunk) => {
+      body += chunk;
+    });
+    request.on('end', () => {
+      seen.push(body);
+      handle(body, response);
+    });
+  });
+
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const { port } = server.address();
+
+  return {
+    url: `http://127.0.0.1:${port}/v1/chat/completions`,
+    seen,
+    close: () => new Promise((resolve) => server.close(resolve)),
+  };
+}
+
+function answering(content) {
+  return (_body, response) => {
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(JSON.stringify(chatCompletion(content)));
+  };
+}
+
+function failingStatus(status) {
+  return (_body, response) => {
+    response.writeHead(status, { 'content-type': 'text/plain' });
+    response.end('endpoint said no');
+  };
+}
+
+// One cycle of the real decider with the supplement module the test chose. The assertions every caller
+// shares live here: one message, and it starts with the lines Language produced.
+async function oneDelivery(t, supplement, { materials = materialsFixture() } = {}) {
+  const runtime = new Runtime();
+  t.after(() => runtime.shutdown());
+
+  const ci = ciProvider(() => failure());
+  const speaking = speakingProvider();
+  const delivery = deliveryProvider();
+  const chronicle = chronicleProvider();
+
+  await compose(runtime, {
+    ci,
+    speaking,
+    delivery,
+    chronicle,
+    materials: materialsProvider(materials),
+    supplement,
+    delayMs: 2,
+  });
+
+  await untilAsync(() => delivery.delivered.length >= 1, '一条消息都没发出去');
+  await elapsed(20);
+
+  assert.equal(delivery.delivered.length, 1, '恰好一条消息');
+  return { lines: delivery.delivered[0], base: speaking.spoken[0].lines, chronicle };
+}
+
+test('模型补充：答案合格时，恰好一条消息，那一段接在确定性句子之后', async (t) => {
+  const endpoint = await modelEndpoint(
+    answering(JSON.stringify({ text: '先看 Build and test 这一步的失败断言。', cited: ['Build and test'] })),
+  );
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(t, {
+    definition: repositoryCiDiagnosisSupplementPlugin,
+    config: {
+      model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+      log: (line) => logs.push(line),
+    },
+  });
+
+  assert.deepEqual(lines.slice(0, base.length), base, '确定性句子逐字不变');
+  assert.deepEqual(lines.slice(base.length), [
+    '',
+    REPOSITORY_CI_SUPPLEMENT_LABEL,
+    '先看 Build and test 这一步的失败断言。',
+  ]);
+  // §10.4 的那一行正例：只有「已附加 + 耗时」，且只有一条。失败行一条都不许有——否则成功与失败
+  // 在日志里长得一样，日志就不再是证据。
+  assert.equal(logs.length, 1, '成功路径只写一条');
+  assert.match(logs[0], /^模型补充：已附加（\d+ ms）$/);
+  assert.equal(endpoint.seen.length, 1, '模型只被问一次');
+});
+
+test('模型补充：端点报错时，消息退回原样，且只投一条', async (t) => {
+  const endpoint = await modelEndpoint(failingStatus(500));
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(t, {
+    definition: repositoryCiDiagnosisSupplementPlugin,
+    config: {
+      model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+      log: (line) => logs.push(line),
+    },
+  });
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, ['模型补充：端点不可用 → 未附加']);
+});
+
+test('模型补充：答案不是 JSON 时，消息退回原样，且只投一条', async (t) => {
+  const endpoint = await modelEndpoint(answering('我觉得应该看看构建那一步。'));
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(t, {
+    definition: repositoryCiDiagnosisSupplementPlugin,
+    config: {
+      model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+      log: (line) => logs.push(line),
+    },
+  });
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, ['模型补充：格式错误 → 未附加']);
+});
+
+test('模型补充：引用了材料里没有的东西时，消息退回原样', async (t) => {
+  const endpoint = await modelEndpoint(
+    answering(JSON.stringify({ text: '建议去看 deployment.yaml 的第三个步骤。', cited: ['deployment.yaml'] })),
+  );
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(t, {
+    definition: repositoryCiDiagnosisSupplementPlugin,
+    config: {
+      model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+      log: (line) => logs.push(line),
+    },
+  });
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, ['模型补充：引用不可核验（1 处）→ 未附加']);
+});
+
+test('模型补充：超时时，消息退回原样，且预算写进那一行', async (t) => {
+  const endpoint = await modelEndpoint((_body, response) => {
+    setTimeout(() => {
+      if (!response.writableEnded) {
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end(JSON.stringify(chatCompletion('{"deficient":true}')));
+      }
+    }, 400);
+  });
+  t.after(() => endpoint.close());
+
+  // Built directly rather than through the plugin, because the plugin's floor on `budgetMs` is the
+  // operator-facing one (30 s) and a test that waited it out would be a test about the clock.
+  const logs = [];
+  const supplement = createRepositoryCiDiagnosisSupplement({
+    readMaterials: () => Promise.resolve(materialsFixture()),
+    model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 50 },
+    log: (line) => logs.push(line),
+  });
+
+  const { lines, base } = await oneDelivery(t, supplementProvider({ attach: (request) => supplement.attach(request) }));
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, ['模型补充：超时（50 ms）→ 未附加']);
+});
+
+test('模型补充：材料缺件时，不调模型，消息退回原样', async (t) => {
+  const endpoint = await modelEndpoint(answering('{"deficient":true}'));
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(
+    t,
+    {
+      definition: repositoryCiDiagnosisSupplementPlugin,
+      config: {
+        model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+        log: (line) => logs.push(line),
+      },
+    },
+    { materials: materialsFixture({ jobs: { kind: 'missing', reason: 'authentication' } }) },
+  );
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, ['模型补充：材料读取失败（jobs:authentication）→ 未附加']);
+  assert.equal(endpoint.seen.length, 0, '材料不齐就不该问模型');
+});
+
+test('模型补充：材料身份不符时，静默退回，一个字都不往日志里写', async (t) => {
+  const endpoint = await modelEndpoint(answering('{"deficient":true}'));
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(
+    t,
+    {
+      definition: repositoryCiDiagnosisSupplementPlugin,
+      config: {
+        model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+        log: (line) => logs.push(line),
+      },
+    },
+    { materials: materialsFixture({ identity: 'mismatch' }) },
+  );
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, [], '身份不符不是材料缺失，也不是模型故障');
+  assert.equal(endpoint.seen.length, 0);
+});
+
+test('模型补充：模型自己说材料不够时，安静地退回原样', async (t) => {
+  const endpoint = await modelEndpoint(answering('{"deficient":true}'));
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(t, {
+    definition: repositoryCiDiagnosisSupplementPlugin,
+    config: {
+      model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+      log: (line) => logs.push(line),
+    },
+  });
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, []);
+});
+
+test('模型补充：没配模型时，插件照样在位，消息与这一片之前逐字相同', async (t) => {
+  const logs = [];
+  const { lines, base } = await oneDelivery(t, {
+    definition: repositoryCiDiagnosisSupplementPlugin,
+    config: { log: (line) => logs.push(line) },
+  });
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, []);
 });

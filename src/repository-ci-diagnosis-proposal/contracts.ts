@@ -18,6 +18,7 @@
 
 import { defineService } from '../runtime/contracts.js';
 
+import type { RepositoryCiDiagnosisSupplementRequest } from './supplement.js';
 import type { RepositoryCiDiagnosisProposal, RepositoryCiDiagnosisRequest } from './types.js';
 
 export interface RepositoryCiDiagnosisProposalService {
@@ -40,3 +41,23 @@ export const repositoryCiDiagnosisProposalService = defineService<RepositoryCiDi
   'repository-ci-diagnosis-proposal.propose',
   1,
 );
+
+/**
+ * The model-written supplement, as a second question this package answers.
+ *
+ * A separate Service rather than a field on the proposal, and the separation is the contract: the
+ * proposal is a deterministic answer that exists whether or not an operator configured a model, and the
+ * supplement is an addition that can be absent for a dozen reasons that are all normal. A caller holding
+ * only one call could not tell "the judgement had nothing to say" from "no model was configured", and
+ * that difference is what decides whether a notification goes out unchanged or not at all.
+ *
+ * `attach` returning a string is the one place this package hands over words. They are not a suggestion:
+ * they are labelled model content, and the label travels inside the returned block so that a caller
+ * cannot append the text without it.
+ */
+export interface RepositoryCiDiagnosisSupplementService {
+  attach(request: RepositoryCiDiagnosisSupplementRequest): Promise<string | undefined>;
+}
+
+export const repositoryCiDiagnosisSupplementService =
+  defineService<RepositoryCiDiagnosisSupplementService>('repository-ci-diagnosis-proposal.supplement', 1);

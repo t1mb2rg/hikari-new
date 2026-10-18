@@ -39,7 +39,10 @@ import { repositoryCiAwarenessService } from '../repository-ci-awareness/index.j
 // The same leaf rule as `language/contracts.js` above, and it is load-bearing here for a second reason:
 // this package's `types.ts` is imported by that package's `types.ts`, so a barrel import would put the
 // cycle on the path rather than merely near it.
-import { repositoryCiDiagnosisProposalService } from '../repository-ci-diagnosis-proposal/contracts.js';
+import {
+  repositoryCiDiagnosisProposalService,
+  repositoryCiDiagnosisSupplementService,
+} from '../repository-ci-diagnosis-proposal/contracts.js';
 import type { RepositoryCiDiagnosisProposal } from '../repository-ci-diagnosis-proposal/types.js';
 import type { PluginDefinition } from '../runtime/plugin.js';
 
@@ -48,6 +51,15 @@ import { detectNewFailure } from './judgement.js';
 
 export interface RepositoryCiAttentionPluginConfig {
   readonly delayMs: number;
+  /**
+   * Where a failure worth an operator's attention goes. Handed in by the runner, which owns stderr;
+   * absent is silence, which is the right default for a test.
+   *
+   * It exists because of the two boundaries this file now has that swallow: the one around the
+   * supplement and the one around the whole cycle. Both are the correct shape — a cycle must not die —
+   * and both used to be invisible, which is how a silent CI chain cost a day of diagnosis once already.
+   */
+  readonly log?: ((line: string) => void) | undefined;
 }
 
 // The largest delay a Node timer can express faithfully. `setTimeout` silently rewrites anything above
@@ -65,6 +77,14 @@ function parseConfig(input: unknown): RepositoryCiAttentionPluginConfig {
     typeof input === 'object' && input !== null
       ? (input as { readonly delayMs?: unknown }).delayMs
       : undefined;
+  const log =
+    typeof input === 'object' && input !== null
+      ? (input as { readonly log?: unknown }).log
+      : undefined;
+
+  if (log !== undefined && typeof log !== 'function') {
+    throw new Error('repository-ci-attention requires config.log to be a function when present.');
+  }
 
   if (
     typeof candidate !== 'number' ||
@@ -77,15 +97,16 @@ function parseConfig(input: unknown): RepositoryCiAttentionPluginConfig {
     );
   }
 
-  return Object.freeze({ delayMs: candidate });
+  return Object.freeze({ delayMs: candidate, log: log as ((line: string) => void) | undefined });
 }
 
 export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttentionPluginConfig> = {
   id: 'repository-ci-attention',
   version: '1.0.0',
-  // Six requirements, and each one is a different question this plugin cannot answer itself: what
-  // happened, whether a specific follow-up is worth suggesting, how to say it, how to say the
-  // suggestion, whether anyone is listening, and what it has said before.
+  // Seven requirements, and each one is a different question this plugin cannot answer itself: what
+  // happened, whether a specific follow-up is worth suggesting, whether there is a sentence to add on
+  // top of that suggestion, how to say it, how to say the suggestion, whether anyone is listening, and
+  // what it has said before.
   //
   // The first two changed in the milestone-2 slice, and the change is the point of it. It used to
   // require `github-ci` and call `current()` for itself. Now it requires the *world* — one assessment,
@@ -103,7 +124,15 @@ export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttention
   // than being reached for only when a suggestion appears: the two speaking contracts are two halves of
   // one decision, and a plugin that could only express one of them would have to decide before asking.
   //
-  // The composition grants the first by having a repository scope, the middle four by loading the
+  // `repository-ci-diagnosis-proposal.supplement` is required beside the judgement, and the reason is
+  // not symmetry. The supplement is an addition to a message this plugin is about to send, so the only
+  // module entitled to append it is the one that owns the send — and the only way to guarantee it
+  // cannot stop that send is for it to arrive as a value this plugin appends, rather than as something
+  // another activation could fail to produce. A composition without the supplement module is one where
+  // this plugin would have to decide whether "no supplement" means "not configured" or "not needed",
+  // which is a question it has no material to answer.
+  //
+  // The composition grants the first by having a repository scope, the middle five by loading the
   // providers, and the last by loading the store — which is the whole of what "authorization" means
   // here (`principles.md` §5: a capability existing is not a permission).
   //
@@ -115,6 +144,7 @@ export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttention
   requires: [
     repositoryCiAwarenessService,
     repositoryCiDiagnosisProposalService,
+    repositoryCiDiagnosisSupplementService,
     languageSpeakingService,
     languageDiagnosisSpeakingService,
     humanDeliveryService,
@@ -125,10 +155,22 @@ export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttention
   setup(context, config) {
     const awareness = context.services.get(repositoryCiAwarenessService);
     const diagnosis = context.services.get(repositoryCiDiagnosisProposalService);
+    const supplement = context.services.get(repositoryCiDiagnosisSupplementService);
     const speaking = context.services.get(languageSpeakingService);
     const suggestionSpeaking = context.services.get(languageDiagnosisSpeakingService);
     const delivery = context.services.get(humanDeliveryService);
     const chronicle = context.services.get(chronicleService);
+
+    function note(line: string): void {
+      if (config.log === undefined) return;
+
+      try {
+        config.log(line);
+      } catch {
+        // A logger that throws is a logger, not a decision. Swallowing keeps the guarantee both
+        // boundaries in this file are written for: nothing here can stop a notification.
+      }
+    }
 
     // Two sets, and the difference between them is the whole of what this slice adds.
     //
@@ -276,11 +318,36 @@ export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttention
         // re-decides the judgement, reorders anything, or retries. The only question it answers is
         // whether this owner has a fact worth admitting — and the three outcomes still differ in
         // exactly one way, which is whether the next activation will remember this.
-        const outcome = await delivery.deliver(
+        // The lines Language produces are the lines that go on the wire, unchanged. The supplement is
+        // the one thing appended to them, and it is appended here — in the module that owns the send,
+        // after the deterministic sentence is already a string — rather than by a writer that could
+        // re-order the two or forget which half it was holding.
+        //
+        // Two boundaries stand between the model and the transport, and they are at different places on
+        // purpose. The first is inside the supplement module, which turns every failure it can name into
+        // `undefined`. The second is this one, and it exists because the failures nobody named are the
+        // ones that would otherwise reach the delivery call: a defect in that module, a rejection out of
+        // a material read that was supposed to be caught, a logger that throws. What this boundary is
+        // allowed to do is exactly one thing — log, and use the message it already had. It is not
+        // allowed to change the count of messages, re-order anything, or turn a supplement failure into
+        // a notification that does not happen.
+        let lines: readonly string[] =
           proposal === undefined || proposal.kind === 'insufficient-evidence'
             ? speaking.speak(occurrence)
-            : suggestionSpeaking.speak(proposal),
-        );
+            : suggestionSpeaking.speak(proposal);
+
+        if (proposal !== undefined) {
+          try {
+            const attached = await supplement.attach({ occurrence, proposal });
+            if (attached !== undefined) {
+              lines = [...lines, '', ...attached.split('\n')];
+            }
+          } catch {
+            note('模型补充：未预期异常 → 未附加');
+          }
+        }
+
+        const outcome = await delivery.deliver(lines);
 
         // Not checked before the append, and deliberately. An activation that ended while the bytes
         // were going out does not make the delivery un-happen, and refusing to record it would lose a
@@ -301,13 +368,19 @@ export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttention
           // nothing was ever said. That is a truth about the store, not a defect to paper over —
           // fixing it would take a retry or a compensation, and this slice has neither.
         }
-      } catch {
+      } catch (error) {
         // One cycle failing is one cycle failing, and this boundary is where that stays true. The
         // Runtime does not turn a rejection from an active plugin's background work into a failed
         // state, so nothing else would catch an acquisition failure, a broken transport, or a defect
         // in this file — each would become an unhandled rejection, or a loop that stopped for good.
-        // What this cannot do is make the failure observable; v1 has no public surface for it, and
-        // that is recorded as a known limit rather than papered over with one.
+        //
+        // It used to be invisible as well as survivable, and the cost of that was measured: a CI chain
+        // that went quiet for a day looked exactly like a chain with nothing to say. The line below is
+        // the smallest thing that makes the two distinguishable, and it goes to the runner's logger
+        // rather than into a fact — a failed cycle is a property of this process, not of the world.
+        note(
+          `Repository CI attention：本轮失败（${error instanceof Error ? error.message : '未知错误'}）→ 下一轮继续`,
+        );
       } finally {
         if (!stopped) scheduleCycle(config.delayMs);
       }

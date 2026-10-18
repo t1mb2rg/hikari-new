@@ -154,6 +154,10 @@ const REPOSITORY_CI_MEMBER_IDS = [
   // rather than beside the decider because that is where its dependency is — it requires
   // `repository-ci-relevance.judge@1`, which is published by the member directly above it.
   'repository-ci-diagnosis-proposal',
+  // The eighth: it requires the material reader `github-ci` publishes (`github-ci.run-materials@1`) and
+  // nothing else, and it is loaded even when no model is configured — an unconfigured supplement answers
+  // `undefined` for every arm, which is what lets the chain keep one shape instead of two.
+  'repository-ci-diagnosis-supplement',
 ];
 
 // The same seven minus the executor, for the assertions that ask what a resident with *no* repository scope
@@ -167,6 +171,7 @@ const REPOSITORY_CI_CHAIN_MEMBER_IDS = [
   'repository-ci-awareness',
   'repository-ci-relevance',
   'repository-ci-diagnosis-proposal',
+  'repository-ci-diagnosis-supplement',
 ];
 
 const ROSTER_DATA_DIR = join(tmpdir(), 'hikari-resident-roster');
@@ -221,7 +226,7 @@ test('默认生产组合恰好是这十二个成员，按加载顺序', () => {
   );
 });
 
-test('显式配置 Repository CI 后，生产组合是这十二个加上那六个', () => {
+test('显式配置 Repository CI 后，生产组合是这十二个加上那七个', () => {
   const composition = productionComposition({
     dataDir: ROSTER_DATA_DIR,
     desktopAwarenessDelayMs: 1000,
@@ -303,8 +308,8 @@ test('Repository CI 与语言入口可以同时在场，且语言在 CI 链之�
   // A literal, for the reason the three tests above give, and it states the whole rule: the base, then
   // the entire Repository CI chain, then the language member — which is the plugin that requires a
   // contract from the middle of that chain, `repository-ci-relevance.current@1`, and therefore has to
-  // follow the chain rather than sit beside it. The chain is now six and its last two links are a pair:
-  // the judgement, then the thing that asks it about a snapshot it was handed.
+  // follow the chain rather than sit beside it. The chain is now seven and its last two links are a pair:
+  // the judgement, then the thing that asks it about a snapshot it was handed, then the supplement on top.
   assert.deepEqual(composition.map((member) => member.id), [
     ...CI_BASE_MEMBER_IDS,
     'git-repository',
@@ -314,6 +319,7 @@ test('Repository CI 与语言入口可以同时在场，且语言在 CI 链之�
     'repository-ci-awareness',
     'repository-ci-relevance',
     'repository-ci-diagnosis-proposal',
+    'repository-ci-diagnosis-supplement',
     'language',
   ]);
 });
@@ -454,7 +460,7 @@ test('六个 roster 各自以它自己的基础为前缀，且共有成员保持
   assert.equal(both.at(-1), 'language', 'language 是唯一被依赖决定位置而排到最后的成员');
   assert.equal(
     rosters.repositoryCi.map((member) => member.id).at(-1),
-    'repository-ci-diagnosis-proposal',
+    'repository-ci-diagnosis-supplement',
   );
   assert.ok(
     both.indexOf('repository-ci-relevance') < both.indexOf('repository-ci-diagnosis-proposal'),
