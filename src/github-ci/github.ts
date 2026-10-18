@@ -17,21 +17,37 @@ export interface GitHubCiAcquirerOptions {
   // is not a decision a composer gets to make, and there is exactly one GitHub.
   readonly baseUrl?: string;
   readonly timeoutMs?: number;
+  // The credential, already resolved from the environment by whoever composed this resident — the
+  // same shape the materials reader takes, and the same token, because observation and materials are
+  // two reads of one repository and the quota they spend is one quota. Absent is the anonymous
+  // request this build always made; present is one more header and nothing else about the answer.
+  readonly token?: string;
 }
 
-// Unauthenticated, read-only, over the built-in fetch. The `gh` CLI was considered and rejected:
-// it authenticates from an ambient keyring this module cannot see, which would make the auth
-// boundary something that depends on the machine rather than on the code, and it reports failures
-// as process exit codes that would then need a taxonomy invented here. A plain HTTPS GET has one
-// boundary — no credentials of any kind are sent, and the request either gets an answer or does not.
+// Read-only, over the built-in fetch. The `gh` CLI was considered and rejected: it authenticates
+// from an ambient keyring this module cannot see, which would make the auth boundary something that
+// depends on the machine rather than on the code, and it reports failures as process exit codes that
+// would then need a taxonomy invented here. A plain HTTPS GET has one boundary — whatever credential
+// the caller resolved and handed over in `options.token`, and nothing else — and the request either
+// gets an answer or does not.
 //
 // The cost of that choice is stated rather than hidden: an unauthenticated caller shares a quota of
 // 60 requests per hour per address, and one observation spends two. A caller that needs more is a
-// caller that needs a credential, and a credential is a decision this slice does not make.
+// caller that needs a credential; where that credential comes from is decided by the composition root
+// that reads the environment, not here. This function's part of the bargain is that the value never
+// leaves the `Authorization` header: it is not logged, not quoted in an error, and not carried into
+// the observation.
 export function createGitHubCiAcquirer(options: GitHubCiAcquirerOptions): GitHubCiAcquirer {
   const baseUrl = (options.baseUrl ?? API_BASE).replace(/\/+$/, '');
   const timeoutMs = options.timeoutMs ?? ACQUISITION_TIMEOUT_MS;
   const { owner, name } = options;
+  // Built once, so every request this acquirer makes is authenticated or anonymous together. The
+  // header value is the token verbatim: it is validated where it is read from the environment, and a
+  // second check here would be a second opinion about what a credential looks like.
+  const authorization =
+    options.token === undefined || options.token === ''
+      ? undefined
+      : { authorization: `Bearer ${options.token}` };
 
   const abort = new AbortController();
   let disposed = false;
@@ -46,7 +62,11 @@ export function createGitHubCiAcquirer(options: GitHubCiAcquirerOptions): GitHub
     try {
       response = await fetch(`${baseUrl}${path}`, {
         method: 'GET',
-        headers: { accept: 'application/vnd.github+json', 'x-github-api-version': API_VERSION },
+        headers: {
+          accept: 'application/vnd.github+json',
+          'x-github-api-version': API_VERSION,
+          ...authorization,
+        },
         signal,
       });
     } catch (error) {

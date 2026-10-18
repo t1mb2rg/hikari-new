@@ -14,11 +14,11 @@
 // added to arrives as an argument, because the caller already has it and asking again would be asking
 // the same question twice in one cycle, with two chances to answer differently.
 //
-// No model configured is the normal state of this build. `--model-endpoint` for the supplement is not
-// wired in this slice — the operator's token and budget flags land together in the next one — so a
-// resident today loads this plugin and it answers `undefined` to everything. That is not a stub: it is
-// the fail-closed default, and the tests hold it there by composing the plugin with no model and
-// asserting the message is byte-identical to what the build produced before this slice.
+// No model configured is still the normal state: `--proactive-ci-supplement` is off unless the operator
+// turned it on, and the resident refuses to start if it was turned on without an endpoint, a model, a
+// budget and the rest of the CI composition. A resident that loads this plugin with no model answers
+// `undefined` to everything — the fail-closed default, held there by tests that compose the plugin with
+// no model and assert the message is byte-identical to what the build produced before this slice.
 
 import { gitHubCiRunMaterialsService } from '../github-ci/contracts.js';
 import type { PluginDefinition } from '../runtime/plugin.js';
@@ -59,7 +59,13 @@ function parseModel(input: unknown): RepositoryCiDiagnosisSupplementModel {
     throw new Error('repository-ci-diagnosis-supplement requires model to be an object.');
   }
 
-  const { endpoint, model, budgetMs } = input;
+  const { endpoint, model, budgetMs, credential } = input;
+
+  if (credential !== undefined && typeof credential !== 'string') {
+    throw new Error(
+      'repository-ci-diagnosis-supplement requires model.credential to be a string when present.',
+    );
+  }
 
   if (typeof endpoint !== 'string' || endpoint.trim() === '') {
     throw new Error(
@@ -88,7 +94,12 @@ function parseModel(input: unknown): RepositoryCiDiagnosisSupplementModel {
     );
   }
 
-  return Object.freeze({ endpoint: endpoint.trim(), model: model.trim(), budgetMs });
+  return Object.freeze({
+    endpoint: endpoint.trim(),
+    model: model.trim(),
+    budgetMs,
+    ...(credential === undefined || credential === '' ? {} : { credential }),
+  });
 }
 
 function parseConfig(input: unknown): RepositoryCiDiagnosisSupplementPluginConfig {

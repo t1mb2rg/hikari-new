@@ -92,6 +92,63 @@ test('the github ci plugin requires nothing and provides the observation and the
   assert.equal(gitHubCiRunMaterialsService.version, 1);
 });
 
+// The credential crosses this plugin in exactly one direction: it is a value the composition read and
+// handed to both factories. What this asserts is the handover — both reads of one repository are
+// authenticated by the same token, because two credentials for one repository would be two quotas and
+// two answers to "is this token allowed" — and that a composition with no token still configures both
+// factories with nothing rather than with an empty string.
+test('the token is handed to both factories, and its absence is handed as absence', async (t) => {
+  const seen = [];
+
+  const runtime = new Runtime();
+  t.after(() => runtime.shutdown());
+
+  const acquirer = () => ({
+    acquire: async () => acquisition(),
+    dispose: () => {},
+  });
+
+  await runtime.loadPlugin(
+    createGitHubCiPlugin(
+      (reference, token) => {
+        seen.push({ which: 'acquirer', reference, token });
+        return acquirer();
+      },
+      (reference, token) => {
+        seen.push({ which: 'materials', reference, token });
+        return { getRunMaterials: async () => undefined };
+      },
+    ),
+    { repository: 't1mb2rg/hikari-new', token: 'test-github-token' },
+  );
+
+  assert.deepEqual(
+    seen.map((entry) => entry.which),
+    ['acquirer', 'materials'],
+  );
+  for (const entry of seen) {
+    assert.equal(entry.token, 'test-github-token');
+    assert.deepEqual(entry.reference, { owner: 't1mb2rg', name: 'hikari-new' });
+  }
+
+  const anonymous = [];
+  const second = new Runtime();
+  t.after(() => second.shutdown());
+
+  await second.loadPlugin(
+    createGitHubCiPlugin(
+      (reference, token) => {
+        anonymous.push(token);
+        return acquirer();
+      },
+      () => ({ getRunMaterials: async () => undefined }),
+    ),
+    { repository: 't1mb2rg/hikari-new' },
+  );
+
+  assert.deepEqual(anonymous, [undefined]);
+});
+
 test('an observation reports the four facts and no others, labelled by source', async (t) => {
   const { observed } = await observeOnce(t, () => acquisition());
 

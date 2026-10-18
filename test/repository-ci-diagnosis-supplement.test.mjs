@@ -144,6 +144,39 @@ test('这一支上合格答案原样返回内容：不带标签、不带排版�
   assert.ok(body.messages[1].content.includes('Build and test'));
 });
 
+test('凭据只出现在 Authorization 头里：不进请求体、不进日志行', async () => {
+  const logs = [];
+  const model = modelThatAnswers(
+    JSON.stringify({ text: '先看 Build and test 这一步。', cited: ['Build and test'] }),
+  );
+  const supplement = createRepositoryCiDiagnosisSupplement({
+    readMaterials: countingReader().readMaterials,
+    model: {
+      endpoint: 'http://127.0.0.1:1/v1/chat/completions',
+      model: 'test-model',
+      budgetMs: 30_000,
+      credential: 'test-model-credential',
+    },
+    log: (line) => logs.push(line),
+  });
+
+  await withFetch(model.fetch, () =>
+    supplement.attach({
+      occurrence: OCCURRENCE,
+      proposal: { kind: 'insufficient-evidence', missing: 'commit-comparison-indeterminate' },
+    }),
+  );
+
+  assert.equal(model.seen.length, 1);
+  assert.equal(model.seen[0].init.headers.authorization, 'Bearer test-model-credential');
+  assert.equal(model.seen[0].init.body.includes('test-model-credential'), false);
+  // No line at all on the success path, and that is the module's contract rather than an omission:
+  // 「已附加」 is a claim about the message, and the message is assembled by the caller — so the line
+  // that says it belongs to whoever appends. What this asserts about the credential is the absence:
+  // nothing this module writes can carry it.
+  assert.deepEqual(logs, []);
+});
+
 test('引用列表为空、或者引用了材料里没有的字符串，都不算合格答案', async () => {
   for (const content of [
     JSON.stringify({ text: '看看那里。', cited: [] }),

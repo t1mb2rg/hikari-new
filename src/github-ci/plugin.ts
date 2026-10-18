@@ -30,9 +30,12 @@ export interface GitHubCiReference {
 // The materials reader has the same seam and for the same reason, with one addition: the failure the
 // tests need to inject is not "the network is down" but "this read throws", because the property under
 // test is that a broken material path cannot take the notification down with it.
+//
+// Both factories receive the configured token, because both spend the same repository's quota: an
+// authenticated observation and an anonymous log read would be two credentials for one repository.
 export function createGitHubCiPlugin(
-  createAcquirer: (reference: GitHubCiReference) => GitHubCiAcquirer,
-  createMaterials: (reference: GitHubCiReference) => GitHubCiRunMaterialsReader = defaultMaterials,
+  createAcquirer: (reference: GitHubCiReference, token?: string) => GitHubCiAcquirer,
+  createMaterials: (reference: GitHubCiReference, token?: string) => GitHubCiRunMaterialsReader = defaultMaterials,
 ): PluginDefinition<GitHubCiPluginConfig> {
   return {
     id: 'github-ci',
@@ -49,14 +52,14 @@ export function createGitHubCiPlugin(
     },
     setup(context, config) {
       const reference = parseReference(config.repository);
-      const acquirer = createAcquirer(reference);
+      const acquirer = createAcquirer(reference, config.token);
       context.defer(() => acquirer.dispose());
       context.services.provide(
         gitHubCiService,
         Object.freeze({ current: async () => toObservation(await acquirer.acquire()) }),
       );
 
-      const reader = createMaterials(reference);
+      const reader = createMaterials(reference, config.token);
 
       // One `try` around the whole read, and the catch does not rethrow. A reader that fails is a
       // reader whose failure has to stop here: the callers that matter are inside a cycle that must
@@ -78,8 +81,11 @@ export function createGitHubCiPlugin(
   };
 }
 
-function defaultMaterials(reference: GitHubCiReference): GitHubCiRunMaterialsReader {
-  return createGitHubCiRunMaterialsReader(reference);
+function defaultMaterials(reference: GitHubCiReference, token?: string): GitHubCiRunMaterialsReader {
+  return createGitHubCiRunMaterialsReader({
+    ...reference,
+    ...(token === undefined ? {} : { token }),
+  });
 }
 
 // A GitHub owner is alphanumeric with interior hyphens, and a repository name additionally allows

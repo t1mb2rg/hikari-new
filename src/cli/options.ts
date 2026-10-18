@@ -86,6 +86,31 @@ export interface ResidentOptions extends CliOptions {
    * composition this file can express rather than one it has to choose between.
    */
   readonly proactiveReturn?: ProactiveReturnOptions;
+  /**
+   * Whether Hikari may spend model time adding a paragraph to one kind of CI notification, and how
+   * long it may spend — or absent because nobody asked it to.
+   *
+   * Absent is the default resident in every composition, and it is a complete answer: the CI failure
+   * notification is exactly the one this build sent before the supplement existed. Present is a whole
+   * composition's worth of promise rather than one flag: the switch is refused without the CI scope,
+   * the cadence, the model and the budget, so a resident that has it has everything the supplement
+   * needs to be more than a plugin that answers `undefined`.
+   */
+  readonly proactiveCiSupplement?: ProactiveCiSupplementOptions;
+  /**
+   * The name of the environment variable that holds a GitHub credential, or absent for anonymous
+   * requests.
+   *
+   * A variable *name*, never a value, for the reason `--model-credential-env` is a name: an argument
+   * list is visible to every process on this machine and is kept in shell history, so a token passed
+   * here would be disclosed by the act of configuring it. The value is resolved once, at startup, and
+   * never printed, logged, written to a fact or put anywhere but the `Authorization` header.
+   *
+   * Absent is the ordinary state and changes nothing: observation stays anonymous and a log read
+   * answers as missing rather than as empty. Present is refused without the CI scope, because a
+   * credential with no repository is a secret configured for a request that will never be made.
+   */
+  readonly githubTokenEnv?: string;
 }
 
 /**
@@ -105,6 +130,25 @@ export interface ResidentOptions extends CliOptions {
 export interface ProactiveReturnOptions {
   readonly delayMs: number;
   readonly afterMs: number;
+}
+
+/**
+ * One explicit model-written supplement: the switch, and the budget it is allowed to spend.
+ *
+ * Unlike the return mandate above, the authorization here is the **switch**, not the number, and that
+ * asymmetry is deliberate rather than unexamined. A return is announced into a silence and needs a
+ * threshold to mean anything; a supplement is an extra paragraph added to a notification that is
+ * already concatenated, so its budget is a bound on a cost rather than the act of deciding to speak.
+ * The number is required all the same: a budget with no default is the same rule the cadence and the
+ * threshold obey, and a default here would be this file deciding how long a human waits.
+ *
+ * What the switch names is a whole composition, not a boolean — that is what the conditional approval
+ * on this slice asked for. It is refused unless the Repository CI scope, the cadence, the model and
+ * the budget are all present, and an operator who turned it on cannot end up with a resident whose CI
+ * notifications are silently missing a member.
+ */
+export interface ProactiveCiSupplementOptions {
+  readonly budgetMs: number;
 }
 
 /**
@@ -369,6 +413,8 @@ export const USAGE = [
   '                  [--proactive-ci-delay-ms <integer>]',
   '                  [--proactive-return-delay-ms <integer>',
   '                   --proactive-return-after-ms <integer>]',
+  '                  [--proactive-ci-supplement --proactive-ci-supplement-budget-ms <integer>]',
+  '                  [--github-token-env <ENV_NAME>]',
   '  hikari status --data-dir <path>',
   '  hikari stop --data-dir <path>',
   '  hikari subscribe --data-dir <path>',
@@ -408,6 +454,11 @@ export const USAGE = [
   '  --proactive-return-delay-ms <integer>    观察输入活动的节奏，与 --proactive-return-after-ms 成对出现',
   '  --proactive-return-after-ms <integer>    多久没有输入之后又出现输入才算一次「回来」；',
   '                                           给出它就是授权 Hikari 主动说话，省略表示不主动说话',
+  '  --proactive-ci-supplement                授权模型在某一种 CI 失败通知后面补一段复查建议；',
+  '                                           与 --proactive-ci-supplement-budget-ms 成对出现，省略表示不补',
+  '  --proactive-ci-supplement-budget-ms <integer>  最多花多少毫秒等模型写完那段补充；没有默认值',
+  '  --github-token-env <ENV_NAME>            从该环境变量读取 GitHub 凭据；省略表示匿名请求',
+  '                                           （这里给的是变量的名字，不是凭据本身）',
   '',
   '说明：',
   '  hikari resident 同时给出 --model-endpoint 与 --model 时才会加载语言插件；',
@@ -445,6 +496,15 @@ export const USAGE = [
   '  不声称你离开过或回来过。没有声明关注对象时它不说；声明集为空的那次不会形成播报。',
   '  --proactive-return-delay-ms 单独出现是用法错误：它只是采样节奏，',
   '  不给出阈值时它没有任何东西可以影响。两个主动播报开关互不推导，各自独立授权。',
+  '  --proactive-ci-supplement 打开的是「模型可以在某一种 CI 失败通知后面补一段」。',
+  '  它只在通知已经确定要发出去之后才用得上：补不出来就发原来的句子，一次失败仍然只有一条消息，',
+  '  模型不能决定发不发、也不能增加消息条数。它要求整个 Repository CI 组合都在场',
+  '  （仓库范围、--proactive-ci-delay-ms、--model-endpoint 与 --model、以及它自己的预算），',
+  '  缺任何一项都会在启动前被拒绝——而不是让 CI 通知整体静默。',
+  '  预算给的是最多等多久；超时、端点报错、格式不对、引用核不上都会退回原句，并只在运行日志里留一行。',
+  '  --github-token-env 给的是环境变量的名字，不是凭据本身；凭据只进 Authorization 头，',
+  '  不进日志、不进材料、不进 Chronicle、不进错误消息。省略时请求是匿名的：',
+  '  GitHub 有每小时次数上限，日志那一项读不到时就当作没有材料，原通知照常发出。',
   '  hikari 不带命令时打开 TUI，这是日常待着的那个窗口：默认是 Chat，按 Tab 切到 System 与 Profile。',
   '  Chat 把你输入的文字原样交给常驻的语言入口，把它的回答原样显示回来——TUI 不判断你的意思，',
   '  也不改写它说的话。System 显示常驻的状态并可以启动 / 停止 / 重启；',
@@ -1023,6 +1083,9 @@ function readResidentOptions(tokens: readonly string[]): ResidentOptions {
     proactiveDelayToken,
     proactiveReturnDelayToken,
     proactiveReturnAfterToken,
+    supplementRequested,
+    supplementBudgetToken,
+    githubTokenEnv,
   } = readOptionTokens(tokens, 'resident');
   if (delayToken === undefined) {
     throw new UsageError('缺少必填参数：--desktop-awareness-delay-ms');
@@ -1041,7 +1104,23 @@ function readResidentOptions(tokens: readonly string[]): ResidentOptions {
   // Independent of the pairing above, and of the repository scope: this mandate names a subject that
   // is not a repository, so it is read from the model and its own two tokens and from nothing else.
   const proactiveReturn = readProactiveReturnPairing(proactiveReturnAfterToken, proactiveReturnDelayToken, language);
-  return proactiveReturn === undefined ? withProactive : { ...withProactive, proactiveReturn };
+  const withReturn = proactiveReturn === undefined ? withProactive : { ...withProactive, proactiveReturn };
+
+  // Both of these name things the Repository CI chain already contains, so they are read against the
+  // same scope the chain is built from. The supplement is read last on purpose: its rule is the only
+  // one that runs forward into the others (it needs the cadence that was just resolved), and reading it
+  // here means an operator who enabled it hears about every missing piece in one sentence.
+  const supplement = readProactiveSupplementPairing(
+    supplementRequested,
+    supplementBudgetToken,
+    repositoryCi,
+    language,
+    proactive,
+  );
+  const withSupplement = supplement === undefined ? withReturn : { ...withReturn, proactiveCiSupplement: supplement };
+
+  const tokenEnv = readGitHubTokenEnv(githubTokenEnv, repositoryCi);
+  return tokenEnv === undefined ? withSupplement : { ...withSupplement, githubTokenEnv: tokenEnv };
 }
 
 // The fourth pairing rule, and the only one where the *threshold* is the act of authorization. The
@@ -1086,6 +1165,77 @@ function readProactiveReturnPairing(
   }
 
   return Object.freeze({ delayMs: Number(delayToken), afterMs: Number(afterToken) });
+}
+
+// The fifth pairing rule, and the only one that names a *composition* rather than a value. The other
+// four answer "are the two halves of this one configuration present"; this one answers "is every
+// member the supplement needs actually going to be in the resident".
+//
+// It is refused here for the reason the CI pairing gives, in its strongest form. A resident started
+// with the switch and a missing half does not degrade into today's notification: attention requires
+// the supplement service, an unsatisfied requirement makes attention `waiting` or `inert`, and the
+// resident refuses readiness and exits — CI failure notifications would stop entirely because an
+// optional paragraph could not be built. The startup gate makes that a refusal rather than a silence,
+// but it reports a roster; this sentence says which flag is missing before anything is loaded.
+//
+// Every missing item is named in one message, because they are independent omissions: an operator who
+// wanted the supplement and supplied none of it has four edits to make, and discovering them one
+// restart at a time is the loop this rule exists to remove.
+//
+// What is deliberately *not* checked: the budget's range. `readOptionTokens` has established that it
+// is a numeric literal; whether the number is one the supplement module will accept is that module's
+// own question, asked in its `config.parse`. A second copy of that bound here would be a second
+// answer to a question that already has one.
+function readProactiveSupplementPairing(
+  requested: boolean,
+  budgetToken: string | undefined,
+  repositoryCi: RepositoryCiOptions | undefined,
+  model: ModelOptions | undefined,
+  proactiveCiDelayMs: number | undefined,
+): ProactiveCiSupplementOptions | undefined {
+  if (!requested) {
+    if (budgetToken !== undefined) {
+      throw new UsageError(
+        '--proactive-ci-supplement-budget-ms 需要与 --proactive-ci-supplement 一起出现；缺少：--proactive-ci-supplement',
+      );
+    }
+
+    return undefined;
+  }
+
+  const missing: string[] = [];
+  if (repositoryCi === undefined) missing.push('--repository-root、--repository');
+  if (proactiveCiDelayMs === undefined) missing.push('--proactive-ci-delay-ms');
+  if (model === undefined) missing.push('--model-endpoint、--model');
+  if (budgetToken === undefined) missing.push('--proactive-ci-supplement-budget-ms');
+
+  if (missing.length > 0) {
+    throw new UsageError(
+      `--proactive-ci-supplement 需要完整的 Repository CI 组合；缺少：${missing.join('、')}`,
+    );
+  }
+
+  return Object.freeze({ budgetMs: Number(budgetToken) });
+}
+
+// A credential with no repository is a secret configured for a request that will never be made, and
+// this file refuses that shape rather than carrying it into a resident that cannot use it. Nothing
+// about the value is checked here — whether the variable exists is a question for the process that
+// owns the environment, asked once at startup so that a missing variable is an error the operator
+// reads rather than a log line nobody sees.
+function readGitHubTokenEnv(
+  envName: string | undefined,
+  repositoryCi: RepositoryCiOptions | undefined,
+): string | undefined {
+  if (envName === undefined) return undefined;
+
+  if (repositoryCi === undefined) {
+    throw new UsageError(
+      '--github-token-env 需要 Repository CI 的仓库范围；缺少：--repository-root、--repository',
+    );
+  }
+
+  return envName;
 }
 
 // The third pairing rule in this file, and the widest: this flag names something that needs two other
@@ -1220,6 +1370,9 @@ interface OptionTokens {
   readonly proactiveDelayToken: string | undefined;
   readonly proactiveReturnDelayToken: string | undefined;
   readonly proactiveReturnAfterToken: string | undefined;
+  readonly supplementRequested: boolean;
+  readonly supplementBudgetToken: string | undefined;
+  readonly githubTokenEnv: string | undefined;
 }
 
 function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): OptionTokens {
@@ -1234,6 +1387,9 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
   let proactiveDelayToken: string | undefined;
   let proactiveReturnDelayToken: string | undefined;
   let proactiveReturnAfterToken: string | undefined;
+  let supplementRequested = false;
+  let supplementBudgetToken: string | undefined;
+  let githubTokenEnv: string | undefined;
 
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
@@ -1409,6 +1565,52 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
       continue;
     }
 
+    // The switch takes no value, and that is the whole of what makes it a switch: everything it
+    // authorizes is named by other flags, which the pairing rule below refuses to leave half-given.
+    if (token === '--proactive-ci-supplement' && grammar === 'resident') {
+      if (supplementRequested) {
+        throw new UsageError('--proactive-ci-supplement 只能指定一次。');
+      }
+
+      supplementRequested = true;
+      continue;
+    }
+
+    // Read exactly like the cadences above and checked exactly as little: is this token a number.
+    // Whether the number fits the budget the supplement module accepts is that plugin's question,
+    // asked in its own `config.parse` where the answer can be acted on.
+    if (token === '--proactive-ci-supplement-budget-ms' && grammar === 'resident') {
+      if (supplementBudgetToken !== undefined) {
+        throw new UsageError('--proactive-ci-supplement-budget-ms 只能指定一次。');
+      }
+
+      const value = tokens[index + 1];
+      if (value === undefined) {
+        throw new UsageError('--proactive-ci-supplement-budget-ms 需要一个整数。');
+      }
+      if (!NUMBER_LITERAL.test(value)) {
+        throw new UsageError(`--proactive-ci-supplement-budget-ms 需要一个数字，收到：${value}`);
+      }
+
+      supplementBudgetToken = value;
+      index += 1;
+      continue;
+    }
+
+    // A variable name, never a value — the same rule and the same reason as `--model-credential-env`
+    // above. What is read here is where to look, not what is there.
+    if (token === '--github-token-env' && grammar === 'resident') {
+      if (githubTokenEnv !== undefined) throw new UsageError('--github-token-env 只能指定一次。');
+
+      const value = tokens[index + 1];
+      if (value === undefined) throw new UsageError('--github-token-env 需要一个环境变量名。');
+      if (!value.trim()) throw new UsageError('--github-token-env 不能是空值。');
+
+      githubTokenEnv = value;
+      index += 1;
+      continue;
+    }
+
     throw new UsageError(`未知参数：${String(token)}`);
   }
 
@@ -1425,5 +1627,8 @@ function readOptionTokens(tokens: readonly string[], grammar: OptionGrammar): Op
     proactiveDelayToken,
     proactiveReturnDelayToken,
     proactiveReturnAfterToken,
+    supplementRequested,
+    supplementBudgetToken,
+    githubTokenEnv,
   };
 }

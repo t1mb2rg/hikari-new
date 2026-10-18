@@ -1328,11 +1328,130 @@ test('主动投递要仓库范围与语言插件一起出现，缺哪一半就�
   assert.deepEqual(readdirSync(root), []);
 });
 
-// The number itself is deliberately not checked here. `readOptionTokens` establishes that it is a
-// numeric literal, which is all an argument list can know; whether it is a cadence a timer can carry is
-// the attention plugin's own question, asked in its `config.parse`. What is checked is that the CLI has
-// no second opinion about the shape — including that it does not silently accept a token that is not a
-// number, which would then reach the plugin as `NaN`.
+// The supplement's own pairing rule, and the one rule in this file that names four configurations
+// rather than one or two. The reason is the shape of the feature: a supplement is not a capability of
+// the resident, it is a fourth stage of one particular notification, so a resident missing any of its
+// inputs would send CI notifications without it forever — and the operator would have no way to tell
+// that from the model having nothing to say. Refused at the argument layer, before any of it runs.
+test('补充开关与显式预算是一对：缺一样就指名道姓，配齐了才成为配置', (t) => {
+  const root = createRoot(t);
+
+  const switchOnly = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--proactive-ci-supplement',
+  );
+  assert.equal(switchOnly.code, 2);
+  assert.match(switchOnly.stderr, /需要仓库范围/);
+  assert.match(switchOnly.stderr, /--proactive-ci-supplement-budget-ms/);
+  assert.match(switchOnly.stderr, /--model-endpoint/);
+  assert.match(switchOnly.stderr, /用法：/);
+
+  // The number is not authorization: a budget with nothing to budget is refused rather than kept
+  // against a future flag, exactly as `--proactive-return-delay-ms` alone is refused.
+  const budgetOnly = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--proactive-ci-supplement-budget-ms',
+    '180000',
+  );
+  assert.equal(budgetOnly.code, 2);
+  assert.match(budgetOnly.stderr, /缺少：--proactive-ci-supplement\b/);
+
+  // The whole set, parsed rather than spawned: what this asserts is that the CLI produced a value at
+  // all and produced it under a name the composition can read, not that a resident came up.
+  const parsed = parseCommandLine([
+    'resident',
+    '--data-dir',
+    'root',
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository-root',
+    'C:\\work\\hikari-new',
+    '--repository',
+    't1mb2rg/hikari-new',
+    '--proactive-ci-delay-ms',
+    '30000',
+    '--model-endpoint',
+    'http://127.0.0.1:8080/v1/chat/completions',
+    '--model',
+    'qwen3.8',
+    '--proactive-ci-supplement',
+    '--proactive-ci-supplement-budget-ms',
+    '180000',
+  ]);
+  assert.deepEqual(parsed.options.proactiveCiSupplement, { budgetMs: 180_000 });
+  assert.deepEqual(readdirSync(root), []);
+});
+
+// The credential is a variable *name*, and this is the only place that name can appear: the value is
+// read in the composition root, at startup, and never printed. A name without a repository scope
+// authenticates reads that will not be made, which is refused rather than carried.
+test('--github-token-env 给的是变量名：没有仓库范围就是用法错误，给了就是那个名字', (t) => {
+  const root = createRoot(t);
+
+  const orphaned = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--github-token-env',
+    'HIKARI_TEST_GITHUB_TOKEN',
+  );
+  assert.equal(orphaned.code, 2);
+  assert.match(orphaned.stderr, /需要仓库范围/);
+  assert.match(orphaned.stderr, /缺少：--repository-root、--repository/);
+
+  const parsed = parseCommandLine([
+    'resident',
+    '--data-dir',
+    'root',
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository-root',
+    'C:\\work\\hikari-new',
+    '--repository',
+    't1mb2rg/hikari-new',
+    '--github-token-env',
+    'HIKARI_TEST_GITHUB_TOKEN',
+  ]);
+  assert.equal(parsed.options.githubTokenEnv, 'HIKARI_TEST_GITHUB_TOKEN');
+  assert.deepEqual(readdirSync(root), []);
+});
+
+// A named variable that holds nothing is a fault, not an anonymous fallback. The distinction matters
+// because the anonymous quota is small and shared: a resident that quietly sent anonymous requests
+// while its operator believed they were authenticated would look healthy and then stop seeing runs.
+test('凭据变量没有值时，常驻启动前就失败，而不是静默退回匿名', (t) => {
+  const root = createRoot(t);
+
+  const outcome = runCli(
+    'resident',
+    '--data-dir',
+    root,
+    '--desktop-awareness-delay-ms',
+    '1000',
+    '--repository-root',
+    'C:\\work\\hikari-new',
+    '--repository',
+    't1mb2rg/hikari-new',
+    '--github-token-env',
+    'HIKARI_TEST_ABSENT_GITHUB_TOKEN',
+  );
+
+  assert.equal(outcome.code, 1);
+  assert.match(outcome.stderr, /HIKARI_TEST_ABSENT_GITHUB_TOKEN 没有值/);
+  assert.match(outcome.stderr, /去掉这个参数走匿名请求/);
+  assert.equal(/Hikari 常驻已启动/.test(outcome.stdout), false);
+});
+
 test('主动投递的节奏只由参数列表确认是数字，合法与否交给插件', (t) => {
   const root = createRoot(t);
 

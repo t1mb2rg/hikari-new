@@ -8,7 +8,10 @@ export { judgeProposal } from './judgement.js';
 export { repositoryCiDiagnosisProposalPlugin } from './plugin.js';
 export { renderProposal } from './render.js';
 export { createRepositoryCiDiagnosisSupplement } from './supplement.js';
-export type { RepositoryCiDiagnosisSupplementContent } from './supplement.js';
+export type {
+  RepositoryCiDiagnosisSupplementContent,
+  RepositoryCiDiagnosisSupplementModel,
+} from './supplement.js';
 export {
   repositoryCiDiagnosisSupplementPlugin,
   type RepositoryCiDiagnosisSupplementPluginConfig,

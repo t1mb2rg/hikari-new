@@ -60,8 +60,14 @@ function runsBody(runs) {
   return { total_count: runs.length, workflow_runs: runs };
 }
 
-function acquirerFor(baseUrl, timeoutMs) {
-  return createGitHubCiAcquirer({ owner: OWNER, name: NAME, baseUrl, timeoutMs });
+function acquirerFor(baseUrl, timeoutMs, token) {
+  return createGitHubCiAcquirer({
+    owner: OWNER,
+    name: NAME,
+    baseUrl,
+    ...(timeoutMs === undefined ? {} : { timeoutMs }),
+    ...(token === undefined ? {} : { token }),
+  });
 }
 
 test('an observation is two unauthenticated GETs: the repository, then its most recent run', async (t) => {
@@ -92,6 +98,47 @@ test('no credential of any kind is sent, and the API version is stated', async (
     assert.equal(request.headers['x-github-api-version'], '2022-11-28');
     assert.equal(request.headers.accept, 'application/vnd.github+json');
   }
+});
+
+// The other half of the same seam. The token is not a feature of this module — it is one value the
+// composition root read from the environment and handed over — but two things about it are this
+// module's promise and are therefore asserted here: it goes on exactly the requests it was given for,
+// and it goes nowhere else. The observation that comes back is the same observation either way, which
+// is the point: authenticated reads spend a different quota, they do not see a different repository.
+test('a credential is one header on every request it was given for, and nothing else changes', async (t) => {
+  const { baseUrl, seen } = await serve(t, {
+    [REPOSITORY_PATH]: (request, response) => json(response, 200, repositoryBody(`${OWNER}/${NAME}`)),
+    [RUNS_PATH]: (request, response) => json(response, 200, runsBody([runBody()])),
+  });
+
+  const observation = await createGitHubCiAcquirer({
+    owner: OWNER,
+    name: NAME,
+    baseUrl,
+    token: 'test-token-value',
+  }).acquire();
+
+  assert.equal(seen.length, 2);
+  for (const request of seen) {
+    assert.equal(request.headers.authorization, 'Bearer test-token-value');
+  }
+
+  assert.equal(observation.repository, `${OWNER}/${NAME}`);
+  assert.equal(JSON.stringify(observation).includes('test-token-value'), false);
+});
+
+// An empty string is the anonymous case rather than a header with nothing after `Bearer `. It is the
+// plugin that refuses a configured-but-empty token; by the time a value reaches here, `''` can only
+// mean one thing, and sending `Bearer ` would be a request that is authenticated in appearance only.
+test('an empty token is the anonymous request, not an empty Authorization header', async (t) => {
+  const { baseUrl, seen } = await serve(t, {
+    [REPOSITORY_PATH]: (request, response) => json(response, 200, repositoryBody(`${OWNER}/${NAME}`)),
+    [RUNS_PATH]: (request, response) => json(response, 200, runsBody([runBody()])),
+  });
+
+  await acquirerFor(baseUrl, undefined, '').acquire();
+
+  for (const request of seen) assert.equal(request.headers.authorization, undefined);
 });
 
 test("the repository is reported under GitHub's spelling, not the one it was asked about", async (t) => {

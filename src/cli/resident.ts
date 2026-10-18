@@ -54,6 +54,7 @@ import { repositoryCiAwarenessPlugin } from '../repository-ci-awareness/index.js
 import {
   repositoryCiDiagnosisProposalPlugin,
   repositoryCiDiagnosisSupplementPlugin,
+  type RepositoryCiDiagnosisSupplementModel,
 } from '../repository-ci-diagnosis-proposal/index.js';
 import { repositoryCiRelevancePlugin } from '../repository-ci-relevance/index.js';
 import { repositoryCiWorldPlugin } from '../repository-ci-world/index.js';
@@ -368,6 +369,13 @@ export function productionComposition(options: ResidentOptions): Composition {
 
   const model = options.model;
   const repositoryCi = options.repositoryCi;
+  const supplement = options.proactiveCiSupplement;
+  // Read once, here, because this is the composition root: the plugin layer is handed a value and
+  // never a variable name, and a token that changed between two reads could authenticate one request
+  // and not the next. Only reached when the operator named a variable — the pairing check in
+  // `options.ts` refuses a token without a repository scope.
+  const githubToken =
+    options.githubTokenEnv === undefined ? undefined : readGitHubToken(options.githubTokenEnv);
 
   // The member shape is the same for both variants — same id, same four config values — and only the
   // *definition* differs. Building it once from a definition is what keeps the id and the configuration
@@ -510,7 +518,14 @@ export function productionComposition(options: ResidentOptions): Composition {
     },
     {
       id: gitHubCiPlugin.id,
-      load: (runtime) => runtime.loadPlugin(gitHubCiPlugin, { repository: repositoryCi.repository }),
+      load: (runtime) =>
+        runtime.loadPlugin(gitHubCiPlugin, {
+          repository: repositoryCi.repository,
+          // The one credential this build can be given, resolved from the variable name the operator
+          // typed and handed to both of this plugin's reads. Absent is the anonymous request every
+          // earlier build made; the plugin treats the two identically apart from one header.
+          ...(githubToken === undefined ? {} : { token: githubToken }),
+        }),
     },
     {
       // The executor's CI-aware definition, here rather than in the base because this is the composition
@@ -568,6 +583,13 @@ export function productionComposition(options: ResidentOptions): Composition {
       load: (runtime) =>
         runtime.loadPlugin(repositoryCiDiagnosisSupplementPlugin, {
           log: (line: string) => PROCESS_IO.err(`${line}\n`),
+          // No flag, no model: the plugin is loaded (so the contract is present and the boundaries are
+          // exercised) and answers `undefined` to everything. With the flag, the model is the same one
+          // the rest of this resident talks to — one endpoint, one credential, one model name — and the
+          // only value the supplement adds is how long it may take.
+          ...(supplement === undefined
+            ? {}
+            : { model: supplementModel(model, supplement.budgetMs) }),
         }),
     },
   ];
@@ -588,6 +610,97 @@ export function productionComposition(options: ResidentOptions): Composition {
   // exactly what the build before the proactive slices produced — the mandates are appended here, they
   // do not rearrange anything already in the list.
   return [...base, ...chain, language, ...proactive];
+}
+
+// The supplement's eligibility, checked once at startup and answered with the exact missing piece.
+//
+// `isReady` already refuses a composition in which any member is not `active`, so this is not the only
+// thing standing between the operator and a half-configured supplement — it is the thing that names
+// the fault. A resident that came up with a supplement plugin in `waiting` would otherwise send CI
+// notifications *without* the supplement for as long as nobody read the startup screen, and the whole
+// point of the fail-closed design is that the degradation is loud in the log rather than silent in the
+// message. The flag was given; if the chain it names cannot come up, the operator hears it before the
+// resident says it is started.
+function checkSupplementChain(
+  options: ResidentOptions,
+  loaded: readonly LoadedMember[],
+): string | undefined {
+  if (options.proactiveCiSupplement === undefined) return undefined;
+
+  const member = loaded.find((entry) => entry.id === repositoryCiDiagnosisSupplementPlugin.id);
+  if (member === undefined) {
+    // Unreachable while `compositionFor` and this check are the same file: the supplement member is
+    // part of the chain that the same flags selected. Kept because the alternative to a named fault is
+    // a sentence about "the composition" that does not say what to fix.
+    return (
+      '--proactive-ci-supplement 需要整个 Repository CI 组合：' +
+      '仓库范围、--proactive-ci-delay-ms、--model-endpoint 与 --model、以及补充预算。' +
+      '这次启动里没有装补充模块。'
+    );
+  }
+
+  if (member.state !== 'active') {
+    return (
+      '--proactive-ci-supplement 已给出，但补充模块没有起来' +
+      `（状态：${member.state}）。它需要材料读取契约 github-ci.run-materials@1；` +
+      '缺这一项就什么都不补，而不是让 CI 通知整体降级。'
+    );
+  }
+
+  return undefined;
+}
+
+// The supplement's model: the same endpoint, credential and model name the rest of this resident uses,
+// plus the one number that is the operator's alone.
+//
+// The credential is resolved here rather than in the module, for the same reason the executor's is: a
+// variable *name* is configuration, a value is a boundary crossing, and this file is where the crossing
+// happens. A supplement that could not name its model would be a supplement that silently never
+// attaches, which is why the missing case throws instead of returning `undefined` — this function is
+// only called when the flag was given, and the flag's pairing check already made the model mandatory.
+function supplementModel(
+  model: ModelOptions | undefined,
+  budgetMs: number,
+): RepositoryCiDiagnosisSupplementModel {
+  if (model === undefined) {
+    throw new Error(
+      '--proactive-ci-supplement 需要 --model-endpoint 与 --model；这里是组合根，不接受缺一项的组合。',
+    );
+  }
+
+  const credential = readModelCredential(model.credentialEnv);
+
+  return {
+    endpoint: model.endpoint,
+    model: model.model,
+    budgetMs,
+    ...(credential === undefined ? {} : { credential }),
+  };
+}
+
+// The GitHub credential, read from the variable the operator named.
+//
+// Two checks, and both are about what is *not* done: an empty variable is a fault rather than an
+// anonymous fallback (the operator asked for authenticated reads, and quietly sending anonymous ones
+// would spend the small quota while looking like it worked), and a value carrying whitespace or a
+// control character is refused because it would be a header injection rather than a credential. What
+// is deliberately *not* checked is the shape of a token — GitHub's are not this build's business, and
+// a second opinion here would reject credentials that work.
+function readGitHubToken(envName: string): string {
+  const value = process.env[envName];
+  if (value === undefined || value === '') {
+    throw new Error(
+      `--github-token-env 指定的环境变量 ${envName} 没有值；要么给它赋值，要么去掉这个参数走匿名请求。`,
+    );
+  }
+
+  if (/[\s\u0000-\u001f\u007f]/.test(value)) {
+    throw new Error(
+      `--github-token-env 指定的环境变量 ${envName} 含有空白或控制字符；凭据本身不会这样。`,
+    );
+  }
+
+  return value;
 }
 
 // The model the executor drives, or `undefined` when this operator configured none.
@@ -696,8 +809,14 @@ export async function residentCommand(
     }
 
     const loaded = await loadComposition(runtime, composition);
+    const supplementFault = checkSupplementChain(options, loaded);
 
-    if (!isReady(loaded)) {
+    if (supplementFault !== undefined) {
+      // Before `isReady`, on purpose: both would refuse this composition, and the named fault says
+      // which flag is unserviceable while the not-ready render says which member is waiting.
+      exitCode = 1;
+      failure = `${supplementFault}\n`;
+    } else if (!isReady(loaded)) {
       exitCode = 1;
       failure = renderNotReady(runtime, loaded);
     } else if (signals.isRequested()) {

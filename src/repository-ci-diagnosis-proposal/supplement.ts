@@ -72,6 +72,15 @@ export interface RepositoryCiDiagnosisSupplementModel {
   /** The operator's endpoint, exactly as the Language plugin's own model seam takes it. */
   readonly endpoint: string;
   readonly model: string;
+  /**
+   * The credential, resolved by the composition root from the variable name the operator gave —
+   * `--model-credential-env` names it, this field carries its value. It travels in the `Authorization`
+   * header and nowhere else: not in the request body, not in a log line, not in an error message.
+   *
+   * It is here rather than in the plugin's configuration because that is the same seam the Language
+   * plugin uses, and an endpoint that needs a credential is the ordinary case rather than an extension.
+   */
+  readonly credential?: string | undefined;
   /** How long a supplement may take before the message goes without it. Explicit, never defaulted. */
   readonly budgetMs: number;
 }
@@ -265,7 +274,12 @@ export function createRepositoryCiDiagnosisSupplement(
     try {
       response = await fetch(model.endpoint, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          // Absent stays absent rather than becoming an empty header: an operator who named no
+          // credential is talking to an endpoint that wants none.
+          ...(model.credential === undefined ? {} : { authorization: `Bearer ${model.credential}` }),
+        },
         body: JSON.stringify({
           model: model.model,
           messages: [
