@@ -18,7 +18,10 @@
 
 import { defineService } from '../runtime/contracts.js';
 
-import type { RepositoryCiDiagnosisSupplementRequest } from './supplement.js';
+import type {
+  RepositoryCiDiagnosisSupplementContent,
+  RepositoryCiDiagnosisSupplementRequest,
+} from './supplement.js';
 import type { RepositoryCiDiagnosisProposal, RepositoryCiDiagnosisRequest } from './types.js';
 
 export interface RepositoryCiDiagnosisProposalService {
@@ -51,12 +54,16 @@ export const repositoryCiDiagnosisProposalService = defineService<RepositoryCiDi
  * only one call could not tell "the judgement had nothing to say" from "no model was configured", and
  * that difference is what decides whether a notification goes out unchanged or not at all.
  *
- * `attach` returning a string is the one place this package hands over words. They are not a suggestion:
- * they are labelled model content, and the label travels inside the returned block so that a caller
- * cannot append the text without it.
+ * `attach` returning content is the one place this package hands over words. They are not a suggestion
+ * and they are not a message: the returned value is the verified text and the material lines it was
+ * checked against, with no label, no blank line and no layout. Marking it as model-written and placing
+ * it in the notification belong to the one module that owns the send, so that "the label is present
+ * exactly when the content is" has a single writer instead of a shared convention.
  */
 export interface RepositoryCiDiagnosisSupplementService {
-  attach(request: RepositoryCiDiagnosisSupplementRequest): Promise<string | undefined>;
+  attach(
+    request: RepositoryCiDiagnosisSupplementRequest,
+  ): Promise<RepositoryCiDiagnosisSupplementContent | undefined>;
 }
 
 export const repositoryCiDiagnosisSupplementService =

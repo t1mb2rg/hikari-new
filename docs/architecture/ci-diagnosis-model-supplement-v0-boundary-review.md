@@ -641,11 +641,13 @@ run 仍在排队、尚未产生 job 时：不继续等待 jobs、不调用模型
 
 | 文件 | 变动 | 职责 |
 | --- | --- | --- |
-| `src/repository-ci-diagnosis-proposal/supplement.ts` | 新增 | 补充模块本身：一次材料读取、一次模型调用、一次引用核验，产出「可附加的一段话」或 `undefined` |
+| `src/repository-ci-diagnosis-proposal/supplement.ts` | 新增 | 补充模块本身：一次材料读取、一次模型调用、一次引用核验，产出「经过核验的内容 `{ text, cited }`」或 `undefined` |
 | `src/repository-ci-diagnosis-proposal/supplement-plugin.ts` | 新增 | 把模块接到 Runtime：`repository-ci-diagnosis-proposal.supplement@1`，`requires: gitHubCiRunMaterialsService` |
 | `src/repository-ci-diagnosis-proposal/contracts.ts` | 改 | 新增 `RepositoryCiDiagnosisSupplementService` 与 `attach()` 的请求/返回形状 |
-| `src/repository-ci-attention/plugin.ts` | 改 | 投递前取补充、追加到同一段文字、外面加一道局部失败边界 |
+| `src/repository-ci-attention/supplement-block.ts` | 新增 | 「空行 + 固定标签 + 正文」的唯一写点；正文里出现身份标签时整段拒收 |
+| `src/repository-ci-attention/plugin.ts` | 改 | 投递前取补充、按版面拼进同一段文字、外面加一道局部失败边界，成功时写一行「已附加」 |
 | `src/cli/resident.ts` | 改 | 装载补充插件（**不配模型端点**），把 stderr 日志接给 attention |
+| `test/repository-ci-attention.test.mjs` / `test/repository-ci-diagnosis-supplement.test.mjs` | 改 | 产品级失败注入 11 条 + 模块级 5 条 |
 
 `github-ci` 一侧（材料读取器）是上一片落的，不在本节。
 
@@ -680,10 +682,14 @@ run 仍在排队、尚未产生 job 时：不继续等待 jobs、不调用模型
 模型补充：已附加（<耗时> ms）
 模型补充：超时（<B> ms）→ 未附加
 模型补充：格式错误 → 未附加
+模型补充：格式错误（内容里出现了身份标签）→ 未附加
 模型补充：引用不可核验（<n> 处）→ 未附加
 模型补充：端点不可用 → 未附加
 模型补充：材料读取失败（<reason>）→ 未附加
+模型补充：未预期异常 → 未附加
 ```
+
+前两行里，`已附加` 由 attention 写（只有它知道字有没有进消息），其余全是补充模块写；`未预期异常` 是 attention 第二道边界写的。
 
 - 只记原因与耗时；**不记** token、提示词、材料原文、日志原文。
 - 不写 chronicle、不加事实 kind、不进 `hikari status`（§10.4 的裁决没有被实现改写）。
@@ -693,9 +699,11 @@ run 仍在排队、尚未产生 job 时：不继续等待 jobs、不调用模型
 
 ### 13.5 证据：产品级失败注入，不靠 API 探针
 
-`test/repository-ci-attention.test.mjs` 新增 9 条产品级用例（真 Runtime、真插件、假 GitHub HTTP、假投递客户端）：
+`test/repository-ci-attention.test.mjs` 新增 11 条产品级用例（真 Runtime、真插件、假 GitHub HTTP、假投递客户端）：
 
 - 答案合格：恰好一条消息，补充段在确定性句子之后，形状为「空行 + 标签 + 正文」；
+- 正文里自己写了身份标签：**整段不附加**，消息逐字退回原样（两条标签会让「哪段是事实、哪段是模型」没法定）；
+- 答案里多给一个 `label` 字段：被忽略，那一行仍由代码写；
 - 端点报错 / 答案不是 JSON / 引用对不上材料：消息退回原样，且**只投一条**；
 - 超时：退回原样，日志里带预算数字；
 - 材料缺件：**不调模型**，退回原样；
@@ -703,9 +711,9 @@ run 仍在排队、尚未产生 job 时：不继续等待 jobs、不调用模型
 - 模型自己说材料不够：安静退回原样；
 - 没配模型：插件照样在位，消息与这一片之前逐字相同。
 
-`test/repository-ci-diagnosis-supplement.test.mjs` 新增 5 条模块级用例：门（其余三支与另外两个 `missing` **连材料都不读**）、没配模型、合格答案带标签、空引用与异物引用都不合格、弃权不写日志而格式错误写。
+`test/repository-ci-diagnosis-supplement.test.mjs` 新增 5 条模块级用例：门（其余三支与另外两个 `missing` **连材料都不读**）、没配模型、合格答案**原样返回内容**（不含标签与排版）、空引用与异物引用都不合格、弃权不写日志而格式错误写。
 
-读数：`repository-ci-attention` **60/60**、`repository-ci-diagnosis-supplement` **5/5**。
+读数：`repository-ci-attention` **62/62**、`repository-ci-diagnosis-supplement` **5/5**。
 
 这一组断言覆盖的正是 §10.5 A 段要求的三件事：补充成功、补充失败、根本不调用模型，**三种情形下原通知都恰好投递一次**。
 
@@ -719,8 +727,24 @@ run 仍在排队、尚未产生 job 时：不继续等待 jobs、不调用模型
 
 不改 `judgement.ts` 的四支；不改观察与材料读取；不新增事实 kind；不写 Chronicle；不加 `hikari status` 字段；不做退避、队列、异步生命周期；不接真实模型端点。
 
-### 13.8 两处实现偏移（请评审）
+### 13.8 两处实现偏移（已裁决，2026-10-18）
 
-1. **身份标签是模块里的常量**（`REPOSITORY_CI_SUPPLEMENT_LABEL = '补充复查建议（模型，不是规则判断）'`），不经 language 渲染。理由：它是**可识别性标签**，不是措辞——读者必须永远看到同一句话，才不可能把它误读成规则判断。
-2. **`attach()` 返回一段带标签的文字**，而「空行 + 标签 + 正文」这个拼接放在 attention。理由：契约只承诺「有没有一段可附加的话」，不承诺排版；排版属于消息形状，归投递方。
+原报的两处偏移按 Human 裁决改为下面这条**唯一归属**，代码已按此实现：
+
+1. **身份标签由代码固定，不由模型生成，也不由 language 渲染。** 常量现在只在一处：`src/repository-ci-attention/supplement-block.ts` 的 `REPOSITORY_CI_SUPPLEMENT_LABEL = '补充复查建议（模型，不是规则判断）'`。答案形状只有 `text` 与 `cited`，没有可写标签的字段；正文里只要有一行与标签逐字相同（去首尾空白后比较），**整段不附加**并写一行 `模型补充：格式错误（内容里出现了身份标签）→ 未附加`——两条标签会让「哪段来自事实、哪段由模型写」失去可读性，宁可不要。
+2. **消息拼接有唯一 owner，且是 attention。** 补充模块返回的是**内容**：`RepositoryCiDiagnosisSupplementContent { text, cited }`——经过核验的文字与被核验的材料行，不带空行、不带标签、不带自身排版。attention 用 `supplementBlock(content)` 产出 `['', LABEL, ...text.split('\n')]`，这是「空行 + 固定标签 + 补充正文」的唯一写点，也是补充段进入 `delivery.deliver(lines)` 的唯一路径。
+3. **由此产生的日志归属也随之改了。** `模型补充：已附加（<耗时> ms）` 由 attention 写，不再由补充模块写：只有真正把字附加进消息的那一方，才有资格说「已附加」；模块自己只写「未附加」的原因行。
+
+验收断言同 §10.5：最终消息里必须带着这行固定标签；没有有效补充时**不出现**该标签；模型无法用任何字段覆盖它。
+
+### 13.9 静态审查：生产组合的风险（2026-10-18）
+
+四问逐条回答，均以源码位置为准：
+
+1. **「加载了但没配置」是否与之前完全一致？** 是。resident 在 `repository-ci` 分支里以 `{ log }` 加载补充插件（`src/cli/resident.ts:567-572`），不给 `model`；`parseConfig` 因此返回 `{}`，`setup` 里 `model: undefined`，`attach()` 在任何材料读取**之前**返回 `undefined`（模块级用例「没配模型时什么都不读，也不问」）。消息行与这一片之前逐字相同（产品级用例「没配模型：插件照样在位，消息与这一片之前逐字相同」）。这条路径**不写任何日志**。
+2. **没有模型端点、没有显式预算时，会不会被打开？** 不会。`model` 三项（endpoint / model / budgetMs）必须同时给出且全部显式（`supplement-plugin.ts` `parseModel`），没有默认值、不读环境变量；resident 今天不传 `model`，生产路径恒为 inert。
+3. **补充的意外异常会不会越过局部边界、吃掉原通知？** 不会，两道边界都在：模块内把所有可命名失败翻成 `undefined`；attention 在**投递前**对「取补充 + 组装版面」整段 `try/catch`，catch 只写一行 `模型补充：未预期异常 → 未附加` 并继续用原 `lines`。`note()` 本身吞掉 logger 抛出的异常（`plugin.ts:165-173`），所以连日志写入也不能阻断投递。产品级失败注入 11 条用例覆盖端点 5xx、非 JSON、超时、引用不符、材料缺件、身份不符、弃权。
+4. **标签 / 版面的所有权是否唯一？** 是，见 §13.8：常量一处、拼接一处、写入路径一条。
+
+**残留风险（如实报告，本轮不修）**：attention 现在把补充服务列为**第七项硬依赖**（`plugin.ts` 的 `requires`）。若将来某个组合加载了 attention 却没有加载补充插件，attention 会因缺 capability 而不激活——**CI 失败通知会整体静默**，而不是「只有补充缺席」。今天不存在这种组合（两者同在 `chain` 里，resident 一次性加载，测试也断言了七项在齐才 active），但接 CLI 时必须保证「补充满载失败」不会先于「通知仍要发出」发生：参数校验要在加载前完成，失败要落到启动期错误上，而不是让 `chain` 静默少一个成员。
 

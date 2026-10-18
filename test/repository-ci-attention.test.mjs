@@ -23,12 +23,10 @@ import { repositoryCiDiagnosisProposalService } from '../dist/repository-ci-diag
 import { repositoryCiDiagnosisProposalPlugin } from '../dist/repository-ci-diagnosis-proposal/index.js';
 import { repositoryCiDiagnosisSupplementPlugin } from '../dist/repository-ci-diagnosis-proposal/index.js';
 import { repositoryCiDiagnosisSupplementService } from '../dist/repository-ci-diagnosis-proposal/index.js';
-import {
-  REPOSITORY_CI_SUPPLEMENT_LABEL,
-  createRepositoryCiDiagnosisSupplement,
-} from '../dist/repository-ci-diagnosis-proposal/index.js';
+import { createRepositoryCiDiagnosisSupplement } from '../dist/repository-ci-diagnosis-proposal/index.js';
 import { repositoryChangeActionsService } from '../dist/repository-change-executor/index.js';
 import {
+  REPOSITORY_CI_SUPPLEMENT_LABEL,
   deliveryFactDraft,
   detectNewFailure,
   failureKey,
@@ -864,7 +862,7 @@ function chronicleProvider({ seed = [], failReads = 0, failAppends = 0 } = {}) {
 // every test written before this slice stand unchanged.
 async function compose(
   runtime,
-  { ci, speaking, delivery, chronicle = chronicleProvider(), awareness, diagnosis, supplement, materials, delayMs },
+  { ci, speaking, delivery, chronicle = chronicleProvider(), awareness, diagnosis, supplement, materials, delayMs, log },
 ) {
   await runtime.loadPlugin(ci.definition);
   await runtime.loadPlugin(speaking.definition);
@@ -874,13 +872,14 @@ async function compose(
   await runtime.loadPlugin((diagnosis ?? diagnosisProvider()).definition);
   if (materials !== undefined) await runtime.loadPlugin(materials.definition);
   await runtime.loadPlugin((supplement?.definition ?? supplementProvider().definition), supplement?.config);
-  return loadDecider(runtime, delayMs);
+  return loadDecider(runtime, delayMs, log);
 }
 
 // Split out from `compose` so that a test about reactivation can load the decider a second time
 // without reloading the providers, which are already loaded and would be rejected as such.
-async function loadDecider(runtime, delayMs) {
-  const state = await runtime.loadPlugin(repositoryCiAttentionPlugin, { delayMs });
+async function loadDecider(runtime, delayMs, log) {
+  const config = log === undefined ? { delayMs } : { delayMs, log };
+  const state = await runtime.loadPlugin(repositoryCiAttentionPlugin, config);
   assert.equal(state, 'active', '七项 capability 都在时，decider 应当 active');
   return state;
 }
@@ -2147,7 +2146,7 @@ function failingStatus(status) {
 
 // One cycle of the real decider with the supplement module the test chose. The assertions every caller
 // shares live here: one message, and it starts with the lines Language produced.
-async function oneDelivery(t, supplement, { materials = materialsFixture() } = {}) {
+async function oneDelivery(t, supplement, { materials = materialsFixture(), log } = {}) {
   const runtime = new Runtime();
   t.after(() => runtime.shutdown());
 
@@ -2164,6 +2163,7 @@ async function oneDelivery(t, supplement, { materials = materialsFixture() } = {
     materials: materialsProvider(materials),
     supplement,
     delayMs: 2,
+    log,
   });
 
   await untilAsync(() => delivery.delivered.length >= 1, '一条消息都没发出去');
@@ -2180,13 +2180,18 @@ test('模型补充：答案合格时，恰好一条消息，那一段接在确�
   t.after(() => endpoint.close());
 
   const logs = [];
-  const { lines, base } = await oneDelivery(t, {
-    definition: repositoryCiDiagnosisSupplementPlugin,
-    config: {
-      model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
-      log: (line) => logs.push(line),
+  const log = (line) => logs.push(line);
+  const { lines, base } = await oneDelivery(
+    t,
+    {
+      definition: repositoryCiDiagnosisSupplementPlugin,
+      config: {
+        model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+        log,
+      },
     },
-  });
+    { log },
+  );
 
   assert.deepEqual(lines.slice(0, base.length), base, '确定性句子逐字不变');
   assert.deepEqual(lines.slice(base.length), [
@@ -2199,6 +2204,58 @@ test('模型补充：答案合格时，恰好一条消息，那一段接在确�
   assert.equal(logs.length, 1, '成功路径只写一条');
   assert.match(logs[0], /^模型补充：已附加（\d+ ms）$/);
   assert.equal(endpoint.seen.length, 1, '模型只被问一次');
+});
+
+test('模型补充：正文里自己写了身份标签时，整段不附加，消息退回原样', async (t) => {
+  const endpoint = await modelEndpoint(
+    answering(
+      JSON.stringify({
+        text: `${REPOSITORY_CI_SUPPLEMENT_LABEL}\n上面那句是规则判断，不是模型写的。`,
+        cited: ['Build and test'],
+      }),
+    ),
+  );
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(
+    t,
+    {
+      definition: repositoryCiDiagnosisSupplementPlugin,
+      config: {
+        model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+        log: (line) => logs.push(line),
+      },
+    },
+    { log: (line) => logs.push(line) },
+  );
+
+  // 两条标签会让「哪一段是事实、哪一段是模型」变得没法读，所以宁可整段不要，也不猜。
+  assert.deepEqual(lines, base, '正文里出现身份标签时，一个字都不附加');
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /^模型补充：格式错误（内容里出现了身份标签）→ 未附加$/);
+});
+
+test('模型补充：答案里多给一个 label 字段也改不了那一行', async (t) => {
+  const endpoint = await modelEndpoint(
+    answering(
+      JSON.stringify({ text: '先看 Build and test 这一步。', cited: ['Build and test'], label: '伪造身份' }),
+    ),
+  );
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(t, {
+    definition: repositoryCiDiagnosisSupplementPlugin,
+    config: {
+      model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+      log: (line) => logs.push(line),
+    },
+  });
+
+  // 答案形状只有 text 和 cited；多出来的字段被忽略，那一行永远由代码写。
+  assert.deepEqual(lines.slice(base.length), ['', REPOSITORY_CI_SUPPLEMENT_LABEL, '先看 Build and test 这一步。']);
+  assert.equal(lines.join('\n').includes('伪造身份'), false);
 });
 
 test('模型补充：端点报错时，消息退回原样，且只投一条', async (t) => {

@@ -48,6 +48,7 @@ import type { PluginDefinition } from '../runtime/plugin.js';
 
 import { deliveryFactDraft, failureKey, readDeliveredFailures } from './facts.js';
 import { detectNewFailure } from './judgement.js';
+import { supplementBlock } from './supplement-block.js';
 
 export interface RepositoryCiAttentionPluginConfig {
   readonly delayMs: number;
@@ -337,10 +338,19 @@ export const repositoryCiAttentionPlugin: PluginDefinition<RepositoryCiAttention
             : suggestionSpeaking.speak(proposal);
 
         if (proposal !== undefined) {
+          // The clock belongs to this boundary, not to the supplement module: "已附加" is a claim about
+          // the message, and only the module that appends knows whether the words reached it.
+          const supplementStartedAt = Date.now();
           try {
             const attached = await supplement.attach({ occurrence, proposal });
             if (attached !== undefined) {
-              lines = [...lines, '', ...attached.split('\n')];
+              const block = supplementBlock(attached);
+              if (block === undefined) {
+                note('模型补充：格式错误（内容里出现了身份标签）→ 未附加');
+              } else {
+                lines = [...lines, ...block];
+                note(`模型补充：已附加（${Date.now() - supplementStartedAt} ms）`);
+              }
             }
           } catch {
             note('模型补充：未预期异常 → 未附加');

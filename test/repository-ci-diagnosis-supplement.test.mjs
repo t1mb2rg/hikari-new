@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  REPOSITORY_CI_SUPPLEMENT_LABEL,
-  createRepositoryCiDiagnosisSupplement,
-} from '../dist/repository-ci-diagnosis-proposal/index.js';
+import { createRepositoryCiDiagnosisSupplement } from '../dist/repository-ci-diagnosis-proposal/index.js';
 
 // The supplement module, without a runtime and without a socket.
 //
@@ -123,7 +120,7 @@ test('没配模型时什么都不读，也不问', async () => {
   assert.equal(reader.reads.length, 0);
 });
 
-test('这一支上合格答案带标签返回，标签是这段话的身份而不是措辞', async () => {
+test('这一支上合格答案原样返回内容：不带标签、不带排版，那是投递方的固定写法', async () => {
   const model = modelThatAnswers(JSON.stringify({ text: '先看 Build and test 这一步。', cited: ['Build and test'] }));
   const supplement = createRepositoryCiDiagnosisSupplement({
     readMaterials: countingReader().readMaterials,
@@ -137,7 +134,7 @@ test('这一支上合格答案带标签返回，标签是这段话的身份而�
     }),
   );
 
-  assert.equal(attached, `${REPOSITORY_CI_SUPPLEMENT_LABEL}\n先看 Build and test 这一步。`);
+  assert.deepEqual(attached, { text: '先看 Build and test 这一步。', cited: ['Build and test'] });
   assert.equal(model.seen.length, 1);
   assert.equal(model.seen[0].init.method, 'POST');
   // The model is asked with the materials and nothing else: no notification text, no human sentence,

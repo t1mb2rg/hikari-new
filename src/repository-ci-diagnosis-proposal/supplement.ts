@@ -36,30 +36,36 @@ import type { RepositoryCiAttentionOccurrence } from '../repository-ci-attention
 import type { RepositoryCiDiagnosisProposal } from './types.js';
 
 /**
- * The line that separates model-written words from everything else in the message.
- *
- * It is part of the frozen contract rather than a rendering choice: a reader has to be able to tell,
- * without knowing how the build is wired, that this part was not derived from a fact. The string lives
- * here, next to the code that attaches it, rather than in the renderer that composes the rest of the
- * message — this label is the thing that makes the model content identifiable, so it has to be produced
- * by whichever module is responsible for that content existing.
+ * What Attention hands over: the failure it is about to announce, and the judgement it already made.
  */
-export const REPOSITORY_CI_SUPPLEMENT_LABEL = '补充复查建议（模型，不是规则判断）';
-
-/** What Attention hands over: the failure it is about to announce, and the judgement it already made. */
 export interface RepositoryCiDiagnosisSupplementRequest {
   readonly occurrence: RepositoryCiAttentionOccurrence;
   readonly proposal: RepositoryCiDiagnosisProposal;
 }
 
+/**
+ * A supplement that passed verification: the words, and the lines of material they were checked against.
+ *
+ * It carries no label, no blank line and no line breaks of its own. The label that says "model-written"
+ * is part of the message's layout, and the module that owns the layout is the one that owns the send;
+ * a value returned from here is content, not a message. Splitting the two is what makes "the label is
+ * always there when the content is" a property of one writer instead of a convention two writers share.
+ */
+export interface RepositoryCiDiagnosisSupplementContent {
+  readonly text: string;
+  readonly cited: readonly string[];
+}
+
 export interface RepositoryCiDiagnosisSupplement {
   /**
-   * The block to append, or `undefined` for "send what you were going to send".
+   * The verified content, or `undefined` for "send what you were going to send".
    *
-   * The returned string already carries the label and its own line break, so a caller that appends it
-   * cannot forget to mark it, and cannot re-word it either.
+   * Every reason a supplement cannot be produced — no model configured, a branch this one does not
+   * reach, a material that is absent where it was required, a model that answers late or badly, a
+   * citation that cannot be found in the material — ends in `undefined`, and the caller sends the
+   * message it already had.
    */
-  attach(request: RepositoryCiDiagnosisSupplementRequest): Promise<string | undefined>;
+  attach(request: RepositoryCiDiagnosisSupplementRequest): Promise<RepositoryCiDiagnosisSupplementContent | undefined>;
 }
 
 export interface RepositoryCiDiagnosisSupplementModel {
@@ -340,7 +346,7 @@ export function createRepositoryCiDiagnosisSupplement(
 
   async function attach(
     request: RepositoryCiDiagnosisSupplementRequest,
-  ): Promise<string | undefined> {
+  ): Promise<RepositoryCiDiagnosisSupplementContent | undefined> {
     // The door. Everything else is unreachable from another arm, and an `undefined` here is not a
     // failure: it is the arm having nothing to add.
     const { proposal } = request;
@@ -389,15 +395,13 @@ export function createRepositoryCiDiagnosisSupplement(
     // material read failure it is, not silently read as "the log had nothing in it".
     const materialsText = materialsForModel(materials);
 
-    const startedAt = Date.now();
     const answer = await askModel(materialsText, model.budgetMs);
     if (answer === undefined) return undefined;
 
-    // The only positive line, and the reason it exists: without it an operator cannot tell a model that
-    // answered well from a branch that never asked. Every other line ends in 未附加.
-    note(`模型补充：已附加（${Date.now() - startedAt} ms）`);
-
-    return `${REPOSITORY_CI_SUPPLEMENT_LABEL}\n${answer.text}`;
+    // No positive line here. "已附加" is a claim about the message, and this module does not write the
+    // message: it can return content that the send-side layout then refuses. The line is written by the
+    // module that appends, once the words are actually in the notification.
+    return { text: answer.text, cited: answer.cited };
   }
 
   return Object.freeze({ attach });

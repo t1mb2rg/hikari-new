@@ -40,4 +40,5 @@ export { deliveryFactDraft, failureKey, readDeliveredFailures } from './facts.js
 export { detectNewFailure, renderOccurrence } from './judgement.js';
 export { repositoryCiAttentionPlugin } from './plugin.js';
 export type { RepositoryCiAttentionPluginConfig } from './plugin.js';
+export { REPOSITORY_CI_SUPPLEMENT_LABEL, supplementBlock } from './supplement-block.js';
 export type { RepositoryCiAttentionOccurrence } from './types.js';
