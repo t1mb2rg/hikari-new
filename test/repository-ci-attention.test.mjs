@@ -2258,6 +2258,54 @@ test('模型补充：答案里多给一个 label 字段也改不了那一行', a
   assert.equal(lines.join('\n').includes('伪造身份'), false);
 });
 
+test('模型补充：日志写入抛异常时，补充段照样出现，且只投一条', async (t) => {
+  const endpoint = await modelEndpoint(
+    answering(JSON.stringify({ text: '先看 Build and test 这一步的失败断言。', cited: ['Build and test'] })),
+  );
+  t.after(() => endpoint.close());
+
+  // 两层 note() 各自吞异常（supplement.ts 与 attention/plugin.ts 各一处）。日志是观察，不是决定：
+  // 写日志抛错既不能让补充段消失，也不能让这一轮重投或者静默。
+  const boom = () => {
+    throw new Error('logger boom');
+  };
+
+  const { lines, base } = await oneDelivery(
+    t,
+    {
+      definition: repositoryCiDiagnosisSupplementPlugin,
+      config: { model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 }, log: boom },
+    },
+    { log: boom },
+  );
+
+  assert.deepEqual(lines.slice(base.length), [
+    '',
+    REPOSITORY_CI_SUPPLEMENT_LABEL,
+    '先看 Build and test 这一步的失败断言。',
+  ]);
+});
+
+test('模型补充：日志写入抛异常时，失败也退不回原样，且只投一条', async (t) => {
+  const endpoint = await modelEndpoint(failingStatus(500));
+  t.after(() => endpoint.close());
+
+  const boom = () => {
+    throw new Error('logger boom');
+  };
+
+  const { lines, base } = await oneDelivery(
+    t,
+    {
+      definition: repositoryCiDiagnosisSupplementPlugin,
+      config: { model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 }, log: boom },
+    },
+    { log: boom },
+  );
+
+  assert.deepEqual(lines, base, '日志写不进去时，原文仍然逐字发出');
+});
+
 test('模型补充：端点报错时，消息退回原样，且只投一条', async (t) => {
   const endpoint = await modelEndpoint(failingStatus(500));
   t.after(() => endpoint.close());
