@@ -1,7 +1,20 @@
-export { gitHubCiService } from './contracts.js';
-export type { GitHubCiService } from './contracts.js';
+export { gitHubCiRunMaterialsService, gitHubCiService } from './contracts.js';
+export type { GitHubCiRunMaterialsService, GitHubCiService } from './contracts.js';
 export { GitHubCiError, GitHubCiObservationError } from './errors.js';
-export { gitHubCiPlugin } from './plugin.js';
+export { createGitHubCiRunMaterialsReader, unusableRunMaterials } from './materials.js';
+export type {
+  GitHubCiChangedFile,
+  GitHubCiChangedFiles,
+  GitHubCiJobMaterial,
+  GitHubCiLogExcerpt,
+  GitHubCiMaterial,
+  GitHubCiMaterialGap,
+  GitHubCiMaterialStep,
+  GitHubCiRunMaterials,
+  GitHubCiRunMaterialsQuery,
+  GitHubCiRunMaterialsReader,
+} from './materials.js';
+export { createGitHubCiPlugin, gitHubCiPlugin } from './plugin.js';
 export type { GitHubCiPluginConfig } from './plugin.js';
 export type { GitHubCiLatestRun, GitHubCiObservation, GitHubCiRun } from './types.js';
 

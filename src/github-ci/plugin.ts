@@ -1,12 +1,20 @@
 import type { PluginDefinition } from '../runtime/plugin.js';
 import type { GitHubCiAcquirer } from './acquisition.js';
 import { toObservation } from './acquisition.js';
-import { gitHubCiService } from './contracts.js';
+import { gitHubCiRunMaterialsService, gitHubCiService } from './contracts.js';
 import { GitHubCiError } from './errors.js';
 import { createGitHubCiAcquirer } from './github.js';
+import type { GitHubCiRunMaterialsQuery, GitHubCiRunMaterialsReader } from './materials.js';
+import { createGitHubCiRunMaterialsReader, unusableRunMaterials } from './materials.js';
 
 export interface GitHubCiPluginConfig {
   readonly repository: string;
+  // The credential the log endpoint needs, already resolved from the environment by whoever composed
+  // this resident. It travels as a value rather than as an environment variable name for the reason
+  // the language plugin's credential does: a plugin that reads the environment is a plugin whose
+  // behaviour depends on where it happened to be started. Absent means anonymous, which is the
+  // observation's own state and the reason a log read answers `missing('authentication')`.
+  readonly token?: string;
 }
 
 export interface GitHubCiReference {
@@ -18,28 +26,60 @@ export interface GitHubCiReference {
 // provider injects its own: the seam is what lets the lifecycle be tested without a network. It is
 // also what keeps construction inside `setup` — no request handle exists until the plugin is
 // activated.
+//
+// The materials reader has the same seam and for the same reason, with one addition: the failure the
+// tests need to inject is not "the network is down" but "this read throws", because the property under
+// test is that a broken material path cannot take the notification down with it.
 export function createGitHubCiPlugin(
   createAcquirer: (reference: GitHubCiReference) => GitHubCiAcquirer,
+  createMaterials: (reference: GitHubCiReference) => GitHubCiRunMaterialsReader = defaultMaterials,
 ): PluginDefinition<GitHubCiPluginConfig> {
   return {
     id: 'github-ci',
     version: '1.0.0',
     requires: [],
-    provides: [gitHubCiService],
+    provides: [gitHubCiService, gitHubCiRunMaterialsService],
     config: {
       parse(input: unknown): GitHubCiPluginConfig {
-        return Object.freeze({ repository: readRepository(input) });
+        return Object.freeze({
+          repository: readRepository(input),
+          ...readToken(input),
+        });
       },
     },
     setup(context, config) {
-      const acquirer = createAcquirer(parseReference(config.repository));
+      const reference = parseReference(config.repository);
+      const acquirer = createAcquirer(reference);
       context.defer(() => acquirer.dispose());
       context.services.provide(
         gitHubCiService,
         Object.freeze({ current: async () => toObservation(await acquirer.acquire()) }),
       );
+
+      const reader = createMaterials(reference);
+
+      // One `try` around the whole read, and the catch does not rethrow. A reader that fails is a
+      // reader whose failure has to stop here: the callers that matter are inside a cycle that must
+      // stay silent when the optional half is unavailable, and a rejection crossing this boundary
+      // would turn "the log could not be read" into "the notification did not happen".
+      context.services.provide(
+        gitHubCiRunMaterialsService,
+        Object.freeze({
+          async getRunMaterials(query: GitHubCiRunMaterialsQuery) {
+            try {
+              return await reader.getRunMaterials(query);
+            } catch {
+              return unusableRunMaterials(query);
+            }
+          },
+        }),
+      );
     },
   };
+}
+
+function defaultMaterials(reference: GitHubCiReference): GitHubCiRunMaterialsReader {
+  return createGitHubCiRunMaterialsReader(reference);
 }
 
 // A GitHub owner is alphanumeric with interior hyphens, and a repository name additionally allows
@@ -72,6 +112,22 @@ function readRepository(input: unknown): string {
   }
 
   return repository;
+}
+
+// Absent is the ordinary state, not an error: a resident that watches CI without a credential is
+// today's composition, and it is the one that answers `missing('authentication')` for a log read.
+// What is refused is the ambiguous middle — a token key that is present and is not a usable string.
+function readToken(input: unknown): { readonly token?: string } {
+  const token = (input as { token?: unknown }).token;
+  if (token === undefined) {
+    return {};
+  }
+
+  if (typeof token !== 'string' || !token.trim()) {
+    throw new GitHubCiError('the GitHub CI credential must be a non-empty string when it is given.');
+  }
+
+  return { token };
 }
 
 // The pattern above guarantees one slash with a non-empty part on each side, so this split is total

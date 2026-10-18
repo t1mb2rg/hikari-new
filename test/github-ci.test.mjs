@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { Runtime } from '../dist/index.js';
-import { GitHubCiError, GitHubCiObservationError, gitHubCiService } from '../dist/github-ci/index.js';
+import {
+  gitHubCiRunMaterialsService,
+  gitHubCiService,
+  GitHubCiError,
+  GitHubCiObservationError,
+} from '../dist/github-ci/index.js';
 
 // The single named exception to the "tests import only public entry points" pattern: the acquisition
 // seam is internal, and supplying a fake acquirer is the only way to make these tests deterministic
@@ -73,14 +78,18 @@ async function observeOnce(t, acquire, config = CONFIG) {
   return { observed, counts, runtime };
 }
 
-test('the github ci plugin requires nothing and provides github-ci.current@1', () => {
+test('the github ci plugin requires nothing and provides the observation and the materials', () => {
   const { acquirer } = acquirerFrom(() => acquisition());
   const definition = createGitHubCiPlugin(() => acquirer);
 
   assert.deepEqual(definition.requires, []);
-  assert.deepEqual(definition.provides, [gitHubCiService]);
+  assert.deepEqual(definition.provides, [gitHubCiService, gitHubCiRunMaterialsService]);
   assert.equal(gitHubCiService.id, 'github-ci.current');
   assert.equal(gitHubCiService.version, 1);
+  // Two services rather than a field on the first: an observation is a fresh fact about the
+  // repository, and a material is a fixed fact about one run it already reported.
+  assert.equal(gitHubCiRunMaterialsService.id, 'github-ci.run-materials');
+  assert.equal(gitHubCiRunMaterialsService.version, 1);
 });
 
 test('an observation reports the four facts and no others, labelled by source', async (t) => {
