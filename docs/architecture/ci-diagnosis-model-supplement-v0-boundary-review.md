@@ -11,6 +11,7 @@
 - **§7 五项未决已全部裁决**（2026-10-17）：消息形状、单一分支、可观测性（§10.1/§10.2/§10.4）；材料按 **3 个请求采全**（commit 清单+patch / jobs / 失败步骤日志，§10.8）；连续失败 **v0 不退避**（只加可观测性与复访触发条件，§10.9）。
 - **同日一处边界被推翻（§10.8）**：第三条材料不是「多花配额」——`/actions/jobs/{id}/logs` 匿名返回 **403 `Must have admin rights to Repository.`**（公开大仓库同样如此），因此 **Human 裁决引入 admin 级 GitHub 凭据**，越过 `src/github-ci/github.ts:28-30` 那条「凭据是这一片不做决定的事」。凭据契约、最小权限、失败语义与安全清单写在 §10.8，**最小权限集合尚未用真 token 实测**。
 - **实现评审的硬边界已定（§11）**：材料采集**继续归 `github-ci`**（唯一持有凭据、额度与 HTTP 的 owner），不新建采集 owner；补充模块不持有 token、不发请求；**材料失败不得让已经成立的 CI 失败事实变成不可用**（观察与材料是两次独立获取）；认证失败按「未配置 / 无效或权限不足 / 网络或服务端错误 / 日志失败」四类分别处理，且**必须读响应头与体、不能只看状态码**。**本轮仍然只有文档，没有产品代码。**
+- **材料契约的候选形状已写出（§12，2026-10-18）**：输入绑在已观测的那条 run 上（三个字段全过形状检查，URL 只由它们拼）；每份材料各自带 `present` / `missing(reason)` / `pending`，**提供侧不判断够不够**；三个请求、材料总时限 20 s、日志流式截断到 64 KiB、不重试；**材料失败是值不是异常，且不改变观察**。依赖方向给了三个候选（推荐「补充模块取材料、诊断一行不动」），**待 Human 裁决 Q1–Q3**。
 - 模型输出是**候选**，不是决定：结构不合、引用对不上材料、超时、模型不可用，一律 **fail-closed** 回退到原行为（只发普通通知）。
 - 本文件**不采用** `likelyCause` 分类准确率作为验收指标——那是 §2.10 实验的代理指标，与产品要解决的问题不是同一个。
 - **设计与契约已冻结**（§10，2026-10-17 Human 裁决）：同一条通知 + 可选补充段且自带身份声明；只开放 `commit-comparison-indeterminate` 一支；预算与开关都是**显式参数、无插件默认值**（首轮推荐 180 000 ms）；取消语义两分（客户端取消 ≠ 服务端推理终止）；验收分「不添乱」与「有价值」两段，后者用真实红 run 且**调过提示词就必须换材料复测**。**实现未开始。**
@@ -416,3 +417,133 @@ Human 立的原则：**不要为了避免沉默而制造额外请求，也不要
 - 不动产品代码，直到实现评审把这四件事说清：材料契约、失败分类、生命周期、验收；
 - 不开第四轮人造案例；
 - 不因为「已经有 token」就顺手扩 GitHub 权限面（§10.10 最后一条仍然有效）。
+
+## §12 `github-ci.run-materials@1` 实现评审（2026-10-18，**候选形状，未冻结**）
+
+> **本节仍然没有产品代码。** 它回答 §11.4 第 1 项：输入身份、返回结构、缺失语义、请求限制、依赖方向。
+> 契约名 `github-ci.run-materials@1` 与下列**所有字段名**都是候选——实现时以现有契约习惯为准（例如今天的 `defineService('github-ci.current', 1)` 就只用了 `current`）。**不候选的是 §12.1–§12.4 的语义**：那五条是这一节的正文，改名可以，改语义要重开评审。
+
+### 12.1 输入身份：材料绑在「已经观测到的那一条 run」上，不是「再查一次最新」
+
+```ts
+interface GitHubCiRunMaterialsRequest {
+  readonly repository: string; // GitHub 报的拼写（`observation.repository`），不是配置里写的
+  readonly runId: number;      // 正整数
+  readonly headSha: string;    // /^[0-9a-f]{40}$/
+}
+```
+
+四条规则：
+
+1. **仓库只认一个。** `repository` 与插件配置的 `owner/name` **大小写不敏感相等**才继续；不等就拒绝（抛，不查、不猜）。理由与 `src/github-ci/github.ts:77-82` 那段注释同一条：配置是「怎么称呼一个仓库」，观测是「这个称呼指到了哪个仓库」；材料只能发给**这一个**。
+2. **URL 只由校验过的输入拼。** 三个字段都过形状检查后拼进固定模板；**不接受**路径片段、不接受完整 URL、不接受第二个仓库、不接受分支名或 `?` 参数。这就是「不开放任意 URL / 任意仓库」的实现形态——不是加一个白名单，而是根本没有可以把 URL 塞进去的参数。
+3. **身份确认不靠「再读最新 run」，靠回包自证。** 请求的是 `/actions/runs/{runId}/jobs`，GitHub 的 job 对象自带 `run_id` 与 `head_sha`；回来的 `head_sha` 与请求里的**逐字不等**，整份材料就返回 `identity: 'mismatch'` 且**不带任何内容**。这样「再读一次、悄悄换了条 run」在结构上不可能发生——它没有可换的对象，只有被点名的那个 id。
+4. **「还没有」不当「没有」。** run 已排队但尚无 job 时，`jobs` 返回 `pending`，不返回 `missing`。今天的 `types.ts:15-18` 对 `conclusion` 立过同一条规矩：GitHub 合法地说「还没有」，与「这次没读到」是两件事，合并成一个值就是丢信息。
+
+### 12.2 返回结构：每份材料各自带「有没有 / 为什么没有」
+
+```ts
+type GitHubCiMaterialGap =
+  | 'not-found'        // 404：对私有/无权限仓库与「不存在」同码，见 `github.ts:165-169`
+  | 'authentication'   // 401；或 403 且响应体是权限类
+  | 'rate-limited'     // 403 + `x-ratelimit-remaining: 0`，或带 `retry-after`
+  | 'transport'        // 连接失败 / DNS / TLS
+  | 'timeout'
+  | 'unusable-answer'; // 非 JSON、形状不对、重定向到非预期目标
+
+type GitHubCiMaterial<T> =
+  | { readonly kind: 'present'; readonly value: T }
+  | { readonly kind: 'missing'; readonly reason: GitHubCiMaterialGap }
+  | { readonly kind: 'pending' }; // 只对 `jobs` 有意义：run 还没有 job
+
+interface GitHubCiRunMaterials {
+  readonly requestedAt: string;
+  readonly repository: string;              // GitHub 的规范拼写
+  readonly runId: number;
+  readonly headSha: string;                 // 回包自证的那个
+  readonly identity: 'confirmed' | 'mismatch';
+  readonly jobs: GitHubCiMaterial<readonly GitHubCiJobMaterial[]>;
+  readonly changedFiles: GitHubCiMaterial<GitHubCiChangedFiles>;
+  readonly log: GitHubCiMaterial<GitHubCiLogExcerpt>;
+}
+```
+
+三条规则：
+
+1. **三份材料彼此独立。** 日志没拿到不等于 diff 没拿到；一个 `missing` 不牵连另外两个字段。**「整条回退」是消费侧的资格规则（§10.8），不是提供侧的返回值语义**——提供侧只负责把「这份没拿到、因为什么」如实交出去。
+2. **截断是「在场」的一种属性，不是缺失。** `GitHubCiLogExcerpt` 带 `{ kind: 'cut'; droppedBytes: number }`；`GitHubCiChangedFiles` 带 `skipped: readonly { filename: string; why: 'binary' | 'generated' | 'over-limit' }[]`。§10.8 那句「没送不能被读成不存在」在这里变成一个字段，而不是一句注释。
+3. **提供侧不判断「够不够」。** 哪些缺口使补充失去资格，由 §10 已冻结的补充契约决定（见 §12.8 的 Q2）。`github-ci` 不知道诊断是什么，这一条与 §11.1「材料采集归 `github-ci`，不负责决定材料对诊断有没有价值」是同一句话的两种写法。
+
+### 12.3 请求、上限与时限
+
+| 项 | 值 | 依据 |
+| --- | --- | --- |
+| 请求数 | **3**，顺序发、不并发 | §10.8 裁决 |
+| 单请求超时 | 10 000 ms | 沿用 `src/github-ci/github.ts:7` 的 `ACQUISITION_TIMEOUT_MS` |
+| **材料总时限** | **20 000 ms**（含重定向） | 补充预算 180 s，材料不许吃掉超过约 1/9；超了就是整份超时，不是半个 |
+| `jobs` JSON 体积 | ≤ 1 MiB | 只需要 name / conclusion / steps 的 conclusion，超了就是 `unusable-answer` |
+| `patch` | ≤ 20 文件；每文件 ≤ 200 行；合计 ≤ 400 行 | §10.8 截断规则 |
+| 日志 | **最多读 64 KiB，保留尾部**；流式读取到上限即断，**不先整份下载再截** | 失败在日志末尾；先全下再截会让「有界」只体现在内存里 |
+| 重试 | **不重试** | §10.8 fail-closed |
+
+一条实现细节值得写在这里，因为它是「有界」和「假装有界」的分界：日志响应是 `text/plain`（重定向到临时地址），必须走**流式读取 + 字节计数 + 主动 abort**；`getJson()`（`src/github-ci/github.ts:39-67`）装不下它，材料入口需要自己的读取器，而不是给 `getJson` 加一个 `text` 开关。
+
+### 12.4 失败语义：两次独立获取，材料永不改写观察
+
+- **per-material 的失败是值，不是异常。** 只有「拒绝按你要求的做」才抛（仓库与配置不符、`runId` / `headSha` 形状不对）——与 `src/github-ci/errors.ts` 今天的两分法一致：`GitHubCiError` 是「我拒绝」，`GitHubCiObservationError` 是「试过了没拿到」。材料把后者降级成 `missing`，因为**它必须能被消费侧当成一个可以据以决定「本次不附加」的值**，而不是一个需要 catch 的意外。
+- **材料在没有观察的情况下不许被调用。** 它的输入（`repository` / `runId` / `headSha`）全部来自一条**已经成立**的 observation；调用方拿不出这三个值就说明它没有失败事实可讲。
+- **材料不写 Chronicle、不写事实、不产生 `delivered`。** 与 §10.4「模型行为不是领域事实」同一条理由——采集行为也不是。
+- **材料失败不改变观测。** 观察与材料是两次独立获取（§11.1）；材料层没有任何路径能改 `GitHubCiObservation`，因为它拿不到那个对象。
+
+### 12.5 依赖方向：三个候选，推荐第三个
+
+这是本节唯一真正有争议的地方，因为用户原话是「消费方 = `repository-ci-diagnosis-proposal`」，而今天的 `src/repository-ci-diagnosis-proposal/contracts.ts` 写着两句话，正对着这条：
+
+> It does **not** acquire a world snapshot: the assessment comes in with the request, which is what keeps one cycle to one acquirement.
+> A dependency that rejects makes this reject: `insufficient-evidence` is an answer this layer reached from material it had, and a failed acquisition is a question it did not get to put.
+
+**候选 1（用户提案的字面形态）**：诊断 `requires` 材料服务，自己在 `indeterminate` 那支去取。
+- 优点：与「由诊断路径决定何时需要补充」字面一致；少一层。
+- 代价一：诊断从「材料随请求传进来的函数」变成「自己取材料的模块」，`contracts.ts` 那两句要重写。
+- 代价二（更硬）：诊断一旦因取材料而 reject，attention 的 cycle catch（`src/repository-ci-attention/plugin.ts:304`）会吞掉整轮——**这正是 §11.1 明令禁止的「材料失败让原始通知静默」**。要在候选 1 里避免它，得再给诊断加一条「材料失败必须吞掉」的纪律，而那条纪律与它自己写的「依赖 reject 就 reject」互相矛盾。
+
+**候选 2**：attention 取材料，随请求传进诊断。
+- 优点：诊断保持纯；材料失败天然只影响补充。
+- 代价：感知插件开始组装领域输入（它要知道「材料」这个概念），attention 的职责从投递扩成了装配。
+
+**候选 3（推荐）**：**补充模块**取材料，诊断一行不动。
+- 链路：attention 拿到 `insufficient-evidence('commit-comparison-indeterminate')` —— 这是一条**逐字读出来的事实**，不是判断 —— 进补充模块 → 补充模块 `requires` 材料服务 → 取材料 → 按**冻结的**补充契约判资格 → 调模型 → 校验引用 → 交回补充段或 `undefined`。
+- 为什么是它：**唯一真正需要材料内容的模块就是补充模块**；它需要的三个输入全在 occurrence 里；诊断保持「材料随请求传入」，`contracts.ts` 一个字不用改；attention 只多一个按枚举值分派的分支，那不是判断。
+- 对 §11.1 三条禁止逐条对：不持有 token（token 在 `github-ci`）✓；不发请求、不下日志（它调契约，`github-ci` 发）✓；不新开采集 owner / 投递者 / 事实族 ✓。
+- 残留代价：补充模块因此成为「材料 + 模型」两个外部依赖的持有者，它的失败面比原设计大一点点——但那正是它该负责的面。
+
+> **这条待裁**，见 §12.8 Q1。我不擅自改用户写下的消费关系；这里只把「按字面实现会撞上哪条硬约束」摆出来。
+
+### 12.6 采集侧**不算**对应关系
+
+§5 说「能用代码算出来的关系，不交给模型推断」，并把「失败测试文件 ↔ 改动文件 ↔ 共享路径段」列在材料里。这里要划一条更细的线：**那套对应关系由诊断侧算，不由 `github-ci` 算。**
+
+`github-ci` 交出去的是「哪些文件改了、每个改了什么」与「哪个 job / step 失败了」——两条来源各自的原文。把二者对起来（哪个测试名出现在哪个文件名里、共享哪段路径）是一个**关于两个来源的判断**，而 `src/github-ci/types.ts:1-4` 那段开篇注释已经立过规矩：一个来源不做「两个来源说的是不是同一件事」的判断。这条线不划清，材料契约会顺手长成「通用 GitHub 分析器」。
+
+### 12.7 真 token 阶段要验证什么（§11.4 第 2 步的验收清单）
+
+按 Human 指定的四问，加一条兜底：
+
+1. **最小权限**：fine-grained PAT 只给 `Actions: read` 是否足以读 `/actions/jobs/{id}/logs`（今天的 403 是匿名视角，换 token 后需要什么**没有任何人验证过**）。
+2. **真实响应形状**：`/actions/jobs/{id}/logs` 到底是 `302` 到临时地址后的 `text/plain`、还是 zip 流、还是别的；重定向怎么跟、要不要保留 `Authorization`、下载到多大。
+3. **两次获取是否独立**：把材料请求打成必失败（关代理 / 假 base URL），确认 observation 照常成立、attention 照常投递。
+4. **凭据是否始终在边界内**：token 不进日志、不进材料、不进模型输入、不进错误消息、不进 Chronicle、不进提交。
+5. **兜底**：如果真实服务的**断连取消**能力无法确认，按 §10.3 记「未验证」，**不拿客户端超时冒充服务端取消证据**。
+
+### 12.8 本节留给 Human 的三个裁决点
+
+- **Q1 依赖方向**：候选 3（补充模块取，诊断不动）还是候选 1（诊断自己取，并接受 `contracts.ts` 需要重写 + 一条新的「材料失败必须吞掉」纪律）？
+- **Q2 资格规则归谁**：`github-ci` 只报告缺口（本节已定）。那么「哪些缺口使补充失效」写进 §10 补充契约的哪一条？v0 建议：`jobs` 与 `changedFiles` 至少各一份在场即可尝试，`log` 缺失只降低材料厚度、不单独否决——但这属于补充契约，本节不替它定。
+- **Q3 `pending` 的资格**：run 还在排队、一条 job 都没有时，`pending` 应视为「本次不附加」（推荐）还是「再等一轮」？（后者会引入第二个等待点，与 §10.3 的单点预算冲突。）
+
+### 12.9 本节明确不做
+
+- 不写实现、不加 CLI 参数、不动 `src/github-ci/**` 与 `src/repository-ci-diagnosis-proposal/**`；
+- 不冻结契约名与字段名（`changedFiles` / `files`、`log` / `logExcerpt` 都可以改）；
+- 不把「对应关系」「优先级」「值不值得看」放进材料契约——那是诊断侧与模型侧的事；
+- 不因为要拿日志就把 `github-ci` 扩成通用 GitHub 客户端（§12.6）。
