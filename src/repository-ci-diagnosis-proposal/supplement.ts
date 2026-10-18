@@ -117,6 +117,45 @@ const MAX_ANSWER_BYTES = 64 * 1024;
 /** Room for the chain of thought a reasoning model may emit before its answer. */
 const MAX_COMPLETION_TOKENS = 4_096;
 
+/**
+ * The answer's shape, stated to the endpoint instead of hoped for in prose.
+ *
+ * Two shapes and no third: a supplement, or the honest abstention the prompt already offers. Every leaf
+ * is a string or a boolean, both objects forbid extra keys, and `cited` carries the same ceiling the
+ * parser enforces downstream — so "one citation too many" stops being something the model can do rather
+ * than something this file has to reject after the fact. The parser and the citation check stay exactly
+ * as they were: a constraint on generation is not a substitute for verification, and an endpoint that
+ * ignores `strict` gets the same treatment as one that never supported it (see the format-error path).
+ *
+ * `anyOf` rather than a single object because abstention is not a failure: a model that says the
+ * materials do not support a specific observation must be able to do so through the schema, otherwise
+ * the schema itself would push it into inventing something to satisfy `required`.
+ */
+const SUPPLEMENT_SCHEMA = {
+  anyOf: [
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['deficient'],
+      properties: { deficient: { type: 'boolean', const: true } },
+    },
+    {
+      type: 'object',
+      additionalProperties: false,
+      required: ['text', 'cited'],
+      properties: {
+        text: { type: 'string', minLength: 1, maxLength: MAX_TEXT_CHARS },
+        cited: {
+          type: 'array',
+          minItems: 1,
+          maxItems: MAX_CITED,
+          items: { type: 'string', minLength: 1, maxLength: MAX_CITED_CHARS },
+        },
+      },
+    },
+  ],
+} as const;
+
 const SYSTEM_PROMPT = [
   '你在为一条已经发给人的 CI 失败通知写一段补充复查建议。',
   '',
@@ -288,6 +327,12 @@ export function createRepositoryCiDiagnosisSupplement(
           ],
           temperature: 0,
           max_tokens: MAX_COMPLETION_TOKENS,
+          // Constrained generation, not a different prompt: the words are still the frozen ones, only
+          // the shape of the answer is now enforced by the endpoint instead of requested politely.
+          response_format: {
+            type: 'json_schema',
+            json_schema: { name: 'repository-ci-supplement', strict: true, schema: SUPPLEMENT_SCHEMA },
+          },
           stream: false,
         }),
         signal: AbortSignal.timeout(budgetMs),
@@ -335,8 +380,18 @@ export function createRepositoryCiDiagnosisSupplement(
     }
 
     const first = choices[0];
+    const finishReason = isObject(first) ? first.finish_reason : undefined;
     const message = isObject(first) ? first.message : undefined;
     const content = isObject(message) ? message.content : undefined;
+
+    // Truncation and a wrong shape are two different things to an operator: one says the budget was too
+    // small for this model's reasoning, the other says the model answered outside the contract. Calling
+    // both "格式错误" would send the next person tuning the wrong knob.
+    if (finishReason === 'length') {
+      note('模型补充：输出未完成（length）→ 未附加');
+      return undefined;
+    }
+
     if (typeof content !== 'string' || content.trim() === '') {
       note('模型补充：格式错误 → 未附加');
       return undefined;

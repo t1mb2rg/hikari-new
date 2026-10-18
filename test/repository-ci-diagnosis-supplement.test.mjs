@@ -57,7 +57,7 @@ function countingReader() {
   };
 }
 
-function modelThatAnswers(content) {
+function modelThatAnswers(content, finishReason = 'stop') {
   const seen = [];
   return {
     seen,
@@ -65,7 +65,7 @@ function modelThatAnswers(content) {
       seen.push({ url, init });
       return Promise.resolve({
         ok: true,
-        text: () => Promise.resolve(JSON.stringify({ choices: [{ message: { content } }] })),
+        text: () => Promise.resolve(JSON.stringify({ choices: [{ message: { content }, finish_reason: finishReason }] })),
       });
     },
   };
@@ -230,4 +230,53 @@ test('诚实的弃权不写日志，形状不对才写：这两件事不能混�
   );
 
   assert.deepEqual(logs, ['模型补充：格式错误 → 未附加']);
+});
+
+test('请求里带的是严格 schema：两种形状、cited 最多五项、不许额外字段', async () => {
+  const model = modelThatAnswers(JSON.stringify({ text: '先看 Build and test 这一步。', cited: ['Build and test'] }));
+  const supplement = createRepositoryCiDiagnosisSupplement({
+    readMaterials: countingReader().readMaterials,
+    model: { endpoint: 'http://127.0.0.1:1/v1/chat/completions', model: 'test-model', budgetMs: 30_000 },
+  });
+
+  await withFetch(model.fetch, () =>
+    supplement.attach({
+      occurrence: OCCURRENCE,
+      proposal: { kind: 'insufficient-evidence', missing: 'commit-comparison-indeterminate' },
+    }),
+  );
+
+  const body = JSON.parse(model.seen[0].init.body);
+  const format = body.response_format;
+  assert.equal(format.type, 'json_schema');
+  assert.equal(format.json_schema.strict, true);
+  // Two shapes: the answer, and the abstention. A schema that only allowed the answer would push an
+  // honest model into inventing citations to satisfy `required`.
+  const shapes = format.json_schema.schema.anyOf;
+  assert.equal(shapes.length, 2);
+  const answer = shapes.find((shape) => shape.required?.includes('cited'));
+  assert.equal(answer.additionalProperties, false);
+  assert.equal(answer.properties.cited.maxItems, 5);
+  assert.equal(answer.properties.text.maxLength, 600);
+});
+
+test('模型把 token 用在思考上、被 max_tokens 截断时，与「形状不对」分开记', async () => {
+  const logs = [];
+  const supplement = createRepositoryCiDiagnosisSupplement({
+    readMaterials: countingReader().readMaterials,
+    model: { endpoint: 'http://127.0.0.1:1/v1/chat/completions', model: 'test-model', budgetMs: 30_000 },
+    log: (line) => logs.push(line),
+  });
+
+  const attached = await withFetch(modelThatAnswers(null, 'length').fetch, () =>
+    supplement.attach({
+      occurrence: OCCURRENCE,
+      proposal: { kind: 'insufficient-evidence', missing: 'commit-comparison-indeterminate' },
+    }),
+  );
+
+  assert.equal(attached, undefined);
+  // 两件事对运维的含义不同：一个是预算太小、模型没来得及回答；另一个是模型答了但不在契约里。
+  // 都退成 undefined，但日志必须能分辨，否则下一次调参就会调错那一格。
+  assert.deepEqual(logs, ['模型补充：输出未完成（length）→ 未附加']);
 });
