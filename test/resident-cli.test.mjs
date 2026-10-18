@@ -1623,6 +1623,21 @@ test('Repository CI 的两个参数只属于 resident，没有拓宽别的命令
   }
 });
 
+test('补充与凭据的三个参数只属于 resident，没有拓宽别的命令', (t) => {
+  const root = createRoot(t);
+
+  for (const argv of [
+    ['ask', '--data-dir', root, '--proactive-ci-supplement', '你好'],
+    ['focus', 'status', '--data-dir', root, '--proactive-ci-supplement-budget-ms', '180000'],
+    ['start', '--data-dir', root, '--github-token-env', 'HIKARI_GITHUB_TOKEN'],
+    ['stop', '--data-dir', root, '--github-token-env', 'HIKARI_GITHUB_TOKEN'],
+  ]) {
+    const result = runCli(...argv);
+    assert.equal(result.code, 2, `${argv[0]} 不应接受补充或凭据配置`);
+    assert.match(result.stderr, /未知参数/);
+  }
+});
+
 test('relevance 的语法是 repository-ci status，别的都在用法层被拒绝', (t) => {
   const root = createRoot(t);
 

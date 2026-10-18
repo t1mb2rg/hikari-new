@@ -728,6 +728,7 @@ function supplementProvider({ attach } = {}) {
 // The materials reader, as a fake: a supplement test chooses the材料 the model would have been given,
 // and the real `github-ci` slice is exercised in its own file against a fake GitHub.
 function materialsProvider(materials) {
+  let reads = 0;
   const definition = {
     id: MATERIALS_PROVIDER,
     version: '1.0.0',
@@ -735,12 +736,13 @@ function materialsProvider(materials) {
     setup(context) {
       context.services.provide(gitHubCiRunMaterialsService, {
         getRunMaterials() {
+          reads += 1;
           return Promise.resolve(materials);
         },
       });
     },
   };
-  return { definition };
+  return { definition, reads };
 }
 
 // A diagnosis module that is broken or unreachable. The whole point of it as a test fixture is that
@@ -2146,7 +2148,11 @@ function failingStatus(status) {
 
 // One cycle of the real decider with the supplement module the test chose. The assertions every caller
 // shares live here: one message, and it starts with the lines Language produced.
-async function oneDelivery(t, supplement, { materials = materialsFixture(), log } = {}) {
+async function oneDelivery(
+  t,
+  supplement,
+  { materials = materialsFixture(), materialsReader, log, deliveryDeadlineMs = 2000 } = {},
+) {
   const runtime = new Runtime();
   t.after(() => runtime.shutdown());
 
@@ -2154,23 +2160,24 @@ async function oneDelivery(t, supplement, { materials = materialsFixture(), log 
   const speaking = speakingProvider();
   const delivery = deliveryProvider();
   const chronicle = chronicleProvider();
+  const materialsService = materialsReader ?? materialsProvider(materials);
 
   await compose(runtime, {
     ci,
     speaking,
     delivery,
     chronicle,
-    materials: materialsProvider(materials),
+    materials: materialsService,
     supplement,
     delayMs: 2,
     log,
   });
 
-  await untilAsync(() => delivery.delivered.length >= 1, '一条消息都没发出去');
+  await untilAsync(() => delivery.delivered.length >= 1, '一条消息都没发出去', deliveryDeadlineMs);
   await elapsed(20);
 
   assert.equal(delivery.delivered.length, 1, '恰好一条消息');
-  return { lines: delivery.delivered[0], base: speaking.spoken[0].lines, chronicle };
+  return { lines: delivery.delivered[0], base: speaking.spoken[0].lines, chronicle, reads: materialsService.reads };
 }
 
 test('模型补充：答案合格时，恰好一条消息，那一段接在确定性句子之后', async (t) => {
@@ -2448,11 +2455,124 @@ test('模型补充：模型自己说材料不够时，安静地退回原样', as
 
 test('模型补充：没配模型时，插件照样在位，消息与这一片之前逐字相同', async (t) => {
   const logs = [];
-  const { lines, base } = await oneDelivery(t, {
+  const { lines, base, reads } = await oneDelivery(t, {
     definition: repositoryCiDiagnosisSupplementPlugin,
     config: { log: (line) => logs.push(line) },
   });
 
   assert.deepEqual(lines, base);
   assert.deepEqual(logs, []);
+  assert.equal(reads, 0, '没配模型就不该读材料：不配置不等于匿名地做一遍准备');
+});
+
+// A段验收的第 6 行，走的是和「缺件」不同的那条路径：材料读取**抛异常**，而不是回答一个 missing 值。
+// 两者在模块里的处理不同（一个在 try/catch 里被翻成 transport，一个本来就是一个值），所以各要一条证据。
+test('模型补充：材料读取抛异常时，不调模型，原通知照常发出', async (t) => {
+  const endpoint = await modelEndpoint(answering('{"deficient":true}'));
+  t.after(() => endpoint.close());
+
+  const provider = { reads: 0 };
+  provider.definition = {
+    id: MATERIALS_PROVIDER,
+    version: '1.0.0',
+    provides: [gitHubCiRunMaterialsService],
+    setup(context) {
+      context.services.provide(gitHubCiRunMaterialsService, {
+        getRunMaterials() {
+          provider.reads += 1;
+          return Promise.reject(new Error('读材料的时候连接断了'));
+        },
+      });
+    },
+  };
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(
+    t,
+    {
+      definition: repositoryCiDiagnosisSupplementPlugin,
+      config: {
+        model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+        log: (line) => logs.push(line),
+      },
+    },
+    { materialsReader: provider },
+  );
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, ['模型补充：材料读取失败（transport）→ 未附加']);
+  assert.equal(provider.reads, 1, '只读一次，不重试');
+  assert.equal(endpoint.seen.length, 0, '读不到材料就不该问模型');
+});
+
+// A段验收的第 4 行：合法 JSON，但形状不合约定。这一条与「不是 JSON」分开，因为前者说明模型答了、
+// 只是答得不对，后者说明端点根本没按协议回答；两种都要退回原样。
+test('模型补充：响应是 JSON 但形状不对时，整段不附加，消息退回原样', async (t) => {
+  const endpoint = await modelEndpoint(
+    answering(JSON.stringify({ text: '先看 Build and test 这一步', cited: 'Build and test' })),
+  );
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const { lines, base } = await oneDelivery(t, {
+    definition: repositoryCiDiagnosisSupplementPlugin,
+    config: {
+      model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+      log: (line) => logs.push(line),
+    },
+  });
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, ['模型补充：格式错误 → 未附加']);
+  assert.equal(endpoint.seen.length, 1);
+});
+
+// A段验收的第 1 行，走产品路径、用允许范围内的最小预算（30 000 ms——插件配置的下限）。
+//
+// 这里要证明的是**客户端不再等**，并且原通知照常发出。它不能证明推理已经停了：这个协议没有取消
+// 通道，客户端能做的只有放弃这次等待并关掉连接。所以这条用例同时留下两边的痕迹——客户端在预算内
+// 回来（waited < 预算 + 容差）、连接被关掉（aborted），而服务端在断言时刻**还在算**
+// （serverStillWorking 为 false，它被安排在 32 秒后才完成）。把这一点写进断言，是为了让后来的人
+// 不能把「客户端超时」当成「服务端已终止」的证据使用。
+test('模型补充：等满预算时客户端不再等、原通知照常发出，而服务端并没有被叫停', async (t) => {
+  let serverStillWorking = false;
+  let aborted = false;
+  const endpoint = await modelEndpoint((_body, response) => {
+    const timer = setTimeout(() => {
+      serverStillWorking = true;
+      if (!response.writableEnded && !response.destroyed) {
+        response.writeHead(200, { 'content-type': 'application/json' });
+        response.end(JSON.stringify(chatCompletion('{"deficient":true}')));
+      }
+    }, 32_000);
+    timer.unref();
+    response.on('close', () => {
+      aborted = true;
+    });
+  });
+  t.after(() => endpoint.close());
+
+  const logs = [];
+  const startedAt = Date.now();
+  const { lines, base } = await oneDelivery(
+    t,
+    {
+      definition: repositoryCiDiagnosisSupplementPlugin,
+      config: {
+        model: { endpoint: endpoint.url, model: 'test-model', budgetMs: 30_000 },
+        log: (line) => logs.push(line),
+      },
+    },
+    // The delivery cannot happen before the budget has run out, so the wait is the budget plus room
+    // for the cycle to finish — not the two-second default that fits every other case here.
+    { deliveryDeadlineMs: 40_000 },
+  );
+  const waited = Date.now() - startedAt;
+
+  assert.deepEqual(lines, base);
+  assert.deepEqual(logs, ['模型补充：超时（30000 ms）→ 未附加']);
+  assert.ok(waited < 34_000, `等满预算就该走，实际等了 ${waited} ms`);
+  assert.equal(aborted, true, '客户端放弃等待时，连接被关掉');
+  assert.equal(serverStillWorking, false, '断言时刻服务端仍在算：客户端超时不等于推理终止');
+  assert.equal(endpoint.seen.length, 1, '只问一次，不重试');
 });
