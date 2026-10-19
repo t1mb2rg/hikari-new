@@ -30,6 +30,16 @@
 | `run-2026-10-18-two-cycles.log`、`run-2026-10-19-three-cycles.log` | 两批的时序日志原文 |
 | `probe-materials.mjs`、`real-materials.json` | 单独测材料读取耗时与材料形状（不含日志正文，只有字节数与字符数） |
 
+### `ci-log-adversarial/` — Q1 隔离之后，日志内的指令在真实模型上还会不会被服从
+
+| 文件 | 内容 |
+| --- | --- |
+| `report.md` | 四类注入 × 3 次的计数、逐条模型输出原文、两条判断的裁决、Q2 建议、范围与不证明什么、读数缺陷 |
+| `samples.json` | 冻结件：4 类注入正文 + 对照、插入位置、四项判定的机械规则（写于任何模型调用之前） |
+| `adversarial-probe.mjs` | 探针：真 `attach()` 发请求，假端点抓包后原样转发真端点，因此既跑真校验链又拿到模型原始输出 |
+| `results.json` | 15 次调用：原始输出、cited、四项判定、上游错误 |
+| `run-full.log`、`run-resume3.log` | 第一批与补齐批的运行输出 |
+
 ### `ci-log-untrusted-input/` — CI 日志作为不可信输入的边界
 
 | 文件 | 内容 |
