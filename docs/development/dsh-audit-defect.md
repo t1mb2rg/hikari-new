@@ -7,7 +7,7 @@
 
 `ClearAI` 的结案流程要求独立评估者核判据。在本机 DSH 会话里，**任何需要派发独立评估者的动作一律失败**：
 
-- `Conclude`（结案）——四次；
+- `Conclude`（结案）——七次；
 - `AdvancePlan`（带 `tests` 的 L3 步骤）——三次；
 - `Frame` 判据修订的独立裁决——两次。
 
@@ -19,7 +19,7 @@
 persona+outputSchema+toolFilter: subagents.start is not a function
 ```
 
-四次 `Conclude` 返回的都是 `audit_dispatch_failed`，附同一条报错。
+七次 `Conclude` 返回的都是 `audit_dispatch_failed`，附同一条报错。
 
 ## 3. 影响范围（截至 2026-10-19）
 
@@ -27,8 +27,10 @@ persona+outputSchema+toolFilter: subagents.start is not a function
 | --- | --- | --- | --- |
 | 产品路径上的补充预算测量 | `goal-e8468709-…` | 测量与本地判据已完成，独立审计未完成 | Human 批准暂停；`Conclude abandoned` 关闭，报告 §8.1 记录 |
 | CI 日志作为不可信输入的边界 | `goal-e8468709-…`（同 id 复用） | 判据 ①–④ 已交付，独立审计未完成 | 保持 `phase=blocked` / `activation=disarmed`；**不标 achieved** |
+| Q1 隔离后的日志注入对抗验证 | `g-mvewwojq3rc5` | 15 次真调用与报告已完成，独立审计未完成 | `Conclude abandoned` 关闭，报告 §10 记录 |
+| 模型补充相对基线通知的增量 | `g-mvey8gs2uvqd` | 五次真调用与判分已完成（commit `48ca29e`，CI `39220927088` success），独立审计未完成 | `Conclude abandoned` 关闭，报告 §6 记录 |
 
-两次都没有改判据、没有改读数、没有为了「攒够轮次」重复派遣。
+四个目标都没有改判据、没有改读数、没有为了「攒够轮次」重复派遣。
 
 ## 4. 已排除的原因
 
@@ -50,6 +52,6 @@ persona+outputSchema+toolFilter: subagents.start is not a function
 
 独立评估者恢复可用后：
 
-- 两个目标**不需要重新测量**——产物与读数都还在原位；
-- 只是**重跑 `Conclude`**（必要时先 `update_goal resume`）；
+- 四个目标**不需要重新测量**——产物与读数都还在原位；
+- 只是**重跑 `Conclude`**（必要时先 `update_goal resume`）；已按 `abandoned` 关闭的三个需先 `update_goal resume`，`phase=blocked` 的那个可直接重试；
 - 若那时产品代码已经变化（例如又改了提示词/协议），则旧读数按各自文档的效力条款处理，**不再当作独立验证**。
