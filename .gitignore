@@ -3,6 +3,9 @@ dist/
 coverage/
 *.log
 
+# 实验记录是要回读的证据；上面那条通配会把它们也吞掉。
+!experiments/**/*.log
+
 # Build output of the Windows surface (`apps/human-surface`), which is built with the .NET SDK rather
 # than npm and so produces neither `dist/` nor `node_modules/`.
 bin/

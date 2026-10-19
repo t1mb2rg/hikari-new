@@ -1,0 +1,31 @@
+supplement=active attention=active
+      1ms [cycle-start] 1
+[trace] kind=available occ={"repository":"t1mb2rg/hikari-new","runId":38932844025,"workflow":"ci","headBranch":"main","headSha":"8b740053a25996efb6b9285cc93a12958c12e2e1","conclusion":"failure","observedAt":"2026-10-18T16:26:09.573Z"} handled=0 delivered=0
+[trace] propose -> {"kind":"insufficient-evidence","missing":"commit-comparison-indeterminate"}
+[trace] handled added
+   5384ms [materials-read] round#1 run=38932844025 5381ms identity=confirmed jobs=present files=present log=present(65536)
+ 132266ms [log] 模型补充：已附加（132263 ms）
+ 132267ms [cycle-end] 1
+[trace] deliver -> {"outcome":"delivered"} lines=4
+ 133270ms [cycle-start] 2
+[trace] kind=available occ={"repository":"t1mb2rg/hikari-new","runId":38931770141,"workflow":"ci","headBranch":"main","headSha":"dee5659fc73ef041686e548398855f19bcb4ba43","conclusion":"failure","observedAt":"2026-10-18T16:28:22.841Z"} handled=1 delivered=0
+[trace] propose -> {"kind":"insufficient-evidence","missing":"commit-comparison-indeterminate"}
+[trace] handled added
+ 138301ms [materials-read] round#2 run=38931770141 5030ms identity=confirmed jobs=present files=present log=present(65536)
+ 257910ms [log] 模型补充：已附加（124639 ms）
+ 257910ms [cycle-end] 2
+[trace] deliver -> {"outcome":"delivered"} lines=4
+      1ms [cycle-start] {"round":1}
+   5384ms [materials-read] {"round":1,"ms":5381,"runId":38932844025,"identity":"confirmed","jobs":"present","changedFiles":"present","log":"present","logChars":65536}
+ 132266ms [log] 模型补充：已附加（132263 ms）
+ 132267ms [cycle-end] {"round":1,"lineCount":4,"lines":["CI 失败：run 38932844025（failure）","","补充复查建议（模型，不是规则判断）","建议先看一眼 Build and test 步骤中 test/ci-failure-probe.test.mjs 的改动，以及日志里 test at test/ci-failure-probe.test.mjs:13:1 附近；同时看 surface 作业的 Test the runtime 步骤和它跳过的 Surface tests。"]}
+ 133270ms [cycle-start] {"round":2}
+ 138301ms [materials-read] {"round":2,"ms":5030,"runId":38931770141,"identity":"confirmed","jobs":"present","changedFiles":"present","log":"present","logChars":65536}
+ 257910ms [log] 模型补充：已附加（124639 ms）
+ 257910ms [cycle-end] {"round":2,"lineCount":4,"lines":["CI 失败：run 38931770141（failure）","","补充复查建议（模型，不是规则判断）","建议先看 test 作业里的 Build and test 步骤，以及 surface 作业里的 Test the runtime 步骤；在 test/ci-failure-probe.test.mjs 的改动附近，日志末尾有真机实验：故意失败，并出现 AssertionError [ERR_ASSERTION]: 这一条是故意写失败的断言。"]}
+---
+cycle#1: total=132266ms  (end-supplement 见 log)
+cycle#2: total=124640ms  (end-supplement 见 log)
+interval #1→#2 = 133269ms，上一轮 cycle=132266ms，delay=1000
+materials round#1: 5381ms identity=confirmed logChars=65536
+materials round#2: 5030ms identity=confirmed logChars=65536

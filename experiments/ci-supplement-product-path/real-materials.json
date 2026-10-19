@@ -1,0 +1,49 @@
+{
+  "probedAt": "2026-10-18T16:06:04.746Z",
+  "repository": "t1mb2rg/hikari-new",
+  "runId": 38932844025,
+  "headSha": "8b740053a25996efb6b9285cc93a12958c12e2e1",
+  "requestedAt": "2026-10-18T16:05:59.322Z",
+  "identity": "confirmed",
+  "readerTotalMs": 3348,
+  "subRequests": [
+    {
+      "label": "commits",
+      "ms": 469,
+      "status": 200,
+      "bytes": 4339
+    },
+    {
+      "label": "jobs",
+      "ms": 543,
+      "status": 200,
+      "bytes": 5027
+    },
+    {
+      "label": "log(zip)",
+      "ms": 1064,
+      "status": 200,
+      "bytes": 140464
+    }
+  ],
+  "materials": {
+    "jobs": {
+      "kind": "present",
+      "items": 2,
+      "bytes": 1333
+    },
+    "changedFiles": {
+      "kind": "present",
+      "files": 1,
+      "totalFiles": 1,
+      "bytes": 488
+    },
+    "log": {
+      "kind": "present",
+      "chars": 65536,
+      "bytes": 66450
+    }
+  },
+  "jobCount": 2,
+  "failedJobId": 117080875590
+}

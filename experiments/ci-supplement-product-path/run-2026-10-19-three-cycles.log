@@ -1,0 +1,46 @@
+supplement=active attention=active
+     14ms [cycle-start] 1
+   5192ms [materials-read] round#1 run=38932844025 5176ms identity=confirmed jobs=present files=present log=present(65536)
+ 158176ms [log] 模型补充：已附加（158160 ms）
+ 158177ms [deliver-start] 1
+ 158177ms [cycle-end] 1
+ 159190ms [cycle-start] 2
+ 165093ms [materials-read] round#2 run=38931770141 5902ms identity=confirmed jobs=present files=present log=present(65536)
+ 310162ms [log] 模型补充：已附加（150971 ms）
+ 310162ms [deliver-start] 2
+ 310162ms [cycle-end] 2
+ 311167ms [cycle-start] 3
+ 316497ms [materials-read] round#3 run=38930952193 5330ms identity=confirmed jobs=present files=present log=present(65536)
+ 474805ms [log] 模型补充：已附加（163638 ms）
+ 474805ms [deliver-start] 3
+ 474805ms [cycle-end] 3
+     14ms [cycle-start] {"round":1}
+   5192ms [materials-read] {"round":1,"ms":5176,"runId":38932844025,"identity":"confirmed","jobs":"present","changedFiles":"present","log":"present","logChars":65536}
+ 158176ms [log] 模型补充：已附加（158160 ms）
+ 158177ms [deliver-start] {"round":1,"atMs":158177,"messageCount":1,"lineCount":4}
+ 158177ms [cycle-end] {"round":1,"lineCount":4,"lines":["CI 失败：run 38932844025（failure）","","补充复查建议（模型，不是规则判断）","建议先看一眼 surface 作业里 Test the runtime 步骤的失败上下文；当前日志片段只覆盖 test 作业的 Build and test。可对照 test/ci-failure-probe.test.mjs 的改动行，以及失败测试位置 test at test/ci-failure-probe.test.mjs:13:1 和 AssertionError [ERR_ASSERTION]: 这一条是故意写失败的断言。"]}
+ 159190ms [cycle-start] {"round":2}
+ 165093ms [materials-read] {"round":2,"ms":5902,"runId":38931770141,"identity":"confirmed","jobs":"present","changedFiles":"present","log":"present","logChars":65536}
+ 310162ms [log] 模型补充：已附加（150971 ms）
+ 310162ms [deliver-start] {"round":2,"atMs":310162,"messageCount":1,"lineCount":4}
+ 310162ms [cycle-end] {"round":2,"lineCount":4,"lines":["CI 失败：run 38931770141（failure）","","补充复查建议（模型，不是规则判断）","可补看 test/ci-failure-probe.test.mjs 的 patch 行；日志 failing tests 段有 test at test/ci-failure-probe.test.mjs:13:1，并出现 1 !== 2。"]}
+ 311167ms [cycle-start] {"round":3}
+ 316497ms [materials-read] {"round":3,"ms":5330,"runId":38930952193,"identity":"confirmed","jobs":"present","changedFiles":"present","log":"present","logChars":65536}
+ 474805ms [log] 模型补充：已附加（163638 ms）
+ 474805ms [deliver-start] {"round":3,"atMs":474805,"messageCount":1,"lineCount":4}
+ 474805ms [cycle-end] {"round":3,"lineCount":4,"lines":["CI 失败：run 38930952193（failure）","","补充复查建议（模型，不是规则判断）","建议先看一眼失败步骤 Test the runtime 在作业 surface 的日志尾部，以及文件 test/ci-failure-probe.test.mjs 的改动；日志里有一行 ✖ 真机实验：故意失败，另一失败步骤是 Build and test。"]}
+---
+cycle#1: total=158163ms  (end-supplement 见 log)
+cycle#2: total=150972ms  (end-supplement 见 log)
+cycle#3: total=163638ms  (end-supplement 见 log)
+interval #1→#2 = 159176ms，上一轮 cycle=158163ms，delay=1000
+interval #2→#3 = 151977ms，上一轮 cycle=150972ms，delay=1000
+materials round#1: 5176ms identity=confirmed logChars=65536
+materials round#2: 5902ms identity=confirmed logChars=65536
+materials round#3: 5330ms identity=confirmed logChars=65536
+deliver round#1: at=158177ms messages=1 lines=4
+deliver round#2: at=310162ms messages=1 lines=4
+deliver round#3: at=474805ms messages=1 lines=4
+timeouts=0
+observed round#2 at 159190ms = prev cycle-end 158177ms + 1013ms
+observed round#3 at 311167ms = prev cycle-end 310162ms + 1005ms

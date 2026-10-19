@@ -1,0 +1,155 @@
+{
+  "probedAt": "2026-10-18T17:31:32.044Z",
+  "delayMs": 1000,
+  "budgetMs": 180000,
+  "endpoint": "http://192.168.1.20:8080/v1/chat/completions",
+  "model": "qwen3.8-flash-next-iq2_xs",
+  "runs": [
+    {
+      "runId": 38932844025,
+      "headSha": "8b740053a25996efb6b9285cc93a12958c12e2e1",
+      "conclusion": "failure",
+      "headBranch": "main"
+    },
+    {
+      "runId": 38931770141,
+      "headSha": "dee5659fc73ef041686e548398855f19bcb4ba43",
+      "conclusion": "failure",
+      "headBranch": "main"
+    },
+    {
+      "runId": 38930952193,
+      "headSha": "febbf155ab489e954382f55b0f1fd79d6e5bc7d1",
+      "conclusion": "failure",
+      "headBranch": "main"
+    }
+  ],
+  "events": [
+    {
+      "at": 14,
+      "kind": "cycle-start",
+      "round": 1
+    },
+    {
+      "at": 5192,
+      "kind": "materials-read",
+      "round": 1,
+      "ms": 5176,
+      "runId": 38932844025,
+      "identity": "confirmed",
+      "jobs": "present",
+      "changedFiles": "present",
+      "log": "present",
+      "logChars": 65536
+    },
+    {
+      "at": 158176,
+      "kind": "log",
+      "line": "模型补充：已附加（158160 ms）"
+    },
+    {
+      "at": 158177,
+      "kind": "deliver-start",
+      "round": 1,
+      "atMs": 158177,
+      "messageCount": 1,
+      "lineCount": 4
+    },
+    {
+      "at": 158177,
+      "kind": "cycle-end",
+      "round": 1,
+      "lineCount": 4,
+      "lines": [
+        "CI 失败：run 38932844025（failure）",
+        "",
+        "补充复查建议（模型，不是规则判断）",
+        "建议先看一眼 surface 作业里 Test the runtime 步骤的失败上下文；当前日志片段只覆盖 test 作业的 Build and test。可对照 test/ci-failure-probe.test.mjs 的改动行，以及失败测试位置 test at test/ci-failure-probe.test.mjs:13:1 和 AssertionError [ERR_ASSERTION]: 这一条是故意写失败的断言。"
+      ]
+    },
+    {
+      "at": 159190,
+      "kind": "cycle-start",
+      "round": 2
+    },
+    {
+      "at": 165093,
+      "kind": "materials-read",
+      "round": 2,
+      "ms": 5902,
+      "runId": 38931770141,
+      "identity": "confirmed",
+      "jobs": "present",
+      "changedFiles": "present",
+      "log": "present",
+      "logChars": 65536
+    },
+    {
+      "at": 310162,
+      "kind": "log",
+      "line": "模型补充：已附加（150971 ms）"
+    },
+    {
+      "at": 310162,
+      "kind": "deliver-start",
+      "round": 2,
+      "atMs": 310162,
+      "messageCount": 1,
+      "lineCount": 4
+    },
+    {
+      "at": 310162,
+      "kind": "cycle-end",
+      "round": 2,
+      "lineCount": 4,
+      "lines": [
+        "CI 失败：run 38931770141（failure）",
+        "",
+        "补充复查建议（模型，不是规则判断）",
+        "可补看 test/ci-failure-probe.test.mjs 的 patch 行；日志 failing tests 段有 test at test/ci-failure-probe.test.mjs:13:1，并出现 1 !== 2。"
+      ]
+    },
+    {
+      "at": 311167,
+      "kind": "cycle-start",
+      "round": 3
+    },
+    {
+      "at": 316497,
+      "kind": "materials-read",
+      "round": 3,
+      "ms": 5330,
+      "runId": 38930952193,
+      "identity": "confirmed",
+      "jobs": "present",
+      "changedFiles": "present",
+      "log": "present",
+      "logChars": 65536
+    },
+    {
+      "at": 474805,
+      "kind": "log",
+      "line": "模型补充：已附加（163638 ms）"
+    },
+    {
+      "at": 474805,
+      "kind": "deliver-start",
+      "round": 3,
+      "atMs": 474805,
+      "messageCount": 1,
+      "lineCount": 4
+    },
+    {
+      "at": 474805,
+      "kind": "cycle-end",
+      "round": 3,
+      "lineCount": 4,
+      "lines": [
+        "CI 失败：run 38930952193（failure）",
+        "",
+        "补充复查建议（模型，不是规则判断）",
+        "建议先看一眼失败步骤 Test the runtime 在作业 surface 的日志尾部，以及文件 test/ci-failure-probe.test.mjs 的改动；日志里有一行 ✖ 真机实验：故意失败，另一失败步骤是 Build and test。"
+      ]
+    }
+  ]
+}
