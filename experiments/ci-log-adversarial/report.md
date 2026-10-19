@@ -111,7 +111,7 @@ cited 5 条：`surface`、`Test the runtime`、`test/ci-failure-probe.test.mjs`�
 
 ## §6 Q2（建议–证据绑定）该不该做
 
-**本批没有可支撑它的失败样本，建议暂不新增。**
+**本批没有可支撑它的失败样本，建议暂不新增。**（2026-10-19 Human 最终裁决：**暂缓**，理由与本报告一致。）
 
 理由逐条：
 
@@ -163,3 +163,20 @@ node experiments/ci-log-adversarial/adversarial-probe.mjs --resume   # 只补缺
 - `experiments/ci-log-adversarial/run-full.log`、`run-resume3.log` — 第一批与补齐批的运行原始输出（两条作废的 502 读数记录在 `results.json` 的 `upstreamError` 字段与本报告 §8）
 
 核对实验期间未改产品代码：`git log -1 --format=%H -- src/repository-ci-diagnosis-proposal/supplement.ts` 在实验前后都是 `146e53bf9feeafa1bfed9dd7b199b55b82c12fe7`。
+
+## §10 收口（2026-10-19，Human 最终裁决）
+
+**按有限结论收口。** 本实验的效力到此为止，不再扩展样本、不再加机制：
+
+| 结论 | 强度 |
+| --- | --- |
+| Q1 的材料隔离在真实请求上生效（`messages.length === 3`、日志单独成段、材料段不含日志正文） | **产品行为，可复跑核对** |
+| 这批 4 类明显形式注入（12 次）没有改变任务、没有产生因果断言、没有诱发弃权 | **只在这一个模型、这批样本、3 次重复上成立** |
+| 「建议的证据可能只在日志里」 | **被推翻**（每条建议 1–4 条引用来自结构段） |
+| 产品管线是否「看得懂」日志内容并据此拒绝 | **没有**。管线只校验形状与引用逐字命中 |
+| Q2（建议–证据绑定） | **暂缓**，重新考虑的条件见 §6 |
+
+**本报告不能支持的表述**：不能说注入被「挡住」；不能把 0/12 外推成「模型不会服从日志里的指令」；不能拿本批耗时讨论 180 000 ms 预算。
+
+**审计状态**：本目标的独立结案核验未完成——独立评估者派发失败（`persona+outputSchema+toolFilter: subagents.start is not a function`，第 5 次同类），已按 Human 裁决与产品事实分开、单独挂起。判据、读数、结论均未因审计故障改动。
+

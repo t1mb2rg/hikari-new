@@ -1,0 +1,91 @@
+{
+  "note": "真材料 + 真端点 + 真 supplement 模块。text 就是 attach 的返回值，即人看到的那段。",
+  "model": {
+    "endpoint": "http://192.168.1.20:8080/v1/chat/completions",
+    "model": "qwen3.8-flash-next-iq2_xs",
+    "budgetMs": 180000
+  },
+  "supplementCommit": "146e53bf9feeafa1bfed9dd7b199b55b82c12fe7",
+  "promptUnchangedCheck": "supplementCommit 应等于 146e53bf9feeafa1bfed9dd7b199b55b82c12fe7",
+  "ranAt": "2026-10-19T08:01:19.127Z",
+  "records": [
+    {
+      "runId": 38920662846,
+      "ms": 138776,
+      "attached": true,
+      "text": "建议补看 surface 作业里的 Test the runtime 步骤；当前日志窗口只覆盖 Build and test。可再核对 test/ci-failure-probe.test.mjs:8:1 与 1 !== 2 这两行。",
+      "cited": [
+        "surface",
+        "Test the runtime",
+        "Build and test",
+        "test/ci-failure-probe.test.mjs:8:1",
+        "1 !== 2"
+      ],
+      "logs": []
+    },
+    {
+      "runId": 38929605750,
+      "ms": 140565,
+      "attached": true,
+      "text": "建议补看 surface 作业中 conclusion 为 failure 的 Test the runtime 步骤；当前日志片段只覆盖 Build and test。",
+      "cited": [
+        "surface",
+        "Test the runtime",
+        "failure",
+        "Build and test",
+        "conclusion"
+      ],
+      "logs": []
+    },
+    {
+      "runId": 38930952193,
+      "ms": 147241,
+      "attached": true,
+      "text": "建议补查：先看 Test the runtime 步骤日志中的 test at test\\ci-failure-probe.test.mjs:13:1 和 AssertionError [ERR_ASSERTION]: 这一条是故意写失败的断言；同时核对 Build and test 步骤是否也涉及 test/ci-failure-probe.test.mjs。",
+      "cited": [
+        "Test the runtime",
+        "test at test\\ci-failure-probe.test.mjs:13:1",
+        "AssertionError [ERR_ASSERTION]: 这一条是故意写失败的断言",
+        "Build and test",
+        "test/ci-failure-probe.test.mjs"
+      ],
+      "logs": [],
+      "firstAttempt": {
+        "runId": 38930952193,
+        "ms": 175889,
+        "attached": false,
+        "text": null,
+        "cited": null,
+        "logs": [
+          "模型补充：端点不可用 → 未附加"
+        ]
+      }
+    },
+    {
+      "runId": 38931770141,
+      "ms": 125902,
+      "attached": true,
+      "text": "建议先看 test 作业里 Build and test 失败步骤，以及 surface 作业里 Test the runtime 失败步骤；在改动文件 test/ci-failure-probe.test.mjs 的日志片段中，可核对“真机实验：故意失败”和“1 !== 2”这两行。",
+      "cited": [
+        "Build and test",
+        "Test the runtime",
+        "test/ci-failure-probe.test.mjs",
+        "真机实验：故意失败",
+        "1 !== 2"
+      ],
+      "logs": []
+    },
+    {
+      "runId": 38932844025,
+      "ms": 166807,
+      "attached": true,
+      "text": "建议再看 Test the runtime 步骤、被标记为 skipped 的步骤，以及日志末尾的进程退出行。",
+      "cited": [
+        "Test the runtime",
+        "skipped",
+        "Process completed with exit code 1."
+      ],
+      "logs": []
+    }
+  ]
+}

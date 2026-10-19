@@ -1,0 +1,227 @@
+{
+  "note": "真值与基线通知。不调模型；不落日志正文。failures 取自材料里的 job/step conclusion。",
+  "ownerName": "t1mb2rg/hikari-new",
+  "fetchedAt": "2026-10-19T07:45:51.863Z",
+  "runs": [
+    {
+      "runId": 38920662846,
+      "headSha": "dc62a236f15cd234826c19d6b66bc43f0cd3a5ed",
+      "workflow": "Runtime Tests",
+      "headBranch": "main",
+      "conclusion": "failure",
+      "identity": "confirmed",
+      "materialsMs": 4460,
+      "logChars": 65536,
+      "allJobNames": [
+        "test",
+        "surface"
+      ],
+      "failedJobs": [
+        {
+          "name": "test",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Build and test"
+          ]
+        },
+        {
+          "name": "surface",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Test the runtime"
+          ]
+        }
+      ],
+      "changedFiles": [
+        "test/ci-failure-probe.test.mjs"
+      ],
+      "noticeLineCount": 8,
+      "notice": [
+        "Repository CI attention：",
+        "  仓库：t1mb2rg/hikari-new",
+        "  运行：38920662846",
+        "  工作流：Runtime Tests",
+        "  分支：main",
+        "  提交：dc62a236f15cd234826c19d6b66bc43f0cd3a5ed",
+        "  结论：failure",
+        "  观察时间：2026-10-19T07:45:30.808Z"
+      ]
+    },
+    {
+      "runId": 38929605750,
+      "headSha": "7d9fade72ec54e97be534169d8c7165177edc6fc",
+      "workflow": "Runtime Tests",
+      "headBranch": "main",
+      "conclusion": "failure",
+      "identity": "confirmed",
+      "materialsMs": 5818,
+      "logChars": 65536,
+      "allJobNames": [
+        "test",
+        "surface"
+      ],
+      "failedJobs": [
+        {
+          "name": "test",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Build and test"
+          ]
+        },
+        {
+          "name": "surface",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Test the runtime"
+          ]
+        }
+      ],
+      "changedFiles": [
+        "test/ci-failure-probe.test.mjs"
+      ],
+      "noticeLineCount": 8,
+      "notice": [
+        "Repository CI attention：",
+        "  仓库：t1mb2rg/hikari-new",
+        "  运行：38929605750",
+        "  工作流：Runtime Tests",
+        "  分支：main",
+        "  提交：7d9fade72ec54e97be534169d8c7165177edc6fc",
+        "  结论：failure",
+        "  观察时间：2026-10-19T07:45:37.120Z"
+      ]
+    },
+    {
+      "runId": 38930952193,
+      "headSha": "febbf155ab489e954382f55b0f1fd79d6e5bc7d1",
+      "workflow": "Runtime Tests",
+      "headBranch": "main",
+      "conclusion": "failure",
+      "identity": "confirmed",
+      "materialsMs": 4445,
+      "logChars": 65536,
+      "allJobNames": [
+        "surface",
+        "test"
+      ],
+      "failedJobs": [
+        {
+          "name": "surface",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Test the runtime"
+          ]
+        },
+        {
+          "name": "test",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Build and test"
+          ]
+        }
+      ],
+      "changedFiles": [
+        "test/ci-failure-probe.test.mjs"
+      ],
+      "noticeLineCount": 8,
+      "notice": [
+        "Repository CI attention：",
+        "  仓库：t1mb2rg/hikari-new",
+        "  运行：38930952193",
+        "  工作流：Runtime Tests",
+        "  分支：main",
+        "  提交：febbf155ab489e954382f55b0f1fd79d6e5bc7d1",
+        "  结论：failure",
+        "  观察时间：2026-10-19T07:45:42.271Z"
+      ]
+    },
+    {
+      "runId": 38931770141,
+      "headSha": "dee5659fc73ef041686e548398855f19bcb4ba43",
+      "workflow": "Runtime Tests",
+      "headBranch": "main",
+      "conclusion": "failure",
+      "identity": "confirmed",
+      "materialsMs": 5098,
+      "logChars": 65536,
+      "allJobNames": [
+        "test",
+        "surface"
+      ],
+      "failedJobs": [
+        {
+          "name": "test",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Build and test"
+          ]
+        },
+        {
+          "name": "surface",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Test the runtime"
+          ]
+        }
+      ],
+      "changedFiles": [
+        "test/ci-failure-probe.test.mjs"
+      ],
+      "noticeLineCount": 8,
+      "notice": [
+        "Repository CI attention：",
+        "  仓库：t1mb2rg/hikari-new",
+        "  运行：38931770141",
+        "  工作流：Runtime Tests",
+        "  分支：main",
+        "  提交：dee5659fc73ef041686e548398855f19bcb4ba43",
+        "  结论：failure",
+        "  观察时间：2026-10-19T07:45:47.856Z"
+      ]
+    },
+    {
+      "runId": 38932844025,
+      "headSha": "8b740053a25996efb6b9285cc93a12958c12e2e1",
+      "workflow": "Runtime Tests",
+      "headBranch": "main",
+      "conclusion": "failure",
+      "identity": "confirmed",
+      "materialsMs": 3483,
+      "logChars": 65536,
+      "allJobNames": [
+        "test",
+        "surface"
+      ],
+      "failedJobs": [
+        {
+          "name": "test",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Build and test"
+          ]
+        },
+        {
+          "name": "surface",
+          "conclusion": "failure",
+          "failedSteps": [
+            "Test the runtime"
+          ]
+        }
+      ],
+      "changedFiles": [
+        "test/ci-failure-probe.test.mjs"
+      ],
+      "noticeLineCount": 8,
+      "notice": [
+        "Repository CI attention：",
+        "  仓库：t1mb2rg/hikari-new",
+        "  运行：38932844025",
+        "  工作流：Runtime Tests",
+        "  分支：main",
+        "  提交：8b740053a25996efb6b9285cc93a12958c12e2e1",
+        "  结论：failure",
+        "  观察时间：2026-10-19T07:45:51.863Z"
+      ]
+    }
+  ]
+}

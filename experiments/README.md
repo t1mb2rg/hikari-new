@@ -30,6 +30,15 @@
 | `run-2026-10-18-two-cycles.log`、`run-2026-10-19-three-cycles.log` | 两批的时序日志原文 |
 | `probe-materials.mjs`、`real-materials.json` | 单独测材料读取耗时与材料形状（不含日志正文，只有字节数与字符数） |
 
+### `ci-supplement-increment/` — 模型补充相对基线通知多说了什么
+
+| 文件 | 内容 |
+| --- | --- |
+| `report.md` | 五个 run 的逐条定位判定、22 个标识的对照表、幻觉与规则局限、范围 |
+| `probe-truth.mjs` | 取真值：五个 run 的失败 job/step、changedFiles、`log.step`、8 行基线通知 → `materials.json` |
+| `run-supplement.mjs` | 五次真调用（真 supplement 模块 + 真材料 + 真端点）→ `outputs.json` |
+| `score.mjs`、`score.json` | 判分规则（写死在文件顶部）与逐项明细 |
+
 ### `ci-log-adversarial/` — Q1 隔离之后，日志内的指令在真实模型上还会不会被服从
 
 | 文件 | 内容 |

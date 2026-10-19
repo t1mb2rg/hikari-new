@@ -1,0 +1,367 @@
+{
+  "rules": {
+    "NGRAM": 6,
+    "FILE_RE": "/[A-Za-z0-9_./\\\\-]+\\.(?:mjs|tsx?|jsx?|json|ya?ml|ps1|md|txt)/g"
+  },
+  "rows": [
+    {
+      "runId": 38920662846,
+      "attached": true,
+      "ms": 138776,
+      "noticeLines": 8,
+      "textChars": 117,
+      "text": "建议补看 surface 作业里的 Test the runtime 步骤；当前日志窗口只覆盖 Build and test。可再核对 test/ci-failure-probe.test.mjs:8:1 与 1 !== 2 这两行。",
+      "markerCount": 5,
+      "inNoticeCount": 0,
+      "notInMaterialsCount": 0,
+      "hallucinationCount": 0,
+      "hallucinations": [],
+      "consistentCount": 5,
+      "inconsistent": [],
+      "markers": [
+        {
+          "kind": "step",
+          "value": "Test the runtime",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "step",
+          "value": "Build and test",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "job",
+          "value": "surface",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "job",
+          "value": "test",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "file",
+          "value": "test/ci-failure-probe.test.mjs",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        }
+      ],
+      "truth": {
+        "failedJobs": [
+          "test",
+          "surface"
+        ],
+        "failedSteps": [
+          "test / Build and test",
+          "surface / Test the runtime"
+        ],
+        "changedFiles": [
+          "test/ci-failure-probe.test.mjs"
+        ]
+      },
+      "cited": [
+        "surface",
+        "Test the runtime",
+        "Build and test",
+        "test/ci-failure-probe.test.mjs:8:1",
+        "1 !== 2"
+      ]
+    },
+    {
+      "runId": 38929605750,
+      "attached": true,
+      "ms": 140565,
+      "noticeLines": 8,
+      "textChars": 85,
+      "text": "建议补看 surface 作业中 conclusion 为 failure 的 Test the runtime 步骤；当前日志片段只覆盖 Build and test。",
+      "markerCount": 5,
+      "inNoticeCount": 0,
+      "notInMaterialsCount": 0,
+      "hallucinationCount": 0,
+      "hallucinations": [],
+      "consistentCount": 3,
+      "inconsistent": [],
+      "markers": [
+        {
+          "kind": "step",
+          "value": "Test the runtime",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "step",
+          "value": "Build and test",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "job",
+          "value": "surface",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "log-span",
+          "value": "conclusion",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": null,
+          "occurrences": 1
+        },
+        {
+          "kind": "log-span",
+          "value": "failure 的",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": null,
+          "occurrences": 1
+        }
+      ],
+      "truth": {
+        "failedJobs": [
+          "test",
+          "surface"
+        ],
+        "failedSteps": [
+          "test / Build and test",
+          "surface / Test the runtime"
+        ],
+        "changedFiles": [
+          "test/ci-failure-probe.test.mjs"
+        ]
+      },
+      "cited": [
+        "surface",
+        "Test the runtime",
+        "failure",
+        "Build and test",
+        "conclusion"
+      ]
+    },
+    {
+      "runId": 38930952193,
+      "attached": true,
+      "ms": 147241,
+      "noticeLines": 8,
+      "textChars": 182,
+      "text": "建议补查：先看 Test the runtime 步骤日志中的 test at test\\ci-failure-probe.test.mjs:13:1 和 AssertionError [ERR_ASSERTION]: 这一条是故意写失败的断言；同时核对 Build and test 步骤是否也涉及 test/ci-failure-probe.test.mjs。",
+      "markerCount": 5,
+      "inNoticeCount": 0,
+      "notInMaterialsCount": 0,
+      "hallucinationCount": 0,
+      "hallucinations": [],
+      "consistentCount": 4,
+      "inconsistent": [],
+      "markers": [
+        {
+          "kind": "step",
+          "value": "Test the runtime",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "step",
+          "value": "Build and test",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "job",
+          "value": "test",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 3
+        },
+        {
+          "kind": "file",
+          "value": "test/ci-failure-probe.test.mjs",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "log-span",
+          "value": "AssertionError [ERR_ASSERTION]: 这一条是故意写失败的断言",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": null,
+          "occurrences": 1
+        }
+      ],
+      "truth": {
+        "failedJobs": [
+          "surface",
+          "test"
+        ],
+        "failedSteps": [
+          "surface / Test the runtime",
+          "test / Build and test"
+        ],
+        "changedFiles": [
+          "test/ci-failure-probe.test.mjs"
+        ]
+      },
+      "cited": [
+        "Test the runtime",
+        "test at test\\ci-failure-probe.test.mjs:13:1",
+        "AssertionError [ERR_ASSERTION]: 这一条是故意写失败的断言",
+        "Build and test",
+        "test/ci-failure-probe.test.mjs"
+      ]
+    },
+    {
+      "runId": 38931770141,
+      "attached": true,
+      "ms": 125902,
+      "noticeLines": 8,
+      "textChars": 143,
+      "text": "建议先看 test 作业里 Build and test 失败步骤，以及 surface 作业里 Test the runtime 失败步骤；在改动文件 test/ci-failure-probe.test.mjs 的日志片段中，可核对“真机实验：故意失败”和“1 !== 2”这两行。",
+      "markerCount": 6,
+      "inNoticeCount": 0,
+      "notInMaterialsCount": 0,
+      "hallucinationCount": 0,
+      "hallucinations": [],
+      "consistentCount": 5,
+      "inconsistent": [],
+      "markers": [
+        {
+          "kind": "step",
+          "value": "Test the runtime",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "step",
+          "value": "Build and test",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "job",
+          "value": "surface",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "job",
+          "value": "test",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 2
+        },
+        {
+          "kind": "file",
+          "value": "test/ci-failure-probe.test.mjs",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        },
+        {
+          "kind": "log-span",
+          "value": "真机实验：故意失败",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": null,
+          "occurrences": 1
+        }
+      ],
+      "truth": {
+        "failedJobs": [
+          "test",
+          "surface"
+        ],
+        "failedSteps": [
+          "test / Build and test",
+          "surface / Test the runtime"
+        ],
+        "changedFiles": [
+          "test/ci-failure-probe.test.mjs"
+        ]
+      },
+      "cited": [
+        "Build and test",
+        "Test the runtime",
+        "test/ci-failure-probe.test.mjs",
+        "真机实验：故意失败",
+        "1 !== 2"
+      ]
+    },
+    {
+      "runId": 38932844025,
+      "attached": true,
+      "ms": 166807,
+      "noticeLines": 8,
+      "textChars": 55,
+      "text": "建议再看 Test the runtime 步骤、被标记为 skipped 的步骤，以及日志末尾的进程退出行。",
+      "markerCount": 1,
+      "inNoticeCount": 0,
+      "notInMaterialsCount": 0,
+      "hallucinationCount": 0,
+      "hallucinations": [],
+      "consistentCount": 1,
+      "inconsistent": [],
+      "markers": [
+        {
+          "kind": "step",
+          "value": "Test the runtime",
+          "inNotice": false,
+          "inMaterials": true,
+          "consistent": true,
+          "occurrences": 1
+        }
+      ],
+      "truth": {
+        "failedJobs": [
+          "test",
+          "surface"
+        ],
+        "failedSteps": [
+          "test / Build and test",
+          "surface / Test the runtime"
+        ],
+        "changedFiles": [
+          "test/ci-failure-probe.test.mjs"
+        ]
+      },
+      "cited": [
+        "Test the runtime",
+        "skipped",
+        "Process completed with exit code 1."
+      ]
+    }
+  ]
+}
