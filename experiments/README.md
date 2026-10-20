@@ -58,6 +58,27 @@
 | `injection-probe.mjs` | 注入探针（真实 supplement 模块 + 假端点确定性回显） |
 | `injection-result.json` | 四类注入的放行/阻断读数 |
 
+### `cognition-responsibility/` — 认知职责审查的原始记录
+
+配套 `docs/architecture/cognition-responsibility-review-v0.md`。只读源码，不含模型调用。
+
+| 文件 | 内容 |
+| --- | --- |
+| `s1-authorities.md` | 四个判断模块（CI Relevance / Diagnosis Proposal / CI Attention / Desktop Return Attention）的权利表，逐行标注事实判定 / 重要性判断 / 行动授权与 `文件:行号` |
+| `s2-language.md` | Language 层能自主与不能自主的边界、能力暴露边界、全仓库模型调用点穷举、`repository-change-executor` 的第二条模型循环 |
+| `s3-chronicle.md` | 六个事实家族的读取通路、必须留在原 owner 的四项责任、四项可作材料但未进入模型的 |
+
+### `ci-supplement-triangulate/` — 三组对照：模型补充相对零模型机械摘要还有没有增量
+
+| 文件 | 内容 |
+| --- | --- |
+| `report.md` | 三组对比表、逐 run 增量判定、范围限制、九节 |
+| `samples.json` | 冻结件（选定理由、失败形态、抽取规则、判据） |
+| `candidates.json`、`probe-candidates.mjs` | 六个未用 run 的只读筛选（取了 5 个） |
+| `digest.mjs`、`groups.mjs`、`groups.json` | 零模型机械摘要的三条规则与 A/B 两组内容 |
+| `markers.mjs`、`score.mjs`、`summary.json` | 标识提取、判分与逐项明细 |
+| `run-supplement.mjs`、`results.json` | 五次真调用与三组内容 |
+
 ## 复现前提
 
 - **GitHub 材料**：`gh auth status` 显示已登录（探针用 `gh auth token` 现取，不落盘）；脚本里写死的 run id 是本仓库历史上的真实红 run。
