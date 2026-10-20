@@ -68,6 +68,22 @@
 | `s2-language.md` | Language 层能自主与不能自主的边界、能力暴露边界、全仓库模型调用点穷举、`repository-change-executor` 的第二条模型循环 |
 | `s3-chronicle.md` | 六个事实家族的读取通路、必须留在原 owner 的四项责任、四项可作材料但未进入模型的 |
 
+### `cognition-control-round2/` — 最后一轮四组对照：换成不自证原因的失败场景
+
+承接 `cognition-control/`。上一轮的 run 日志里直接写着「真机实验：故意失败」，M0 组饱和，结论应改判为「在该场景无法区分」。本轮换成 run `34752988729`（`Setup Node` 缺 lock file，日志只给症状、不给处置方向）。
+
+**结论：相关历史只改变了一处——候选介入里多出「把 lock 生成提前到 cache 之前、调整 workflow 顺序」，并配了对应时序推理；复查优先级（三组首位都是 Setup Node 日志）与语义判断没变。同形态但无关的历史只带来通用排查项。三组都没有把历史读成「已解决」。**
+
+| 文件 | 内容 |
+| --- | --- |
+| `report.md` | 九节：结论、样本选择理由、四组设置、五维逐条比对（含原文）、C1–C6 结果表、两条判断裁决、对上轮结论的效力修正、不证明什么、读数缺陷与复现 |
+| `samples.json` | 冻结件：四组完整消息、两条历史材料（`materialKind: experimental` + provenance）、C1–C6、`frozenAt` |
+| `outputs.json` | 四组记录（R 组 `modelCalled: false`）+ C1–C6 逐项判定 |
+| `c2-tokens.json` | C2 的事后 token 级核验（原「逐字匹配」规则跨语言不可用，52 条 facts 零编造） |
+| `freeze.mjs` | 冻结脚本：抓产品真实请求体，不调真模型；R 组用真 `judgeProposal` |
+| `run.mjs` | 三组真调用，每组一次，不重试 |
+| `assess.mjs` | C2 的补充核验脚本 |
+
 ### `cognition-control/` — 一次最小四组对照：相关行动历史会不会改变开放认知判断
 
 配套 `docs/architecture/cognition-responsibility-review-v0.md` §7（按 Human 裁决重写的四组设计）。**本轮结论：两条判断均被推翻，但只在一个在对照组上已饱和的场景内成立**——详见 `report.md` §6.1。

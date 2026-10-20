@@ -1,0 +1,406 @@
+{
+  "scoredAt": "2026-10-20T16:13:25.399Z",
+  "samplesFrozenAt": "2026-10-20T16:10:15.281Z",
+  "rules": {
+    "misread": [
+      "已解决",
+      "已被解决",
+      "已修复",
+      "已经修好",
+      "无需再看",
+      "无需改动",
+      "说明根因就是",
+      "根因已确定"
+    ],
+    "stillFailing": [
+      "仍然失败",
+      "依然失败",
+      "仍会失败",
+      "当前仍然",
+      "并未解决",
+      "没有解决",
+      "仍需",
+      "仍要"
+    ],
+    "lockTerms": [
+      "lock 文件",
+      "package-lock",
+      "lockfile",
+      "npm-shrinkwrap",
+      "npm ci",
+      "缓存",
+      "cache"
+    ],
+    "infoTerms": [
+      "lock",
+      "package-lock",
+      "npm ci",
+      "npm install",
+      "cache",
+      "缓存",
+      "workflow",
+      "工作流配置",
+      "依赖"
+    ]
+  },
+  "groups": {
+    "R": {
+      "modelCalled": false,
+      "output": {
+        "kind": "insufficient-evidence",
+        "missing": "commit-comparison-indeterminate"
+      }
+    },
+    "M0": {
+      "modelCalled": true,
+      "history": null,
+      "elapsedMs": 52290,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 2101,
+        "completion_tokens": 2451,
+        "total_tokens": 4552,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "rawContent": "{\"explains\":\"这次 CI 失败发生在 test job 的 Setup Node 步骤，因为 actions/setup-node@v4 启用 npm cache 时未找到依赖 lock file。\",\"facts\":[\"job test 的 conclusion 是 failure\",\"Setup Node 步骤的 conclusion 是 failure\",\"Install dependencies 步骤的 conclusion 是 skipped\",\"Build and test 步骤的 conclusion 是 skipped\",\"Post Setup Node 步骤的 conclusion 是 skipped\",\"Post Checkout 步骤的 conclusion 是 success\",\"Complete job 步骤的 conclusion 是 success\",\"changedFiles 中 .github/workflows/runtime-tests.yml 的 status 是 added\",\"workflow 使用 actions/setup-node@v4\",\"workflow 中 setup-node 配置了 node-version: 24\",\"workflow 中 setup-node 配置了 cache: npm\",\"CI 日志显示 node: v24.20.0\",\"CI 日志显示 npm: 11.19.0\",\"CI 日志显示 yarn: 1.22.22\",\"CI 日志显示错误：Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new. Supported file patterns: package-lock.json,npm-shrinkwrap.json,yarn.lock\",\"CI 日志显示 warning：Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4.\"],\"assumptions\":[\"仓库当前没有 package-lock.json、npm-shrinkwrap.json 或 yarn.lock，或者这些文件不在 CI checkout 路径中。\",\"失败由 setup-node 的 cache: npm 配置触发，而不是 npm install 或测试本身失败。\",\"如果提交 lockfile 或移除 cache，Setup Node 步骤可能通过。\"],\"first_look\":[\"job test / step Setup Node 的失败日志\",\".github/workflows/runtime-tests.yml 中 actions/setup-node@v4 的 cache: npm 配置\",\"仓库根目录是否存在 package-lock.json、npm-shrinkwrap.json 或 yarn.lock\",\"CI checkout 路径 /home/runner/work/hikari-new/hikari-new 是否包含 lockfile\"],\"missing_info\":[\"仓库中是否实际存在 lockfile，以及它是否被提交到 headSha 2a2c0748ed5c58b5c8e91b7439cff3de51946056\",\"workflow 是否有意使用 npm cache，还是应改用 yarn/pnpm cache\",\"actions/setup-node@v4 在缺少 lockfile 时是否应失败还是仅警告\",\"是否有其他 CI 配置或 .npmrc 影响 lockfile 检测\"],\"candidates\":[\"在仓库中提交 package-lock.json、npm-shrinkwrap.json 或 yarn.lock，使 setup-node cache 能找到 lockfile\",\"移除 workflow 中 setup-node 的 cache: npm，或改为不依赖 lockfile 的缓存方式\",\"如果项目使用 yarn，确认 lockfile 类型与 cache 配置一致；不确定时移除 cache 更可能先恢复 CI\"],\"resolved\":false}",
+      "parsed": {
+        "explains": "这次 CI 失败发生在 test job 的 Setup Node 步骤，因为 actions/setup-node@v4 启用 npm cache 时未找到依赖 lock file。",
+        "facts": [
+          "job test 的 conclusion 是 failure",
+          "Setup Node 步骤的 conclusion 是 failure",
+          "Install dependencies 步骤的 conclusion 是 skipped",
+          "Build and test 步骤的 conclusion 是 skipped",
+          "Post Setup Node 步骤的 conclusion 是 skipped",
+          "Post Checkout 步骤的 conclusion 是 success",
+          "Complete job 步骤的 conclusion 是 success",
+          "changedFiles 中 .github/workflows/runtime-tests.yml 的 status 是 added",
+          "workflow 使用 actions/setup-node@v4",
+          "workflow 中 setup-node 配置了 node-version: 24",
+          "workflow 中 setup-node 配置了 cache: npm",
+          "CI 日志显示 node: v24.20.0",
+          "CI 日志显示 npm: 11.19.0",
+          "CI 日志显示 yarn: 1.22.22",
+          "CI 日志显示错误：Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new. Supported file patterns: package-lock.json,npm-shrinkwrap.json,yarn.lock",
+          "CI 日志显示 warning：Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4."
+        ],
+        "assumptions": [
+          "仓库当前没有 package-lock.json、npm-shrinkwrap.json 或 yarn.lock，或者这些文件不在 CI checkout 路径中。",
+          "失败由 setup-node 的 cache: npm 配置触发，而不是 npm install 或测试本身失败。",
+          "如果提交 lockfile 或移除 cache，Setup Node 步骤可能通过。"
+        ],
+        "first_look": [
+          "job test / step Setup Node 的失败日志",
+          ".github/workflows/runtime-tests.yml 中 actions/setup-node@v4 的 cache: npm 配置",
+          "仓库根目录是否存在 package-lock.json、npm-shrinkwrap.json 或 yarn.lock",
+          "CI checkout 路径 /home/runner/work/hikari-new/hikari-new 是否包含 lockfile"
+        ],
+        "missing_info": [
+          "仓库中是否实际存在 lockfile，以及它是否被提交到 headSha 2a2c0748ed5c58b5c8e91b7439cff3de51946056",
+          "workflow 是否有意使用 npm cache，还是应改用 yarn/pnpm cache",
+          "actions/setup-node@v4 在缺少 lockfile 时是否应失败还是仅警告",
+          "是否有其他 CI 配置或 .npmrc 影响 lockfile 检测"
+        ],
+        "candidates": [
+          "在仓库中提交 package-lock.json、npm-shrinkwrap.json 或 yarn.lock，使 setup-node cache 能找到 lockfile",
+          "移除 workflow 中 setup-node 的 cache: npm，或改为不依赖 lockfile 的缓存方式",
+          "如果项目使用 yarn，确认 lockfile 类型与 cache 配置一致；不确定时移除 cache 更可能先恢复 CI"
+        ],
+        "resolved": false
+      },
+      "score": {
+        "C1": {
+          "explains": "这次 CI 失败发生在 test job 的 Setup Node 步骤，因为 actions/setup-node@v4 启用 npm cache 时未找到依赖 lock file。"
+        },
+        "C2": {
+          "factCount": 16,
+          "unverifiableFacts": [
+            "job test 的 conclusion 是 failure",
+            "Setup Node 步骤的 conclusion 是 failure",
+            "Install dependencies 步骤的 conclusion 是 skipped",
+            "Build and test 步骤的 conclusion 是 skipped",
+            "Post Setup Node 步骤的 conclusion 是 skipped",
+            "Post Checkout 步骤的 conclusion 是 success",
+            "Complete job 步骤的 conclusion 是 success",
+            "changedFiles 中 .github/workflows/runtime-tests.yml 的 status 是 added",
+            "workflow 使用 actions/setup-node@v4",
+            "workflow 中 setup-node 配置了 node-version: 24",
+            "workflow 中 setup-node 配置了 cache: npm",
+            "CI 日志显示 node: v24.20.0",
+            "CI 日志显示 npm: 11.19.0",
+            "CI 日志显示 yarn: 1.22.22",
+            "CI 日志显示错误：Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new. Supported file patterns: package-lock.json,npm-shrinkwrap.json,yarn.lock",
+            "CI 日志显示 warning：Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-node@v4."
+          ],
+          "pass": false,
+          "assumptionCount": 3
+        },
+        "C3": {
+          "firstLookHead": "job test / step Setup Node 的失败日志",
+          "mentionsLock": false
+        },
+        "C4": {
+          "mentioned": [
+            "仓库中是否实际存在 lockfile，以及它是否被提交到 headSha 2a2c0748ed5c58b5c8e91b7439cff3de51946056",
+            "workflow 是否有意使用 npm cache，还是应改用 yarn/pnpm cache",
+            "actions/setup-node@v4 在缺少 lockfile 时是否应失败还是仅警告",
+            "是否有其他 CI 配置或 .npmrc 影响 lockfile 检测"
+          ],
+          "pass": true
+        },
+        "C5": {
+          "candidateCount": 3,
+          "pass": true
+        },
+        "C6": {
+          "misreadHits": [],
+          "exempted": false,
+          "pass": true
+        },
+        "resolved": false
+      }
+    },
+    "M1": {
+      "modelCalled": true,
+      "history": "relevant",
+      "elapsedMs": 62735,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 2177,
+        "completion_tokens": 3439,
+        "total_tokens": 5616,
+        "prompt_tokens_details": {
+          "cached_tokens": 2096
+        }
+      },
+      "rawContent": "{\"explains\":\"这次失败意味着 test job 的 Setup Node 步骤因启用 npm cache 但 checkout 中没有受支持的依赖 lock file 而失败，后续安装和测试步骤被跳过。\",\"facts\":[\"runId 是 34752988729，headSha 是 2a2c0748ed5c58b5c8e91b7439cff3de51946056。\",\"test job 的 conclusion 是 failure。\",\"test job 中 Setup Node 步骤的 conclusion 是 failure。\",\"Install dependencies 步骤的 conclusion 是 skipped。\",\"Build and test 步骤的 conclusion 是 skipped。\",\"Post Setup Node 步骤的 conclusion 是 skipped。\",\"Post Checkout 步骤的 conclusion 是 success。\",\"Complete job 步骤的 conclusion 是 success。\",\"changedFilesTotal 是 1，changedFilesOmitted 是 0。\",\"唯一 changed file 是 .github/workflows/runtime-tests.yml，status 是 added。\",\"workflow 使用 actions/setup-node@v4。\",\"workflow 中 Setup Node 配置了 node-version: 24。\",\"workflow 中 Setup Node 配置了 cache: npm。\",\"log window 是 failing-step，step 是 Setup Node。\",\"log truncated 是 false。\",\"log 显示 node 是 v24.20.0。\",\"log 显示 npm 是 11.19.0。\",\"log 显示 yarn 是 1.22.22。\",\"log 显示 npm config get cache 返回 /home/runner/.npm。\",\"log 中有 ##[error]Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new。\",\"log 中列出的 supported file patterns 是 package-lock.json, npm-shrinkwrap.json, yarn.lock。\",\"log 中有 Node 20 deprecated 的 warning。\",\"log 中有 warning：actions/checkout@v4 和 actions/setup-node@v4 被强制运行在 Node.js 24。\",\"实验材料称截至提交 2a2c074 本仓库从未提交过 package-lock.json 或 npm-shrinkwrap.json。\",\"实验材料称 .gitignore 里没有忽略 package-lock.json 或 npm-shrinkwrap.json。\",\"实验材料称本地安装依赖一直用 npm install。\"],\"assumptions\":[\"Setup Node 失败最可能是因为 cache: npm 要求存在受支持的 lock file，而 checkout 中没有 lock file。\",\"Node 20 deprecation warning 本身不是这次 Setup Node 失败的直接原因。\",\"如果仓库中存在 package-lock.json、npm-shrinkwrap.json 或 yarn.lock，Setup Node 的 cache 步骤可能不会报这个错误。\",\"npm install 可能在本地生成 lock file，但 CI 中 Setup Node cache 步骤发生在 Install dependencies 之前，因此本次运行无法依赖后续 npm install 生成 lock file。\",\"提交 lock file 或移除 cache: npm 可能解决这次失败。\"],\"first_look\":[\"test job > Setup Node step in run 34752988729\",\".github/workflows/runtime-tests.yml 中 Setup Node 的 cache: npm 配置\",\"仓库根目录在 headSha 2a2c0748ed5c58b5c8e91b7439cff3de51946056 是否存在 package-lock.json、npm-shrinkwrap.json 或 yarn.lock\",\".gitignore 是否排除 lock file\",\"package.json 是否存在以及项目预期使用的包管理器\"],\"missing_info\":[\"仓库在 headSha 2a2c0748ed5c58b5c8e91b7439cff3de51946056 是否确实没有 lock file，除了实验材料给出的历史描述外，还需要确认 CI checkout 实际状态。\",\"项目是否应该提交 lock file，还是应该禁用 Setup Node cache。\",\"package.json 是否存在，以及项目是否预期使用 npm、yarn 或其他包管理器。\",\"是否有后续 CI run 在添加 lock file 或移除 cache 后成功。\",\"actions/setup-node@v4 的 cache: npm 是否在所有情况下都要求 lock file，还是仅在该次运行中因缺失 lock file 失败。\"],\"candidates\":[\"提交受支持的 lock file，例如 package-lock.json、npm-shrinkwrap.json 或 yarn.lock；如果项目应该使用 lockfile，这更可能解决失败。\",\"移除 Setup Node 中的 cache: npm，或改为 cache: false；如果项目有意不提交 lock file，这更可能解决失败。\",\"在 Setup Node cache 步骤之前生成 lock file，但需要调整 workflow 顺序或单独执行安装步骤。\",\"确认项目预期包管理器，并统一使用对应 lock file 和 cache 配置。\"],\"resolved\":false}",
+      "parsed": {
+        "explains": "这次失败意味着 test job 的 Setup Node 步骤因启用 npm cache 但 checkout 中没有受支持的依赖 lock file 而失败，后续安装和测试步骤被跳过。",
+        "facts": [
+          "runId 是 34752988729，headSha 是 2a2c0748ed5c58b5c8e91b7439cff3de51946056。",
+          "test job 的 conclusion 是 failure。",
+          "test job 中 Setup Node 步骤的 conclusion 是 failure。",
+          "Install dependencies 步骤的 conclusion 是 skipped。",
+          "Build and test 步骤的 conclusion 是 skipped。",
+          "Post Setup Node 步骤的 conclusion 是 skipped。",
+          "Post Checkout 步骤的 conclusion 是 success。",
+          "Complete job 步骤的 conclusion 是 success。",
+          "changedFilesTotal 是 1，changedFilesOmitted 是 0。",
+          "唯一 changed file 是 .github/workflows/runtime-tests.yml，status 是 added。",
+          "workflow 使用 actions/setup-node@v4。",
+          "workflow 中 Setup Node 配置了 node-version: 24。",
+          "workflow 中 Setup Node 配置了 cache: npm。",
+          "log window 是 failing-step，step 是 Setup Node。",
+          "log truncated 是 false。",
+          "log 显示 node 是 v24.20.0。",
+          "log 显示 npm 是 11.19.0。",
+          "log 显示 yarn 是 1.22.22。",
+          "log 显示 npm config get cache 返回 /home/runner/.npm。",
+          "log 中有 ##[error]Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new。",
+          "log 中列出的 supported file patterns 是 package-lock.json, npm-shrinkwrap.json, yarn.lock。",
+          "log 中有 Node 20 deprecated 的 warning。",
+          "log 中有 warning：actions/checkout@v4 和 actions/setup-node@v4 被强制运行在 Node.js 24。",
+          "实验材料称截至提交 2a2c074 本仓库从未提交过 package-lock.json 或 npm-shrinkwrap.json。",
+          "实验材料称 .gitignore 里没有忽略 package-lock.json 或 npm-shrinkwrap.json。",
+          "实验材料称本地安装依赖一直用 npm install。"
+        ],
+        "assumptions": [
+          "Setup Node 失败最可能是因为 cache: npm 要求存在受支持的 lock file，而 checkout 中没有 lock file。",
+          "Node 20 deprecation warning 本身不是这次 Setup Node 失败的直接原因。",
+          "如果仓库中存在 package-lock.json、npm-shrinkwrap.json 或 yarn.lock，Setup Node 的 cache 步骤可能不会报这个错误。",
+          "npm install 可能在本地生成 lock file，但 CI 中 Setup Node cache 步骤发生在 Install dependencies 之前，因此本次运行无法依赖后续 npm install 生成 lock file。",
+          "提交 lock file 或移除 cache: npm 可能解决这次失败。"
+        ],
+        "first_look": [
+          "test job > Setup Node step in run 34752988729",
+          ".github/workflows/runtime-tests.yml 中 Setup Node 的 cache: npm 配置",
+          "仓库根目录在 headSha 2a2c0748ed5c58b5c8e91b7439cff3de51946056 是否存在 package-lock.json、npm-shrinkwrap.json 或 yarn.lock",
+          ".gitignore 是否排除 lock file",
+          "package.json 是否存在以及项目预期使用的包管理器"
+        ],
+        "missing_info": [
+          "仓库在 headSha 2a2c0748ed5c58b5c8e91b7439cff3de51946056 是否确实没有 lock file，除了实验材料给出的历史描述外，还需要确认 CI checkout 实际状态。",
+          "项目是否应该提交 lock file，还是应该禁用 Setup Node cache。",
+          "package.json 是否存在，以及项目是否预期使用 npm、yarn 或其他包管理器。",
+          "是否有后续 CI run 在添加 lock file 或移除 cache 后成功。",
+          "actions/setup-node@v4 的 cache: npm 是否在所有情况下都要求 lock file，还是仅在该次运行中因缺失 lock file 失败。"
+        ],
+        "candidates": [
+          "提交受支持的 lock file，例如 package-lock.json、npm-shrinkwrap.json 或 yarn.lock；如果项目应该使用 lockfile，这更可能解决失败。",
+          "移除 Setup Node 中的 cache: npm，或改为 cache: false；如果项目有意不提交 lock file，这更可能解决失败。",
+          "在 Setup Node cache 步骤之前生成 lock file，但需要调整 workflow 顺序或单独执行安装步骤。",
+          "确认项目预期包管理器，并统一使用对应 lock file 和 cache 配置。"
+        ],
+        "resolved": false
+      },
+      "score": {
+        "C1": {
+          "explains": "这次失败意味着 test job 的 Setup Node 步骤因启用 npm cache 但 checkout 中没有受支持的依赖 lock file 而失败，后续安装和测试步骤被跳过。"
+        },
+        "C2": {
+          "factCount": 26,
+          "unverifiableFacts": [
+            "runId 是 34752988729，headSha 是 2a2c0748ed5c58b5c8e91b7439cff3de51946056。",
+            "test job 的 conclusion 是 failure。",
+            "test job 中 Setup Node 步骤的 conclusion 是 failure。",
+            "Install dependencies 步骤的 conclusion 是 skipped。",
+            "Build and test 步骤的 conclusion 是 skipped。",
+            "Post Setup Node 步骤的 conclusion 是 skipped。",
+            "Post Checkout 步骤的 conclusion 是 success。",
+            "Complete job 步骤的 conclusion 是 success。",
+            "changedFilesTotal 是 1，changedFilesOmitted 是 0。",
+            "唯一 changed file 是 .github/workflows/runtime-tests.yml，status 是 added。",
+            "workflow 使用 actions/setup-node@v4。",
+            "workflow 中 Setup Node 配置了 node-version: 24。",
+            "workflow 中 Setup Node 配置了 cache: npm。",
+            "log window 是 failing-step，step 是 Setup Node。",
+            "log truncated 是 false。",
+            "log 显示 node 是 v24.20.0。",
+            "log 显示 npm 是 11.19.0。",
+            "log 显示 yarn 是 1.22.22。",
+            "log 显示 npm config get cache 返回 /home/runner/.npm。",
+            "log 中有 ##[error]Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new。",
+            "log 中列出的 supported file patterns 是 package-lock.json, npm-shrinkwrap.json, yarn.lock。",
+            "log 中有 Node 20 deprecated 的 warning。",
+            "log 中有 warning：actions/checkout@v4 和 actions/setup-node@v4 被强制运行在 Node.js 24。",
+            "实验材料称截至提交 2a2c074 本仓库从未提交过 package-lock.json 或 npm-shrinkwrap.json。",
+            "实验材料称 .gitignore 里没有忽略 package-lock.json 或 npm-shrinkwrap.json。",
+            "实验材料称本地安装依赖一直用 npm install。"
+          ],
+          "pass": false,
+          "assumptionCount": 5
+        },
+        "C3": {
+          "firstLookHead": "test job > Setup Node step in run 34752988729",
+          "mentionsLock": false
+        },
+        "C4": {
+          "mentioned": [
+            "仓库在 headSha 2a2c0748ed5c58b5c8e91b7439cff3de51946056 是否确实没有 lock file，除了实验材料给出的历史描述外，还需要确认 CI checkout 实际状态。",
+            "项目是否应该提交 lock file，还是应该禁用 Setup Node cache。",
+            "是否有后续 CI run 在添加 lock file 或移除 cache 后成功。",
+            "actions/setup-node@v4 的 cache: npm 是否在所有情况下都要求 lock file，还是仅在该次运行中因缺失 lock file 失败。"
+          ],
+          "pass": true
+        },
+        "C5": {
+          "candidateCount": 4,
+          "pass": true
+        },
+        "C6": {
+          "misreadHits": [],
+          "exempted": false,
+          "pass": true
+        },
+        "resolved": false
+      }
+    },
+    "M1-negative": {
+      "modelCalled": true,
+      "history": "irrelevant",
+      "elapsedMs": 58273,
+      "finishReason": "stop",
+      "usage": {
+        "prompt_tokens": 2162,
+        "completion_tokens": 3391,
+        "total_tokens": 5553,
+        "prompt_tokens_details": {
+          "cached_tokens": 2096
+        }
+      },
+      "rawContent": "{\"explains\":\"这次失败意味着 Setup Node 步骤因 actions/setup-node 的 npm cache 找不到依赖 lock file 而失败，后续安装和测试步骤被跳过。\",\"facts\":[\"失败 job 是 test，失败 step 是 Setup Node。\",\"Install dependencies 和 Build and test 被 skipped。\",\"新增文件是 .github/workflows/runtime-tests.yml。\",\"workflow 中 Setup Node 使用 actions/setup-node@v4，并设置 node-version: 24 和 cache: npm。\",\"CI 日志显示 node: v24.20.0、npm: 11.19.0、yarn: 1.22.22。\",\"CI 日志报错：Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new。\",\"CI 日志列出支持的 lock file patterns：package-lock.json, npm-shrinkwrap.json, yarn.lock。\",\"CI 日志包含 Node 20 deprecated 警告，并说明 actions 被强制运行在 Node 24。\",\"实验材料称本仓库测试框架一直使用 Node.js 内置的 node:test，package.json 的 test 脚本直接调用 node --test。\",\"实验材料称没有使用 jest、mocha 或 vitest。\"],\"assumptions\":[\"失败最可能由 cache: npm 要求 lock file，但 checkout 后仓库中没有 lock file 导致。\",\"headSha 对应的仓库快照可能缺少 package-lock.json、npm-shrinkwrap.json 或 yarn.lock。\",\"Node 20 deprecated 警告不是本次失败的直接原因。\",\"如果添加 lock file 或关闭 setup-node 的 cache，Setup Node 可能通过。\",\"测试脚本本身没有被执行，因为失败发生在 Setup Node 阶段。\"],\"first_look\":[\"job test > step Setup Node > CI 日志中的 Dependencies lock file is not found 报错行\",\".github/workflows/runtime-tests.yml > Setup Node > cache: npm 配置\",\"仓库根目录 > 是否存在 package-lock.json、npm-shrinkwrap.json 或 yarn.lock\",\".gitignore > 是否忽略 lock file\",\"package.json > test 脚本是否仍为 node --test\"],\"missing_info\":[\"headSha 仓库快照中是否确实没有 lock file，还是 lock file 被忽略或未提交。\",\"该 workflow 是否应该启用 npm cache。\",\"package.json 是否包含依赖，以及是否应该生成 lock file。\",\"是否希望 CI 使用 npm install 而不依赖 lock file。\",\"同一 workflow 在其他 run 中是否通过。\",\"actions/setup-node@v4 的 cache 行为是否在所有情况下都要求 lock file。\"],\"candidates\":[\"在仓库中提交 package-lock.json、npm-shrinkwrap.json 或 yarn.lock，使 setup-node cache 能找到 lock file。\",\"移除或关闭 .github/workflows/runtime-tests.yml 中 Setup Node 的 cache: npm，改为 cache: false 或不设置 cache。\",\"确认 lock file 是否被 .gitignore 排除，并调整忽略规则。\",\"如果仓库不需要 lock file，则调整 workflow 不依赖 setup-node cache；更可能方向是添加 lock file 或关闭 cache。\"],\"resolved\":false}",
+      "parsed": {
+        "explains": "这次失败意味着 Setup Node 步骤因 actions/setup-node 的 npm cache 找不到依赖 lock file 而失败，后续安装和测试步骤被跳过。",
+        "facts": [
+          "失败 job 是 test，失败 step 是 Setup Node。",
+          "Install dependencies 和 Build and test 被 skipped。",
+          "新增文件是 .github/workflows/runtime-tests.yml。",
+          "workflow 中 Setup Node 使用 actions/setup-node@v4，并设置 node-version: 24 和 cache: npm。",
+          "CI 日志显示 node: v24.20.0、npm: 11.19.0、yarn: 1.22.22。",
+          "CI 日志报错：Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new。",
+          "CI 日志列出支持的 lock file patterns：package-lock.json, npm-shrinkwrap.json, yarn.lock。",
+          "CI 日志包含 Node 20 deprecated 警告，并说明 actions 被强制运行在 Node 24。",
+          "实验材料称本仓库测试框架一直使用 Node.js 内置的 node:test，package.json 的 test 脚本直接调用 node --test。",
+          "实验材料称没有使用 jest、mocha 或 vitest。"
+        ],
+        "assumptions": [
+          "失败最可能由 cache: npm 要求 lock file，但 checkout 后仓库中没有 lock file 导致。",
+          "headSha 对应的仓库快照可能缺少 package-lock.json、npm-shrinkwrap.json 或 yarn.lock。",
+          "Node 20 deprecated 警告不是本次失败的直接原因。",
+          "如果添加 lock file 或关闭 setup-node 的 cache，Setup Node 可能通过。",
+          "测试脚本本身没有被执行，因为失败发生在 Setup Node 阶段。"
+        ],
+        "first_look": [
+          "job test > step Setup Node > CI 日志中的 Dependencies lock file is not found 报错行",
+          ".github/workflows/runtime-tests.yml > Setup Node > cache: npm 配置",
+          "仓库根目录 > 是否存在 package-lock.json、npm-shrinkwrap.json 或 yarn.lock",
+          ".gitignore > 是否忽略 lock file",
+          "package.json > test 脚本是否仍为 node --test"
+        ],
+        "missing_info": [
+          "headSha 仓库快照中是否确实没有 lock file，还是 lock file 被忽略或未提交。",
+          "该 workflow 是否应该启用 npm cache。",
+          "package.json 是否包含依赖，以及是否应该生成 lock file。",
+          "是否希望 CI 使用 npm install 而不依赖 lock file。",
+          "同一 workflow 在其他 run 中是否通过。",
+          "actions/setup-node@v4 的 cache 行为是否在所有情况下都要求 lock file。"
+        ],
+        "candidates": [
+          "在仓库中提交 package-lock.json、npm-shrinkwrap.json 或 yarn.lock，使 setup-node cache 能找到 lock file。",
+          "移除或关闭 .github/workflows/runtime-tests.yml 中 Setup Node 的 cache: npm，改为 cache: false 或不设置 cache。",
+          "确认 lock file 是否被 .gitignore 排除，并调整忽略规则。",
+          "如果仓库不需要 lock file，则调整 workflow 不依赖 setup-node cache；更可能方向是添加 lock file 或关闭 cache。"
+        ],
+        "resolved": false
+      },
+      "score": {
+        "C1": {
+          "explains": "这次失败意味着 Setup Node 步骤因 actions/setup-node 的 npm cache 找不到依赖 lock file 而失败，后续安装和测试步骤被跳过。"
+        },
+        "C2": {
+          "factCount": 10,
+          "unverifiableFacts": [
+            "失败 job 是 test，失败 step 是 Setup Node。",
+            "Install dependencies 和 Build and test 被 skipped。",
+            "新增文件是 .github/workflows/runtime-tests.yml。",
+            "workflow 中 Setup Node 使用 actions/setup-node@v4，并设置 node-version: 24 和 cache: npm。",
+            "CI 日志显示 node: v24.20.0、npm: 11.19.0、yarn: 1.22.22。",
+            "CI 日志报错：Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new。",
+            "CI 日志列出支持的 lock file patterns：package-lock.json, npm-shrinkwrap.json, yarn.lock。",
+            "CI 日志包含 Node 20 deprecated 警告，并说明 actions 被强制运行在 Node 24。",
+            "实验材料称本仓库测试框架一直使用 Node.js 内置的 node:test，package.json 的 test 脚本直接调用 node --test。",
+            "实验材料称没有使用 jest、mocha 或 vitest。"
+          ],
+          "pass": false,
+          "assumptionCount": 5
+        },
+        "C3": {
+          "firstLookHead": "job test > step Setup Node > CI 日志中的 Dependencies lock file is not found 报错行",
+          "mentionsLock": false
+        },
+        "C4": {
+          "mentioned": [
+            "headSha 仓库快照中是否确实没有 lock file，还是 lock file 被忽略或未提交。",
+            "该 workflow 是否应该启用 npm cache。",
+            "package.json 是否包含依赖，以及是否应该生成 lock file。",
+            "是否希望 CI 使用 npm install 而不依赖 lock file。",
+            "同一 workflow 在其他 run 中是否通过。",
+            "actions/setup-node@v4 的 cache 行为是否在所有情况下都要求 lock file。"
+          ],
+          "pass": true
+        },
+        "C5": {
+          "candidateCount": 4,
+          "pass": true
+        },
+        "C6": {
+          "misreadHits": [],
+          "exempted": false,
+          "pass": true
+        },
+        "resolved": false
+      }
+    }
+  }
+}

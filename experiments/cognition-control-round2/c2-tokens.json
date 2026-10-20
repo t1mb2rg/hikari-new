@@ -1,0 +1,23 @@
+{
+  "note": "事后补充规则，仅作辅助读数",
+  "groups": {
+    "M0": {
+      "factCount": 16,
+      "ok": 16,
+      "noToken": 0,
+      "unbacked": []
+    },
+    "M1": {
+      "factCount": 26,
+      "ok": 26,
+      "noToken": 0,
+      "unbacked": []
+    },
+    "M1-negative": {
+      "factCount": 10,
+      "ok": 10,
+      "noToken": 0,
+      "unbacked": []
+    }
+  }
+}
