@@ -7,7 +7,7 @@
 
 `ClearAI` 的结案流程要求独立评估者核判据。在本机 DSH 会话里，**任何需要派发独立评估者的动作一律失败**：
 
-- `Conclude`（结案）——七次；
+- `Conclude`（结案）——八次；
 - `AdvancePlan`（带 `tests` 的 L3 步骤）——三次；
 - `Frame` 判据修订的独立裁决——两次。
 
@@ -19,9 +19,9 @@
 persona+outputSchema+toolFilter: subagents.start is not a function
 ```
 
-七次 `Conclude` 返回的都是 `audit_dispatch_failed`，附同一条报错。
+八次 `Conclude` 返回的都是 `audit_dispatch_failed`，附同一条报错。
 
-## 3. 影响范围（截至 2026-10-19）
+## 3. 影响范围（截至 2026-10-20）
 
 | 目标 | 目标 id | 状态 | 处置 |
 | --- | --- | --- | --- |
@@ -29,12 +29,14 @@ persona+outputSchema+toolFilter: subagents.start is not a function
 | CI 日志作为不可信输入的边界 | `goal-e8468709-…`（同 id 复用） | 判据 ①–④ 已交付，独立审计未完成 | 保持 `phase=blocked` / `activation=disarmed`；**不标 achieved** |
 | Q1 隔离后的日志注入对抗验证 | `g-mvewwojq3rc5` | 15 次真调用与报告已完成，独立审计未完成 | `Conclude abandoned` 关闭，报告 §10 记录 |
 | 模型补充相对基线通知的增量 | `g-mvey8gs2uvqd` | 五次真调用与判分已完成（commit `48ca29e`，CI `39220927088` success），独立审计未完成 | `Conclude abandoned` 关闭，报告 §6 记录 |
+| 三组对照：模型补充相对机械摘要 | `g-mvf9409ypmh4` | 五个新样本、三组对照与报告已完成（commit `c5d9fa6`），独立审计未完成 | `Conclude abandoned` 关闭，报告 §9 记录 |
+| Hikari 认知职责审查 | `g-mvgucdbl6sfg` | 五条判据逐条达成（`docs/architecture/cognition-responsibility-review-v0.md`，commit `1fc7f30`，CI `39450041755` success），独立审计未完成 | `Conclude abandoned` 关闭；**不标 achieved** |
 
-四个目标都没有改判据、没有改读数、没有为了「攒够轮次」重复派遣。
+六个目标都没有改判据、没有改读数、没有为了「攒够轮次」重复派遣。
 
 ## 4. 已排除的原因
 
-- **不是判据不成立**：两个目标的判据都逐条对照过产物（文件存在、含指定表格、含可回溯的行号、含独立样本对照），本地 L2 自判均为「支持」。
+- **不是判据不成立**：所有目标的判据都逐条对照过产物（文件存在、含指定表格、含可回溯的行号、含独立样本对照），本地 L2 自判均为「支持」；最新一次（认知职责审查）五条判据在 `Conclude` 的 `basis` 里逐条落到章节与行号。
 - **不是网络或端点问题**：同一会话里 `ops_bash`、`gh api`、`web_fetch`、模型端点探测全部正常。
 - **不是工具名写错**：报错来自 `subagents.start`，是运行时内部的派发函数，调用方无法指定。
 - **不是任务太大**：一次只核一条判据的最小改动也失败。
@@ -52,6 +54,6 @@ persona+outputSchema+toolFilter: subagents.start is not a function
 
 独立评估者恢复可用后：
 
-- 四个目标**不需要重新测量**——产物与读数都还在原位；
-- 只是**重跑 `Conclude`**（必要时先 `update_goal resume`）；已按 `abandoned` 关闭的三个需先 `update_goal resume`，`phase=blocked` 的那个可直接重试；
+- 六个目标**不需要重新测量**——产物与读数都还在原位；
+- 只是**重跑 `Conclude`**（必要时先 `update_goal resume`）；已按 `abandoned` 关闭的五个需先 `update_goal resume`，`phase=blocked` 的那个可直接重试；
 - 若那时产品代码已经变化（例如又改了提示词/协议），则旧读数按各自文档的效力条款处理，**不再当作独立验证**。
