@@ -68,6 +68,19 @@
 | `s2-language.md` | Language 层能自主与不能自主的边界、能力暴露边界、全仓库模型调用点穷举、`repository-change-executor` 的第二条模型循环 |
 | `s3-chronicle.md` | 六个事实家族的读取通路、必须留在原 owner 的四项责任、四项可作材料但未进入模型的 |
 
+### `cognition-control/` — 一次最小四组对照：相关行动历史会不会改变开放认知判断
+
+配套 `docs/architecture/cognition-responsibility-review-v0.md` §7（按 Human 裁决重写的四组设计）。**本轮结论：两条判断均被推翻，但只在一个在对照组上已饱和的场景内成立**——详见 `report.md` §6.1。
+
+| 文件 | 内容 |
+| --- | --- |
+| `report.md` | 八节：四组判断原文、判据结果表、两条判断的裁定、失败样本节（无）、范围与限制、对 Q2 的意义、复现 |
+| `samples.json` | 冻结文件：四组完整消息、两条历史材料（标注 `materialKind: experimental`）、判据 C1–C4、`frozenAt` |
+| `outputs.json` | 四组原始回答（R 组 `modelCalled: false`）+ C1–C4 逐项结果 |
+| `freeze.mjs` | 冻结脚本：起本地假端点抓产品真实请求体，不调真模型；R 组用真 `judgeProposal` 计算 |
+| `run.mjs` | 三组真调用，每组一次，不重试 |
+| `score.mjs` | 按冻结判据打分，规则写死在文件顶部 |
+
 ### `ci-supplement-triangulate/` — 三组对照：模型补充相对零模型机械摘要还有没有增量
 
 | 文件 | 内容 |
