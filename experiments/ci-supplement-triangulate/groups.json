@@ -1,0 +1,531 @@
+{
+  "note": "A/B 两组是零模型的，独立于模型读数生成。真值取自同一份材料。",
+  "ranAt": "2026-10-19T12:53:09.684Z",
+  "groups": [
+    {
+      "runId": 38760836396,
+      "identity": "confirmed",
+      "materialsMs": 4680,
+      "failureTruth": {
+        "failedJobs": [
+          "surface"
+        ],
+        "failedSteps": [
+          "surface / Test the runtime"
+        ],
+        "changedFileCount": 11,
+        "logChars": 65536
+      },
+      "A_notice": [
+        "Repository CI attention：",
+        "  仓库：t1mb2rg/hikari-new",
+        "  运行：38760836396",
+        "  工作流：Runtime Tests",
+        "  分支：main",
+        "  提交：d734eab62848b9f9e57785302a602e2b3a70fbd1",
+        "  结论：failure",
+        "  观察时间：2026-10-19T12:52:46.456Z"
+      ],
+      "A_lineCount": 8,
+      "B_digest": "失败位置：surface / Test the runtime\n改动文件：docs/architecture/authorized-repository-action-v0-implementation-boundary-freeze.md、src/repository-change-executor/containment.ts、src/repository-change-executor/execute.ts 等 11 个\n日志首行：2026-10-15T15:31:04.8500716Z ✖ 范围：声明里的根按 origin 的仓库名逐字命中才算 declared (566.1119ms)",
+      "markers": {
+        "A": [
+          {
+            "kind": "log-span",
+            "value": "Repository CI",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "ttention",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "/hikari-new",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-10-1",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          }
+        ],
+        "B": [
+          {
+            "kind": "step",
+            "value": "Test the runtime",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "job",
+            "value": "surface",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "docs/architecture/authorized-repository-action-v0-implementation-boundary-freeze.md",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "src/repository-change-executor/containment.ts",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "src/repository-change-executor/execute.ts",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-10-15T15:31:04.8500716Z ✖ 范围：声明里的根按 origin 的仓库名逐字命中才算 declared (566.1119ms)",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": false
+          }
+        ]
+      }
+    },
+    {
+      "runId": 34752998965,
+      "identity": "confirmed",
+      "materialsMs": 3395,
+      "failureTruth": {
+        "failedJobs": [
+          "test"
+        ],
+        "failedSteps": [
+          "test / Setup Node"
+        ],
+        "changedFileCount": 1,
+        "logChars": 2996
+      },
+      "A_notice": [
+        "Repository CI attention：",
+        "  仓库：t1mb2rg/hikari-new",
+        "  运行：34752998965",
+        "  工作流：Runtime Tests",
+        "  分支：main",
+        "  提交：97a5a1daee022754a2e90a73eb414538b00d41f5",
+        "  结论：failure",
+        "  观察时间：2026-10-19T12:52:51.144Z"
+      ],
+      "A_lineCount": 8,
+      "B_digest": "失败位置：test / Setup Node\n改动文件：docs/development/phase-1-runtime.md\n日志首行：2026-09-13T10:53:09.6389635Z ##[error]Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new. Supported file patterns: package-lock.json,npm-shrinkwrap.json,yarn.lock",
+      "markers": {
+        "A": [
+          {
+            "kind": "log-span",
+            "value": "epository",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "/hikari-new",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          }
+        ],
+        "B": [
+          {
+            "kind": "step",
+            "value": "Setup Node",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "job",
+            "value": "test",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "docs/development/phase-1-runtime.md",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "package-lock.js",
+            "inMaterials": true,
+            "consistent": false,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "npm-shrinkwrap.js",
+            "inMaterials": true,
+            "consistent": false,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-09-13T10:53:09.6389635Z ##[error]Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new. Supported file patterns:",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "log-span",
+            "value": "on,yarn.lock",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": false
+          }
+        ]
+      }
+    },
+    {
+      "runId": 36327884462,
+      "identity": "confirmed",
+      "materialsMs": 3529,
+      "failureTruth": {
+        "failedJobs": [
+          "test"
+        ],
+        "failedSteps": [
+          "test / Build and test"
+        ],
+        "changedFileCount": 1,
+        "logChars": 65153
+      },
+      "A_notice": [
+        "Repository CI attention：",
+        "  仓库：t1mb2rg/hikari-new",
+        "  运行：36327884462",
+        "  工作流：Runtime Tests",
+        "  分支：test/proactive-ci-outbound",
+        "  提交：6261c2a0b982755588cb75e3ba66e6a1615d6e13",
+        "  结论：failure",
+        "  观察时间：2026-10-19T12:52:54.539Z"
+      ],
+      "A_lineCount": 8,
+      "B_digest": "失败位置：test / Build and test\n改动文件：test/proactive-ci-smoke.test.mjs\n日志首行：2026-09-27T14:59:47.6468005Z ✖ intentional proactive CI outbound smoke failure (1.215779ms)",
+      "markers": {
+        "A": [
+          {
+            "kind": "log-span",
+            "value": "Repository CI",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "ttention",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "/hikari-new",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "test/proactive-ci-outbound",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          }
+        ],
+        "B": [
+          {
+            "kind": "step",
+            "value": "Build and test",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "job",
+            "value": "test",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 2,
+            "inNotice": true
+          },
+          {
+            "kind": "file",
+            "value": "test/proactive-ci-smoke.test.mjs",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-09-27T14:59:47.6468005Z ✖ intentional proactive CI outbound smoke failure (1.215779ms)",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": false
+          }
+        ]
+      }
+    },
+    {
+      "runId": 38765009721,
+      "identity": "confirmed",
+      "materialsMs": 7651,
+      "failureTruth": {
+        "failedJobs": [
+          "test"
+        ],
+        "failedSteps": [
+          "test / Build and test"
+        ],
+        "changedFileCount": 19,
+        "logChars": 65536
+      },
+      "A_notice": [
+        "Repository CI attention：",
+        "  仓库：t1mb2rg/hikari-new",
+        "  运行：38765009721",
+        "  工作流：Runtime Tests",
+        "  分支：main",
+        "  提交：d682a89331ea19a9f9c09fe8187bd8896a51f47c",
+        "  结论：failure",
+        "  观察时间：2026-10-19T12:52:58.079Z"
+      ],
+      "A_lineCount": 8,
+      "B_digest": "失败位置：test / Build and test\n改动文件：docs/development/current-stage.md、src/cli/act-command.ts、src/cli/act.ts 等 19 个\n日志首行：2026-10-15T15:59:05.8423799Z ✖ 端点：人问一句，常驻答一句，句子逐字回来 (4.738641ms)",
+      "markers": {
+        "A": [
+          {
+            "kind": "log-span",
+            "value": "Repository CI",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "ttention",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "/hikari-new",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-10-1",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          }
+        ],
+        "B": [
+          {
+            "kind": "step",
+            "value": "Build and test",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "job",
+            "value": "test",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "docs/development/current-stage.md",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "src/cli/act-command.ts",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "src/cli/act.ts",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-10-15T15:59:05.8423799Z ✖ 端点：人问一句，常驻答一句，句子逐字回来 (4.738641ms)",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": false
+          }
+        ]
+      }
+    },
+    {
+      "runId": 38415923320,
+      "identity": "confirmed",
+      "materialsMs": 3936,
+      "failureTruth": {
+        "failedJobs": [
+          "test"
+        ],
+        "failedSteps": [
+          "test / Build and test"
+        ],
+        "changedFileCount": 1,
+        "logChars": 65536
+      },
+      "A_notice": [
+        "Repository CI attention：",
+        "  仓库：t1mb2rg/hikari-new",
+        "  运行：38415923320",
+        "  工作流：Runtime Tests",
+        "  分支：main",
+        "  提交：5e8be53716e17fb9ddf78ddd34a7f6c27448470d",
+        "  结论：failure",
+        "  观察时间：2026-10-19T12:53:05.740Z"
+      ],
+      "A_lineCount": 8,
+      "B_digest": "失败位置：test / Build and test\n改动文件：test/changeable-repositories.test.mjs\n日志首行：2026-10-13T14:44:44.9443682Z ✖ failing tests:",
+      "markers": {
+        "A": [
+          {
+            "kind": "log-span",
+            "value": "Repository CI",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "ttention",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "/hikari-new",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-10-1",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": true
+          }
+        ],
+        "B": [
+          {
+            "kind": "step",
+            "value": "Build and test",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "job",
+            "value": "test",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 2,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "test/changeable-repositories.test.mjs",
+            "inMaterials": true,
+            "consistent": true,
+            "occurrences": 1,
+            "inNotice": false
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-10-13T14:44:44.9443682Z ✖ failing tests:",
+            "inMaterials": true,
+            "consistent": null,
+            "occurrences": 1,
+            "inNotice": false
+          }
+        ]
+      }
+    }
+  ]
+}

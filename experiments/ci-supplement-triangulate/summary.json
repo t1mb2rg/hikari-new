@@ -1,0 +1,450 @@
+{
+  "note": "六项指标汇总。usable 标识 = job/step/文件且能在材料里核实且与真值一致。",
+  "ranAt": "2026-10-19T13:05:34.831Z",
+  "totals": {
+    "attachRate": "1/5",
+    "mechanicalDigestUsable": "5/5",
+    "noticeUsable": "0/5",
+    "failureTypes": [
+      "refused-citation",
+      "timeout",
+      "attached",
+      "timeout",
+      "upstream-error"
+    ],
+    "mediansMs": {
+      "attached": [
+        132018
+      ]
+    }
+  },
+  "rows": [
+    {
+      "runId": 34752998965,
+      "failureShape": "环境失败：在 Setup Node 就失败，没有测试输出，日志只有 2 996 字符",
+      "materialsMs": null,
+      "ms": 52725,
+      "attached": false,
+      "failureType": "refused-citation",
+      "truth": {
+        "failedJobs": [
+          "test"
+        ],
+        "failedSteps": [
+          "test / Setup Node"
+        ],
+        "changedFileCount": 1,
+        "logChars": 2996
+      },
+      "A": {
+        "lineCount": 8,
+        "usableMarkers": 0,
+        "hasJobStep": false,
+        "hasFile": false
+      },
+      "B": {
+        "text": "失败位置：test / Setup Node\n改动文件：docs/development/phase-1-runtime.md\n日志首行：2026-09-13T10:53:09.6389635Z ##[error]Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new. Supported file patterns: package-lock.json,npm-shrinkwrap.json,yarn.lock",
+        "usableMarkers": [
+          "step:Setup Node",
+          "job:test",
+          "file:docs/development/phase-1-runtime.md"
+        ],
+        "allMarkers": [
+          {
+            "kind": "step",
+            "value": "Setup Node",
+            "consistent": true
+          },
+          {
+            "kind": "job",
+            "value": "test",
+            "consistent": true
+          },
+          {
+            "kind": "file",
+            "value": "docs/development/phase-1-runtime.md",
+            "consistent": true
+          },
+          {
+            "kind": "file",
+            "value": "package-lock.js",
+            "consistent": false
+          },
+          {
+            "kind": "file",
+            "value": "npm-shrinkwrap.js",
+            "consistent": false
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-09-13T10:53:09.6389635Z ##[error]Dependencies lock file is not found in /home/runner/work/hikari-new/hikari-new. Supported file patterns:",
+            "consistent": null
+          },
+          {
+            "kind": "log-span",
+            "value": "on,yarn.lock",
+            "consistent": null
+          }
+        ]
+      },
+      "C": {
+        "text": null,
+        "markers": [],
+        "locusConsistency": null,
+        "citationQuality": null,
+        "cited": null
+      },
+      "incremental": {
+        "onlyModel": [],
+        "onlyDigest": [
+          "step:Setup Node",
+          "job:test",
+          "file:docs/development/phase-1-runtime.md"
+        ]
+      }
+    },
+    {
+      "runId": 38760836396,
+      "failureShape": "另一个 job 单独失败：test job 是绿的，只有 surface 失败；日志窗口按失败步骤切",
+      "materialsMs": 4947,
+      "ms": 180005,
+      "attached": false,
+      "failureType": "timeout",
+      "truth": {
+        "failedJobs": [
+          "surface"
+        ],
+        "failedSteps": [
+          "surface / Test the runtime"
+        ],
+        "changedFileCount": 11,
+        "logChars": 65536
+      },
+      "A": {
+        "lineCount": 8,
+        "usableMarkers": 0,
+        "hasJobStep": false,
+        "hasFile": false
+      },
+      "B": {
+        "text": "失败位置：surface / Test the runtime\n改动文件：docs/architecture/authorized-repository-action-v0-implementation-boundary-freeze.md、src/repository-change-executor/containment.ts、src/repository-change-executor/execute.ts 等 11 个\n日志首行：2026-10-15T15:31:04.8500716Z ✖ 范围：声明里的根按 origin 的仓库名逐字命中才算 declared (566.1119ms)",
+        "usableMarkers": [
+          "step:Test the runtime",
+          "job:surface",
+          "file:docs/architecture/authorized-repository-action-v0-implementation-boundary-freeze.md",
+          "file:src/repository-change-executor/containment.ts",
+          "file:src/repository-change-executor/execute.ts"
+        ],
+        "allMarkers": [
+          {
+            "kind": "step",
+            "value": "Test the runtime",
+            "consistent": true
+          },
+          {
+            "kind": "job",
+            "value": "surface",
+            "consistent": true
+          },
+          {
+            "kind": "file",
+            "value": "docs/architecture/authorized-repository-action-v0-implementation-boundary-freeze.md",
+            "consistent": true
+          },
+          {
+            "kind": "file",
+            "value": "src/repository-change-executor/containment.ts",
+            "consistent": true
+          },
+          {
+            "kind": "file",
+            "value": "src/repository-change-executor/execute.ts",
+            "consistent": true
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-10-15T15:31:04.8500716Z ✖ 范围：声明里的根按 origin 的仓库名逐字命中才算 declared (566.1119ms)",
+            "consistent": null
+          }
+        ]
+      },
+      "C": {
+        "text": null,
+        "markers": [],
+        "locusConsistency": null,
+        "citationQuality": null,
+        "cited": null
+      },
+      "incremental": {
+        "onlyModel": [],
+        "onlyDigest": [
+          "step:Test the runtime",
+          "job:surface",
+          "file:docs/architecture/authorized-repository-action-v0-implementation-boundary-freeze.md",
+          "file:src/repository-change-executor/containment.ts",
+          "file:src/repository-change-executor/execute.ts"
+        ]
+      }
+    },
+    {
+      "runId": 36327884462,
+      "failureShape": "旧 workflow（8 步）在功能分支上失败；日志窗口按失败步骤切但未截满",
+      "materialsMs": 4623,
+      "ms": 132018,
+      "attached": true,
+      "failureType": "attached",
+      "truth": {
+        "failedJobs": [
+          "test"
+        ],
+        "failedSteps": [
+          "test / Build and test"
+        ],
+        "changedFileCount": 1,
+        "logChars": 65153
+      },
+      "A": {
+        "lineCount": 8,
+        "usableMarkers": 0,
+        "hasJobStep": true,
+        "hasFile": false
+      },
+      "B": {
+        "text": "失败位置：test / Build and test\n改动文件：test/proactive-ci-smoke.test.mjs\n日志首行：2026-09-27T14:59:47.6468005Z ✖ intentional proactive CI outbound smoke failure (1.215779ms)",
+        "usableMarkers": [
+          "step:Build and test",
+          "job:test",
+          "file:test/proactive-ci-smoke.test.mjs"
+        ],
+        "allMarkers": [
+          {
+            "kind": "step",
+            "value": "Build and test",
+            "consistent": true
+          },
+          {
+            "kind": "job",
+            "value": "test",
+            "consistent": true
+          },
+          {
+            "kind": "file",
+            "value": "test/proactive-ci-smoke.test.mjs",
+            "consistent": true
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-09-27T14:59:47.6468005Z ✖ intentional proactive CI outbound smoke failure (1.215779ms)",
+            "consistent": null
+          }
+        ]
+      },
+      "C": {
+        "text": "建议补看作业步骤列表里的 Post Setup Node、日志摘要中的 skipped 92，以及日志末尾的 Node.js 20 is deprecated 警告；这些位置在通知建议之外。",
+        "markers": [
+          {
+            "kind": "step",
+            "value": "Post Setup Node",
+            "consistent": false,
+            "inNotice": false
+          },
+          {
+            "kind": "file",
+            "value": "Node.js",
+            "consistent": false,
+            "inNotice": false
+          },
+          {
+            "kind": "log-span",
+            "value": "skipped 92",
+            "consistent": null,
+            "inNotice": false
+          },
+          {
+            "kind": "log-span",
+            "value": "20 is deprecated",
+            "consistent": null,
+            "inNotice": false
+          }
+        ],
+        "locusConsistency": {
+          "judged": 2,
+          "inconsistent": [
+            "Post Setup Node",
+            "Node.js"
+          ]
+        },
+        "citationQuality": {
+          "total": 3,
+          "structural": 1,
+          "logOnly": 2
+        },
+        "cited": [
+          "Post Setup Node",
+          "skipped 92",
+          "Node.js 20 is deprecated"
+        ]
+      },
+      "incremental": {
+        "onlyModel": [],
+        "onlyDigest": [
+          "step:Build and test",
+          "job:test",
+          "file:test/proactive-ci-smoke.test.mjs"
+        ]
+      }
+    },
+    {
+      "runId": 38765009721,
+      "failureShape": "常规测试失败，但改动面很宽（19 个文件），日志窗口是 tail 且截断",
+      "materialsMs": 6394,
+      "ms": 180010,
+      "attached": false,
+      "failureType": "timeout",
+      "truth": {
+        "failedJobs": [
+          "test"
+        ],
+        "failedSteps": [
+          "test / Build and test"
+        ],
+        "changedFileCount": 19,
+        "logChars": 65536
+      },
+      "A": {
+        "lineCount": 8,
+        "usableMarkers": 0,
+        "hasJobStep": false,
+        "hasFile": false
+      },
+      "B": {
+        "text": "失败位置：test / Build and test\n改动文件：docs/development/current-stage.md、src/cli/act-command.ts、src/cli/act.ts 等 19 个\n日志首行：2026-10-15T15:59:05.8423799Z ✖ 端点：人问一句，常驻答一句，句子逐字回来 (4.738641ms)",
+        "usableMarkers": [
+          "step:Build and test",
+          "job:test",
+          "file:docs/development/current-stage.md",
+          "file:src/cli/act-command.ts",
+          "file:src/cli/act.ts"
+        ],
+        "allMarkers": [
+          {
+            "kind": "step",
+            "value": "Build and test",
+            "consistent": true
+          },
+          {
+            "kind": "job",
+            "value": "test",
+            "consistent": true
+          },
+          {
+            "kind": "file",
+            "value": "docs/development/current-stage.md",
+            "consistent": true
+          },
+          {
+            "kind": "file",
+            "value": "src/cli/act-command.ts",
+            "consistent": true
+          },
+          {
+            "kind": "file",
+            "value": "src/cli/act.ts",
+            "consistent": true
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-10-15T15:59:05.8423799Z ✖ 端点：人问一句，常驻答一句，句子逐字回来 (4.738641ms)",
+            "consistent": null
+          }
+        ]
+      },
+      "C": {
+        "text": null,
+        "markers": [],
+        "locusConsistency": null,
+        "citationQuality": null,
+        "cited": null
+      },
+      "incremental": {
+        "onlyModel": [],
+        "onlyDigest": [
+          "step:Build and test",
+          "job:test",
+          "file:docs/development/current-stage.md",
+          "file:src/cli/act-command.ts",
+          "file:src/cli/act.ts"
+        ]
+      }
+    },
+    {
+      "runId": 38415923320,
+      "failureShape": "常规测试失败，改动 1 个文件，日志窗口是 tail 且截断",
+      "materialsMs": 6024,
+      "ms": 168379,
+      "attached": false,
+      "failureType": "upstream-error",
+      "truth": {
+        "failedJobs": [
+          "test"
+        ],
+        "failedSteps": [
+          "test / Build and test"
+        ],
+        "changedFileCount": 1,
+        "logChars": 65536
+      },
+      "A": {
+        "lineCount": 8,
+        "usableMarkers": 0,
+        "hasJobStep": false,
+        "hasFile": false
+      },
+      "B": {
+        "text": "失败位置：test / Build and test\n改动文件：test/changeable-repositories.test.mjs\n日志首行：2026-10-13T14:44:44.9443682Z ✖ failing tests:",
+        "usableMarkers": [
+          "step:Build and test",
+          "job:test",
+          "file:test/changeable-repositories.test.mjs"
+        ],
+        "allMarkers": [
+          {
+            "kind": "step",
+            "value": "Build and test",
+            "consistent": true
+          },
+          {
+            "kind": "job",
+            "value": "test",
+            "consistent": true
+          },
+          {
+            "kind": "file",
+            "value": "test/changeable-repositories.test.mjs",
+            "consistent": true
+          },
+          {
+            "kind": "log-span",
+            "value": "2026-10-13T14:44:44.9443682Z ✖ failing tests:",
+            "consistent": null
+          }
+        ]
+      },
+      "C": {
+        "text": null,
+        "markers": [],
+        "locusConsistency": null,
+        "citationQuality": null,
+        "cited": null
+      },
+      "incremental": {
+        "onlyModel": [],
+        "onlyDigest": [
+          "step:Build and test",
+          "job:test",
+          "file:test/changeable-repositories.test.mjs"
+        ]
+      }
+    }
+  ]
+}

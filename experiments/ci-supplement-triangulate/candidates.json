@@ -1,0 +1,173 @@
+[
+  {
+    "runId": 38760836396,
+    "headSha": "d734eab62848b9f9e57785302a602e2b3a70fbd1",
+    "why": "surface 单独失败（Test the runtime），test job 绿",
+    "identity": "confirmed",
+    "materialsMs": 4357,
+    "workflow": null,
+    "failedJobs": [
+      {
+        "name": "surface",
+        "failedSteps": [
+          "Test the runtime"
+        ]
+      }
+    ],
+    "allJobNames": [
+      "surface[failure]",
+      "test[success]"
+    ],
+    "changedFiles": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "log": {
+      "step": "Test the runtime",
+      "window": "tail",
+      "chars": 65536,
+      "truncated": true
+    }
+  },
+  {
+    "runId": 34752998965,
+    "headSha": "97a5a1daee022754a2e90a73eb414538b00d41f5",
+    "why": "test job 在 Setup Node 就失败，没有测试输出",
+    "identity": "confirmed",
+    "materialsMs": 4188,
+    "workflow": null,
+    "failedJobs": [
+      {
+        "name": "test",
+        "failedSteps": [
+          "Setup Node"
+        ]
+      }
+    ],
+    "allJobNames": [
+      "test[failure]"
+    ],
+    "changedFiles": [
+      null
+    ],
+    "log": {
+      "step": "Setup Node",
+      "window": "failing-step",
+      "chars": 2996,
+      "truncated": false
+    }
+  },
+  {
+    "runId": 36327884462,
+    "headSha": "6261c2a0b982755588cb75e3ba66e6a1615d6e13",
+    "why": "非 main 分支，旧 workflow（8 步）",
+    "identity": "confirmed",
+    "materialsMs": 4822,
+    "workflow": null,
+    "failedJobs": [
+      {
+        "name": "test",
+        "failedSteps": [
+          "Build and test"
+        ]
+      }
+    ],
+    "allJobNames": [
+      "test[failure]"
+    ],
+    "changedFiles": [
+      null
+    ],
+    "log": {
+      "step": "Build and test",
+      "window": "failing-step",
+      "chars": 65153,
+      "truncated": true
+    }
+  },
+  {
+    "runId": 38765009721,
+    "headSha": "d682a89331ea19a9f9c09fe8187bd8896a51f47c",
+    "why": "test/Build and test，surface 绿",
+    "identity": "confirmed",
+    "materialsMs": 5143,
+    "workflow": null,
+    "failedJobs": [
+      {
+        "name": "test",
+        "failedSteps": [
+          "Build and test"
+        ]
+      }
+    ],
+    "allJobNames": [
+      "test[failure]",
+      "surface[success]"
+    ],
+    "changedFiles": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "log": {
+      "step": "Build and test",
+      "window": "tail",
+      "chars": 65536,
+      "truncated": true
+    }
+  },
+  {
+    "runId": 38415923320,
+    "headSha": "5e8be53716e17fb9ddf78ddd34a7f6c27448470d",
+    "why": "test/Build and test，另一个时间点",
+    "identity": "confirmed",
+    "materialsMs": 3170,
+    "workflow": null,
+    "failedJobs": [
+      {
+        "name": "test",
+        "failedSteps": [
+          "Build and test"
+        ]
+      }
+    ],
+    "allJobNames": [
+      "surface[success]",
+      "test[failure]"
+    ],
+    "changedFiles": [
+      null
+    ],
+    "log": {
+      "step": "Build and test",
+      "window": "tail",
+      "chars": 65536,
+      "truncated": true
+    }
+  }
+]

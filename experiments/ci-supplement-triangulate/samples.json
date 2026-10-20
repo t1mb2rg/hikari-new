@@ -1,0 +1,162 @@
+{
+  "frozenAt": "2026-10-19T17:30:00.000Z",
+  "frozenBeforeModelCalls": true,
+  "purpose": "三组对照：原始八行通知 / 零模型机械摘要 / 真实模型补充。回答「不用模型、只从材料机械抽取，模型还剩多少可核实的定位增量」。",
+  "productCommit": {
+    "supplementTs": "146e53bf9feeafa1bfed9dd7b199b55b82c12fe7",
+    "howToCheck": "git log -1 --format=%H -- src/repository-ci-diagnosis-proposal/supplement.ts"
+  },
+  "model": {
+    "endpoint": "http://192.168.1.20:8080/v1/chat/completions",
+    "model": "qwen3.8-flash-next-iq2_xs",
+    "budgetMs": 180000,
+    "temperature": 0,
+    "note": "temperature 与 max_tokens 由产品请求体决定，本实验不覆盖；不自动重试，首次失败即记为失败。"
+  },
+  "groups": {
+    "A_baseline": {
+      "producedBy": "产品（renderOccurrence）",
+      "definition": "失败头行 + 仓库/运行/工作流/分支/提交/结论/观察时间，恰好 8 行；不含 job、step、文件、日志内容。"
+    },
+    "B_digest": {
+      "producedBy": "本实验脚本 digest.mjs，零模型",
+      "definition": "按 digestRules 从材料机械抽取，固定三行模板；不做判断、不提建议、不概括因果。仅用于实验，不接入产品。"
+    },
+    "C_model": {
+      "producedBy": "产品当前实现（真 attach() + 真材料 + 真端点）",
+      "definition": "模型补充段原文；被拒或失败时记录原因，不重试。"
+    }
+  },
+  "digestRules": [
+    {
+      "id": "MD-1",
+      "name": "失败位置",
+      "rule": "取 jobs 里 conclusion === 'failure' 的 job，按返回顺序输出「job 名 / 失败 step 名」（step 取该 job 内 conclusion === 'failure' 的名称；多个用「、」连接）。没有失败 job 则输出「（无失败 job）」。"
+    },
+    {
+      "id": "MD-2",
+      "name": "改动文件",
+      "rule": "取 changedFiles.files 前 3 个 filename，按返回顺序输出；若 totalFiles > 3，追加「等 N 个」；没有改动文件则输出「（无改动文件）」。"
+    },
+    {
+      "id": "MD-3",
+      "name": "日志首行失败标记",
+      "rule": "在日志文本里按行序找第一个匹配正则 /^##\\[error\\]|^not ok \\d|^✖ / 的行，输出该行原文（去掉首尾空白，截断到 200 字符）；找不到则输出「（日志里没有找到失败标记）」。"
+    },
+    {
+      "id": "MD-4",
+      "name": "不做的事",
+      "rule": "不判断原因、不提复查建议、不概括跨 job 关系、不引用 MD-3 之外的其他日志内容、不使用模型。"
+    },
+    {
+      "id": "MD-5",
+      "name": "输出模板",
+      "rule": "恰好三行：`失败位置：<MD-1>` / `改动文件：<MD-2>` / `日志首行：<MD-3>`。不加标题、不加空行、不加建议。"
+    }
+  ],
+  "amendments": [
+    {
+      "at": "2026-10-19T17:52:00.000Z",
+      "rule": "MD-3",
+      "before": "正则 /^##\\[error\\]|^not ok \\d|^✖ /，锚定行首",
+      "after": "正则 /##\\[error\\]|\\bnot ok \\d|✖ /，不锚定行首",
+      "why": "真实日志每行都带时间戳前缀（如 `2026-10-15T15:58:49.9474551Z ✔ …`），行首锚定导致五个样本 0/5 命中。改的是实现与真实格式的偏差，不动规则语义（仍是「按行序找第一个匹配失败标记的行」）。",
+      "whenRelativeToReadings": "改在冻结之后、任何成功的模型读数之前：当时只有 run 34752998965 的一条读数，且它是拒绝（引用不可核验），没有可用文本被比较过。改后未覆盖任何模型输出。"
+    }
+  ],
+  "markerRules": {
+    "note": "标识提取规则与 experiments/ci-supplement-increment/score.mjs 一致，跑分前冻结。",
+    "jobStep": "词表命中：出现 materials 里任一 job 名或任一步骤名的完整字符串。",
+    "file": "正则 /[A-Za-z0-9_./\\\\-]+\\.(?:mjs|tsx?|jsx?|json|ya?ml|ps1|md|txt)/g 命中的路径。",
+    "logSpan": "与日志文本逐字相同的片段，用 6-gram 滑窗求最长公共块（与 score.mjs 同一实现）。",
+    "consistency": "job 名必须在失败 job 清单里；step 名必须挂在某个失败 job 下；文件必须在 changedFiles 里。logSpan 不参与一致性判定。"
+  },
+  "metrics": {
+    "attachRate": "首次模型调用是否附加（true/false），不重试；汇总为 n/5。",
+    "failureType": "attached / refused-citation / refused-shape / upstream-error / timeout / not-eligible。",
+    "ms": "attach() 总耗时（毫秒），含材料读取与模型调用。",
+    "locusConsistency": "模型标识与材料真值的冲突数（指向不存在的 job/step/文件，或把日志内容归到错误步骤名下）。",
+    "citationQuality": "cited 总数、在结构性材料段出现的条数、只能从日志段取到的条数。",
+    "incrementalGain": "模型标识里「不在机械摘要里且材料可核实」的条数；同时记录机械摘要里「模型没提到」的条数。"
+  },
+  "criteria": {
+    "C1": "samples.json 在任何模型调用之前落盘（本文件 frozenAt 早于 results.json 的首次调用时间）。",
+    "C2": "results.json 逐 run 含三组内容 + 六项指标。",
+    "C3": "report.md 含三组对比表与逐 run 增量判定。",
+    "C4": "报告记录 supplement.ts 哈希，且实验前后一致。"
+  },
+  "samples": [
+    {
+      "runId": 38760836396,
+      "headSha": "d734eab62848b9f9e57785302a602e2b3a70fbd1",
+      "headBranch": "main",
+      "workflowObserved": "Runtime Tests",
+      "failedJobs": [{ "name": "surface", "failedSteps": ["Test the runtime"] }],
+      "changedFileCount": 11,
+      "logStep": "Test the runtime",
+      "logChars": 65536,
+      "failureShape": "另一个 job 单独失败：test job 是绿的，只有 surface 失败；日志窗口按失败步骤切",
+      "why": "补上「失败 job 不总是 test」的情形"
+    },
+    {
+      "runId": 34752998965,
+      "headSha": "97a5a1daee022754a2e90a73eb414538b00d41f5",
+      "headBranch": "main",
+      "workflowObserved": "Runtime Tests",
+      "failedJobs": [{ "name": "test", "failedSteps": ["Setup Node"] }],
+      "changedFileCount": 1,
+      "logStep": "Setup Node",
+      "logChars": 2996,
+      "failureShape": "环境失败：在 Setup Node 就失败，没有测试输出，日志只有 2 996 字符",
+      "why": "补上「失败 stage 不是测试、日志极短」的情形"
+    },
+    {
+      "runId": 36327884462,
+      "headSha": "6261c2a0b982755588cb75e3ba66e6a1615d6e13",
+      "headBranch": "test/proactive-ci-outbound",
+      "workflowObserved": "Runtime Tests",
+      "failedJobs": [{ "name": "test", "failedSteps": ["Build and test"] }],
+      "changedFileCount": 1,
+      "logStep": "Build and test",
+      "logChars": 65153,
+      "failureShape": "旧 workflow（8 步）在功能分支上失败；日志窗口按失败步骤切但未截满",
+      "why": "补上「旧 workflow 版本 + 非 main 分支」的情形"
+    },
+    {
+      "runId": 38765009721,
+      "headSha": "d682a89331ea19a9f9c09fe8187bd8896a51f47c",
+      "headBranch": "main",
+      "workflowObserved": "Runtime Tests",
+      "failedJobs": [{ "name": "test", "failedSteps": ["Build and test"] }],
+      "changedFileCount": 19,
+      "logStep": "Build and test",
+      "logChars": 65536,
+      "failureShape": "常规测试失败，但改动面很宽（19 个文件），日志窗口是 tail 且截断",
+      "why": "补上「改动文件多、候选定位多」的情形"
+    },
+    {
+      "runId": 38415923320,
+      "headSha": "5e8be53716e17fb9ddf78ddd34a7f6c27448470d",
+      "headBranch": "main",
+      "workflowObserved": "Runtime Tests",
+      "failedJobs": [{ "name": "test", "failedSteps": ["Build and test"] }],
+      "changedFileCount": 1,
+      "logStep": "Build and test",
+      "logChars": 65536,
+      "failureShape": "常规测试失败，改动 1 个文件，日志窗口是 tail 且截断",
+      "why": "与上一个形成「宽改动 vs 窄改动」对照"
+    }
+  ],
+  "excluded": {
+    "reason": "已参与此前实验，本轮不再使用",
+    "runIds": [38920662846, 38929605750, 38930952193, 38931770141, 38932844025]
+  },
+  "boundaries": [
+    "不改提示词、schema、MAX_CITED、确定性判断。",
+    "不自动重试模型请求；首次失败即记为失败。",
+    "不修改 main，不制造新的 CI 失败。",
+    "不调用已知不可用的独立审计派遣路径；本轮 L2 自判。",
+    "Q2（建议–证据绑定）继续暂缓，只有出现真实的「建议缺乏引用材料支持」反例才提交机制建议。",
+    "机械摘要只用于实验，不接入产品。"
+  ]
+}
