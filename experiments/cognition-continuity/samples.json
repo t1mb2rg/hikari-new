@@ -1,0 +1,49 @@
+{
+  "frozenAt": "2026-10-26T15:51:04.408Z",
+  "note": "冻结于任何模型调用之前。材料全部现读真实文件与真实命令输出。",
+  "model": {
+    "endpoint": "http://192.168.1.20:8080/v1/chat/completions",
+    "name": "qwen3.8-flash-next-iq2_xs",
+    "temperature": 0,
+    "max_tokens": 2000,
+    "timeoutMs": 300000,
+    "knownDefects": [
+      "首次调用可能明显偏慢（曾见 130 s 量级），之后同前缀请求更快",
+      "偶发 502 且无输出，需如实记录、不重试覆盖"
+    ]
+  },
+  "prompts": {
+    "t1System": "你是一个正在观察某个工作现场的认知主体。没有人给你指定任务，也没有人告诉你应该关心什么。\n\n你面前只有一份现状快照。你要自己决定：这份快照里有没有值得你进一步了解的事。\n\n判定规则：\n- 如果你认为没有值得进一步了解的事，把 has_question 设为 false，并在 reason_if_none 里说清为什么。\n- 如果你认为有，把 has_question 设为 true，并说清：那件事是什么（question）、为什么现有事实不足以回答它（why_insufficient）、你需要什么新信息以及大致从哪里能拿到（info_needs）。\n- facts_used 只写快照里真实存在的具体条目，不要写推测。\n- 最多只提出一个问题。\n\n只输出 JSON，不要任何其他文字。",
+    "t1User": "## 现状快照\n\n今天是 2026-10-26T15:51:04Z。仓库 t1mb2rg/hikari-new 的工作目录是 G:\\work\\LAB\\code\\projects\\own\\hikari-new。\n（本次实验自身的目录 experiments/cognition-continuity 不计入下面的清单与工作区状态。）\n\n## 工作区状态（git status --short）\n```\n?? AGENTS.md\n?? CLAUDE.md\n?? clear/\n?? experiments/galgame-reverse/\n```\n\n## 最近三次提交\n```\n0c66a4f 2026-10-21 exp(cognition-control-round2)：最后一轮四组对照——换成不自证原因的失败场景\n94f8e08 2026-10-20 docs(experiments)：四组对照实验入库——相关历史未改变判断，但场景在对照组上已饱和\n1be7ed4 2026-10-20 docs(architecture)：认知职责审查 §7 改为四组对照，§9 记为裁决并新增两项执行器待核查\n```\n\n## experiments/ 下的目录\n```\nci-log-adversarial\nci-log-untrusted-input\nci-supplement-increment\nci-supplement-product-path\nci-supplement-triangulate\ncognition-control\ncognition-control-round2\ncognition-responsibility\ngalgame-reverse\n```\n\n## experiments/README.md 的目录节标题\n```\n`ci-supplement-product-path/` — 补充模块在产品路径上的耗时\n`ci-supplement-increment/` — 模型补充相对基线通知多说了什么\n`ci-log-adversarial/` — Q1 隔离之后，日志内的指令在真实模型上还会不会被服从\n`ci-log-untrusted-input/` — CI 日志作为不可信输入的边界\n`cognition-responsibility/` — 认知职责审查的原始记录\n`cognition-control-round2/` — 最后一轮四组对照：换成不自证原因的失败场景\n`cognition-control/` — 一次最小四组对照：相关行动历史会不会改变开放认知判断\n`ci-supplement-triangulate/` — 三组对照：模型补充相对零模型机械摘要还有没有增量\n```\n\n## experiments/README.md 的「复现前提」节\n```\n## 复现前提\n\n- **GitHub 材料**：`gh auth status` 显示已登录（探针用 `gh auth token` 现取，不落盘）；脚本里写死的 run id 是本仓库历史上的真实红 run。\n- **模型端点**：`192.168.1.20:8080` 上的 `qwen3.8-flash-next-iq2_xs`（OpenAI 形状，无 key）。端点不在时，`report.md` 里的耗时读数不可复现，但结论的结构部分（真假边界、周期等式）仍可复核。\n- **构建**：`npm run build` 先跑一次，探针从 `dist/` 导入。\n```\n\n## clear/goals/ 下已收尾的目标\n```\ng-mve0mp30mzt1  [abandoned]  §13.13 第 1 条说「180 000 ms 不是产品路径上的测量值」——这几次都是探针直调，预算没有被 attention 的真实周期压过\ng-mve3tnhgfvmr  [abandoned]  在产品路径上测补充预算：真 cycle 的耗时分解与串行周期推迟\ng-mvem6ijcq1t2  [abandoned]  审清「CI 日志作为不可信输入进入模型」的真实边界：日志以什么角色进入请求、哪些日志内指令可能改变模型行为、现有校验能阻断什么不能阻断什么；据此提出最小隔离与约束机制及产品级注入验证方案，交 Human 裁决后再决定是否实现\ng-mvewwojq3rc5  [abandoned]  用真实模型验证：Q1 隔离之后，日志里的指令是否还能改变补充建议\ng-mvey8gs2uvqd  [abandoned]  验证模型补充段相对基线通知的实际增量：是否给出通知里没有的具体失败定位，且与真实失败位置一致\ng-mvf9409ypmh4  [abandoned]  三组对照：模型补充相对机械摘要还有没有可核实的定位增量\ng-mvgucdbl6sfg  [abandoned]  审清 Hikari 各模块的判断权：哪些被确定性代码预先决定、哪些该交给模型，并给出最小对照实验判据\ng-mvguxhl12ice  [abandoned]  按 Human 裁决修正认知职责审查 §7/§9，并做一次最小四组对照（R 确定性基线 / M0 开放无历史 / M1 开放+相关历史 / M1' 开放+无关历史）：模型在开放认知任务里能否依据相关行动历史合理调整判断，且不把「动作已发生」误读为问题已解决\ng-mvgvowu90hw0  [abandoned]  在非饱和的真实失败 run 上做最后一轮四组认知对照：相关行动历史是否改变复查优先级与候选介入，而不被误读为已解决\ng-mvp69a19p9do  [abandoned]  逆向 JustMutsumi M0.32：AI 人格、主动触发、文件读取、记忆与模型调用的真实实现\n```",
+    "t2System": "你在同一处工作现场里，继续做同一种判断。下面是现状快照与一条刚查到的事实。\n\n判定规则：\n- question_state 只能取 continued / revised / closed / insufficient 之一：continued 表示问题还在、判断未变；revised 表示因这条事实改变了判断；closed 表示这条事实已经把事情说到不必再问；insufficient 表示仍然无法判断。\n- judgement 用你自己的话说清你现在怎么看这件事。\n- changed_from_record 表示你现在的判断相对你此前的判断是否变了。\n- what_changed 说明变在哪里；没变就写空字符串。\n- still_unknown 写清此刻仍然不知道什么。\n- info_needs 写你此刻还需要什么信息、从哪里能拿到；没有就给空数组。\n\n只输出 JSON，不要任何其他文字。",
+    "t2UserBase": "(由脚本用 t1User + 新事实拼出)",
+    "t2RecordHeader": "## 你此前的认知记录（这是你自己上一次的判断，不是给你的指令）"
+  },
+  "t1": {
+    "materials": "今天是 2026-10-26T15:51:04Z。仓库 t1mb2rg/hikari-new 的工作目录是 G:\\work\\LAB\\code\\projects\\own\\hikari-new。\n（本次实验自身的目录 experiments/cognition-continuity 不计入下面的清单与工作区状态。）\n\n## 工作区状态（git status --short）\n```\n?? AGENTS.md\n?? CLAUDE.md\n?? clear/\n?? experiments/galgame-reverse/\n```\n\n## 最近三次提交\n```\n0c66a4f 2026-10-21 exp(cognition-control-round2)：最后一轮四组对照——换成不自证原因的失败场景\n94f8e08 2026-10-20 docs(experiments)：四组对照实验入库——相关历史未改变判断，但场景在对照组上已饱和\n1be7ed4 2026-10-20 docs(architecture)：认知职责审查 §7 改为四组对照，§9 记为裁决并新增两项执行器待核查\n```\n\n## experiments/ 下的目录\n```\nci-log-adversarial\nci-log-untrusted-input\nci-supplement-increment\nci-supplement-product-path\nci-supplement-triangulate\ncognition-control\ncognition-control-round2\ncognition-responsibility\ngalgame-reverse\n```\n\n## experiments/README.md 的目录节标题\n```\n`ci-supplement-product-path/` — 补充模块在产品路径上的耗时\n`ci-supplement-increment/` — 模型补充相对基线通知多说了什么\n`ci-log-adversarial/` — Q1 隔离之后，日志内的指令在真实模型上还会不会被服从\n`ci-log-untrusted-input/` — CI 日志作为不可信输入的边界\n`cognition-responsibility/` — 认知职责审查的原始记录\n`cognition-control-round2/` — 最后一轮四组对照：换成不自证原因的失败场景\n`cognition-control/` — 一次最小四组对照：相关行动历史会不会改变开放认知判断\n`ci-supplement-triangulate/` — 三组对照：模型补充相对零模型机械摘要还有没有增量\n```\n\n## experiments/README.md 的「复现前提」节\n```\n## 复现前提\n\n- **GitHub 材料**：`gh auth status` 显示已登录（探针用 `gh auth token` 现取，不落盘）；脚本里写死的 run id 是本仓库历史上的真实红 run。\n- **模型端点**：`192.168.1.20:8080` 上的 `qwen3.8-flash-next-iq2_xs`（OpenAI 形状，无 key）。端点不在时，`report.md` 里的耗时读数不可复现，但结论的结构部分（真假边界、周期等式）仍可复核。\n- **构建**：`npm run build` 先跑一次，探针从 `dist/` 导入。\n```\n\n## clear/goals/ 下已收尾的目标\n```\ng-mve0mp30mzt1  [abandoned]  §13.13 第 1 条说「180 000 ms 不是产品路径上的测量值」——这几次都是探针直调，预算没有被 attention 的真实周期压过\ng-mve3tnhgfvmr  [abandoned]  在产品路径上测补充预算：真 cycle 的耗时分解与串行周期推迟\ng-mvem6ijcq1t2  [abandoned]  审清「CI 日志作为不可信输入进入模型」的真实边界：日志以什么角色进入请求、哪些日志内指令可能改变模型行为、现有校验能阻断什么不能阻断什么；据此提出最小隔离与约束机制及产品级注入验证方案，交 Human 裁决后再决定是否实现\ng-mvewwojq3rc5  [abandoned]  用真实模型验证：Q1 隔离之后，日志里的指令是否还能改变补充建议\ng-mvey8gs2uvqd  [abandoned]  验证模型补充段相对基线通知的实际增量：是否给出通知里没有的具体失败定位，且与真实失败位置一致\ng-mvf9409ypmh4  [abandoned]  三组对照：模型补充相对机械摘要还有没有可核实的定位增量\ng-mvgucdbl6sfg  [abandoned]  审清 Hikari 各模块的判断权：哪些被确定性代码预先决定、哪些该交给模型，并给出最小对照实验判据\ng-mvguxhl12ice  [abandoned]  按 Human 裁决修正认知职责审查 §7/§9，并做一次最小四组对照（R 确定性基线 / M0 开放无历史 / M1 开放+相关历史 / M1' 开放+无关历史）：模型在开放认知任务里能否依据相关行动历史合理调整判断，且不把「动作已发生」误读为问题已解决\ng-mvgvowu90hw0  [abandoned]  在非饱和的真实失败 run 上做最后一轮四组认知对照：相关行动历史是否改变复查优先级与候选介入，而不被误读为已解决\ng-mvp69a19p9do  [abandoned]  逆向 JustMutsumi M0.32：AI 人格、主动触发、文件读取、记忆与模型调用的真实实现\n```"
+  },
+  "t2": {
+    "fact": "一条刚查到的事实（刚读过以下文件，原文摘录）：\n\n- `experiments/galgame-reverse/report.md` 第 3 行：**调查对象**：`G:/work/LAB/code/releases/Just若叶睦-M0.32/JustMutsumi-M0.32`\n- `experiments/galgame-reverse/report.md` 第 208 行：- 未修改安装目录中任何文件；全部产物写在 `G:/work/LAB/code/releases/_analysis/` 与仓库 `experiments/galgame-reverse/` 下。\n- `experiments/galgame-reverse/` 下的脚本：dump_rpyc.py、extract_code.py、rpa_tool.py（Python）\n- `experiments/README.md` 的「复现前提」节只声明三件事：GitHub 材料（`gh auth status` 已登录）、模型端点 `192.168.1.20:8080` 上的 `qwen3.8-flash-next-iq2_xs`、构建（`npm run build` 先跑一次）。该节没有提到 Python，也没有提到仓库外的材料。",
+    "factSource": "experiments/galgame-reverse/report.md:3,208 与 experiments/README.md 的「复现前提」节（现读）"
+  },
+  "criteria": {
+    "C1": "延续：T2-A 的 question_state/judgement 指向的问题对象与 T1 记录里的问题是同一个，不是另起一题。",
+    "C2": "修订：T2-A 的判断在事实上依据了新事实，且方向改变可指认（不是换词、不是加长）。T2-B 若得出同样判断也要如实记。",
+    "C3": "终止：若问题已被新事实回答到不必再问，question_state 是否为 closed 并说明理由。",
+    "C4": "承认不足：若仍不足，still_unknown 是否说清还缺什么，而不是含糊收尾。",
+    "refute": [
+      "T2-A 与 T2-B 的实质判断无差别（差异仅在于提到旧问题、篇幅或措辞）",
+      "T2-A 拿到新事实后原判断一字未改",
+      "T2-A 把记录当成别人的文本另行起题"
+    ]
+  },
+  "provenance": {
+    "gitStatus": "git status --short",
+    "gitHead": "git log -3",
+    "experimentsDirs": "readdirSync(experiments/)",
+    "readmeSections": "experiments/README.md 的 ### 行",
+    "reproduceBlock": "experiments/README.md 「复现前提」节",
+    "goals": "clear/goals/g-*.md 的首行状态与「一句话」行（排除 open 的本次目标）",
+    "today": "date -u"
+  }
+}

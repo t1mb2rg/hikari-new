@@ -108,11 +108,35 @@
 | `markers.mjs`、`score.mjs`、`summary.json` | 标识提取、判分与逐项明细 |
 | `run-supplement.mjs`、`results.json` | 五次真调用与三组内容 |
 
+### `cognition-continuity/` — 模型能不能自己形成一个信息需求，并在下一次独立调用里接住它
+
+| 文件 | 内容 |
+| --- | --- |
+| `report.md` | 九节：结论、冻结项与一处预算修订、三次调用读数、T1 记录原文、A/B 逐字段对照、C1–C4、延续 vs 复述、失败定位、范围与不证明什么 |
+| `samples.json` | 冻结件（`frozenAt=2026-10-26T15:51:04.408Z`）：T1 材料全文、T2 新事实全文与来源、三段提示词、模型与端点、C1–C4 与推翻条件 |
+| `gen-samples.mjs` | 冻结脚本：`execFileSync` 现读 `git`、`experiments/` 目录、README 段落、`clear/goals/*.md`；不调模型 |
+| `t1.mjs`、`t1.json` | T1 一次调用；`structured` 是模型 `content` 直接解析，无字段补写 |
+| `t2.mjs`、`outputs.json` | T2-A（带 T1 记录）与 T2-B（不带）各一次调用，附 `identicalPrefix`、`bHasNoRecord` 两条断言 |
+| `outputs-round1-truncated.json` | 首轮原始记录：`max_tokens=2000` 使 T2-A 截断（`content=null`），留作方法缺陷证据，未覆盖 |
+
+### `galgame-reverse/` — 一款 AI Galgame 的人格、主动行为、文件读取与记忆是怎么实现的
+
+**依赖仓库外材料，本目录里的脚本不能只靠仓库复现**（见「复现前提」第四条）。
+
+| 文件 | 内容 |
+| --- | --- |
+| `report.md` | 七节：技术栈与解包清单、五条路径调用链、A/B/C 三问、模型决定 vs 预设脚本、可借鉴、无法确认、合规声明 |
+| `inventory.md`、`model-chain.md`、`trigger-chain.md`、`file-access.md`、`memory.md` | 技术栈判定与四条路径的独立调用链表（每行带 `文件:行号` 与置信度） |
+| `rpa_tool.py` | RPA-3.0 只读解包（`list` / `stat` / `extract --only=.ext --max-mb=N`） |
+| `dump_rpyc.py` | `RPA-3.0` → Ren'Py RPC2 `.rpyc` 反编译器，还原 AST 与 Python 块 |
+| `extract_code.py` | 批量导出可读 Python（`src/<module>.py.txt`） |
+
 ## 复现前提
 
 - **GitHub 材料**：`gh auth status` 显示已登录（探针用 `gh auth token` 现取，不落盘）；脚本里写死的 run id 是本仓库历史上的真实红 run。
-- **模型端点**：`192.168.1.20:8080` 上的 `qwen3.8-flash-next-iq2_xs`（OpenAI 形状，无 key）。端点不在时，`report.md` 里的耗时读数不可复现，但结论的结构部分（真假边界、周期等式）仍可复核。
+- **模型端点**：`192.168.1.20:8080` 上的 `qwen3.8-flash-next-iq2_xs`（OpenAI 形状）。**自 2026-10-26 起该端点要求 API key**，`cognition-continuity/` 的脚本只从环境变量 `MODEL_API_KEY` 读、不落盘、不进产物；更早的实验写于免鉴权时期。端点不在时，`report.md` 里的耗时读数不可复现，但结论的结构部分（真假边界、周期等式）仍可复核。
 - **构建**：`npm run build` 先跑一次，探针从 `dist/` 导入。
+- **Python 与仓库外材料**（仅 `galgame-reverse/`）：三个脚本需要 Python 3.12；解包对象是仓库外的一份 1.7 GB 安装目录，反编译产物（205 MB 树）也在仓库外，两者都未入库，路径写在该目录 `report.md` 的第 3 行与第 208 行。这决定了它**不能靠仓库本身复现**，只能复核已有文档里的行号引用。
 
 ## 读数的效力
 
