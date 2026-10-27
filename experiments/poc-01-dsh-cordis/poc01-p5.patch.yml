@@ -1,0 +1,59 @@
+# PoC-01 / P5：只暴露 peek_desktop 一个领域工具。
+# 手段是 patch 层的 insert（加插件）+ 逐条 disabled（停用提供工具的插件），
+# 不改上游源码、也不靠提示词自律。
+- insert:
+    - id: poc01-hikari-peek
+      name: 'file:///G:/work/LAB/code/projects/own/hikari-new/experiments/poc-01-dsh-cordis/dsh-plugin.mjs'
+
+- id: tool-plugin-manager
+  disabled: true
+- id: plugin-manager
+  disabled: true
+- id: config-editor
+  disabled: true
+- id: tool-working-directory
+  disabled: true
+- id: tool-bash
+  disabled: true
+- id: tool-pwsh
+  disabled: true
+- id: tool-jobs
+  disabled: true
+- id: jobs
+  disabled: true
+- id: tool-fs
+  disabled: true
+- id: tool-fs-search
+  disabled: true
+- id: tool-skill
+  disabled: true
+- id: skill
+  disabled: true
+- id: skill-filesystem
+  disabled: true
+- id: tool-subagent
+  disabled: true
+- id: tool-subagent-control
+  disabled: true
+- id: tool-subagent-list-agents
+  disabled: true
+- id: tool-subagent-fork
+  disabled: true
+- id: subagent
+  disabled: true
+- id: subagent-spawn-in-process
+  disabled: true
+- id: subagent-fork-in-process
+  disabled: true
+- id: tool-workflow
+  disabled: true
+- id: workflow-ptc
+  disabled: true
+- id: tool-todo
+  disabled: true
+- id: tool-goal
+  disabled: true
+- id: tool-web
+  disabled: true
+- id: mcp-resources
+  disabled: true

@@ -1,0 +1,100 @@
+{
+  "startedAt": "2026-10-27T16:39:44.552Z",
+  "hikari": {
+    "states": {
+      "foreground.windows": "active",
+      "input-activity.windows": "active",
+      "desktop-session-world": "active",
+      "desktop-session-awareness": "active",
+      "poc01.probe": "active"
+    },
+    "series": {
+      "peek1": {
+        "kind": "baseline",
+        "current": {
+          "foreground": "available",
+          "inputActivity": "available",
+          "title": "QQ",
+          "processName": "QQ",
+          "lastInputTick": 188752000
+        }
+      },
+      "peek2": {
+        "kind": "baseline",
+        "current": {
+          "foreground": "available",
+          "inputActivity": "available",
+          "title": "QQ",
+          "processName": "QQ",
+          "lastInputTick": 188752000
+        }
+      },
+      "current1": {
+        "kind": "baseline",
+        "current": {
+          "foreground": "available",
+          "inputActivity": "available",
+          "title": "QQ",
+          "processName": "QQ",
+          "lastInputTick": 188752000
+        }
+      },
+      "peek3": {
+        "kind": "comparison",
+        "foreground": "unchanged",
+        "inputActivity": "unchanged",
+        "change": "stable",
+        "title": "QQ",
+        "lastInputTick": 188752000
+      }
+    }
+  },
+  "cordis": {
+    "states": {
+      "foreground.windows": 2,
+      "input-activity.windows": 2,
+      "desktop-session-world": 2,
+      "desktop-session-awareness": 2
+    },
+    "series": {
+      "peek1": {
+        "kind": "baseline",
+        "current": {
+          "foreground": "available",
+          "inputActivity": "available",
+          "title": "QQ",
+          "processName": "QQ",
+          "lastInputTick": 188752000
+        }
+      },
+      "peek2": {
+        "kind": "baseline",
+        "current": {
+          "foreground": "available",
+          "inputActivity": "available",
+          "title": "QQ",
+          "processName": "QQ",
+          "lastInputTick": 188752000
+        }
+      },
+      "current1": {
+        "kind": "baseline",
+        "current": {
+          "foreground": "available",
+          "inputActivity": "available",
+          "title": "QQ",
+          "processName": "QQ",
+          "lastInputTick": 188764468
+        }
+      },
+      "peek3": {
+        "kind": "comparison",
+        "foreground": "unchanged",
+        "inputActivity": "changed",
+        "change": "changed",
+        "title": "QQ",
+        "lastInputTick": 188764843
+      }
+    }
+  }
+}

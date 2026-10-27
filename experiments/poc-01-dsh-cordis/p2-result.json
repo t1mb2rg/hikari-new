@@ -1,0 +1,103 @@
+{
+  "startedAt": "2026-10-27T16:41:00.491Z",
+  "hikari": {
+    "loaded": {
+      "foreground.windows": "active",
+      "input-activity.windows": "active",
+      "desktop-session-world": "active",
+      "desktop-session-awareness": "active",
+      "poc01.probe": "active"
+    },
+    "peekBefore": "baseline",
+    "afterUnload": {
+      "input-activity.windows": "active",
+      "desktop-session-world": "waiting",
+      "desktop-session-awareness": "waiting",
+      "poc01.probe": "waiting"
+    },
+    "peekAfterUnload": "baseline",
+    "afterReload": {
+      "foreground.windows": "active",
+      "input-activity.windows": "active",
+      "desktop-session-world": "active",
+      "desktop-session-awareness": "active",
+      "poc01.probe": "active"
+    },
+    "peekAfterReload": "baseline",
+    "sameInstance": false
+  },
+  "cordis": {
+    "loaded": {
+      "foreground.windows": 2,
+      "input-activity.windows": 2,
+      "desktop-session-world": 2,
+      "desktop-session-awareness": 2
+    },
+    "peekBefore": "baseline",
+    "afterUnload": {
+      "foreground.windows": 4,
+      "input-activity.windows": 2,
+      "desktop-session-world": 0,
+      "desktop-session-awareness": 0
+    },
+    "peekAfterUnload": "no-service",
+    "peekAfterUnloadStaleRef": "baseline",
+    "serviceGone": true,
+    "tracesAfterUnload": [
+      {
+        "label": "foreground.windows",
+        "provided": 1,
+        "cleanupsRegistered": 1,
+        "cleanupsRan": 2
+      },
+      {
+        "label": "input-activity.windows",
+        "provided": 1,
+        "cleanupsRegistered": 1,
+        "cleanupsRan": 0
+      },
+      {
+        "label": "desktop-session-world",
+        "provided": 1,
+        "cleanupsRegistered": 0,
+        "cleanupsRan": 1
+      },
+      {
+        "label": "desktop-session-awareness",
+        "provided": 2,
+        "cleanupsRegistered": 0,
+        "cleanupsRan": 2
+      }
+    ],
+    "afterReload": {
+      "foreground.windows": 2,
+      "input-activity.windows": 2,
+      "desktop-session-world": 2,
+      "desktop-session-awareness": 2
+    },
+    "peekAfterReload": "baseline",
+    "sameInstance": false,
+    "tracesAfterAllDisposed": [
+      {
+        "label": "foreground.windows",
+        "cleanupsRan": 2
+      },
+      {
+        "label": "input-activity.windows",
+        "cleanupsRan": 2
+      },
+      {
+        "label": "desktop-session-world",
+        "cleanupsRan": 2
+      },
+      {
+        "label": "desktop-session-awareness",
+        "cleanupsRan": 4
+      },
+      {
+        "label": "foreground.windows",
+        "cleanupsRan": 2
+      }
+    ]
+  }
+}

@@ -131,12 +131,32 @@
 | `dump_rpyc.py` | `RPA-3.0` → Ren'Py RPC2 `.rpyc` 反编译器，还原 AST 与 Python 块 |
 | `extract_code.py` | 批量导出可读 Python（`src/<module>.py.txt`） |
 
+### `poc-01-dsh-cordis/` — Hikari 只读领域能力能不能换个宿主，还要能被 Agent 自主调用
+
+一次有界的只读实验，不是迁移。P1–P5 五项判据全部 PASS，产物与逐项证据在 `report.md`。
+
+| 文件 | 内容 |
+| --- | --- |
+| `report.md` | 八节：五项判定、领域实现复用边界、契约三档、DSH 集成成本、A/B/C 推荐、未覆盖项、复现 |
+| `inventory.md` | 起点清单（候选插件、真实依赖链、三条路线预设） |
+| `adapter.mjs` | 共享适配层：契约键编码、`services` 转发、`defer` 收集、`requires → inject`；不含任何领域判断 |
+| `p1-cordis.mjs` / `p1-result.json` / `p1-cordis.md` | P1：四层插件在 Cordis 下装载，`peek`/`current` 三条语义与原 Runtime 一致 |
+| `p2-lifecycle.mjs` / `p2-result.json` / `p2-lifecycle.md` | P2：卸载底层 provider 后依赖方 `waiting`≡`PENDING`，重装自动恢复，disposer 按逆序全执行 |
+| `dsh-plugin.mjs` / `poc01.patch.yml` | 把 `peek()` 注册成 DSH 工具 `peek_desktop`，用官方 patch 层装载 |
+| `p3-agent-tool.md` / `p3-session.jsonl` | P3：真模型在未预注入观察的任务下自主调用该工具并拿到真实读数 |
+| `p4-session.md` | P4：`tool/call` → `tool/result` → 下一次推理，三段都在 session 事件里 |
+| `poc01-p5.patch.yml` / `p5-boundary.md` / `p5-session.jsonl` | P5：patch 停用全部工具提供者，写文件任务被框架层拒绝，且不依赖提示词自律 |
+| `dump-session.mjs` | `session.v4.jsonl.zstd`（多帧 zstd）→ 可读 jsonl |
+
+**依赖仓库外环境**：需要单独安装的 `@deepseek-ai/dsh@0.2.1-rc.2` 与一个 DeepSeek key（只进环境变量）。`p1`/`p2` 不调模型，`p3`/`p5` 需要真 key。
+
 ## 复现前提
 
 - **GitHub 材料**：`gh auth status` 显示已登录（探针用 `gh auth token` 现取，不落盘）；脚本里写死的 run id 是本仓库历史上的真实红 run。
 - **模型端点**：`192.168.1.20:8080` 上的 `qwen3.8-flash-next-iq2_xs`（OpenAI 形状）。**自 2026-10-26 起该端点要求 API key**，`cognition-continuity/` 的脚本只从环境变量 `MODEL_API_KEY` 读、不落盘、不进产物；更早的实验写于免鉴权时期。端点不在时，`report.md` 里的耗时读数不可复现，但结论的结构部分（真假边界、周期等式）仍可复核。
 - **构建**：`npm run build` 先跑一次，探针从 `dist/` 导入。
 - **Python 与仓库外材料**（仅 `galgame-reverse/`）：三个脚本需要 Python 3.12；解包对象是仓库外的一份 1.7 GB 安装目录，反编译产物（205 MB 树）也在仓库外，两者都未入库，路径写在该目录 `report.md` 的第 3 行与第 208 行。这决定了它**不能靠仓库本身复现**，只能复核已有文档里的行号引用。
+- **DSH 与 API key**（仅 `poc-01-dsh-cordis/`）：需要独立安装 `@deepseek-ai/dsh@0.2.1-rc.2`（约 305 个 `@deepseek-ai/*` 包）并把 `DSH_HOME` 指到隔离目录；`p3`/`p5` 需要 `DEEPSEEK_API_KEY`（只进环境变量，不落盘）。Hikari 侧只需 `npm run build` 产出的 `dist/`。
 
 ## 读数的效力
 

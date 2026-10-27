@@ -1,0 +1,5 @@
+# PoC-01 的 DSH profile 叠加层：把 Hikari 的只读领域能力挂进 headless profile。
+# 用法：dsh --profile headless --patch <本文件> "..."
+- insert:
+    - id: poc01-hikari-peek
+      name: 'file:///G:/work/LAB/code/projects/own/hikari-new/experiments/poc-01-dsh-cordis/dsh-plugin.mjs'
