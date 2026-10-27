@@ -76,7 +76,9 @@
 
 1. **Runtime 本体**（`src/runtime/runtime.ts`）不能复用。Cordis 的 fiber 树取代了它：装载、`inject` 求值、级联卸载、`DISPOSED/PENDING` 状态机全在 Cordis 里。硬要复用等于两个装载器抢同一批插件。
 2. **契约键格式**必须适配（`@` 与 `.` 不是合法标识符），编码规则见 `adapter.mjs` 的 `serviceName`。
-3. **事件面**（`EventBus`）本轮没有对位实现，适配器对 `events.on/emit` 直接抛错。要复用任何发收事件的插件（例如 `repository-ci-attention` 订阅 `github-ci/run`），必须先补一层映射，且**它是否等价尚未验证**。
+3. **事件面**（`EventBus`）本轮没有对位实现，适配器对 `events.on/emit` 直接抛错。要复用任何发收事件的插件，必须先补一层映射，且**它是否等价尚未验证**（由 PoC-02 覆盖）。
+
+   > **口径更正（2026-10-28，PoC-02）**：本报告初稿把 `repository-ci-attention` 写成「订阅 `github-ci/run`」，**这是错的**。`github-ci/run` 这个事件在今天的 `src/` 里**不存在**——`collect-contracts.mjs` 扫出的真实事件只有一个：`desktop-session-awareness-loop.assessed@1`。`repository-ci-attention` 是通过 **Service 轮询**（`github-ci.current`）拿 CI 状态的，不消费事件。
 
 ## 4. Hikari Runtime 契约在 Cordis 下的三档
 
@@ -97,7 +99,7 @@
 
 - **A（双 Runtime 桥接）**：进程边界 + IPC。本轮没有跑，也没有证据说它不成立。它的代价是每次观察都要跨进程，且 Cordis 侧拿到的仍是序列化结果而非服务对象。
 - **B（复用核心包）**：把 Hikari 的**领域实现**（纯函数 + 契约声明 + 各插件 `setup`）抽成包，由两个宿主各自装载。**本轮 P1/P2 恰好证明这条路的可复用边界就是这三层**——领域逻辑零改动，改的只有键与声明。这是唯一有正面证据支撑的路线。
-- **C（统一 Cordis 宿主）**：把 Hikari Runtime 整个换掉。领域层能过，但**事件面与同名版本并存这两项没有等价证据**，而 Hikari 今天有 17 个 service、1 个真实事件（`github-ci/run`）、多个插件靠它工作。现在推 C 等于用一个未验证的宿主替换一个已验证的宿主。
+- **C（统一 Cordis 宿主）**：把 Hikari Runtime 整个换掉。领域层能过，但**事件面与同名版本并存这两项没有等价证据**，而 Hikari 今天有 24 个 service、1 个真实事件（`desktop-session-awareness-loop.assessed@1`）、多个插件靠它工作。现在推 C 等于用一个未验证的宿主替换一个已验证的宿主。
 
 **推荐：先验 B，A 作为过渡形态保留，C 在补齐事件面等价证据之前不推。** 理由不是偏好，而是证据分布：B 的每一层都有实测，C 的关键一层是空的。
 

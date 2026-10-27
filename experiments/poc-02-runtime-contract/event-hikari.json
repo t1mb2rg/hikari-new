@@ -1,0 +1,45 @@
+{
+  "event": "desktop-session-awareness-loop.assessed@1",
+  "delayMs": 100,
+  "checks": {
+    "waitsForSubscribers": {
+      "subscriberSleepMs": 300,
+      "delayMs": 100,
+      "arrivalsBefore": 1,
+      "arrivalsTotal": 3,
+      "gapsMs": [
+        831,
+        790
+      ],
+      "verdict": "waits",
+      "expect": "≥ 300+delayMs 说明发布方等订阅者；≈ delayMs 说明不等"
+    },
+    "parallelSubscribers": {
+      "subscribers": [
+        "a",
+        "b"
+      ],
+      "startDeltaMs": 0,
+      "spanMs": 314,
+      "verdict": "concurrent",
+      "expect": "两个 start 几乎同时且总跨度 ≈ 300 说明并发；≈ 600 说明串行"
+    },
+    "failureAggregation": {
+      "thrownType": "AggregateError",
+      "message": "Event desktop-session-awareness-loop.assessed@1 had failing subscribers.",
+      "reasons": [
+        "boom-a",
+        "boom-b"
+      ],
+      "verdict": "aggregated",
+      "note": "直接对真实 EventBus 发起；经插件的路径会把错误吞在 plugin.ts:86-95 的 catch 里"
+    },
+    "unsubscribeAndReactivate": {
+      "hitsWhileLoaded": 1,
+      "hitsInFirst450msAfterUnload": 0,
+      "hitsAfterReload": 1,
+      "verdict": "unsubscribe-then-resubscribe",
+      "expect": "装载期收到 >0；卸载后 450 ms 内 0；重装后又 >0"
+    }
+  }
+}

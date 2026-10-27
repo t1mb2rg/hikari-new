@@ -1,0 +1,167 @@
+{
+  "scenarios": [
+    "R1-undeclared-get",
+    "R2-missing-provider",
+    "R3-undeclared-provide",
+    "R4-declared-but-silent",
+    "R5-duplicate-provider"
+  ],
+  "hikari": {
+    "R1-undeclared-get": {
+      "states": {
+        "p-foo": "active",
+        "p-reader": "failed"
+      },
+      "failed": [
+        {
+          "plugin": "p-reader",
+          "type": "UndeclaredServiceDependencyError",
+          "message": "Plugin p-reader tried to use undeclared service dependency poc02.reject.foo@1."
+        }
+      ]
+    },
+    "R2-missing-provider": {
+      "states": {
+        "p-needy": "waiting"
+      },
+      "failed": []
+    },
+    "R3-undeclared-provide": {
+      "states": {
+        "p-sneaky": "failed"
+      },
+      "failed": [
+        {
+          "plugin": "p-sneaky",
+          "type": "UndeclaredServiceProviderError",
+          "message": "Plugin p-sneaky tried to provide undeclared service poc02.reject.foo@1."
+        }
+      ]
+    },
+    "R4-declared-but-silent": {
+      "states": {
+        "p-silent": "failed"
+      },
+      "failed": [
+        {
+          "plugin": "p-silent",
+          "type": "MissingDeclaredServiceError",
+          "message": "Plugin p-silent declared service poc02.reject.foo@1 but did not provide it during setup."
+        }
+      ]
+    },
+    "R5-duplicate-provider": {
+      "states": {
+        "p-one": "active",
+        "p-two": "failed"
+      },
+      "failed": [
+        {
+          "plugin": "p-two",
+          "type": "ServiceAlreadyProvidedError",
+          "message": "Service poc02.reject.foo@1 is already provided by p-one."
+        }
+      ]
+    }
+  },
+  "cordis": {
+    "loose": {
+      "R1-undeclared-get": {
+        "states": {
+          "p-foo": 2,
+          "p-reader": 2
+        },
+        "failed": []
+      },
+      "R2-missing-provider": {
+        "states": {
+          "p-needy": 0
+        },
+        "failed": []
+      },
+      "R3-undeclared-provide": {
+        "states": {
+          "p-sneaky": 2
+        },
+        "failed": []
+      },
+      "R4-declared-but-silent": {
+        "states": {
+          "p-silent": 2
+        },
+        "failed": []
+      },
+      "R5-duplicate-provider": {
+        "states": {
+          "p-one": 2,
+          "p-two": 3
+        },
+        "failed": [
+          {
+            "plugin": "p-two",
+            "state": 3,
+            "error": null
+          }
+        ]
+      }
+    },
+    "strict": {
+      "R1-undeclared-get": {
+        "states": {
+          "p-foo": 2,
+          "p-reader": 3
+        },
+        "failed": [
+          {
+            "plugin": "p-reader",
+            "state": 3,
+            "error": null
+          }
+        ]
+      },
+      "R2-missing-provider": {
+        "states": {
+          "p-needy": 0
+        },
+        "failed": []
+      },
+      "R3-undeclared-provide": {
+        "states": {
+          "p-sneaky": 3
+        },
+        "failed": [
+          {
+            "plugin": "p-sneaky",
+            "state": 3,
+            "error": null
+          }
+        ]
+      },
+      "R4-declared-but-silent": {
+        "states": {
+          "p-silent": 3
+        },
+        "failed": [
+          {
+            "plugin": "p-silent",
+            "state": 3,
+            "error": null
+          }
+        ]
+      },
+      "R5-duplicate-provider": {
+        "states": {
+          "p-one": 2,
+          "p-two": 3
+        },
+        "failed": [
+          {
+            "plugin": "p-two",
+            "state": 3,
+            "error": null
+          }
+        ]
+      }
+    }
+  }
+}

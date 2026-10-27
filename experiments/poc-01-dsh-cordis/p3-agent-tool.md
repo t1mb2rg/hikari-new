@@ -46,6 +46,10 @@ dsh --profile headless --patch <poc01.patch.yml> --json \
 
 最终回答：`You're in the DeepSeek Harness app — the window "Greeting — DeepSeek Harness" is in the foreground, and you've been typing just moments ago.`
 
+> **口径更正（2026-10-28，PoC-02）**：最后半句「you've been typing just moments ago」是**超出观察证据的推断**，不能当作已验证的结论。工具返回的是 `lastInputTick` 与 `observedTick` 两个数（差 31 ticks，约 0.3 秒），它只能说明「最近有输入活动」，**不能说明输入来自键盘、也不能说明输入发生在该窗口内**（Hikari 的 `src/input-activity/**` 读的是系统级 `GetLastInputInfo`，不区分设备与窗口）。
+>
+> 这不影响 **P3 的判定**：模型确实自己决定调用了工具、拿到了真实读数、并据读数作答——这条工具链是通的。受影响的只有「模型对读数的语义理解是否正确」这一项，而**本轮没有设这项判据，因此不能宣称语义 grounding 已被验证**。
+
 ## 3. 为什么这不是「预置好的答案」
 
 - 观测值里的 `title`、`processName`、两个 tick 数都是**运行时真值**：同一套代码在 16:45:23 那次跑出的是 `processName: explorer`、`title: null`（见 `p5-boundary.md` 的正向对照），说明读数随现场变化，不是常量。

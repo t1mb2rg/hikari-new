@@ -1,0 +1,57 @@
+{
+  "event": "desktop-session-awareness-loop.assessed@1",
+  "delayMs": 100,
+  "checks": {
+    "waitsForSubscribers": {
+      "subscriberSleepMs": 300,
+      "delayMs": 100,
+      "arrivalsTotal": 3,
+      "gapsMs": [
+        792,
+        793
+      ],
+      "verdict": "waits",
+      "mapping": "events.emit → ctx.parallel"
+    },
+    "parallelSubscribers": {
+      "subscribers": [
+        "a",
+        "b"
+      ],
+      "startDeltaMs": 0,
+      "spanMs": 314,
+      "verdict": "concurrent"
+    },
+    "failureAggregation": {
+      "rawParallel": {
+        "thrownType": "AggregateError",
+        "message": "",
+        "reasons": [
+          "boom-a",
+          "boom-b"
+        ]
+      },
+      "adaptedEmit": {
+        "thrownType": "AggregateError",
+        "message": "Event desktop-session-awareness-loop.assessed@1 had failing subscribers.",
+        "reasons": [
+          "boom-a",
+          "boom-b"
+        ]
+      },
+      "pluginSetupFailure": {
+        "fiberState": 3,
+        "fiberError": null,
+        "threwToCaller": false
+      },
+      "verdict": "aggregated",
+      "note": "raw 是 ctx.parallel 原样抛出的；adapted 是 adapter-events.mjs 补了 message 之后的；pluginSetupFailure 看插件内 emit 失败时错误去哪了"
+    },
+    "unsubscribeAndReactivate": {
+      "hitsWhileLoaded": 1,
+      "hitsInFirst450msAfterUnload": 0,
+      "hitsAfterReload": 1,
+      "verdict": "unsubscribe-then-resubscribe"
+    }
+  }
+}

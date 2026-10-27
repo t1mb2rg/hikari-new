@@ -150,13 +150,30 @@
 
 **依赖仓库外环境**：需要单独安装的 `@deepseek-ai/dsh@0.2.1-rc.2` 与一个 DeepSeek key（只进环境变量）。`p1`/`p2` 不调模型，`p3`/`p5` 需要真 key。
 
+### `poc-02-runtime-contract/` — 运行时契约还剩哪些没对位（事件面 / 契约键 / 服务拒绝语义）
+
+PoC-01 证明「插件能换宿主装载」，这一轮只查**运行时契约**本身。五项判定：P1 PASS、P2 PASS（4 等价 + 1 需适配）、P3 PASS（限真实契约集）、**P4 FAIL**、P5 PASS。
+
+| 文件 | 内容 |
+| --- | --- |
+| `report.md` | 八节：五项判定、事件对照、键碰撞、拒绝语义、要重做的部分、复现、范围、下一步 |
+| `inventory.md` | 三张表：事件面 E1–E7、服务解析 S1–S6、契约键 K1–K4，每行带 `文件:行号` |
+| `collect-contracts.mjs` | 扫 `src/` 得到真实契约全集：**24 个 service（全 v1）+ 1 个 event** |
+| `adapter-events.mjs` | 在 PoC-01 适配层上补事件桥接：`emit → ctx.parallel`、`on → ctx.on`、补 `AggregateError` message |
+| `event-hikari.mjs` / `event-hikari.json` / `event-hikari.md` | s2：Hikari 侧五项语义基线（等待 831/790 ms、并发 314 ms、聚合消息逐字、退订 0、重装 1） |
+| `event-cordis.mjs` / `event-cordis.json` / `event-cordis.md` | s3：Cordis 侧同名五项 + 逐项对照（823/793 ms、311 ms、message 需补、0、1） |
+| `key-collision.mjs` / `key-collision.json` / `key-collision.md` | s4：真实 24 个键无碰撞；但编码函数不单射（点/连字符/下划线折叠），撞车时静默 `FAILED` |
+| `service-reject.mjs` / `service-reject.json` / `service-reject.md` | s5：五场景两侧对照，**当前适配层放行 R1/R3/R4**；补检查后状态一致但错误对象丢失 |
+
+**依赖仓库外环境**：与 `poc-01-dsh-cordis/` 相同（`@deepseek-ai/cordis@4.0.5` 随 DSH 装在隔离目录）。全部脚本**不调模型**，不需要 API key。
+
 ## 复现前提
 
 - **GitHub 材料**：`gh auth status` 显示已登录（探针用 `gh auth token` 现取，不落盘）；脚本里写死的 run id 是本仓库历史上的真实红 run。
 - **模型端点**：`192.168.1.20:8080` 上的 `qwen3.8-flash-next-iq2_xs`（OpenAI 形状）。**自 2026-10-26 起该端点要求 API key**，`cognition-continuity/` 的脚本只从环境变量 `MODEL_API_KEY` 读、不落盘、不进产物；更早的实验写于免鉴权时期。端点不在时，`report.md` 里的耗时读数不可复现，但结论的结构部分（真假边界、周期等式）仍可复核。
 - **构建**：`npm run build` 先跑一次，探针从 `dist/` 导入。
 - **Python 与仓库外材料**（仅 `galgame-reverse/`）：三个脚本需要 Python 3.12；解包对象是仓库外的一份 1.7 GB 安装目录，反编译产物（205 MB 树）也在仓库外，两者都未入库，路径写在该目录 `report.md` 的第 3 行与第 208 行。这决定了它**不能靠仓库本身复现**，只能复核已有文档里的行号引用。
-- **DSH 与 API key**（仅 `poc-01-dsh-cordis/`）：需要独立安装 `@deepseek-ai/dsh@0.2.1-rc.2`（约 305 个 `@deepseek-ai/*` 包）并把 `DSH_HOME` 指到隔离目录；`p3`/`p5` 需要 `DEEPSEEK_API_KEY`（只进环境变量，不落盘）。Hikari 侧只需 `npm run build` 产出的 `dist/`。
+- **DSH 与 API key**（仅 `poc-01-dsh-cordis/` 与 `poc-02-runtime-contract/`）：需要独立安装 `@deepseek-ai/dsh@0.2.1-rc.2`（约 305 个 `@deepseek-ai/*` 包）并把 `DSH_HOME` 指到隔离目录；PoC-01 的 `p3`/`p5` 需要 `DEEPSEEK_API_KEY`（只进环境变量，不落盘），PoC-02 全部脚本不调模型、不需要 key。Hikari 侧只需 `npm run build` 产出的 `dist/`。
 
 ## 读数的效力
 

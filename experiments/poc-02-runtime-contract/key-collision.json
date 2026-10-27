@@ -1,0 +1,130 @@
+{
+  "realContracts": {
+    "count": 24,
+    "versions": [
+      1
+    ],
+    "hikariKeysUnique": true,
+    "cordisNamesUnique": true,
+    "hikariDuplicates": [],
+    "cordisDuplicates": [],
+    "sample": [
+      {
+        "hikari": "changeable-repositories.read@1",
+        "cordis": "changeable_repositories_read_v1"
+      },
+      {
+        "hikari": "chronicle@1",
+        "cordis": "chronicle_v1"
+      },
+      {
+        "hikari": "continuity.current@1",
+        "cordis": "continuity_current_v1"
+      },
+      {
+        "hikari": "desktop-content-read.read@1",
+        "cordis": "desktop_content_read_read_v1"
+      }
+    ]
+  },
+  "injectiveCases": [
+    {
+      "label": "点 vs 连字符",
+      "a": {
+        "hikari": "github-ci.run-materials@1",
+        "cordis": "github_ci_run_materials_v1"
+      },
+      "b": {
+        "hikari": "github-ci.run.materials@1",
+        "cordis": "github_ci_run_materials_v1"
+      },
+      "hikariDistinct": true,
+      "cordisDistinct": false
+    },
+    {
+      "label": "点 vs 下划线",
+      "a": {
+        "hikari": "foo.bar@1",
+        "cordis": "foo_bar_v1"
+      },
+      "b": {
+        "hikari": "foo_bar@1",
+        "cordis": "foo_bar_v1"
+      },
+      "hikariDistinct": true,
+      "cordisDistinct": false
+    },
+    {
+      "label": "版本进键",
+      "a": {
+        "hikari": "foo@1",
+        "cordis": "foo_v1"
+      },
+      "b": {
+        "hikari": "foo@2",
+        "cordis": "foo_v2"
+      },
+      "hikariDistinct": true,
+      "cordisDistinct": true
+    },
+    {
+      "label": "版本当后缀",
+      "a": {
+        "hikari": "foo@3",
+        "cordis": "foo_v3"
+      },
+      "b": {
+        "hikari": "foo_v3@1",
+        "cordis": "foo_v3_v1"
+      },
+      "hikariDistinct": true,
+      "cordisDistinct": true
+    },
+    {
+      "label": "大版本号双位",
+      "a": {
+        "hikari": "foo@12",
+        "cordis": "foo_v12"
+      },
+      "b": {
+        "hikari": "foo@1",
+        "cordis": "foo_v1"
+      },
+      "hikariDistinct": true,
+      "cordisDistinct": true
+    }
+  ],
+  "sameIdDifferentVersion": {
+    "coExists": true,
+    "error": null,
+    "consumerRead": "value-from-v1"
+  },
+  "cordisBehavior": {
+    "sameIdDifferentVersion": {
+      "coexists": true,
+      "names": [
+        "poc02_foo_v1",
+        "poc02_foo_v2"
+      ],
+      "readBack": {
+        "v1": "value-from-v1",
+        "v2": "value-from-v2"
+      },
+      "error": null
+    },
+    "encodingCollision": {
+      "hikariKeysDistinct": true,
+      "cordisNames": [
+        "poc02_a_b_v1",
+        "poc02_a_b_v1"
+      ],
+      "cordisNamesEqual": true,
+      "secondProvideError": null,
+      "collisionFiber": {
+        "state": 3,
+        "error": null,
+        "valueAfter": "from-a"
+      }
+    }
+  }
+}
