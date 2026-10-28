@@ -1,0 +1,210 @@
+{
+  "environment": {
+    "node": "v24.15.0",
+    "cordis": "4.0.5",
+    "dsh": "0.2.1-rc.2"
+  },
+  "cases": {
+    "R1": {
+      "title": "未声明 get 拒绝",
+      "expect": {
+        "state": "failed",
+        "message": "Plugin poc03.r1-consumer tried to use undeclared service dependency poc03.alpha@1."
+      },
+      "hikari": [
+        {
+          "id": "poc03.r1-provider",
+          "threw": null,
+          "state": "active",
+          "error": null
+        },
+        {
+          "id": "poc03.r1-consumer",
+          "threw": null,
+          "state": "failed",
+          "error": {
+            "name": "Error",
+            "message": "Plugin poc03.r1-consumer tried to use undeclared service dependency poc03.alpha@1.",
+            "serviceId": null,
+            "pluginId": null
+          }
+        }
+      ],
+      "contractLayer": [
+        {
+          "id": "poc03.r1-provider",
+          "threw": null,
+          "state": "active",
+          "layer": null,
+          "error": null
+        },
+        {
+          "id": "poc03.r1-consumer",
+          "threw": null,
+          "state": "failed",
+          "layer": "setup",
+          "error": {
+            "name": "UndeclaredDependencyError",
+            "message": "Plugin poc03.r1-consumer tried to use undeclared service dependency poc03.alpha@1.",
+            "serviceId": "poc03.alpha@1",
+            "pluginId": "poc03.r1-consumer"
+          }
+        }
+      ],
+      "layerVerdict": "PASS"
+    },
+    "R2": {
+      "title": "依赖缺失保持 waiting / PENDING",
+      "expect": {
+        "state": "waiting",
+        "message": null
+      },
+      "hikari": [
+        {
+          "id": "poc03.r2-consumer",
+          "threw": null,
+          "state": "waiting",
+          "error": null
+        }
+      ],
+      "contractLayer": [
+        {
+          "id": "poc03.r2-consumer",
+          "threw": null,
+          "state": "waiting",
+          "layer": null,
+          "error": null
+        }
+      ],
+      "layerVerdict": "PASS"
+    },
+    "R3": {
+      "title": "未声明 provide 拒绝",
+      "expect": {
+        "state": "failed",
+        "message": "Plugin poc03.r3-provider tried to provide undeclared service poc03.alpha@1."
+      },
+      "hikari": [
+        {
+          "id": "poc03.r3-provider",
+          "threw": null,
+          "state": "failed",
+          "error": {
+            "name": "Error",
+            "message": "Plugin poc03.r3-provider tried to provide undeclared service poc03.alpha@1.",
+            "serviceId": null,
+            "pluginId": null
+          }
+        }
+      ],
+      "contractLayer": [
+        {
+          "id": "poc03.r3-provider",
+          "threw": null,
+          "state": "failed",
+          "layer": "setup",
+          "error": {
+            "name": "UndeclaredProvisionError",
+            "message": "Plugin poc03.r3-provider tried to provide undeclared service poc03.alpha@1.",
+            "serviceId": "poc03.alpha@1",
+            "pluginId": "poc03.r3-provider"
+          }
+        }
+      ],
+      "layerVerdict": "PASS"
+    },
+    "R4": {
+      "title": "声明 provides 但未提供 → 失败",
+      "expect": {
+        "state": "failed",
+        "message": "Plugin poc03.r4-liar declared service poc03.alpha@1 but did not provide it during setup."
+      },
+      "hikari": [
+        {
+          "id": "poc03.r4-liar",
+          "threw": null,
+          "state": "failed",
+          "error": {
+            "name": "Error",
+            "message": "Plugin poc03.r4-liar declared service poc03.alpha@1 but did not provide it during setup.",
+            "serviceId": null,
+            "pluginId": null
+          }
+        }
+      ],
+      "contractLayer": [
+        {
+          "id": "poc03.r4-liar",
+          "threw": null,
+          "state": "failed",
+          "layer": "setup",
+          "error": {
+            "name": "MissingDeclaredServiceError",
+            "message": "Plugin poc03.r4-liar declared service poc03.alpha@1 but did not provide it during setup.",
+            "serviceId": "poc03.alpha@1",
+            "pluginId": "poc03.r4-liar"
+          }
+        }
+      ],
+      "layerVerdict": "PASS"
+    },
+    "R5": {
+      "title": "重复 provide 拒绝",
+      "expect": {
+        "state": "failed",
+        "message": "Service poc03.alpha@1 is already provided by poc03.r5-first."
+      },
+      "hikari": [
+        {
+          "id": "poc03.r5-first",
+          "threw": null,
+          "state": "active",
+          "error": null
+        },
+        {
+          "id": "poc03.r5-second",
+          "threw": null,
+          "state": "failed",
+          "error": {
+            "name": "Error",
+            "message": "Service poc03.alpha@1 is already provided by poc03.r5-first.",
+            "serviceId": null,
+            "pluginId": null
+          }
+        }
+      ],
+      "contractLayer": [
+        {
+          "id": "poc03.r5-first",
+          "threw": null,
+          "state": "active",
+          "layer": null,
+          "error": null
+        },
+        {
+          "id": "poc03.r5-second",
+          "threw": null,
+          "state": "failed",
+          "layer": "setup",
+          "error": {
+            "name": "ServiceAlreadyProvidedError",
+            "message": "Service poc03.alpha@1 is already provided by poc03.r5-first.",
+            "serviceId": "poc03.alpha@1",
+            "pluginId": null
+          }
+        }
+      ],
+      "layerVerdict": "PASS"
+    }
+  },
+  "verdict": {
+    "fiveDisciplinesHeld": true,
+    "perCase": {
+      "R1": "PASS",
+      "R2": "PASS",
+      "R3": "PASS",
+      "R4": "PASS",
+      "R5": "PASS"
+    }
+  }
+}

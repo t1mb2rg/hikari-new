@@ -1,0 +1,371 @@
+{
+  "environment": {
+    "node": "v24.15.0",
+    "cordis": "4.0.5",
+    "dsh": "0.2.1-rc.2"
+  },
+  "scheme": {
+    "encode": "id@version（完整 id + 完整 version，无 hash、无截断）",
+    "decode": "按最后一个 @ 切分；version 必须是纯数字",
+    "constraints": [
+      "id 非空字符串",
+      "version 为正整数"
+    ],
+    "injectivityArgument": "version 是纯数字、不含 @，所以 key 的最后一个 @ 一定是分隔点；给定 key 必唯一还原出 (id, version)，反过来给定 (id, version) 必唯一得到 key。"
+  },
+  "real": {
+    "count": 25,
+    "items": [
+      {
+        "kind": "service",
+        "id": "changeable-repositories.read",
+        "version": 1,
+        "file": "src/changeable-repositories/read.ts",
+        "key": "changeable-repositories.read@1"
+      },
+      {
+        "kind": "service",
+        "id": "chronicle",
+        "version": 1,
+        "file": "src/chronicle/contracts.ts",
+        "key": "chronicle@1"
+      },
+      {
+        "kind": "service",
+        "id": "continuity.current",
+        "version": 1,
+        "file": "src/continuity/contracts.ts",
+        "key": "continuity.current@1"
+      },
+      {
+        "kind": "service",
+        "id": "desktop-content-read.read",
+        "version": 1,
+        "file": "src/desktop-content-read/contracts.ts",
+        "key": "desktop-content-read.read@1"
+      },
+      {
+        "kind": "service",
+        "id": "desktop-session-awareness.current",
+        "version": 1,
+        "file": "src/desktop-session-awareness/contracts.ts",
+        "key": "desktop-session-awareness.current@1"
+      },
+      {
+        "kind": "service",
+        "id": "desktop-session-awareness.peek",
+        "version": 1,
+        "file": "src/desktop-session-awareness/contracts.ts",
+        "key": "desktop-session-awareness.peek@1"
+      },
+      {
+        "kind": "service",
+        "id": "desktop-session-world.current",
+        "version": 1,
+        "file": "src/desktop-session-world/contracts.ts",
+        "key": "desktop-session-world.current@1"
+      },
+      {
+        "kind": "service",
+        "id": "foreground.current",
+        "version": 1,
+        "file": "src/foreground/contracts.ts",
+        "key": "foreground.current@1"
+      },
+      {
+        "kind": "service",
+        "id": "git-repository.current",
+        "version": 1,
+        "file": "src/git-repository/contracts.ts",
+        "key": "git-repository.current@1"
+      },
+      {
+        "kind": "service",
+        "id": "github-ci.current",
+        "version": 1,
+        "file": "src/github-ci/contracts.ts",
+        "key": "github-ci.current@1"
+      },
+      {
+        "kind": "service",
+        "id": "github-ci.run-materials",
+        "version": 1,
+        "file": "src/github-ci/contracts.ts",
+        "key": "github-ci.run-materials@1"
+      },
+      {
+        "kind": "service",
+        "id": "human-delivery.deliver",
+        "version": 1,
+        "file": "src/human-delivery/contracts.ts",
+        "key": "human-delivery.deliver@1"
+      },
+      {
+        "kind": "service",
+        "id": "input-activity.current",
+        "version": 1,
+        "file": "src/input-activity/contracts.ts",
+        "key": "input-activity.current@1"
+      },
+      {
+        "kind": "service",
+        "id": "language.desktop-return-speaking",
+        "version": 1,
+        "file": "src/language/contracts.ts",
+        "key": "language.desktop-return-speaking@1"
+      },
+      {
+        "kind": "service",
+        "id": "language.diagnosis-speaking",
+        "version": 1,
+        "file": "src/language/contracts.ts",
+        "key": "language.diagnosis-speaking@1"
+      },
+      {
+        "kind": "service",
+        "id": "language.speaking",
+        "version": 1,
+        "file": "src/language/contracts.ts",
+        "key": "language.speaking@1"
+      },
+      {
+        "kind": "service",
+        "id": "repository-change-executor.actions",
+        "version": 1,
+        "file": "src/repository-change-executor/contracts.ts",
+        "key": "repository-change-executor.actions@1"
+      },
+      {
+        "kind": "service",
+        "id": "repository-ci-awareness.current",
+        "version": 1,
+        "file": "src/repository-ci-awareness/contracts.ts",
+        "key": "repository-ci-awareness.current@1"
+      },
+      {
+        "kind": "service",
+        "id": "repository-ci-diagnosis-proposal.propose",
+        "version": 1,
+        "file": "src/repository-ci-diagnosis-proposal/contracts.ts",
+        "key": "repository-ci-diagnosis-proposal.propose@1"
+      },
+      {
+        "kind": "service",
+        "id": "repository-ci-diagnosis-proposal.supplement",
+        "version": 1,
+        "file": "src/repository-ci-diagnosis-proposal/contracts.ts",
+        "key": "repository-ci-diagnosis-proposal.supplement@1"
+      },
+      {
+        "kind": "service",
+        "id": "repository-ci-relevance.current",
+        "version": 1,
+        "file": "src/repository-ci-relevance/contracts.ts",
+        "key": "repository-ci-relevance.current@1"
+      },
+      {
+        "kind": "service",
+        "id": "repository-ci-relevance.judge",
+        "version": 1,
+        "file": "src/repository-ci-relevance/contracts.ts",
+        "key": "repository-ci-relevance.judge@1"
+      },
+      {
+        "kind": "service",
+        "id": "repository-ci-world.current",
+        "version": 1,
+        "file": "src/repository-ci-world/contracts.ts",
+        "key": "repository-ci-world.current@1"
+      },
+      {
+        "kind": "service",
+        "id": "work-focus.current",
+        "version": 1,
+        "file": "src/work-focus/contracts.ts",
+        "key": "work-focus.current@1"
+      },
+      {
+        "kind": "event",
+        "id": "desktop-session-awareness-loop.assessed",
+        "version": 1,
+        "file": "src/desktop-session-awareness-loop/contracts.ts",
+        "key": "desktop-session-awareness-loop.assessed@1"
+      }
+    ]
+  },
+  "synthetic": [
+    {
+      "id": "foo.bar",
+      "version": 1,
+      "why": "点号与下划线同形，PoC-02 的旧编码会撞",
+      "key": "foo.bar@1",
+      "encoded": true,
+      "passed": true,
+      "roundTrip": {
+        "id": "foo.bar",
+        "version": 1
+      },
+      "roundTripOk": true
+    },
+    {
+      "id": "foo_bar",
+      "version": 1,
+      "why": "同上",
+      "key": "foo_bar@1",
+      "encoded": true,
+      "passed": true,
+      "roundTrip": {
+        "id": "foo_bar",
+        "version": 1
+      },
+      "roundTripOk": true
+    },
+    {
+      "id": "repository-ci-awareness.current",
+      "version": 1,
+      "why": "真实 id + v1",
+      "key": "repository-ci-awareness.current@1",
+      "encoded": true,
+      "passed": true,
+      "roundTrip": {
+        "id": "repository-ci-awareness.current",
+        "version": 1
+      },
+      "roundTripOk": true
+    },
+    {
+      "id": "repository-ci-awareness.current",
+      "version": 2,
+      "why": "真实 id + v2",
+      "key": "repository-ci-awareness.current@2",
+      "encoded": true,
+      "passed": true,
+      "roundTrip": {
+        "id": "repository-ci-awareness.current",
+        "version": 2
+      },
+      "roundTripOk": true
+    },
+    {
+      "id": "repository-ci-awareness.current",
+      "version": 10,
+      "why": "真实 id + v10，两位版本号",
+      "key": "repository-ci-awareness.current@10",
+      "encoded": true,
+      "passed": true,
+      "roundTrip": {
+        "id": "repository-ci-awareness.current",
+        "version": 10
+      },
+      "roundTripOk": true
+    },
+    {
+      "id": "weird@id",
+      "version": 3,
+      "why": "id 含分隔符本身",
+      "key": "weird@id@3",
+      "encoded": true,
+      "passed": true,
+      "roundTrip": {
+        "id": "weird@id",
+        "version": 3
+      },
+      "roundTripOk": true
+    },
+    {
+      "id": "weird@id@nested",
+      "version": 3,
+      "why": "id 含多个分隔符",
+      "key": "weird@id@nested@3",
+      "encoded": true,
+      "passed": true,
+      "roundTrip": {
+        "id": "weird@id@nested",
+        "version": 3
+      },
+      "roundTripOk": true
+    },
+    {
+      "id": "service.v1",
+      "version": 2,
+      "why": "id 自带版本样式",
+      "key": "service.v1@2",
+      "encoded": true,
+      "passed": true,
+      "roundTrip": {
+        "id": "service.v1",
+        "version": 2
+      },
+      "roundTripOk": true
+    },
+    {
+      "id": "",
+      "version": 1,
+      "why": "空 id 必须被拒",
+      "expectThrows": true,
+      "encoded": false,
+      "error": "contract id must be a non-empty string, got \"\"",
+      "passed": true
+    },
+    {
+      "id": "ok.id",
+      "version": 0,
+      "why": "version 0 必须被拒",
+      "expectThrows": true,
+      "encoded": false,
+      "error": "contract version must be a positive integer, got 0",
+      "passed": true
+    },
+    {
+      "id": "ok.id",
+      "version": -1,
+      "why": "负 version 必须被拒",
+      "expectThrows": true,
+      "encoded": false,
+      "error": "contract version must be a positive integer, got -1",
+      "passed": true
+    },
+    {
+      "id": "ok.id",
+      "version": 1.5,
+      "why": "非整数 version 必须被拒",
+      "expectThrows": true,
+      "encoded": false,
+      "error": "contract version must be a positive integer, got 1.5",
+      "passed": true
+    },
+    {
+      "id": "ok.id",
+      "version": "1",
+      "why": "字符串 version 必须被拒",
+      "expectThrows": true,
+      "encoded": false,
+      "error": "contract version must be a positive integer, got \"1\"",
+      "passed": true
+    }
+  ],
+  "separatorPairTest": {
+    "ids": [
+      "a.b",
+      "a_b",
+      "a-b",
+      "a:b",
+      "a/b",
+      "a b",
+      "a@b"
+    ],
+    "collisions": []
+  },
+  "collisions": {
+    "realOrMixed": [],
+    "count": 0
+  },
+  "problems": [],
+  "verdict": {
+    "realSetCollisionFree": true,
+    "roundTripAllOk": true,
+    "syntheticNoCollision": true,
+    "rejectsInvalid": true,
+    "problems": []
+  }
+}

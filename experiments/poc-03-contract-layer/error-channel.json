@@ -1,0 +1,521 @@
+{
+  "cordis": null,
+  "channels": {
+    "status": {
+      "events": [
+        {
+          "argCount": 2,
+          "argKinds": [
+            "object",
+            "number"
+          ],
+          "oldState": 0,
+          "newState": 1,
+          "fiberUid": 1,
+          "carriesError": false,
+          "fiberOwnKeys": [
+            "parent",
+            "inject",
+            "runtime",
+            "uid",
+            "ctx",
+            "config",
+            "_config",
+            "state",
+            "dispose",
+            "store",
+            "inertia",
+            "_hooks",
+            "_disposables",
+            "context",
+            "_error",
+            "_runner",
+            "_store"
+          ],
+          "fiberErrorField": "absent",
+          "fiberUnderscoreError": {
+            "type": "undefined"
+          },
+          "readErrorAtEventTime": {
+            "type": "undefined"
+          }
+        },
+        {
+          "argCount": 2,
+          "argKinds": [
+            "object",
+            "number"
+          ],
+          "oldState": 1,
+          "newState": 5,
+          "fiberUid": 1,
+          "carriesError": false,
+          "fiberOwnKeys": [
+            "parent",
+            "inject",
+            "runtime",
+            "uid",
+            "ctx",
+            "config",
+            "_config",
+            "state",
+            "dispose",
+            "store",
+            "inertia",
+            "_hooks",
+            "_disposables",
+            "context",
+            "_error",
+            "_runner",
+            "_store"
+          ],
+          "fiberErrorField": "absent",
+          "fiberUnderscoreError": {
+            "type": "object",
+            "ctor": "BoomA",
+            "name": "BoomA",
+            "message": "setup exploded on purpose",
+            "hasMarker": true,
+            "marker": {
+              "code": "E_POC03_SETUP",
+              "at": "poc-03"
+            }
+          },
+          "readErrorAtEventTime": {
+            "type": "undefined"
+          }
+        },
+        {
+          "argCount": 2,
+          "argKinds": [
+            "object",
+            "number"
+          ],
+          "oldState": 5,
+          "newState": 3,
+          "fiberUid": 1,
+          "carriesError": false,
+          "fiberOwnKeys": [
+            "parent",
+            "inject",
+            "runtime",
+            "uid",
+            "ctx",
+            "config",
+            "_config",
+            "state",
+            "dispose",
+            "store",
+            "inertia",
+            "_hooks",
+            "_disposables",
+            "context",
+            "_error",
+            "_runner",
+            "_store"
+          ],
+          "fiberErrorField": "absent",
+          "fiberUnderscoreError": {
+            "type": "object",
+            "ctor": "BoomA",
+            "name": "BoomA",
+            "message": "setup exploded on purpose",
+            "hasMarker": true,
+            "marker": {
+              "code": "E_POC03_SETUP",
+              "at": "poc-03"
+            }
+          },
+          "readErrorAtEventTime": {
+            "type": "undefined"
+          }
+        },
+        {
+          "argCount": 2,
+          "argKinds": [
+            "object",
+            "number"
+          ],
+          "oldState": 0,
+          "newState": 1,
+          "fiberUid": 2,
+          "carriesError": false,
+          "fiberOwnKeys": [
+            "parent",
+            "inject",
+            "runtime",
+            "uid",
+            "ctx",
+            "config",
+            "_config",
+            "state",
+            "dispose",
+            "store",
+            "inertia",
+            "_hooks",
+            "_disposables",
+            "context",
+            "_error",
+            "_runner",
+            "_store"
+          ],
+          "fiberErrorField": "absent",
+          "fiberUnderscoreError": {
+            "type": "undefined"
+          },
+          "readErrorAtEventTime": {
+            "type": "undefined"
+          }
+        },
+        {
+          "argCount": 2,
+          "argKinds": [
+            "object",
+            "number"
+          ],
+          "oldState": 1,
+          "newState": 5,
+          "fiberUid": 2,
+          "carriesError": false,
+          "fiberOwnKeys": [
+            "parent",
+            "inject",
+            "runtime",
+            "uid",
+            "ctx",
+            "config",
+            "_config",
+            "state",
+            "dispose",
+            "store",
+            "inertia",
+            "_hooks",
+            "_disposables",
+            "context",
+            "_error",
+            "_runner",
+            "_store"
+          ],
+          "fiberErrorField": "absent",
+          "fiberUnderscoreError": {
+            "type": "object",
+            "ctor": "BoomA",
+            "name": "BoomA",
+            "message": "setup exploded on purpose",
+            "hasMarker": true,
+            "marker": {
+              "code": "E_POC03_SETUP",
+              "at": "poc-03"
+            }
+          },
+          "readErrorAtEventTime": {
+            "type": "undefined"
+          }
+        },
+        {
+          "argCount": 2,
+          "argKinds": [
+            "object",
+            "number"
+          ],
+          "oldState": 3,
+          "newState": 5,
+          "fiberUid": null,
+          "carriesError": false,
+          "fiberOwnKeys": [
+            "parent",
+            "inject",
+            "runtime",
+            "uid",
+            "ctx",
+            "config",
+            "_config",
+            "state",
+            "dispose",
+            "store",
+            "inertia",
+            "_hooks",
+            "_disposables",
+            "context",
+            "_error",
+            "_runner",
+            "_store"
+          ],
+          "fiberErrorField": "absent",
+          "fiberUnderscoreError": {
+            "type": "object",
+            "ctor": "BoomA",
+            "name": "BoomA",
+            "message": "setup exploded on purpose",
+            "hasMarker": true,
+            "marker": {
+              "code": "E_POC03_SETUP",
+              "at": "poc-03"
+            }
+          },
+          "readErrorAtEventTime": {
+            "type": "undefined"
+          }
+        },
+        {
+          "argCount": 2,
+          "argKinds": [
+            "object",
+            "number"
+          ],
+          "oldState": 5,
+          "newState": 3,
+          "fiberUid": 2,
+          "carriesError": false,
+          "fiberOwnKeys": [
+            "parent",
+            "inject",
+            "runtime",
+            "uid",
+            "ctx",
+            "config",
+            "_config",
+            "state",
+            "dispose",
+            "store",
+            "inertia",
+            "_hooks",
+            "_disposables",
+            "context",
+            "_error",
+            "_runner",
+            "_store"
+          ],
+          "fiberErrorField": "absent",
+          "fiberUnderscoreError": {
+            "type": "object",
+            "ctor": "BoomA",
+            "name": "BoomA",
+            "message": "setup exploded on purpose",
+            "hasMarker": true,
+            "marker": {
+              "code": "E_POC03_SETUP",
+              "at": "poc-03"
+            }
+          },
+          "readErrorAtEventTime": {
+            "type": "undefined"
+          }
+        },
+        {
+          "argCount": 2,
+          "argKinds": [
+            "object",
+            "number"
+          ],
+          "oldState": 5,
+          "newState": 4,
+          "fiberUid": null,
+          "carriesError": false,
+          "fiberOwnKeys": [
+            "parent",
+            "inject",
+            "runtime",
+            "uid",
+            "ctx",
+            "config",
+            "_config",
+            "state",
+            "dispose",
+            "store",
+            "inertia",
+            "_hooks",
+            "_disposables",
+            "context",
+            "_error",
+            "_runner",
+            "_store"
+          ],
+          "fiberErrorField": "absent",
+          "fiberUnderscoreError": {
+            "type": "object",
+            "ctor": "BoomA",
+            "name": "BoomA",
+            "message": "setup exploded on purpose",
+            "hasMarker": true,
+            "marker": {
+              "code": "E_POC03_SETUP",
+              "at": "poc-03"
+            }
+          },
+          "readErrorAtEventTime": {
+            "type": "undefined"
+          }
+        }
+      ],
+      "eventCount": 4,
+      "anyEventCarriedError": false
+    },
+    "pluginEvent": {
+      "events": [
+        {
+          "argCount": 1,
+          "argKinds": [
+            "object"
+          ]
+        },
+        {
+          "argCount": 1,
+          "argKinds": [
+            "object"
+          ]
+        },
+        {
+          "argCount": 1,
+          "argKinds": [
+            "object"
+          ]
+        }
+      ],
+      "eventCount": 2
+    },
+    "logger": {
+      "calls": [
+        [
+          {
+            "type": "object",
+            "ctor": "BoomA",
+            "name": "BoomA",
+            "message": "setup exploded on purpose",
+            "hasMarker": true,
+            "marker": {
+              "code": "E_POC03_SETUP",
+              "at": "poc-03"
+            }
+          }
+        ],
+        [
+          {
+            "type": "object",
+            "ctor": "BoomA",
+            "name": "BoomA",
+            "message": "setup exploded on purpose",
+            "hasMarker": true,
+            "marker": {
+              "code": "E_POC03_SETUP",
+              "at": "poc-03"
+            }
+          }
+        ]
+      ],
+      "callCount": 1,
+      "carriedErrorObject": true
+    },
+    "await": {
+      "first": "threw",
+      "firstError": {
+        "type": "object",
+        "ctor": "BoomA",
+        "name": "BoomA",
+        "message": "setup exploded on purpose",
+        "hasMarker": true,
+        "marker": {
+          "code": "E_POC03_SETUP",
+          "at": "poc-03"
+        }
+      },
+      "second": {
+        "threw": {
+          "type": "object",
+          "ctor": "BoomA",
+          "name": "BoomA",
+          "message": "setup exploded on purpose",
+          "hasMarker": true,
+          "marker": {
+            "code": "E_POC03_SETUP",
+            "at": "poc-03"
+          }
+        }
+      },
+      "repeatable": true
+    },
+    "fiberObject": {
+      "ownKeys": [
+        "then"
+      ],
+      "protoMembers": [
+        "parent",
+        "inject",
+        "runtime",
+        "uid",
+        "ctx",
+        "config",
+        "_config",
+        "state",
+        "dispose",
+        "store",
+        "inertia",
+        "_hooks",
+        "_disposables",
+        "context",
+        "_error",
+        "_runner",
+        "_store"
+      ],
+      "errorLikeMembers": [
+        "_error"
+      ],
+      "errorMemberReads": [
+        {
+          "key": "_error",
+          "kind": "object",
+          "shape": {
+            "type": "object",
+            "ctor": "BoomA",
+            "name": "BoomA",
+            "message": "setup exploded on purpose",
+            "hasMarker": true,
+            "marker": {
+              "code": "E_POC03_SETUP",
+              "at": "poc-03"
+            }
+          }
+        }
+      ],
+      "stateAfterFail": 3,
+      "uidAfterFail": 1
+    },
+    "statusHealthy": {
+      "events": [
+        {
+          "argCount": 2,
+          "oldState": 0,
+          "newState": 1
+        },
+        {
+          "argCount": 2,
+          "oldState": 1,
+          "newState": 2
+        },
+        {
+          "argCount": 2,
+          "oldState": 2,
+          "newState": 5
+        },
+        {
+          "argCount": 2,
+          "oldState": 5,
+          "newState": 4
+        }
+      ],
+      "awaitResult": "no-throw"
+    }
+  },
+  "verdict": {
+    "statusEventCarriesError": false,
+    "awaitRethrows": true,
+    "awaitRepeatable": true,
+    "publicErrorGetterUsable": true,
+    "loggerCarriesErrorObject": true,
+    "conclusion": {
+      "statusEventAloneSufficient": false,
+      "awaitSufficient": true,
+      "adapterMustStore": false
+    }
+  }
+}

@@ -34,11 +34,17 @@
 
 | | Hikari | Cordis |
 |---|---|---|
-| 插件 setup 内 `await emit` 抛错 | `loadPlugin` 把错误**抛给调用方**（`Runtime.#activate` → `#failActivation`） | fiber 置 **`FAILED`（state=3）**，`fiber.error` 为 `null`，**不抛给 `root.plugin()` 的调用方** |
+| 插件 setup 内 `await emit` 抛错 | `loadPlugin` **不抛给调用方**：`#activate` 的 catch 进 `#failActivation`，状态记 `failed`，错误由 `getPluginError()` 读（`src/runtime/runtime.ts:120-157`） | fiber 置 **`FAILED`（state=3）**，`fiber.error` 为 `null`（私有字段 `_error` 持有原错误），**不抛给 `root.plugin()` 的调用方** |
 
 实测：`pluginSetupFailure = { fiberState: 3, fiberError: null, threwToCaller: false }`。`FiberState` 枚举见 `cordis/lib/types/fiber.d.ts:67-72`（`PENDING=0, ACTIVE=2, FAILED=3, DISPOSED=4`）。
 
-这是**本次唯一一处行为差异**：Cordis 把失败放在 fiber 状态里，Hikari 把失败抛给装载者。两侧都能观察到失败，但**观察方式不同**——上层若依赖 `await loadPlugin()` 的异常做回滚，搬到 Cordis 下必须改成轮询 fiber 状态或监听 `internal/status`。
+> **2026-10 更正（PoC-03 实测）**：本节原文写的是「Hikari 把失败抛给装载者」，这是**错的**。
+>
+> 实测（`../poc-03-contract-layer/rollback.md`、`rollback.json`）：插件 setup 抛错时 Hikari 的 `loadPlugin()` **正常返回、不抛**，状态记 `failed`，原错误对象由 `getPluginError(pluginId)` 返回——`#failActivation`（`src/runtime/runtime.ts:145-157`）只是把错误记进 `record.error` 并 `scope.dispose()`，没有 rethrow。
+>
+> 所以两侧在「是否抛给调用方」上其实**一致**：都不抛。真正的差异在**读取通道**——Hikari 有同步的 `getPluginError(id)`；Cordis 的 `fiber._error` 是私有字段，公开接口里 `fiber.await()` 会 rethrow 原错误（`cordis/lib/index.js:1396-1402`），而 `internal/status` 事件只带 `(fiber, oldState)`、不带错误对象（`lib/index.js:1298`）。
+>
+> 这一处更正来自 PoC-03 的 s1-error-channel 与 s5-rollback，原文的错误在于**当时没有实测失败路径**，只读了 `#activate` 的调用链就推断「错误会被抛上去」。
 
 ## 三条必须一起读的限定
 

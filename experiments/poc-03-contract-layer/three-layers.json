@@ -1,0 +1,147 @@
+{
+  "environment": {
+    "node": "v24.15.0",
+    "cordis": "4.0.5",
+    "dsh": "0.2.1-rc.2"
+  },
+  "scenes": {
+    "definition": {
+      "title": "定义验证失败（id 为空白）",
+      "hikari": {
+        "path": "同步/异步抛出",
+        "thrown": {
+          "isError": true,
+          "ctor": "Error",
+          "name": "Error",
+          "message": "Plugin id must not be empty.",
+          "layer": null,
+          "originalName": null,
+          "marker": null
+        },
+        "returnedState": null,
+        "recordedState": null,
+        "recordedError": null
+      },
+      "bareCordis": {
+        "path": "未抛出",
+        "thrown": null,
+        "returnedState": 2,
+        "externalRecordedState": "n/a（宿主无 getPluginState）",
+        "externalRecordedError": "n/a（宿主无 getPluginError）"
+      },
+      "contractLayer": {
+        "path": "同步/异步抛出",
+        "thrown": {
+          "isError": true,
+          "ctor": "ContractLayerError",
+          "name": "ContractLayerError",
+          "message": "Plugin id must not be empty.",
+          "layer": "definition",
+          "originalName": "Error",
+          "marker": null
+        },
+        "returnedState": null,
+        "recordedState": null,
+        "recordedLayer": null,
+        "recordedError": null
+      }
+    },
+    "config": {
+      "title": "配置解析失败（parse 抛 BoomConfig）",
+      "hikari": {
+        "path": "同步/异步抛出",
+        "thrown": {
+          "isError": true,
+          "ctor": "BoomConfig",
+          "name": "BoomConfig",
+          "message": "config rejected on purpose",
+          "layer": null,
+          "originalName": null,
+          "marker": "poc03-config"
+        },
+        "returnedState": null,
+        "recordedState": null,
+        "recordedError": null
+      },
+      "bareCordis": {
+        "path": "未抛出",
+        "thrown": null,
+        "returnedState": 2,
+        "externalRecordedState": "n/a（宿主无 getPluginState）",
+        "externalRecordedError": "n/a（宿主无 getPluginError）"
+      },
+      "contractLayer": {
+        "path": "同步/异步抛出",
+        "thrown": {
+          "isError": true,
+          "ctor": "ContractLayerError",
+          "name": "ContractLayerError",
+          "message": "config rejected on purpose",
+          "layer": "config",
+          "originalName": "BoomConfig",
+          "marker": "poc03-config"
+        },
+        "returnedState": null,
+        "recordedState": null,
+        "recordedLayer": null,
+        "recordedError": null
+      }
+    },
+    "setup": {
+      "title": "setup 失败（provide 之后抛 BoomSetup）",
+      "hikari": {
+        "path": "返回状态",
+        "thrown": null,
+        "returnedState": "failed",
+        "recordedState": "failed",
+        "recordedError": {
+          "isError": true,
+          "ctor": "BoomSetup",
+          "name": "BoomSetup",
+          "message": "setup exploded on purpose",
+          "layer": null,
+          "originalName": null,
+          "marker": "poc03-setup"
+        }
+      },
+      "bareCordis": {
+        "path": "抛出",
+        "thrown": {
+          "isError": true,
+          "ctor": "BoomSetup",
+          "name": "BoomSetup",
+          "message": "setup exploded on purpose",
+          "layer": null,
+          "originalName": null,
+          "marker": "poc03-setup"
+        },
+        "returnedState": 3,
+        "externalRecordedState": "n/a（宿主无 getPluginState）",
+        "externalRecordedError": "n/a（宿主无 getPluginError）"
+      },
+      "contractLayer": {
+        "path": "返回状态",
+        "thrown": null,
+        "returnedState": "failed",
+        "recordedState": "failed",
+        "recordedLayer": "setup",
+        "recordedError": {
+          "isError": true,
+          "ctor": "BoomSetup",
+          "name": "BoomSetup",
+          "message": "setup exploded on purpose",
+          "layer": null,
+          "originalName": null,
+          "marker": "poc03-setup"
+        }
+      }
+    }
+  },
+  "verdict": {
+    "hikariThreeLayersDistinguishable": true,
+    "bareCordisHasNoDefinitionOrConfigCheck": true,
+    "bareCordisSetupFailureIsThrowOnly": true,
+    "contractLayerThreeLayersDistinguishable": true,
+    "contractLayerKeepsOriginalObject": true
+  }
+}

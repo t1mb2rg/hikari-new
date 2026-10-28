@@ -1,0 +1,83 @@
+{
+  "environment": {
+    "node": "v24.15.0",
+    "cordis": "4.0.5",
+    "dsh": "0.2.1-rc.2"
+  },
+  "hikari": {
+    "failingThrewToCaller": null,
+    "failingState": "failed",
+    "failingError": {
+      "name": "BoomSetup",
+      "message": "rollback probe: setup failed on purpose",
+      "isSameInstanceClass": true,
+      "marker": "rollback-marker-42"
+    },
+    "serviceStillResolvable": false,
+    "subscriberCallsAfterFailure": 0,
+    "unloadThrew": null,
+    "reloadState": "active",
+    "reloadThrew": null
+  },
+  "contractLayer": {
+    "failingThrewToCaller": null,
+    "failingState": "failed",
+    "failingLayer": "setup",
+    "failingError": {
+      "name": "BoomSetup",
+      "message": "rollback probe: setup failed on purpose",
+      "isSameInstanceClass": true,
+      "marker": "rollback-marker-42"
+    },
+    "serviceStillResolvable": false,
+    "subscriberCallsAfterFailure": 0,
+    "unloadThrew": null,
+    "reloadState": "active",
+    "reloadThrew": null,
+    "inspect": {
+      "records": [
+        {
+          "id": "poc03.rollback.emitter",
+          "state": "active",
+          "hasError": false,
+          "provided": []
+        },
+        {
+          "id": "poc03.rollback.probe",
+          "state": "waiting",
+          "hasError": false,
+          "provided": []
+        },
+        {
+          "id": "poc03.rollback.failing",
+          "state": "active",
+          "hasError": false,
+          "provided": [
+            "poc03.rollback.service@1"
+          ]
+        }
+      ],
+      "providedBy": [
+        [
+          "poc03.rollback.service@1",
+          "poc03.rollback.failing"
+        ]
+      ]
+    }
+  },
+  "verdict": {
+    "hikari": {
+      "errorObservable": true,
+      "serviceReleased": true,
+      "subscriberReleased": true,
+      "reloadClean": true
+    },
+    "contractLayer": {
+      "errorObservable": true,
+      "serviceReleased": true,
+      "subscriberReleased": true,
+      "reloadClean": true
+    },
+    "allHeld": true
+  }
+}
