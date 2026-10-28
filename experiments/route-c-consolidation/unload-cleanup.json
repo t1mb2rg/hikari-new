@@ -1,0 +1,56 @@
+{
+  "at": "2026-10-28T10:41:15.789Z",
+  "versions": {
+    "cordis": "4.0.5",
+    "dsh": "0.2.1-rc.2",
+    "node": "v24.15.0"
+  },
+  "scenario1_explicitUnload": {
+    "hikari": {
+      "providerCleanups": 1,
+      "timerKeptRunning": false,
+      "serviceStillResolvable": false,
+      "stateAfterUnload": null,
+      "errorReadable": null,
+      "stateOnLoad": "active"
+    },
+    "cordis": {
+      "providerCleanups": 1,
+      "timerKeptRunning": false,
+      "serviceStillResolvable": false,
+      "fiberState": 4,
+      "errorReadable": null
+    },
+    "layer": {
+      "providerCleanups": 1,
+      "timerKeptRunning": false,
+      "serviceStillResolvable": false,
+      "stateAfterUnload": null,
+      "errorReadable": null,
+      "stateOnLoad": "active"
+    }
+  },
+  "scenario2_cascadeDeactivate": {
+    "hikari": {
+      "dependentCleanups": 1,
+      "dependentState": "failed",
+      "dependentErrorReadable": {
+        "name": "AggregateError",
+        "message": "One or more plugin resources failed to clean up.",
+        "marker": null
+      },
+      "dependentOnLoad": "active"
+    },
+    "cordis": {
+      "dependentCleanups": 1,
+      "dependentFiberState": 0,
+      "dependentErrorReadable": null
+    },
+    "layer": {
+      "dependentCleanups": 1,
+      "dependentState": "waiting",
+      "dependentErrorReadable": null,
+      "dependentOnLoad": "active"
+    }
+  }
+}
