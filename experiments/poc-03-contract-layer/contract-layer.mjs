@@ -106,8 +106,19 @@ export function createContractLayer(app, options = {}) {
     if (record) {
       record.state = 'failed';
       record.layer = layer;
-      // 转存，不重建：调用方拿到的就是宿主抛出的那个对象
-      record.error = error;
+      // 转存，不重建：调用方拿到的就是宿主抛出的那个对象。
+      // 若 cleanup 也失败，按 Hikari 的形状合成（runtime.ts:145-157）：
+      //   AggregateError([setupError, AggregateError(cleanupErrors, 'One or more plugin resources failed to clean up.')],
+      //                  'Plugin <id> failed during setup and cleanup.')
+      record.error = record.cleanupErrors.length
+        ? new AggregateError(
+            [
+              error,
+              new AggregateError(record.cleanupErrors, 'One or more plugin resources failed to clean up.'),
+            ],
+            `Plugin ${pluginId} failed during setup and cleanup.`,
+          )
+        : error;
     }
     return error;
   };
@@ -155,7 +166,14 @@ export function createContractLayer(app, options = {}) {
       },
       defer(cleanup) {
         fiberCtx.effect(() => async () => {
-          await cleanup();
+          try {
+            await cleanup();
+          } catch (error) {
+            // Cordis 会吃掉 effect 清理错误；这里先记下来，由失败路径按 Hikari 的形状合成。
+            const record = records.get(definition.id);
+            record?.cleanupErrors.push(error);
+            throw error;
+          }
         });
       },
     };
@@ -183,8 +201,27 @@ export function createContractLayer(app, options = {}) {
     return plugin;
   };
 
+  /**
+   * 按宿主的真实注册表校准簿记。
+   *
+   * 为什么需要它：Cordis 的 inject 在提供方消失时会自行停用下游并把它的 provide 撤掉，
+   * 这个过程不经过本层的 unloadPlugin，所以 providedBy / record.provided 会留下属主已死的条目。
+   * 不校准的后果不是显示问题：下一个想提供同一契约的插件会被「already provided by <已停用的插件>」误拒。
+   */
+  const reconcile = () => {
+    for (const [key, owner] of providedBy) {
+      if (app.get(key, false) === undefined) providedBy.delete(key);
+    }
+    for (const record of records.values()) {
+      for (const key of record.provided) {
+        if (!providedBy.has(key)) record.provided.delete(key);
+      }
+    }
+  };
+
   return {
     async loadPlugin(definition, configInput) {
+      reconcile();
       // —— 层 1：定义验证。同步抛，不建 record。
       try {
         validateDefinition(definition);
@@ -212,6 +249,7 @@ export function createContractLayer(app, options = {}) {
         error: undefined,
         layer: undefined,
         provided: new Set(),
+        cleanupErrors: [],
       };
       records.set(definition.id, record);
 
@@ -222,6 +260,8 @@ export function createContractLayer(app, options = {}) {
       try {
         await fiber.await();
       } catch (error) {
+        // Cordis 在失败后自行清理 effect；给它一轮宏任务，cleanup 的错误才进得来。
+        await new Promise((r) => setTimeout(r, 0));
         fail(definition.id, 'setup', error);
         return 'failed';
       }
@@ -245,8 +285,11 @@ export function createContractLayer(app, options = {}) {
     getPluginState(pluginId) {
       const record = records.get(pluginId);
       if (!record) return undefined;
-      if (record.state === 'active' || record.state === 'failed') return record.state;
-      return CORDIS_STATE[record.fiber?.state] ?? record.state;
+      // 'failed' 是装载结束时就定的结论，不会被级联改写；
+      // 其余状态必须实时问宿主——级联停用（inject 失效）不会经过本层，缓存的 'active' 会失真。
+      if (record.state === 'failed') return 'failed';
+      if (!record.fiber) return record.state;
+      return CORDIS_STATE[record.fiber.state] ?? 'unknown';
     },
 
     /** 转存的原对象：类型、instanceof、自定义字段、堆栈全部保留。 */
@@ -258,12 +301,15 @@ export function createContractLayer(app, options = {}) {
       return records.get(pluginId)?.layer;
     },
 
-    /** 供验证脚本观察内部登记，不是产品 API。 */
+    /** 供验证脚本观察内部登记，不是产品 API。会先按宿主真实注册表校准一次。 */
     inspect() {
+      reconcile();
       return {
         records: [...records.entries()].map(([id, r]) => ({
           id,
           state: r.state,
+          fiberState: r.fiber?.state,
+          fiberStateName: CORDIS_STATE[r.fiber?.state],
           layer: r.layer,
           hasError: r.error !== undefined,
           provided: [...r.provided],

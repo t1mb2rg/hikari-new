@@ -1,0 +1,65 @@
+{
+  "generatedAt": "2026-10-28T10:21:01.707Z",
+  "node": "v24.15.0",
+  "event": "desktop-session-awareness-loop.assessed@1",
+  "cases": {
+    "E1_waits": {
+      "emitGapsMs": [
+        425
+      ],
+      "waitsForSubscribers": true,
+      "note": "订阅者各睡 300 ms、发布间隔 100 ms；若等待，间隔应 ≥ 400 ms"
+    },
+    "E2_concurrent": {
+      "emits": [
+        {
+          "emitIndex": 1,
+          "subscribers": [
+            "e1.sub-a",
+            "e1.sub-b"
+          ],
+          "startDeltaMs": 0
+        },
+        {
+          "emitIndex": 2,
+          "subscribers": [
+            "e1.sub-a",
+            "e1.sub-b"
+          ],
+          "startDeltaMs": 0
+        }
+      ],
+      "concurrent": true
+    },
+    "E3_aggregated": {
+      "thrown": {
+        "name": "AggregateError",
+        "message": "Event desktop-session-awareness-loop.assessed@1 had failing subscribers.",
+        "isAggregateError": true,
+        "errors": [
+          "boom-a",
+          "boom-b"
+        ]
+      },
+      "aggregated": true,
+      "hasMessage": true
+    },
+    "E4_unsubscribed": {
+      "callsAfterFirstEmit": 1,
+      "callsAfterUnload": 1,
+      "unsubscribed": true
+    },
+    "E5_reload": {
+      "callsAfterReload": 2,
+      "receivedExactlyOnce": true,
+      "reloaded": true
+    }
+  },
+  "verdict": {
+    "E1": "PASS",
+    "E2": "PASS",
+    "E3": "PASS",
+    "E4": "PASS",
+    "E5": "PASS"
+  }
+}

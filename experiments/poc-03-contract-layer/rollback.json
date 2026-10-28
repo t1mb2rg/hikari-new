@@ -39,18 +39,24 @@
         {
           "id": "poc03.rollback.emitter",
           "state": "active",
+          "fiberState": 2,
+          "fiberStateName": "active",
           "hasError": false,
           "provided": []
         },
         {
           "id": "poc03.rollback.probe",
           "state": "waiting",
+          "fiberState": 2,
+          "fiberStateName": "active",
           "hasError": false,
           "provided": []
         },
         {
           "id": "poc03.rollback.failing",
           "state": "active",
+          "fiberState": 2,
+          "fiberStateName": "active",
           "hasError": false,
           "provided": [
             "poc03.rollback.service@1"

@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-10-28T10:21:00.291Z",
+  "node": "v24.15.0",
+  "scenarios": [
+    {
+      "name": "S1 PENDING 装载",
+      "question": "依赖未满足时 loadPlugin 是否立即返回",
+      "returnedState": "waiting",
+      "elapsedMs": 0,
+      "stateAfterSettle": "waiting",
+      "setupCount": 0,
+      "tickCountWhilePending": 0,
+      "host": {
+        "up": false,
+        "down": false
+      }
+    },
+    {
+      "name": "S2 迟到的提供方",
+      "question": "提供方异步就绪后，先装载的依赖方是否自动激活",
+      "stateA": "active",
+      "stateBWhenLoaded": "waiting",
+      "loadBElapsedMs": 1,
+      "stateBRightAfterLoad": "waiting",
+      "stateBAfterProviderReady": "active",
+      "bSetupCount": 1,
+      "bTicksBeforeActivation": 8,
+      "host": {
+        "up": true,
+        "down": true
+      }
+    },
+    {
+      "name": "S3 provider 在 setup 中途消失",
+      "question": "下游异步 setup 期间提供方卸载，激活/清理/最终状态是否正确",
+      "stateBDuringSetup": "loading",
+      "stateBRightAfterProviderGone": "waiting",
+      "loadBReturned": "waiting",
+      "stateBFinal": "waiting",
+      "bSetupCompleted": true,
+      "bCleanupCount": 1,
+      "bTimersLeft": 0,
+      "bTicksAfterAbort": 10,
+      "bSubscriberCallsFromOneEmit": 0,
+      "host": {
+        "up": false,
+        "down": false
+      },
+      "elapsedMs": 719
+    }
+  ]
+}

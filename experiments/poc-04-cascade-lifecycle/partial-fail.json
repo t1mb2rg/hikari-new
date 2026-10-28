@@ -1,0 +1,124 @@
+{
+  "generatedAt": "2026-10-28T10:20:54.845Z",
+  "node": "v24.15.0",
+  "scenes": [
+    {
+      "side": "hikari",
+      "scene": "F1 setup 部分初始化后抛错",
+      "returnedState": "failed",
+      "errorReadable": {
+        "name": "BoomSetup",
+        "message": "setup failed after partial init",
+        "marker": "setup-marker",
+        "isAggregateError": false
+      },
+      "cleanupRan": 1,
+      "serviceStillRegistered": false,
+      "consumerProbeState": "waiting",
+      "subscriberStillWired": false
+    },
+    {
+      "side": "hikari",
+      "scene": "F2 setup 抛错 + cleanup 也抛错",
+      "returnedState": "failed",
+      "errorReadable": {
+        "name": "AggregateError",
+        "message": "Plugin hikari.partial failed during setup and cleanup.",
+        "isAggregateError": true,
+        "errors": [
+          {
+            "name": "BoomSetup",
+            "message": "setup failed after partial init",
+            "marker": "setup-marker",
+            "isAggregateError": false
+          },
+          {
+            "name": "AggregateError",
+            "message": "One or more plugin resources failed to clean up.",
+            "isAggregateError": true,
+            "errors": [
+              {
+                "name": "BoomCleanup",
+                "message": "cleanup failed too",
+                "marker": "cleanup-marker",
+                "isAggregateError": false
+              }
+            ]
+          }
+        ]
+      },
+      "cleanupRan": 1,
+      "serviceStillRegistered": false,
+      "consumerProbeState": "waiting",
+      "subscriberStillWired": false
+    },
+    {
+      "side": "cordis+layer",
+      "scene": "F1 setup 部分初始化后抛错",
+      "returnedState": "failed",
+      "errorReadable": {
+        "name": "BoomSetup",
+        "message": "setup failed after partial init",
+        "marker": "setup-marker",
+        "isAggregateError": false
+      },
+      "cleanupRan": 1,
+      "serviceStillRegistered": false,
+      "bookkeepingLeftover": [],
+      "subscriberStillWired": false,
+      "layerRecord": {
+        "id": "cordis.partial",
+        "state": "failed",
+        "fiberState": 3,
+        "fiberStateName": "failed",
+        "layer": "setup",
+        "hasError": true,
+        "provided": []
+      }
+    },
+    {
+      "side": "cordis+layer",
+      "scene": "F2 setup 抛错 + cleanup 也抛错",
+      "returnedState": "failed",
+      "errorReadable": {
+        "name": "AggregateError",
+        "message": "Plugin cordis.partial failed during setup and cleanup.",
+        "isAggregateError": true,
+        "errors": [
+          {
+            "name": "BoomSetup",
+            "message": "setup failed after partial init",
+            "marker": "setup-marker",
+            "isAggregateError": false
+          },
+          {
+            "name": "AggregateError",
+            "message": "One or more plugin resources failed to clean up.",
+            "isAggregateError": true,
+            "errors": [
+              {
+                "name": "BoomCleanup",
+                "message": "cleanup failed too",
+                "marker": "cleanup-marker",
+                "isAggregateError": false
+              }
+            ]
+          }
+        ]
+      },
+      "cleanupRan": 1,
+      "serviceStillRegistered": false,
+      "bookkeepingLeftover": [],
+      "subscriberStillWired": false,
+      "layerRecord": {
+        "id": "cordis.partial",
+        "state": "failed",
+        "fiberState": 3,
+        "fiberStateName": "failed",
+        "layer": "setup",
+        "hasError": true,
+        "provided": []
+      }
+    }
+  ]
+}

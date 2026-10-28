@@ -1,0 +1,585 @@
+{
+  "generatedAt": "2026-10-28T10:21:00.230Z",
+  "node": "v24.15.0",
+  "cordis": "4.0.5",
+  "tickMs": 20,
+  "contracts": {
+    "foreground": "foreground.current@1",
+    "world": "desktop-session-world.current@1",
+    "awareness": "desktop-session-awareness.current@1",
+    "event": "desktop-session-awareness-loop.assessed@1"
+  },
+  "timeline": [
+    {
+      "label": "load A",
+      "at": "2026-10-28T10:20:59.095Z",
+      "layerStates": {
+        "poc04.a": "active"
+      },
+      "layerProvidedBy": {
+        "foreground.current@1": "poc04.a"
+      },
+      "hostServices": {
+        "foreground.current@1": true,
+        "desktop-session-world.current@1": false,
+        "desktop-session-awareness.current@1": false
+      },
+      "fiberStates": {
+        "poc04.a": "active"
+      },
+      "rawFiberStates": {
+        "poc04.a": "2:active"
+      },
+      "obs": {
+        "A": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 4,
+          "subscriberCalls": 0,
+          "timers": 1
+        },
+        "B": {
+          "setupCount": 0,
+          "cleanupCount": 0,
+          "tickCount": 0,
+          "subscriberCalls": 0,
+          "timers": 0
+        },
+        "C": {
+          "setupCount": 0,
+          "cleanupCount": 0,
+          "tickCount": 0,
+          "subscriberCalls": 0,
+          "timers": 0
+        },
+        "D": {
+          "setupCount": 0,
+          "cleanupCount": 0,
+          "tickCount": 0,
+          "subscriberCalls": 0,
+          "timers": 0
+        }
+      },
+      "returned": "active"
+    },
+    {
+      "label": "load B",
+      "at": "2026-10-28T10:20:59.219Z",
+      "layerStates": {
+        "poc04.a": "active",
+        "poc04.b": "active"
+      },
+      "layerProvidedBy": {
+        "foreground.current@1": "poc04.a",
+        "desktop-session-world.current@1": "poc04.b"
+      },
+      "hostServices": {
+        "foreground.current@1": true,
+        "desktop-session-world.current@1": true,
+        "desktop-session-awareness.current@1": false
+      },
+      "fiberStates": {
+        "poc04.a": "active",
+        "poc04.b": "active"
+      },
+      "rawFiberStates": {
+        "poc04.a": "2:active",
+        "poc04.b": "2:active"
+      },
+      "obs": {
+        "A": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 8,
+          "subscriberCalls": 0,
+          "timers": 1
+        },
+        "B": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 4,
+          "subscriberCalls": 0,
+          "timers": 1
+        },
+        "C": {
+          "setupCount": 0,
+          "cleanupCount": 0,
+          "tickCount": 0,
+          "subscriberCalls": 0,
+          "timers": 0
+        },
+        "D": {
+          "setupCount": 0,
+          "cleanupCount": 0,
+          "tickCount": 0,
+          "subscriberCalls": 0,
+          "timers": 0
+        }
+      },
+      "returned": "active"
+    },
+    {
+      "label": "load C",
+      "at": "2026-10-28T10:20:59.343Z",
+      "layerStates": {
+        "poc04.a": "active",
+        "poc04.b": "active",
+        "poc04.c": "active"
+      },
+      "layerProvidedBy": {
+        "foreground.current@1": "poc04.a",
+        "desktop-session-world.current@1": "poc04.b",
+        "desktop-session-awareness.current@1": "poc04.c"
+      },
+      "hostServices": {
+        "foreground.current@1": true,
+        "desktop-session-world.current@1": true,
+        "desktop-session-awareness.current@1": true
+      },
+      "fiberStates": {
+        "poc04.a": "active",
+        "poc04.b": "active",
+        "poc04.c": "active"
+      },
+      "rawFiberStates": {
+        "poc04.a": "2:active",
+        "poc04.b": "2:active",
+        "poc04.c": "2:active"
+      },
+      "obs": {
+        "A": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 12,
+          "subscriberCalls": 0,
+          "timers": 1
+        },
+        "B": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 8,
+          "subscriberCalls": 0,
+          "timers": 1
+        },
+        "C": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 4,
+          "subscriberCalls": 0,
+          "timers": 1
+        },
+        "D": {
+          "setupCount": 0,
+          "cleanupCount": 0,
+          "tickCount": 0,
+          "subscriberCalls": 0,
+          "timers": 0
+        }
+      },
+      "returned": "active"
+    },
+    {
+      "label": "load D",
+      "at": "2026-10-28T10:20:59.468Z",
+      "layerStates": {
+        "poc04.a": "active",
+        "poc04.b": "active",
+        "poc04.c": "active",
+        "poc04.d": "active"
+      },
+      "layerProvidedBy": {
+        "foreground.current@1": "poc04.a",
+        "desktop-session-world.current@1": "poc04.b",
+        "desktop-session-awareness.current@1": "poc04.c"
+      },
+      "hostServices": {
+        "foreground.current@1": true,
+        "desktop-session-world.current@1": true,
+        "desktop-session-awareness.current@1": true
+      },
+      "fiberStates": {
+        "poc04.a": "active",
+        "poc04.b": "active",
+        "poc04.c": "active",
+        "poc04.d": "active"
+      },
+      "rawFiberStates": {
+        "poc04.a": "2:active",
+        "poc04.b": "2:active",
+        "poc04.c": "2:active",
+        "poc04.d": "2:active"
+      },
+      "obs": {
+        "A": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 16,
+          "subscriberCalls": 0,
+          "timers": 1
+        },
+        "B": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 12,
+          "subscriberCalls": 0,
+          "timers": 1
+        },
+        "C": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 8,
+          "subscriberCalls": 0,
+          "timers": 1
+        },
+        "D": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 4,
+          "subscriberCalls": 0,
+          "timers": 1
+        }
+      },
+      "returned": "active"
+    },
+    {
+      "label": "all loaded + emit",
+      "at": "2026-10-28T10:20:59.592Z",
+      "layerStates": {
+        "poc04.a": "active",
+        "poc04.b": "active",
+        "poc04.c": "active",
+        "poc04.d": "active"
+      },
+      "layerProvidedBy": {
+        "foreground.current@1": "poc04.a",
+        "desktop-session-world.current@1": "poc04.b",
+        "desktop-session-awareness.current@1": "poc04.c"
+      },
+      "hostServices": {
+        "foreground.current@1": true,
+        "desktop-session-world.current@1": true,
+        "desktop-session-awareness.current@1": true
+      },
+      "fiberStates": {
+        "poc04.a": "active",
+        "poc04.b": "active",
+        "poc04.c": "active",
+        "poc04.d": "active"
+      },
+      "rawFiberStates": {
+        "poc04.a": "2:active",
+        "poc04.b": "2:active",
+        "poc04.c": "2:active",
+        "poc04.d": "2:active"
+      },
+      "obs": {
+        "A": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 20,
+          "subscriberCalls": 1,
+          "timers": 1
+        },
+        "B": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 16,
+          "subscriberCalls": 1,
+          "timers": 1
+        },
+        "C": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 12,
+          "subscriberCalls": 1,
+          "timers": 1
+        },
+        "D": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 8,
+          "subscriberCalls": 1,
+          "timers": 1
+        }
+      }
+    },
+    {
+      "label": "unload A",
+      "at": "2026-10-28T10:20:59.720Z",
+      "layerStates": {
+        "poc04.b": "active",
+        "poc04.c": "active",
+        "poc04.d": "active"
+      },
+      "layerProvidedBy": {},
+      "hostServices": {
+        "foreground.current@1": false,
+        "desktop-session-world.current@1": false,
+        "desktop-session-awareness.current@1": false
+      },
+      "fiberStates": {
+        "poc04.b": "waiting",
+        "poc04.c": "waiting",
+        "poc04.d": "active"
+      },
+      "rawFiberStates": {
+        "poc04.b": "0:waiting",
+        "poc04.c": "0:waiting",
+        "poc04.d": "2:active"
+      },
+      "obs": {
+        "A": {
+          "setupCount": 1,
+          "cleanupCount": 1,
+          "tickCount": 20,
+          "subscriberCalls": 1,
+          "timers": 0
+        },
+        "B": {
+          "setupCount": 1,
+          "cleanupCount": 1,
+          "tickCount": 16,
+          "subscriberCalls": 1,
+          "timers": 0
+        },
+        "C": {
+          "setupCount": 1,
+          "cleanupCount": 1,
+          "tickCount": 12,
+          "subscriberCalls": 1,
+          "timers": 0
+        },
+        "D": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 12,
+          "subscriberCalls": 1,
+          "timers": 1
+        }
+      }
+    },
+    {
+      "label": "after unload A + emit",
+      "at": "2026-10-28T10:20:59.845Z",
+      "layerStates": {
+        "poc04.b": "active",
+        "poc04.c": "active",
+        "poc04.d": "active"
+      },
+      "layerProvidedBy": {},
+      "hostServices": {
+        "foreground.current@1": false,
+        "desktop-session-world.current@1": false,
+        "desktop-session-awareness.current@1": false
+      },
+      "fiberStates": {
+        "poc04.b": "waiting",
+        "poc04.c": "waiting",
+        "poc04.d": "active"
+      },
+      "rawFiberStates": {
+        "poc04.b": "0:waiting",
+        "poc04.c": "0:waiting",
+        "poc04.d": "2:active"
+      },
+      "obs": {
+        "A": {
+          "setupCount": 1,
+          "cleanupCount": 1,
+          "tickCount": 20,
+          "subscriberCalls": 1,
+          "timers": 0
+        },
+        "B": {
+          "setupCount": 1,
+          "cleanupCount": 1,
+          "tickCount": 16,
+          "subscriberCalls": 1,
+          "timers": 0
+        },
+        "C": {
+          "setupCount": 1,
+          "cleanupCount": 1,
+          "tickCount": 12,
+          "subscriberCalls": 1,
+          "timers": 0
+        },
+        "D": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 16,
+          "subscriberCalls": 2,
+          "timers": 1
+        }
+      }
+    },
+    {
+      "label": "reload A",
+      "at": "2026-10-28T10:20:59.972Z",
+      "layerStates": {
+        "poc04.b": "active",
+        "poc04.c": "active",
+        "poc04.d": "active",
+        "poc04.a": "active"
+      },
+      "layerProvidedBy": {
+        "foreground.current@1": "poc04.a",
+        "desktop-session-world.current@1": "poc04.b",
+        "desktop-session-awareness.current@1": "poc04.c"
+      },
+      "hostServices": {
+        "foreground.current@1": true,
+        "desktop-session-world.current@1": true,
+        "desktop-session-awareness.current@1": true
+      },
+      "fiberStates": {
+        "poc04.b": "active",
+        "poc04.c": "active",
+        "poc04.d": "active",
+        "poc04.a": "active"
+      },
+      "rawFiberStates": {
+        "poc04.b": "2:active",
+        "poc04.c": "2:active",
+        "poc04.d": "2:active",
+        "poc04.a": "2:active"
+      },
+      "obs": {
+        "A": {
+          "setupCount": 2,
+          "cleanupCount": 1,
+          "tickCount": 24,
+          "subscriberCalls": 1,
+          "timers": 1
+        },
+        "B": {
+          "setupCount": 2,
+          "cleanupCount": 1,
+          "tickCount": 20,
+          "subscriberCalls": 1,
+          "timers": 1
+        },
+        "C": {
+          "setupCount": 2,
+          "cleanupCount": 1,
+          "tickCount": 16,
+          "subscriberCalls": 1,
+          "timers": 1
+        },
+        "D": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 20,
+          "subscriberCalls": 2,
+          "timers": 1
+        }
+      },
+      "returned": "active"
+    },
+    {
+      "label": "after reload A + emit",
+      "at": "2026-10-28T10:21:00.094Z",
+      "layerStates": {
+        "poc04.b": "active",
+        "poc04.c": "active",
+        "poc04.d": "active",
+        "poc04.a": "active"
+      },
+      "layerProvidedBy": {
+        "foreground.current@1": "poc04.a",
+        "desktop-session-world.current@1": "poc04.b",
+        "desktop-session-awareness.current@1": "poc04.c"
+      },
+      "hostServices": {
+        "foreground.current@1": true,
+        "desktop-session-world.current@1": true,
+        "desktop-session-awareness.current@1": true
+      },
+      "fiberStates": {
+        "poc04.b": "active",
+        "poc04.c": "active",
+        "poc04.d": "active",
+        "poc04.a": "active"
+      },
+      "rawFiberStates": {
+        "poc04.b": "2:active",
+        "poc04.c": "2:active",
+        "poc04.d": "2:active",
+        "poc04.a": "2:active"
+      },
+      "obs": {
+        "A": {
+          "setupCount": 2,
+          "cleanupCount": 1,
+          "tickCount": 28,
+          "subscriberCalls": 2,
+          "timers": 1
+        },
+        "B": {
+          "setupCount": 2,
+          "cleanupCount": 1,
+          "tickCount": 24,
+          "subscriberCalls": 2,
+          "timers": 1
+        },
+        "C": {
+          "setupCount": 2,
+          "cleanupCount": 1,
+          "tickCount": 20,
+          "subscriberCalls": 2,
+          "timers": 1
+        },
+        "D": {
+          "setupCount": 1,
+          "cleanupCount": 0,
+          "tickCount": 24,
+          "subscriberCalls": 3,
+          "timers": 1
+        }
+      }
+    },
+    {
+      "label": "unload all",
+      "at": "2026-10-28T10:21:00.230Z",
+      "layerStates": {},
+      "layerProvidedBy": {},
+      "hostServices": {
+        "foreground.current@1": false,
+        "desktop-session-world.current@1": false,
+        "desktop-session-awareness.current@1": false
+      },
+      "fiberStates": {},
+      "rawFiberStates": {},
+      "obs": {
+        "A": {
+          "setupCount": 2,
+          "cleanupCount": 2,
+          "tickCount": 28,
+          "subscriberCalls": 2,
+          "timers": 0
+        },
+        "B": {
+          "setupCount": 2,
+          "cleanupCount": 2,
+          "tickCount": 24,
+          "subscriberCalls": 2,
+          "timers": 0
+        },
+        "C": {
+          "setupCount": 2,
+          "cleanupCount": 2,
+          "tickCount": 20,
+          "subscriberCalls": 2,
+          "timers": 0
+        },
+        "D": {
+          "setupCount": 1,
+          "cleanupCount": 1,
+          "tickCount": 24,
+          "subscriberCalls": 3,
+          "timers": 0
+        }
+      }
+    }
+  ]
+}
