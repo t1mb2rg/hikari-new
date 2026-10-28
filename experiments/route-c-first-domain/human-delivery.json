@@ -1,0 +1,66 @@
+{
+  "frozenAt": "2026-10-28T10:59:42.937Z",
+  "rootDir": "C:\\Users\\29719\\AppData\\Local\\Temp\\poc-first-domain-delivery-lvl3nB",
+  "pipePath": "\\\\.\\pipe\\hikari-human-delivery-dd71bd33d825252f",
+  "serviceKey": "human-delivery.deliver@1",
+  "steps": {
+    "load": {
+      "state": "active",
+      "stateAfter": "active"
+    },
+    "noClient": {
+      "outcome": "unavailable"
+    },
+    "withClient": {
+      "outcome": "delivered"
+    },
+    "clientReceived": {
+      "closed": false,
+      "frameCount": 1,
+      "frames": [
+        "[\"Repository CI attention：t1mb2rg/hikari-new\",\"结论：failure\",\"观察时间：2026-10-28T12:00:00Z\"]"
+      ]
+    },
+    "framesMatchInput": true,
+    "secondClient": {
+      "gotData": false,
+      "closedByHost": true
+    },
+    "stalledWrite": {
+      "outcome": "failed",
+      "elapsedMs": 5013,
+      "lines": 60
+    },
+    "afterUnload": {
+      "state": "(无记录)",
+      "serviceResolvable": false,
+      "clientClosed": true,
+      "reconnect": {
+        "connected": false,
+        "code": "ENOENT",
+        "message": "connect ENOENT \\\\.\\pipe\\hikari-human-delivery-dd71bd33d825252f"
+      }
+    },
+    "reload": {
+      "state": "active",
+      "stateAfter": "active"
+    },
+    "reloadDeliver": {
+      "outcome": "delivered"
+    },
+    "reloadClientReceived": {
+      "closed": false,
+      "frameCount": 1,
+      "frames": [
+        "[\"重装之后的一行\"]"
+      ]
+    },
+    "teardown": {
+      "reconnect": {
+        "connected": false,
+        "code": "ENOENT",
+        "message": "connect ENOENT \\\\.\\pipe\\hikari-human-delivery-dd71bd33d825252f"
+      }
+    }
+  }
+}

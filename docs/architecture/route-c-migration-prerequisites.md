@@ -161,13 +161,23 @@ R2 与 R5 是宿主原生拦的，R1/R3/R4 是适配层补的约 20 行检查。
 
 ## §4 已知限定与不等价项
 
-### 4.1 同名不同版本并存 —— 不能等价保证
+### 4.1 同名不同版本并存 —— 编码层已隔离，真实多版本装载未覆盖
 
-Hikari 的 `serviceKey` 是 `id@version`，理论允许 `foo@1` 与 `foo@2` 并存；Cordis 是
-「一个服务名一个实例」。适配层的编码把版本编进名字（`foo_v1` / `foo_v2`）因此**当前
-可用**，但真实契约集 24 个 service **全部 version 1**，并存路径只有构造用例覆盖过。
+Hikari 的 `serviceKey` 是 `id@version`，允许 `foo@1` 与 `foo@2` 并存；Cordis 是「一个
+服务名一个实例」。适配层把完整的 `id@version` 编成宿主的服务名（`foo@1` 与 `foo@2`
+编成两个**不同的名字**），所以两个版本是两个不同的服务身份、互不覆盖。
 
-性质：这是**能力退化**，不是当前 bug（今天没有第二版本）。
+**版本隔离在适配层是被保留的，不是「只剩一个语义标签」。** 三条边界要分清：
+
+- **保留**：完整 `id@version` 是契约身份，单射可逆（PoC-03 §2 的证明与 38 键合并实测）。
+- **不做**：自动版本兼容协商。声明 `foo@2` 的插件不会因为场内只有 `foo@1` 而被满足，
+  也不存在「相近版本自动匹配 / 升级 / 降级」。
+- **未覆盖**：真实多版本插件并发装载。24 个真实 service 全部 version 1，并存路径只有
+  构造用例（`experiments/poc-03-contract-layer/key-codec.mjs`）覆盖过。
+
+性质：这是一条**未验证的路径**，不是能力退化，也不是当前 bug（今天没有第二版本）。
+Human 2026-10-28 裁决：接受 Cordis 不原生理解版本号，但不接受丢失版本隔离；保留完整
+`id@version` 作为契约身份，不做自动版本协商，真实多版本场景继续列为未覆盖。
 
 ### 4.2 Event 无版本概念 —— 已在适配层补偿
 
@@ -193,8 +203,12 @@ Hikari 的 `serviceKey` 是 `id@version`，理论允许 `foo@1` 与 `foo@2` 并�
 
 所以「清理失败可观察」在 Hikari 里是**路径相关**的属性，不是全局契约。要等价，契约层
 必须补两件事：①级联停用路径上给 `failed` + 合成 `AggregateError`（**必须补**，属语义
-等价）；②显式卸载路径上是照抄 Hikari 的不一致，还是比它多保住一点——**这是设计判断，
-需要 Human 定**。
+等价）；②显式卸载路径上是照抄 Hikari 的不一致，还是比它多保住一点。
+
+**②已由 Human 2026-10-28 裁决**：显式卸载后**不增加历史错误转存**，沿用 Hikari 当前
+行为；级联停用时仍须保留失败结论与错误原因，这是 Hikari 原有的可观察语义。**不得为此
+建立第二套生命周期状态机**——Cordis fiber 仍是生命周期权威，适配层的失败记录只能是
+从宿主状态重算的派生量。
 
 ### 4.5 失败记录占位 —— 适配层新增的概念
 
@@ -220,12 +234,21 @@ PoC-02 的 P4 结论时要知道：那个适配层的资源回收行为是不可
    路径在 Cordis 下未验（适配层已实现 `layer='config'`，但没有真实插件跑过）。
 2. **带写入/Action 的插件**。`repository-change-executor` 的八个工具、`human-delivery`
    的投递路径，全部未在 Cordis 下装载过。
-3. **真实四层插件在级联下的表现**。p04 的级联是构造出来的形态——桌面感知那四层之间
-   没有 `requires` 链。
+3. ~~真实四层插件在级联下的表现~~ —— **已在 `experiments/route-c-first-domain/awareness-chain.md` 实测**。
+   本节原先写「桌面感知那四层之间没有 `requires` 链」，**这句话是错的**：链真实存在三段——
+   `src/desktop-session-world/plugin.ts:12-15` requires `foreground` + `input-activity`，
+   `src/desktop-session-awareness/plugin.ts:65-68` requires `desktop-session-world`，
+   `src/desktop-session-awareness-loop/plugin.ts:43-51` requires `desktop-session-awareness`。
+   实测：五层按上述顺序装载全部 `active`；卸掉最上游 `foreground.windows` 后，下游三层
+   全部 `waiting`、`assessed` 事件计数停止增长、与之无关的 `input-activity.windows` 不受
+   影响；重装后五层自行恢复 `active`，事件间隔未减半（无残留定时器或旧订阅）。
+   要区分两件事：**依赖链存在**（读源码即得）与**该生产链的级联卸载已被实测**（需要跑）。
 4. **多层（>3）与分叉依赖图**；同一插件被两个 ctx 重复装载；`dispose()` 异步完成与
    `unloadPlugin` 返回之间的竞态。
-5. **24 个 service 中只有 4 个（桌面感知四层）被真实载入过 Cordis**，其余 20 个只做了
-   契约键编码验证。
+5. **24 个 service 中已有 6 个被真实载入过 Cordis**（桌面感知五层 + `human-delivery`），
+   其余 18 个只做了契约键编码验证。`human-delivery` 是第一个带真实副作用的插件（真建
+   命名管道、真投递、真超时失败、真资源消失），`desktop-session-awareness-loop` 是第一个
+   跑通真实 `config.parse` 的插件。详见 `experiments/route-c-first-domain/`。
 6. **DSH 会话侧**：session 是重放而非可检索事实库。跨会话的持久认知 DSH 给不了，
    要另建——这块不属于 Runtime 兼容性，但属于迁移后的真实成本。
 

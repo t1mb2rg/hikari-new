@@ -1,0 +1,411 @@
+{
+  "summary": {
+    "frozenAt": "2026-10-28T10:56:43.250Z",
+    "repo": "G:\\work\\LAB\\code\\projects\\own\\hikari-new",
+    "cordisRoot": "G:/work/LAB/code/_poc/poc01",
+    "tmpRoot": "C:\\Users\\29719\\AppData\\Local\\Temp\\poc-first-domain-config-matrix",
+    "totalCases": 14,
+    "hikariRejects": 12,
+    "contractLayerRejects": 12,
+    "bareCordisRejects": 0,
+    "sameDecisionAll": true,
+    "sameMessageAll": true
+  },
+  "rows": [
+    {
+      "plugin": "loop",
+      "label": "delayMs=100（合法）",
+      "input": {
+        "delayMs": 100
+      },
+      "hikari": {
+        "rejected": false,
+        "state": "waiting"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 0
+      },
+      "contractLayer": {
+        "rejected": false,
+        "state": "waiting"
+      },
+      "agreement": {
+        "hikariRejects": false,
+        "contractLayerRejects": false,
+        "sameDecision": true,
+        "sameMessage": false,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "loop",
+      "label": "delayMs=0",
+      "input": {
+        "delayMs": 0
+      },
+      "hikari": {
+        "rejected": true,
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received 0.",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 0
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received 0.",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "loop",
+      "label": "delayMs=-1",
+      "input": {
+        "delayMs": -1
+      },
+      "hikari": {
+        "rejected": true,
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received -1.",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 0
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received -1.",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "loop",
+      "label": "delayMs=1.5",
+      "input": {
+        "delayMs": 1.5
+      },
+      "hikari": {
+        "rejected": true,
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received 1.5.",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 0
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received 1.5.",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "loop",
+      "label": "delayMs='100'",
+      "input": {
+        "delayMs": "100"
+      },
+      "hikari": {
+        "rejected": true,
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received 100.",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 0
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received 100.",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "loop",
+      "label": "delayMs 缺字段",
+      "input": {},
+      "hikari": {
+        "rejected": true,
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received undefined.",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 0
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received undefined.",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "loop",
+      "label": "input=null",
+      "input": null,
+      "hikari": {
+        "rejected": true,
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received undefined.",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 0
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received undefined.",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "loop",
+      "label": "delayMs=2147483648（超出定时器上界）",
+      "input": {
+        "delayMs": 2147483648
+      },
+      "hikari": {
+        "rejected": true,
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received 2147483648.",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 0
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "desktop-session-awareness-loop requires an integer delayMs between 1 and 2147483647, received 2147483648.",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "delivery",
+      "label": "rootDir=临时目录（合法）",
+      "input": {
+        "rootDir": "C:\\Users\\29719\\AppData\\Local\\Temp\\poc-first-domain-config-matrix"
+      },
+      "hikari": {
+        "rejected": false,
+        "state": "active"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 2
+      },
+      "contractLayer": {
+        "rejected": false,
+        "state": "active"
+      },
+      "agreement": {
+        "hikariRejects": false,
+        "contractLayerRejects": false,
+        "sameDecision": true,
+        "sameMessage": false,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "delivery",
+      "label": "rootDir=''",
+      "input": {
+        "rootDir": ""
+      },
+      "hikari": {
+        "rejected": true,
+        "message": "human-delivery requires a non-empty rootDir, received .",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 2
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "human-delivery requires a non-empty rootDir, received .",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "delivery",
+      "label": "rootDir='   '",
+      "input": {
+        "rootDir": "   "
+      },
+      "hikari": {
+        "rejected": true,
+        "message": "human-delivery requires a non-empty rootDir, received    .",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 2
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "human-delivery requires a non-empty rootDir, received    .",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "delivery",
+      "label": "rootDir=123",
+      "input": {
+        "rootDir": 123
+      },
+      "hikari": {
+        "rejected": true,
+        "message": "human-delivery requires a non-empty rootDir, received 123.",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 3,
+        "setupError": "The \"paths[0]\" argument must be of type string. Received type number (123)"
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "human-delivery requires a non-empty rootDir, received 123.",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "delivery",
+      "label": "rootDir 缺字段",
+      "input": {},
+      "hikari": {
+        "rejected": true,
+        "message": "human-delivery requires a non-empty rootDir, received undefined.",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 3,
+        "setupError": "The \"paths[0]\" argument must be of type string. Received undefined"
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "human-delivery requires a non-empty rootDir, received undefined.",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    },
+    {
+      "plugin": "delivery",
+      "label": "input=null",
+      "input": null,
+      "hikari": {
+        "rejected": true,
+        "message": "human-delivery requires a non-empty rootDir, received undefined.",
+        "kind": "Error"
+      },
+      "cordis": {
+        "rejectedAtLoad": false,
+        "fiberState": 3,
+        "setupError": "Cannot read properties of null (reading 'rootDir')"
+      },
+      "contractLayer": {
+        "rejected": true,
+        "layer": "config",
+        "message": "human-delivery requires a non-empty rootDir, received undefined.",
+        "kind": "ContractLayerError"
+      },
+      "agreement": {
+        "hikariRejects": true,
+        "contractLayerRejects": true,
+        "sameDecision": true,
+        "sameMessage": true,
+        "bareCordisRejects": false
+      }
+    }
+  ]
+}

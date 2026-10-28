@@ -1,0 +1,197 @@
+{
+  "frozenAt": "2026-10-28T10:58:21.473Z",
+  "delayMs": 100,
+  "phases": {
+    "load": {
+      "results": {
+        "foreground.windows": "active",
+        "input-activity.windows": "active",
+        "desktop-session-world": "active",
+        "desktop-session-awareness": "active",
+        "desktop-session-awareness-loop": "active"
+      },
+      "states": {
+        "foreground.windows": "active",
+        "input-activity.windows": "active",
+        "desktop-session-world": "active",
+        "desktop-session-awareness": "active",
+        "desktop-session-awareness-loop": "active"
+      },
+      "window": {
+        "label": "装载后稳定运行",
+        "ms": 2000,
+        "from": 0,
+        "to": 4,
+        "added": 4,
+        "gapsMs": [
+          538,
+          487,
+          499
+        ]
+      }
+    },
+    "cascade": {
+      "unloaded": "foreground.windows",
+      "settledAfterMs": 1,
+      "states": {
+        "foreground.windows": "(无记录)",
+        "input-activity.windows": "active",
+        "desktop-session-world": "waiting",
+        "desktop-session-awareness": "waiting",
+        "desktop-session-awareness-loop": "waiting"
+      },
+      "window": {
+        "label": "级联停用后",
+        "ms": 1200,
+        "from": 4,
+        "to": 4,
+        "added": 0,
+        "gapsMs": []
+      }
+    },
+    "reactivate": {
+      "reloaded": "foreground.windows",
+      "settledMs": 1,
+      "statesImmediately": {
+        "foreground.windows": "active",
+        "input-activity.windows": "active",
+        "desktop-session-world": "active",
+        "desktop-session-awareness": "loading",
+        "desktop-session-awareness-loop": "waiting"
+      },
+      "window": {
+        "label": "重新激活后",
+        "ms": 2000,
+        "from": 4,
+        "to": 8,
+        "added": 4,
+        "gapsMs": [
+          496,
+          503,
+          524
+        ]
+      },
+      "statesAfterWindow": {
+        "foreground.windows": "active",
+        "input-activity.windows": "active",
+        "desktop-session-world": "active",
+        "desktop-session-awareness": "active",
+        "desktop-session-awareness-loop": "active"
+      }
+    },
+    "teardown": {
+      "states": {
+        "foreground.windows": "(无记录)",
+        "input-activity.windows": "(无记录)",
+        "desktop-session-world": "(无记录)",
+        "desktop-session-awareness": "(无记录)",
+        "desktop-session-awareness-loop": "(无记录)"
+      },
+      "window": {
+        "label": "全部卸载后",
+        "ms": 600,
+        "from": 8,
+        "to": 8,
+        "added": 0,
+        "gapsMs": []
+      },
+      "records": {
+        "records": [],
+        "providedBy": []
+      }
+    }
+  },
+  "hikariSide": {
+    "load": {
+      "results": {
+        "foreground.windows": "active",
+        "input-activity.windows": "active",
+        "desktop-session-world": "active",
+        "desktop-session-awareness": "active",
+        "desktop-session-awareness-loop": "active"
+      },
+      "states": {
+        "foreground.windows": "active",
+        "input-activity.windows": "active",
+        "desktop-session-world": "active",
+        "desktop-session-awareness": "active",
+        "desktop-session-awareness-loop": "active"
+      },
+      "window": {
+        "from": 0,
+        "to": 4,
+        "added": 4,
+        "gapsMs": [
+          514,
+          521,
+          489
+        ]
+      }
+    },
+    "cascade": {
+      "settledAfterMs": 1,
+      "states": {
+        "foreground.windows": "(无记录)",
+        "input-activity.windows": "active",
+        "desktop-session-world": "waiting",
+        "desktop-session-awareness": "waiting",
+        "desktop-session-awareness-loop": "waiting"
+      },
+      "window": {
+        "from": 4,
+        "to": 4,
+        "added": 0,
+        "gapsMs": []
+      }
+    },
+    "reactivate": {
+      "statesImmediately": {
+        "foreground.windows": "active",
+        "input-activity.windows": "active",
+        "desktop-session-world": "active",
+        "desktop-session-awareness": "active",
+        "desktop-session-awareness-loop": "active"
+      },
+      "window": {
+        "from": 4,
+        "to": 8,
+        "added": 4,
+        "gapsMs": [
+          491,
+          516,
+          533
+        ]
+      },
+      "statesAfterWindow": {
+        "foreground.windows": "active",
+        "input-activity.windows": "active",
+        "desktop-session-world": "active",
+        "desktop-session-awareness": "active",
+        "desktop-session-awareness-loop": "active"
+      }
+    },
+    "teardown": {
+      "window": {
+        "from": 8,
+        "to": 8,
+        "added": 0,
+        "gapsMs": []
+      },
+      "states": {
+        "foreground.windows": "(无记录)",
+        "input-activity.windows": "active",
+        "desktop-session-world": "waiting",
+        "desktop-session-awareness": "waiting",
+        "desktop-session-awareness-loop": "waiting"
+      }
+    }
+  },
+  "payloadShape": [
+    "kind",
+    "previous",
+    "current",
+    "foreground",
+    "inputActivity",
+    "change"
+  ]
+}
