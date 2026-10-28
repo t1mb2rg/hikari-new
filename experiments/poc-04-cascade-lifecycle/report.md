@@ -150,6 +150,20 @@ node experiments/poc-04-cascade-lifecycle/partial-fail.mjs # B
 - **修法**：`defer` 包一层 try/catch，把 cleanup 抛出的错误记进 `record.cleanupErrors` 后再 rethrow；失败路径 `fail()` 若发现 `cleanupErrors` 非空，按 Hikari 的形状合成 `AggregateError([setupError, AggregateError(cleanupErrors, 'One or more plugin resources failed to clean up.')], 'Plugin <id> failed during setup and cleanup.')`。另外在 `await fiber.await()` 的 catch 里先让出一轮宏任务（`setTimeout 0`），因为 Cordis 是在失败后才跑 effect 清理，不留这个窗口就收集不到。
 - **回归**：F2 现在与 Hikari 逐字同形（只有插件 id 不同）。
 
+## §7.5 三条候选判断的判定
+
+三条判断在本轮开始前登记，推翻条件在跑之前写下。这里只做一件事：把已经落盘的读数对到推翻条件上，不重新解读。
+
+| 判断 | 推翻条件（跑之前写的） | 读数 | 判定 |
+| --- | --- | --- | --- |
+| 级联可重建 | 下游停在无法复活的状态，或重激活后仍收到旧订阅回调、旧计时器仍在跑，或 D 也受到影响 | `cascade.json`：卸 A 后 `b`/`c` 的 `getPluginState` 均为 `waiting`，两者 `cleanupCount` 0→1、计时器计数归 0、再 emit 时订阅回调不增；重装 A 后 `setupCount` 1→2、一次 emit 恰好 +1（残留订阅会是 +1→+2）、计时器从 0 重开；无关插件 `d` 的 tick 12→16→20→24 不受影响 | **支持** |
+| 等待不阻塞 | 装载一个 PENDING 插件时 `await` 在有限时间内不返回，或返回结果与实际状态不符 | `race.json`：对 PENDING fiber 调 `await()` 在 0–1 ms 内返回；`cordis/lib/index.js:1396-1402` 的 `inertia` 只表示「有生命周期工作在跑」，与依赖是否满足无关 | **支持** |
+| 级联簿记残留 | 级联停用后适配层簿记自动清空，与服务注册表的真实状态一致 | 本轮实测到残留确实存在，且是**两处**：① `getPluginState` 缓存短路，级联停用后仍报 `active`（宿主真实 `0:waiting`）；② `providedBy` 留着属主已死的条目，会让后来者被 `ServiceAlreadyProvidedError` 误拒。推翻条件是「自动清空」，实测没有清空 | **支持** |
+
+**第三条的读法**：登记它时的主张就是「级联停用绕过了 `unloadPlugin`，所以适配层自维护的簿记会残留」——本轮不但观察到残留，还观察到第二种（状态缓存）。后续的修复（§7.1、§7.2）是**在判断成立之后**才做的，不改变这项判定；修完再回看，`event-final.json` 五项 5/5、PoC-03 三个脚本判定未翻转，说明修得对，但那是另一件事。
+
+这条判断本身是路线 C 的通用约束：**Cordis 做的事不经过适配层**，所以适配层自维护的一切都必须能按宿主真实状态自愈——不是本实验的特例。
+
 ## §8 等价清单（路线 C 的现状）
 
 **可直接表达**：级联停用与复活（`inject` 失效/恢复）、setup 不可取消、失败后资源释放、错误对象原样保留、事件五项语义。
