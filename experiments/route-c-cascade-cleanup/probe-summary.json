@@ -1,0 +1,56 @@
+{
+  "at": "2026-10-28T11:20:00.000Z",
+  "question": "cleanup 失败之后，Provider 恢复时依赖方会不会自己回来？",
+  "probe": "provider P（provides probe.value@1）+ 依赖方 D（requires 它，cleanup 必抛 BoomCleanup）",
+  "readings": {
+    "cordis": {
+      "loaded": {
+        "dependentFiberState": "2:ACTIVE",
+        "dependentSetupCount": 1,
+        "dependentCleanupCount": 0,
+        "serviceResolvable": true
+      },
+      "providerGone": {
+        "dependentFiberState": "0:PENDING",
+        "dependentSetupCount": 1,
+        "dependentCleanupCount": 1,
+        "dependentCleanupErrors": 1,
+        "fiberError": null,
+        "serviceResolvable": false
+      },
+      "providerBack": {
+        "dependentFiberState": "2:ACTIVE",
+        "dependentSetupCount": 2,
+        "dependentCleanupCount": 1,
+        "serviceResolvable": true
+      },
+      "verdict": "Provider 回来后依赖方**自动重跑 setup**（1→2），回到 ACTIVE；cleanup 抛过的错在宿主里没有留下任何标记（fiber._error 始终为 null）"
+    },
+    "hikari": {
+      "loaded": {
+        "dependentState": "active",
+        "dependentSetupCount": 1,
+        "serviceResolvable": false
+      },
+      "providerGone": {
+        "dependentState": "failed",
+        "dependentSetupCount": 1,
+        "dependentCleanupCount": 1,
+        "dependentErrorName": "AggregateError",
+        "dependentErrorMessage": "One or more plugin resources failed to clean up.",
+        "dependentErrorInner": [
+          { "name": "Error", "message": "BoomCleanup: 级联停用时清理失败" }
+        ],
+        "serviceResolvable": false
+      },
+      "providerBack": {
+        "dependentState": "failed",
+        "dependentSetupCount": 1,
+        "dependentCleanupCount": 1,
+        "serviceResolvable": false
+      },
+      "verdict": "依赖方停成 failed 后**不再自动重启**：Provider 回来时 setup 次数仍是 1，状态仍 failed，Service 仍不可解析"
+    }
+  },
+  "conclusion": "两侧不一致。Cordis 会自动重启，Hikari 不会。"
+}

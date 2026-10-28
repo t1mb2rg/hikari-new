@@ -1,0 +1,127 @@
+{
+  "frozenAt": "2026-10-28T11:14:23.369Z",
+  "boom": "BoomCleanup: 级联停用时清理失败",
+  "cordis": {
+    "loaded": {
+      "label": "装载 P 与 D",
+      "at": "2026-10-28T11:14:21.903Z",
+      "provider": {
+        "setupCount": 1,
+        "cleanupCount": 0,
+        "instance": 1
+      },
+      "dependent": {
+        "setupCount": 1,
+        "cleanupCount": 0,
+        "cleanupErrors": 0
+      },
+      "dependentFiberState": "2:ACTIVE",
+      "dependentFiberError": null,
+      "serviceResolvable": true
+    },
+    "providerGone": {
+      "label": "卸掉 P（D 被级联停用，cleanup 抛错）",
+      "at": "2026-10-28T11:14:22.167Z",
+      "provider": {
+        "setupCount": 1,
+        "cleanupCount": 1,
+        "instance": 1
+      },
+      "dependent": {
+        "setupCount": 1,
+        "cleanupCount": 1,
+        "cleanupErrors": 1
+      },
+      "dependentFiberState": "0:PENDING",
+      "dependentFiberError": null,
+      "serviceResolvable": false
+    },
+    "providerBack": {
+      "label": "重装 P（看 D 会不会自己回来）",
+      "at": "2026-10-28T11:14:22.573Z",
+      "provider": {
+        "setupCount": 2,
+        "cleanupCount": 1,
+        "instance": 2
+      },
+      "dependent": {
+        "setupCount": 2,
+        "cleanupCount": 1,
+        "cleanupErrors": 1
+      },
+      "dependentFiberState": "2:ACTIVE",
+      "dependentFiberError": null,
+      "serviceResolvable": true
+    }
+  },
+  "hikari": {
+    "loaded": {
+      "label": "装载 P 与 D",
+      "at": "2026-10-28T11:14:22.696Z",
+      "provider": {
+        "setupCount": 1,
+        "cleanupCount": 0,
+        "instance": 1
+      },
+      "dependent": {
+        "setupCount": 1,
+        "cleanupCount": 0,
+        "cleanupErrors": 0
+      },
+      "dependentState": "active",
+      "serviceResolvable": false
+    },
+    "providerGone": {
+      "label": "卸掉 P（D 被级联停用，cleanup 抛错）",
+      "at": "2026-10-28T11:14:22.962Z",
+      "provider": {
+        "setupCount": 1,
+        "cleanupCount": 1,
+        "instance": 1
+      },
+      "dependent": {
+        "setupCount": 1,
+        "cleanupCount": 1,
+        "cleanupErrors": 1
+      },
+      "dependentState": "failed",
+      "dependentErrorName": "AggregateError",
+      "dependentErrorMessage": "One or more plugin resources failed to clean up.",
+      "dependentErrorInner": [
+        {
+          "name": "Error",
+          "message": "BoomCleanup: 级联停用时清理失败"
+        }
+      ],
+      "serviceResolvable": false
+    },
+    "providerBack": {
+      "label": "重装 P（看 D 会不会自己回来）",
+      "at": "2026-10-28T11:14:23.369Z",
+      "provider": {
+        "setupCount": 2,
+        "cleanupCount": 1,
+        "instance": 2
+      },
+      "dependent": {
+        "setupCount": 1,
+        "cleanupCount": 1,
+        "cleanupErrors": 1
+      },
+      "dependentState": "failed",
+      "dependentErrorName": "AggregateError",
+      "dependentErrorMessage": "One or more plugin resources failed to clean up.",
+      "dependentErrorInner": [
+        {
+          "name": "Error",
+          "message": "BoomCleanup: 级联停用时清理失败"
+        }
+      ],
+      "serviceResolvable": false
+    }
+  },
+  "verdict": {
+    "cordisRevivedDependent": true,
+    "hikariRevivedDependent": false
+  }
+}

@@ -210,6 +210,27 @@ Human 2026-10-28 裁决：接受 Cordis 不原生理解版本号，但不接受�
 建立第二套生命周期状态机**——Cordis fiber 仍是生命周期权威，适配层的失败记录只能是
 从宿主状态重算的派生量。
 
+**2026-10-28 实测后更新：这条要求做不到。**
+
+探针（Provider `P` + 依赖方 `D`，D 的 cleanup 必抛）在两侧跑出
+（`experiments/route-c-cascade-cleanup/report.md`）：
+
+| 判定项 | Cordis | Hikari |
+| --- | --- | --- |
+| cleanup 执行 | 是 | 是 |
+| 清理错误留在宿主 | 否（`_error` 为 `null`） | 是（合成 `AggregateError`） |
+| 停用后状态 | `PENDING` | `failed` |
+| **Provider 恢复后** | **自动重装，setup 1→2，回到 `ACTIVE`，Service 可用** | **不重启，setup 仍 1，仍 `failed`** |
+
+差异不在状态翻译，而在生命周期语义：Hikari 把失败当**终态**，Cordis 把失败当**过程**。
+要在 Cordis 上报 `failed`，就必须让适配层维护一份与宿主不同的生命周期事实——这与
+§3.5 第 3 条的「簿记只能是从宿主重算的派生量」直接冲突。三种修法（代理 fiber、记录
+重放、空壳 fiber）已逐个实测失败，见该报告 §3。
+
+**因此本项判为不可等价表达。** 处置只能三选一：接受 Cordis 语义（依赖方自动恢复）、
+在契约层拦住宿主重激活（需 Cordis 提供钩子，当前没有）、或把「有 cleanup 且会失败」的
+插件留在 Hikari Runtime。留待 Human 裁决。
+
 ### 4.5 失败记录占位 —— 适配层新增的概念
 
 重装前必须先 `unloadPlugin`（失败记录仍占着 id），两侧行为一致；但「记录残留」这个概念
