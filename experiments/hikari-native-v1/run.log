@@ -1,0 +1,23 @@
+# session-hikari-v2 运行记录
+
+2026-10-29 22:41  进程启动  dsh --profile hikari --no-open --port 0
+                  → http://127.0.0.1:56672
+
+配置（hikari-native/cordis.patch.yml）:
+  sessionId            session-hikari-v2
+  hikari-perception    disabled: true
+  hikari-world         disabled: true
+  hikari-replay        eventsPath=experiments/hikari-native-v1/events.json
+                       startDelayMs=10000 gapMs=2000 idleTimeoutMs=600000
+  工具面                dsh-tool-fs-search(glob/grep) + dsh-tool-fs(read:true, write/edit/readImage:false)
+
+事件计数（抽出会话后统计）:
+  turn/start        16
+  turn/end          16  (turn 1..16)
+  assistant/message 52
+  tool/call         86
+  tool/result       86
+  user/message      17  (16 条观察 + 1 条首轮空)
+  agent/inbox/spliced 20
+
+2026-10-29 22:57  16 轮全部完成，进程停止（job pwsh-def376e1b5144003）
