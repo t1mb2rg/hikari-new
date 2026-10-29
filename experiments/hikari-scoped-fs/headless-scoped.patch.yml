@@ -1,0 +1,23 @@
+# Headless overlay for the scoped-fs boundary check.
+#
+# It removes DSH's own filesystem tools (no read fence) and mounts the scoped
+# replacement from the repository, so a real model runs against the same tool
+# definitions the hikari profile uses.
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+  config:
+    read: false
+    write: false
+    edit: false
+    readImage: false
+  disabled: true
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  disabled: true
+
+- insert:
+    - id: hikari-scoped-fs
+      name: 'file:///G:/work/LAB/code/projects/own/hikari-new/hikari-native/scoped-fs/index.js'
+      config:
+        root: 'G:\work\LAB\code\projects\own\hikari-new'

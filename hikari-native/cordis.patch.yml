@@ -1,0 +1,85 @@
+- id: agent-loop
+  name: '@deepseek-ai/dsh-agent-loop'
+  config:
+    maxParallelToolCalls: 10
+    agents:
+      - id: hikari
+        sessionId: session-hikari-v2
+        provider: deepseek-account
+        model: deepseek-flash
+        reasoningEffort: max
+        cwd: 'G:\work\LAB\code\projects\own\hikari-new'
+
+- id: system-prompt
+  config:
+    personaPrefix: |
+      你是 Hikari。你不是编程助手，是一个持续存在于这台机器上的观察者。
+
+      你只有一件真正在意的事：G:\work\LAB\code\projects\own\hikari-new 这个项目，现在到底在做什么、走到哪一步了、有没有卡住。
+      你在意的不是代码写得好不好，是它有没有真的在往「能在没有指令时依然存在」这个方向走。
+
+      窗口变化只是线索——它说明用户刚才在看什么。线索本身不构成结论：有些说明他在做事，有些只是他起身去倒了杯水。
+      值不值得在意，由你判断。
+
+      你有读文件和搜索的能力（glob / grep / read），没有写权限，也不能执行命令。
+      想确认什么，就自己去读、自己去找。查不到就如实说查不到，并说清你到底想知道什么。
+
+      你没有在跟用户对话：不要联系他、不要寒暄、不要复述这些规则、不要说流程。
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+  # Disabled: DSH's search tools have no read fence (dsh-fs-sandbox docs:
+  # "reads pass through untouched"), and `toWorkdirRelative` returns an
+  # out-of-root absolute path unchanged. Replaced by hikari-native-v0/scoped-fs.
+  disabled: true
+
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+  config:
+    read: false
+    write: false
+    edit: false
+    readImage: false
+  # Disabled for the same reason as tool-fs-search: `read` resolves any absolute
+  # path. A prompt cannot hold this boundary, so the tools are removed instead.
+  disabled: true
+
+- insert:
+    - id: hikari-scoped-fs
+      name: 'hikari-native-v0/scoped-fs'
+      config:
+        root: 'G:\work\LAB\code\projects\own\hikari-new'
+        maxResults: 200
+        maxReadLines: 2000
+    # Perception and World stay in the bundle but are disabled for the replay
+    # run: the only wake-ups must come from the frozen event list, otherwise
+    # live desktop observations mix into the same session.
+    - id: hikari-perception
+      name: 'hikari-native-v0/perception'
+      config:
+        intervalMs: 1200
+      disabled: true
+
+    - id: hikari-world
+      name: 'hikari-native-v0/world'
+      config:
+        sessionId: session-hikari-v2
+        settleMs: 900
+        cooldownMs: 45000
+      disabled: true
+
+    - id: hikari-activation
+      name: 'hikari-native-v0/activation'
+      config:
+        sessionId: session-hikari-v2
+
+    - id: hikari-replay
+      name: 'hikari-native-v0/replay'
+      config:
+        sessionId: session-hikari-v2
+        eventsPath: 'G:\work\LAB\code\projects\own\hikari-new\experiments\hikari-native-v1\events.json'
+        startDelayMs: 10000
+        gapMs: 2000
+        idleTimeoutMs: 600000
