@@ -4,7 +4,7 @@
     maxParallelToolCalls: 10
     agents:
       - id: hikari
-        sessionId: session-hikari-v2
+        sessionId: session-hikari-v0
         provider: deepseek-account
         model: deepseek-flash
         reasoningEffort: max
@@ -53,33 +53,41 @@
         root: 'G:\work\LAB\code\projects\own\hikari-new'
         maxResults: 200
         maxReadLines: 2000
-    # Perception and World stay in the bundle but are disabled for the replay
-    # run: the only wake-ups must come from the frozen event list, otherwise
-    # live desktop observations mix into the same session.
+
+    # Read-only project state evidence: branch, HEAD, working tree, recent
+    # commits. Fixed subcommands, no shell, no write.
+    - id: hikari-project-status
+      name: 'hikari-native-v0/project-status'
+      config:
+        root: 'G:\work\LAB\code\projects\own\hikari-new'
+        limit: 5
+
+    # v0 formal state: perception + world + activation all serve session-hikari-v0.
     - id: hikari-perception
       name: 'hikari-native-v0/perception'
       config:
         intervalMs: 1200
-      disabled: true
 
     - id: hikari-world
       name: 'hikari-native-v0/world'
       config:
-        sessionId: session-hikari-v2
+        sessionId: session-hikari-v0
         settleMs: 900
         cooldownMs: 45000
-      disabled: true
 
     - id: hikari-activation
       name: 'hikari-native-v0/activation'
       config:
-        sessionId: session-hikari-v2
+        sessionId: session-hikari-v0
 
+    # Replay is only for controlled v1 experiments. Disabled here so the
+    # formal instance never injects frozen events into the formal session.
     - id: hikari-replay
       name: 'hikari-native-v0/replay'
       config:
-        sessionId: session-hikari-v2
+        sessionId: session-hikari-v1
         eventsPath: 'G:\work\LAB\code\projects\own\hikari-new\experiments\hikari-native-v1\events.json'
         startDelayMs: 10000
         gapMs: 2000
         idleTimeoutMs: 600000
+      disabled: true

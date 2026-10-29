@@ -11,6 +11,7 @@
     "./activation": "./activation/index.js",
     "./replay": "./replay/index.js",
     "./scoped-fs": "./scoped-fs/index.js",
+    "./project-status": "./project-status/index.js",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg"
   },
@@ -21,6 +22,7 @@
     "activation",
     "replay",
     "scoped-fs",
+    "project-status",
     "cordis.patch.yml",
     "locale",
     "icon.svg"
