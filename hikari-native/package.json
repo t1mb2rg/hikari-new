@@ -1,0 +1,33 @@
+{
+  "name": "hikari-native-v0",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Hikari Native v0: desktop perception, world attention, and autonomous agent activation.",
+  "exports": {
+    ".": "./index.js",
+    "./perception": "./perception/index.js",
+    "./world": "./world/index.js",
+    "./activation": "./activation/index.js",
+    "./replay": "./replay/index.js",
+    "./scoped-fs": "./scoped-fs/index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "perception",
+    "world",
+    "activation",
+    "replay",
+    "scoped-fs",
+    "cordis.patch.yml",
+    "locale",
+    "icon.svg"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

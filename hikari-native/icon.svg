@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Hikari Native">
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="#111827"/>
+  <circle cx="32" cy="32" r="13" fill="none" stroke="#f9fafb" stroke-width="3"/>
+  <circle cx="32" cy="32" r="4" fill="#fbbf24"/>
+  <path d="M32 9v6M32 49v6M9 32h6M49 32h6" stroke="#f9fafb" stroke-width="3" stroke-linecap="round"/>
+</svg>
