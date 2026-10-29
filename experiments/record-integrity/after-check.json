@@ -1,0 +1,31 @@
+{
+  "takenAt": "2026-10-29T15:06:42.658Z",
+  "goalsCount": {
+    "before": 20,
+    "after": 20
+  },
+  "hikariNativeCount": {
+    "before": 10,
+    "after": 10
+  },
+  "contentDiff": [],
+  "sessionCacheMtimeDiff": [
+    {
+      "key": "session-c9348ae0-35aa-418d-a14d-9417fdb586ec.json",
+      "before": 1793286298,
+      "after": 1793286401
+    },
+    {
+      "key": "session-hikari-v0.json",
+      "before": 1793286249,
+      "after": 1793286320
+    }
+  ],
+  "sessionCacheTouched": [
+    "session-c9348ae0-35aa-418d-a14d-9417fdb586ec.json",
+    "session-hikari-v0.json"
+  ],
+  "srcTestDiffEmpty": true,
+  "srcTestStat": "",
+  "hikariNativeTrackedFiles": []
+}
