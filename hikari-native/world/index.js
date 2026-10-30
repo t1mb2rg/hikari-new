@@ -8,9 +8,16 @@
  *
  * The session-event listener is filtered to Hikari's own session: it never
  * absorbs events from unrelated user conversations.
+ *
+ * With `config.root` set, this plugin also installs the World findings layer
+ * (see ./findings.js): durable `plugin:hikari/finding` records in the session
+ * log, a projection that derives the current认识, and a per-request
+ * `systemPrompt.context()` section carrying the bounded current findings.
  */
+import { installFindings } from './findings.js'
+
 export const name = 'hikari-world'
-export const inject = []
+export const inject = ['sessions', 'sessionProjections', 'systemPrompt', 'tools']
 
 const IGNORED_PROCESSES = new Set([
   'dsh',
@@ -117,6 +124,10 @@ export function apply(ctx, config) {
   ctx.effect(() => () => {
     clearSettle()
   }, 'hikari.world.settle-timer')
+
+  if (typeof config?.root === 'string' && config.root.length > 0) {
+    installFindings(ctx, { sessionId, root: config.root, injectContext: config.injectContext !== false })
+  }
 
   ctx.logger.info(`hikari world ready (session=${sessionId}, settle=${settleMs}ms, cooldown=${cooldownMs}ms)`)
 }

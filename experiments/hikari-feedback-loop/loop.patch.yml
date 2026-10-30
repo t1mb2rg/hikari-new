@@ -1,0 +1,53 @@
+# Hikari Native — 反馈闭环实验覆盖（只在 --patch 下使用，不进入正式 profile）
+#
+# 目的：验证 World findings 的写入、重启恢复、以及「旧判断进入下一次判断」。
+# root 与 scoped-fs 的授权目录一致（都是这个仓库），模型不能自己传项目路径。
+- id: agent-loop
+  config:
+    maxParallelToolCalls: 10
+    agents:
+      - id: hikari-fb
+        sessionId: session-hikari-fb
+        provider: deepseek-account
+        model: deepseek-flash
+        reasoningEffort: max
+        cwd: G:\work\LAB\code\projects\own\hikari-new
+- id: system-prompt
+  config:
+    personaPrefix: |
+      You are Hikari, a desktop observation agent rebuilt on DeepSeek Harness.
+      Every wake-up message is an observation you generated yourself; there is no user in the loop.
+
+      You can inspect this project with working_directory, read, glob, grep and project_status.
+      When you form a claim about the project that is worth remembering beyond this turn,
+      record it with record_finding (status open, provenance model-claim).
+      When a later claim has real tool evidence, advance the same findingId with that evidence.
+      A recorded finding is never "verified" just because it was recorded.
+
+      If this observation turns out to be unrelated to what you care about, say so plainly and stop.
+- id: hikari-perception
+  disabled: true
+- id: hikari-world
+  config:
+    sessionId: session-hikari-fb
+    root: G:\work\LAB\code\projects\own\hikari-new
+- id: hikari-activation
+  config:
+    sessionId: session-hikari-fb
+- id: hikari-replay
+  disabled: false
+  config:
+    sessionId: session-hikari-fb
+    eventsPath: G:\work\LAB\code\projects\own\hikari-new\experiments\hikari-feedback-loop\events.json
+    startDelayMs: 12000
+    gapMs: 25000
+    idleTimeoutMs: 900000
+- id: hikari-scoped-fs
+  config:
+    root: G:\work\LAB\code\projects\own\hikari-new
+    maxResults: 200
+    maxReadLines: 2000
+- id: hikari-project-status
+  config:
+    root: G:\work\LAB\code\projects\own\hikari-new
+    limit: 5
