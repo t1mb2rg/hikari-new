@@ -279,7 +279,13 @@ export function installFindings(ctx, { sessionId, root, injectContext = true, ap
       if (requestedProvenance !== 'model-claim') throw new Error('a new finding must start as "model-claim"')
       const duplicate = Object.values(findings).find((finding) => normalizeClaim(finding.claim) === claim && (finding.status === 'open' || finding.status === 'confirmed'))
       if (duplicate !== undefined) {
-        return { findingId: duplicate.findingId, seq: duplicate.seq, status: duplicate.status, deduplicated: true }
+        return {
+          findingId: duplicate.findingId,
+          seq: duplicate.seq,
+          status: duplicate.status,
+          evidence: Array.isArray(duplicate.evidence) ? duplicate.evidence : [],
+          deduplicated: true,
+        }
       }
       findingId = nextFindingId(findings)
     } else {
@@ -315,7 +321,9 @@ export function installFindings(ctx, { sessionId, root, injectContext = true, ap
     }
     const append = typeof injectedAppend === 'function' ? injectedAppend : await resolveAppendPluginRecord()
     const seq = await append(session, FINDING_RECORD_TYPE, data)
-    return { findingId, seq, status: requestedStatus, provenance: requestedProvenance }
+    // 回显实际写入的记录（含 evidence 指针），让模型能回读「这条发现关联了哪次工具结果」。
+    // 不重新推断 evidence，也不产生额外 Session 事件。
+    return { findingId, seq, status: requestedStatus, provenance: requestedProvenance, evidence }
   }
 
   ctx.tools.register({

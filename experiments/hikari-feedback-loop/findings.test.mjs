@@ -171,10 +171,12 @@ test('record_finding enforces the state machine and evidence rules', async () =>
   assert.equal(created.findingId, 'f-001')
   assert.equal(created.status, 'open')
   assert.equal(created.provenance, 'model-claim')
+  assert.deepEqual(created.evidence, [])
 
   const duplicate = await tool.execute({ claim: 'project_status 不显示 stash' })
   assert.equal(duplicate.deduplicated, true)
   assert.equal(duplicate.findingId, 'f-001')
+  assert.deepEqual(duplicate.evidence, [])
 
   await assert.rejects(tool.execute({ claim: 'x', status: 'confirmed' }), /must start as "open"/)
   await assert.rejects(
@@ -198,6 +200,7 @@ test('record_finding enforces the state machine and evidence rules', async () =>
     evidence: [{ kind: 'tool-result', seq: 0, callId: 'call-1' }],
   })
   assert.equal(advanced.status, 'confirmed')
+  assert.deepEqual(advanced.evidence, [{ kind: 'tool-result', seq: 0, callId: 'call-1' }])
 
   await assert.rejects(
     tool.execute({ claim: 'back', findingId: 'f-001', status: 'open', provenance: 'model-claim' }),
@@ -220,6 +223,7 @@ test('tool-evidenced evidence is auto-filled from the latest successful tool/res
     provenance: 'tool-evidenced',
   })
   assert.equal(advanced.status, 'confirmed')
+  assert.deepEqual(advanced.evidence, [{ kind: 'tool-result', seq: 0, callId: 'call-ok' }])
   const records = harness.written.filter((event) => event.type === FINDING_RECORD_TYPE && event.data.findingId === 'f-001')
   assert.deepEqual(records.at(-1).data.evidence, [{ kind: 'tool-result', seq: 0, callId: 'call-ok' }])
 })
