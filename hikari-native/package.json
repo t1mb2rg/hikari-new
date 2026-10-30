@@ -12,6 +12,8 @@
     "./replay": "./replay/index.js",
     "./scoped-fs": "./scoped-fs/index.js",
     "./project-status": "./project-status/index.js",
+    "./trace": "./trace/index.js",
+    "./readscope": "./readscope/index.js",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg"
   },
@@ -23,6 +25,8 @@
     "replay",
     "scoped-fs",
     "project-status",
+    "trace",
+    "readscope",
     "cordis.patch.yml",
     "locale",
     "icon.svg"

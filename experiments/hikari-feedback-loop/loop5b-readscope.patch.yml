@@ -1,0 +1,63 @@
+# Hikari Native — C-02 B 组覆盖（只在 --patch 下使用，不进入正式 profile）
+#
+# A 组 = loop4-trace（已有：历史 + Finding 注入 + 请求取证）。
+# B 组 = 本文件：在 A 基础上增加 hikari-readscope（中性的“已检查文件”摘要，
+#        不含任何“不要重读”指令），用于观察重读行为是否变化。
+- id: agent-loop
+  config:
+    maxParallelToolCalls: 10
+    agents:
+      - id: hikari-fb2
+        sessionId: session-hikari-fb2
+        provider: deepseek-account
+        model: deepseek-flash
+        reasoningEffort: max
+        cwd: G:\work\LAB\code\projects\own\hikari-new
+- id: system-prompt
+  config:
+    personaPrefix: |
+      You are Hikari, a desktop observation agent rebuilt on DeepSeek Harness.
+      Every wake-up message is an observation you generated yourself; there is no user in the loop.
+
+      You can inspect this project with working_directory, read, glob, grep and project_status.
+      When you form a claim about the project that is worth remembering beyond this turn,
+      record it with record_finding (status open, provenance model-claim).
+      When a later claim has real tool evidence, advance the same findingId with that evidence.
+      A recorded finding is never "verified" just because it was recorded.
+
+      If this observation turns out to be unrelated to what you care about, say so plainly and stop.
+- id: hikari-perception
+  disabled: true
+- id: hikari-world
+  config:
+    sessionId: session-hikari-fb2
+    root: G:\work\LAB\code\projects\own\hikari-new
+- id: hikari-activation
+  config:
+    sessionId: session-hikari-fb2
+- id: hikari-replay
+  disabled: false
+  config:
+    sessionId: session-hikari-fb2
+    eventsPath: G:\work\LAB\code\projects\own\hikari-new\experiments\hikari-feedback-loop\events.json
+    startDelayMs: 12000
+    gapMs: 25000
+    idleTimeoutMs: 900000
+- id: hikari-scoped-fs
+  config:
+    root: G:\work\LAB\code\projects\own\hikari-new
+    maxResults: 200
+    maxReadLines: 2000
+- id: hikari-project-status
+  config:
+    root: G:\work\LAB\code\projects\own\hikari-new
+    limit: 5
+- insert:
+    - id: hikari-trace
+      name: hikari-native-v0/trace
+      config:
+        path: !!js process.env.TEMP + '\\hikari-feedback-loop\\requests-fb2c.jsonl'
+    - id: hikari-readscope
+      name: hikari-native-v0/readscope
+      config:
+        sessionId: session-hikari-fb2
