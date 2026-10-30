@@ -1,6 +1,6 @@
-# C-03 · 历史证据利用受控对照实验协议（protocol，v2 冻结稿）
+# C-03 · 历史证据利用受控对照实验协议（protocol，v3 冻结稿）
 
-> 状态：fixtures 已搭建并通过 preflight（见 `preflight-report.md`），等待人类确认后才运行模型；**未经单独确认不进入正式实现**。
+> 状态：fixtures 已扩展为 12 次运行并通过补充核实（见 `supplement-review.md`），等待人类最终授权后才运行模型；**未经单独确认不进入正式实现**。
 > 适用范围：只验证一个问题——*额外提供明确的历史检查范围，能否改善 Agent 对历史证据的利用*。不验证 Attention、不验证记忆系统、不改正式插件。
 
 ## 1. 假设
@@ -33,13 +33,15 @@
 - 相同工作区副本（见下）
 - 模型输出差异作为实验噪声，由重复次数与交错顺序抵消
 
-**工作区副本**：`c03/fixtures/` 下四个独立副本 `ws-a1` / `ws-b1` / `ws-a2` / `ws-b2`，由 `c03/tools/make-fixtures.mjs` 幂等生成（同一基线 `ws-base`，各自 `git init` 并提交一次基线提交）。每个条件启动前确认副本干净；A2/B2 由 `hikari-mutate` 在 turn 3 结束后原子改写 `docs/notes/handoff.md`（内容为项目化决定日志，无实验词汇，只改写一次）。重建脚本会重写 `ws-*`，因此**四组必须在同一次重建内完成**。
+**工作区副本**：`make-fixtures.mjs` 在仓库外生成 **12 个独立副本**（`%TEMP%\workbench\ws-01` … `ws-12`，可用 `C03_RUNS_ROOT` 覆盖），各自 `git init` 并提交一次相同基线。每次运行只使用自己的副本，**运行后不复用**（需要重跑时整批重建）。A2/B2 由 `hikari-mutate` 在 turn 3 结束后原子改写 `docs/notes/handoff.md`（项目化决定日志、无实验词汇、只改写一次）。
 
-**独立 Session / 实例**：每个条件独立 `sessionId`（`session-hikari-c03-a1` 等）、独立 `--patch` 覆盖、独立端口（a1=3091、b1=3092、a2=3093、b2=3094），实验实例与正式 3080 完全隔离；正式 `cordis.patch.yml`、`world/findings.js`、`readscope/index.js` 一律不改。`hikari-trace` 的输出路径由每个条件的 `C03_TRACE_PATH` 提供，运行时必须逐条件设置。
+**命名中性（防条件泄露）**：模型能通过 `working_directory` / `project_status` 看到的绝对路径只含 `workbench/ws-NN`，`sessionId` 只含 `session-hikari-c03-NN`——**都不含 a1/b1/a2/b2**。条件→目录的映射只存在于 `fixtures/runs/manifest.json`，位于工作区之外，实验 Agent 的 scoped-fs root 是自己的工作区，读不到。`preflight.mjs` 对 cwd、sessionId、工作区目录名逐一做中性检查。
 
-**交错顺序**：A1 → B1 → A2 → B2 → A1 → B1 → …（每轮循环一次），避免「先跑的条件吃掉时间/资源趋势」。
+**独立 Session / 实例 / trace**：每次运行独立 `sessionId`、独立 `--patch`（`fixtures/patch/rNN.patch.yml`）、独立端口（r01=3091 … r12=3102，串行执行，端口不复用）、独立 `C03_TRACE_PATH` 输出文件（`c03/captures/rNN.jsonl`）。实验实例与正式 3080 完全隔离；正式 `cordis.patch.yml`、`world/findings.js`、`readscope/index.js` 一律不改。
 
-**重复**：每条件 ≥ 3 次；若同条件 3 次结果方差过大（重复读取次数极差 > 50%），补跑至 5 次。
+**交错顺序**：r01=A1 → r02=B1 → r03=A2 → r04=B2 → r05=A1 → …（每轮 A1,B1,A2,B2 循环，共三轮），避免「先跑的条件吃掉时间/资源趋势」。
+
+**重复**：4 条件 × 3 次独立重复 = **12 次运行**（r01–r12），每次从空 session、干净工作区、新 trace 文件开始，不允许复用任何历史。若同条件 3 次结果方差过大（重复读取次数极差 > 50%），按同一交错顺序补跑到 5 次，并用新的 rNN 编号。
 
 ## 4. 材料与工具
 
@@ -49,12 +51,13 @@
 | `hikari-native/readscope-v2` | B 组注入检查范围摘要（中性、无指令、无禁止重读措辞；只收成功且精确配对的读取） |
 | `hikari-native/mutate` | A2/B2 在 turn 3 后真实改写目标文件（原子写、只一次、忽略其他 session） |
 | `c03/tools/tool-evidence.mjs` | 配对 call/result、分类成功/拒绝/错误/未配对、反推行范围、校验 Finding evidence |
-| `c03/tools/make-fixtures.mjs` | 幂等生成四个工作区副本、四个 patch、固定 replay 事件 |
-| `c03/tools/preflight.mjs` | 16 项隔离/一致性检查 |
+| `c03/tools/make-fixtures.mjs` | 幂等生成 12 个工作区副本、12 个 patch、固定 replay 事件、条件映射 manifest |
+| `c03/tools/preflight.mjs` | 19 项隔离/一致性/中性检查 |
 | `c03/tools/verify-mutation.mjs` | 在真实副本上验证「文件变化」条件 |
+| `c03/tools/mutate-order.mjs` | A2/B2 的 turn 3/end → mutate 完成 → turn 4 首读 时序证据 |
 | `c03/tools/extract-samples.mjs` | 从 session 提取各类真实样例 |
 | `c03/tools/tool-evidence.test.mjs` | 取证逻辑单测（15/15） |
-| `hikari-native/replay` | 重放固定窗口事件（四组共用 `fixtures/events/replay.json`） |
+| `hikari-native/replay` | 重放固定窗口事件（12 组共用 `fixtures/events/replay.json`） |
 
 ## 5. 采集指标
 
@@ -71,7 +74,7 @@
 ## 6. 判定规则（冻结）
 
 1. **正向效果**：B1 的「重复读取次数」在至少 2/3 次运行中低于 A1，且差值不能被「B 组新读取更多」解释（新读取与重复读取分开统计）。
-2. **无跳过代价**：B2 在文件变化后必须重新读取被修改范围（至少 1 次），且 B2 的「错误结论」（把未检查当已检查）为 0。
+2. **B2 重读硬门槛（不可放宽）**：每次 B2 运行（r04 / r08 / r12）都必须在文件变化后重新读取被修改范围——判定标准：turn 4 之后存在**成功**的 `read`（或覆盖同一内容的 `grep`/`glob` 结果）指向该工作区的 `docs/notes/handoff.md`，且返回内容包含 `## 4. Decision log` 或 `dedupeKey` 行；用 `tool-evidence` 精确配对（`callId` + `seq`）取证，不接受「间接引用」「模型声称已检查」。任一次 B2 运行未满足 → **该次运行判为 invalid**，不是「部分通过」；按 §3 用新编号补跑，报告必须逐次列出 B2 的重读证据（seq / callId / 行号 / 覆盖范围）与判定。同时 B2 的「错误结论」（把未检查当已检查）必须为 0。
 3. **可见性对照**：A/B 两组的「历史证据可见性」指标应基本一致（同一 replay 前缀、同一模型）；若 systemChars 差异 > 20%，需在报告中单独说明摘要带来的上下文长度效应。
 4. **证据利用**：B 组新 Finding 的 evidence 精确率（`resolveFindingEvidence` 判为 `resolved` 的比例）不低于 A 组。
 5. **结论门槛**：只有 1–4 同时满足，才可得出「检查范围摘要改善历史证据利用」的初步结论；否则报告为「未观察到稳定改善」或「观察到负效应」，并如实记录。
@@ -95,13 +98,15 @@
 | `c03/tools/tool-evidence.test.mjs` | 15 用例 | 完成（15/15） |
 | `c03/tools/extract-samples.mjs` | 从 session 提取样例 | 完成 |
 | `c03/analysis/samples-fb2.json` | fb2 真实样例（92 success / 1 denied） | 完成 |
-| `c03/protocol.md` | 本协议 | 完成（v2，待审阅） |
-| `c03/preflight-report.md` | fixtures 清单、隔离证明、配对测试、文件变化验证、限制 | 完成（待审阅） |
-| `c03/fixtures/` | 四组工作区副本、四个 patch、固定 replay 事件、README | 完成（`ws-*` 为运行产物，不提交） |
+| `c03/protocol.md` | 本协议 | 完成（v3，待最终授权） |
+| `c03/preflight-report.md` | fixtures 清单、隔离证明、配对测试、文件变化验证、限制 | 完成（v1 审阅通过） |
+| `c03/supplement-review.md` | 补充核实报告：12 次重复、A2/B2 时序、条件泄露检查、B2 硬门槛 | 完成（待最终授权） |
+| `c03/fixtures/runs/manifest.json` | 12 次运行的 condition → sessionId/workspace/port/patch 映射 | 完成（运行产物） |
+| `c03/fixtures/patch/rNN.patch.yml` | 12 个运行 patch | 完成 |
 | `hikari-native/readscope-v2/index.js` | 实验插件（B 组用） | 完成，未启用 |
 | `hikari-native/mutate/index.js` | 实验插件（A2/B2 用） | 完成，未启用 |
 | `c03/captures/`、`c03/analysis/`、`c03/report.md` | 运行记录、分析、结论 | 第三阶段（待授权） |
 
 ## 9. 停止点
 
-fixtures 搭建与 preflight 完成后停止，等待人类确认。确认后才开始运行模型：按 §3 启动四组实例，按 §4 运行，按 §5 采集，按 §6 判定，产出 `c03/report.md`。**报告须区分：直接观察事实 / 实验推论 / 未确定解释。**
+fixtures 搭建、preflight 与补充核实完成后停止，等待人类最终授权。授权后才开始运行模型：按 §3 启动十二次实例（逐次串行、每次独立 session/workspace/trace），按 §4 运行，按 §5 采集，按 §6 判定，产出 `c03/report.md`。**报告须区分：直接观察事实 / 实验推论 / 未确定解释。**
