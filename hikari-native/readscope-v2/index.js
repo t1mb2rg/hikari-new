@@ -24,7 +24,7 @@ export const inject = ['systemPrompt', 'sessions']
 
 const MAX_ENTRIES = 12
 
-function render(events) {
+export function render(events) {
   const { pairs } = pairToolEvents(events)
   const digest = inspectedDigest(pairs, { limit: MAX_ENTRIES })
   const lines = []

@@ -15,6 +15,7 @@
     "./trace": "./trace/index.js",
     "./readscope": "./readscope/index.js",
     "./readscope-v2": "./readscope-v2/index.js",
+    "./mutate": "./mutate/index.js",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg"
   },
@@ -29,6 +30,7 @@
     "trace",
     "readscope",
     "readscope-v2",
+    "mutate",
     "cordis.patch.yml",
     "locale",
     "icon.svg"

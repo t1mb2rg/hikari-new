@@ -1,0 +1,30 @@
+[
+  {
+    "at": 1793300000000,
+    "clock": "20:13:20",
+    "previousTitle": "notes/handoff.md - Visual Studio Code",
+    "snapshotTitle": "src/pipeline.js - Visual Studio Code",
+    "process": "Code"
+  },
+  {
+    "at": 1793300060000,
+    "clock": "20:14:20",
+    "previousTitle": "src/pipeline.js - Visual Studio Code",
+    "snapshotTitle": "docs/notes/handoff.md - Visual Studio Code",
+    "process": "Code"
+  },
+  {
+    "at": 1793300120000,
+    "clock": "20:15:20",
+    "previousTitle": "docs/notes/handoff.md - Visual Studio Code",
+    "snapshotTitle": "src/store.js - Visual Studio Code",
+    "process": "Code"
+  },
+  {
+    "at": 1793300180000,
+    "clock": "20:16:20",
+    "previousTitle": "src/store.js - Visual Studio Code",
+    "snapshotTitle": "docs/notes/handoff.md - Visual Studio Code",
+    "process": "Code"
+  }
+]
