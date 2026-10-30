@@ -1,0 +1,45 @@
+# Hikari file-mount 兼容性测试覆盖层
+#
+# 目的：只测 dsh-file-mount 本身的行为，因此
+#   1) 禁用 hikari-native 的自动观察/唤醒/read 替换插件（避免后台 turn 与工具层干扰）；
+#   2) 恢复 DSH 原生文件工具（read/write/edit/read_image、glob/grep）；
+#   3) 保留 file-mount（由 profile bundle 提供，默认 enabled）。
+#
+# 这个 patch 只通过 --patch 传给测试实例，不写进正式 profile 的 cordis.patch.yml。
+
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+  disabled: false
+  config:
+    read: true
+    write: true
+    edit: true
+    readImage: true
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  disabled: false
+
+- id: hikari-perception
+  name: hikari-native-v0/perception
+  disabled: true
+
+- id: hikari-world
+  name: hikari-native-v0/world
+  disabled: true
+
+- id: hikari-activation
+  name: hikari-native-v0/activation
+  disabled: true
+
+- id: hikari-replay
+  name: hikari-native-v0/replay
+  disabled: true
+
+- id: hikari-scoped-fs
+  name: hikari-native-v0/scoped-fs
+  disabled: true
+
+- id: hikari-project-status
+  name: hikari-native-v0/project-status
+  disabled: true
