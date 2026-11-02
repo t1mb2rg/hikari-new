@@ -24,6 +24,12 @@ export const FINDINGS_STATE_VERSION = 1
 export const MAX_CONTEXT_FINDINGS = 3
 export const MAX_CONTEXT_CHARS = 1200
 
+/** search_memory 的预算：整条返回 800 字符硬上限，单条摘录 120 字符。 */
+export const SEARCH_DEFAULT_LIMIT = 4
+export const SEARCH_MAX_LIMIT = 20
+export const SEARCH_LINE_MAX = 120
+export const SEARCH_BUDGET_CHARS = 800
+
 const FINDING_ID_PATTERN = /^f-[a-z0-9][a-z0-9._-]{0,63}$/u
 const STATUSES = new Set(['open', 'confirmed', 'refuted', 'resolved'])
 const PROVENANCES = new Set(['model-claim', 'tool-evidenced'])
@@ -153,8 +159,86 @@ export function renderFindings(findings, { maxFindings = MAX_CONTEXT_FINDINGS, m
   return body === '' ? visibility : `${body}\n\n${visibility}`
 }
 
-function resolveProject(root) {
-  if (typeof root !== 'string' || root.length === 0) return undefined
+/**
+ * 把模型自己写的一句话切成检索词。
+ *
+ * 不做语义模型、不做词表：英文按词、中文按二字滑窗。检索层只负责「找出候选」，
+ * 「值不值得读」留给模型——所以宁可召回宽一点。
+ */
+function tokenizeQuery(query) {
+  const text = String(query ?? '').toLowerCase()
+  const tokens = new Set()
+  for (const match of text.matchAll(/[a-z0-9][a-z0-9_.:/#-]*/gu)) {
+    if (match[0].length >= 2) tokens.add(match[0])
+  }
+  for (const match of text.matchAll(/[\u4e00-\u9fff]+/gu)) {
+    const run = match[0]
+    if (run.length === 1) {
+      tokens.add(run)
+      continue
+    }
+    for (let i = 0; i + 2 <= run.length; i += 1) tokens.add(run.slice(i, i + 2))
+  }
+  return [...tokens]
+}
+
+function formatDay(milliseconds) {
+  const date = new Date(Number.isFinite(milliseconds) ? milliseconds : 0)
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
+/**
+ * 找候选，不返回正文。整条返回受 800 字符硬预算约束；超了从尾部减条数，
+ * 不裁剪单条的信息（id / 时间 / 状态 / 长度都是「要不要读」的判断依据）。
+ *
+ * 分页只提供能力，不自动翻页；也不保证快照一致（两次调用之间新增 Finding 会位移）。
+ */
+export function searchFindings(findings, { query, limit = SEARCH_DEFAULT_LIMIT, offset = 0 } = {}) {
+  const tokens = tokenizeQuery(query)
+  // 一句话查询里的多个词，至少要两个同时出现才算相关；否则中文的二字滑窗会把
+  // 「完全找不到」这种查询靠一个常见 bigram 蒙到一堆无关记录上。
+  const minHits = tokens.length >= 2 ? 2 : 1
+  const scored = []
+  for (const finding of Object.values(findings ?? {})) {
+    const haystack = `${finding.claim ?? ''}\n${finding.findingId ?? ''}`.toLowerCase()
+    let score = 0
+    for (const token of tokens) if (haystack.includes(token)) score += 1
+    if (score === 0 || score < minHits) continue
+    scored.push({ finding, score })
+  }
+  scored.sort((a, b) => b.score - a.score || b.finding.recordedAt - a.finding.recordedAt)
+
+  const total = scored.length
+  const start = Math.max(0, Math.floor(offset))
+  const cap = Math.min(SEARCH_MAX_LIMIT, Math.max(1, Math.floor(limit)))
+  const page = scored.slice(start, start + cap)
+  const build = (items) => {
+    const shown = items.length
+    const hasMore = start + shown < total
+    return { results: items, total, shown, hasMore, nextOffset: hasMore ? start + shown : null }
+  }
+
+  const results = page.map(({ finding }) => {
+    const claim = String(finding.claim ?? '')
+    return {
+      id: finding.findingId,
+      line: claim.length > SEARCH_LINE_MAX ? `${claim.slice(0, SEARCH_LINE_MAX - 1)}…` : claim,
+      at: formatDay(finding.recordedAt),
+      status: finding.status,
+      chars: [...claim].length,
+    }
+  })
+
+  let answer = build(results)
+  while (answer.results.length > 1 && JSON.stringify(answer).length > SEARCH_BUDGET_CHARS) {
+    answer = build(answer.results.slice(0, -1))
+  }
+  return answer
+}
+
+function resolveProject(root) {  if (typeof root !== 'string' || root.length === 0) return undefined
   try {
     const base = realpathSync(root)
     const output = execFileSync('git', ['-C', base, 'rev-parse', '--show-toplevel'], { encoding: 'utf8', timeout: 5000 }).trim()
@@ -382,6 +466,57 @@ export function installFindings(ctx, { sessionId, root, injectContext = true, ap
     },
     async execute(args) {
       return record(args)
+    },
+  })
+
+  ctx.tools.register({
+    name: 'search_memory',
+    description:
+      'Search your own persisted findings about this project, using whatever words describe what you are trying to remember. ' +
+      'Returns candidates only — id, a short excerpt, when, status and full length — never the full text. ' +
+      'Call read_memory with one id to read it completely. Use it when the findings already in your context are not enough; ' +
+      'skip it when they are. Searching is your choice, not a required step.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        query: { type: 'string', description: 'What you are trying to remember, in your own words.' },
+        limit: { type: 'number', description: 'Maximum candidates to return (default 4, max 20). A cap, not a promise.' },
+        offset: { type: 'number', description: 'Skip this many matches, to browse further in the same query.' },
+      },
+      required: ['query'],
+    },
+    output: {
+      schema: {
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          results: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: true,
+              properties: {
+                id: { type: 'string' },
+                line: { type: 'string' },
+                at: { type: 'string' },
+                status: { type: 'string' },
+                chars: { type: 'number' },
+              },
+              required: ['id'],
+            },
+          },
+          total: { type: 'number' },
+          shown: { type: 'number' },
+          hasMore: { type: 'boolean' },
+          nextOffset: { type: ['number', 'null'] },
+        },
+        required: ['results', 'total', 'shown', 'hasMore'],
+      },
+      render: (args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+    },
+    async execute(args) {
+      return searchFindings(currentFindings(), args)
     },
   })
 

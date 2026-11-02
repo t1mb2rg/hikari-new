@@ -5,9 +5,12 @@ import {
   installFindings,
   normalizeClaim,
   renderFindings,
+  searchFindings,
   validateEvidence,
   FINDING_RECORD_TYPE,
   FINDINGS_PROJECTION_KEY,
+  SEARCH_BUDGET_CHARS,
+  SEARCH_LINE_MAX,
 } from '../../hikari-native/world/findings.js'
 
 const baseRecord = (over = {}) => ({
@@ -104,6 +107,115 @@ test('renderFindings returns empty string without current findings', () => {
   assert.equal(renderFindings({}), '')
 })
 
+test('searchFindings returns candidates, never the full text', () => {
+  const findings = {
+    'f-001': { ...baseRecord(), findingId: 'f-001', claim: 'read 工具没有按 root 围栏，绝对路径能读到外面', recordedAt: 1000 },
+    'f-002': { ...baseRecord(), findingId: 'f-002', claim: 'world 的 settle 只有防抖，没有值不值得的判断', recordedAt: 2000 },
+    'f-003': { ...baseRecord(), findingId: 'f-003', claim: 'read 越界是 sandbox 只栅栏写入导致的', recordedAt: 3000 },
+  }
+  const answer = searchFindings(findings, { query: 'read 越界 围栏' })
+  assert.equal(answer.total, 2)
+  assert.equal(answer.shown, 2)
+  assert.equal(answer.hasMore, false)
+  assert.equal(answer.nextOffset, null)
+  // 两条都命中 read 相关；按命中词数降序，f-001 命中「read/围栏」两条，f-003 命中「read/越界」
+  assert.deepEqual(answer.results.map((r) => r.id).sort(), ['f-001', 'f-003'])
+  for (const item of answer.results) {
+    assert.ok(Object.keys(item).sort().join(',') === 'at,chars,id,line,status')
+    assert.ok(item.line.length <= SEARCH_LINE_MAX)
+    assert.equal(item.status, 'open')
+    assert.equal(item.chars, findings[item.id].claim.length)
+  }
+  // 正文不进检索结果：line 是摘录，claims 里的完整句子不应原样出现在任何 line 里
+  assert.ok(answer.results.every((r) => r.line.length <= SEARCH_LINE_MAX))
+})
+
+test('searchFindings tokenizes Chinese without a word list', () => {
+  const findings = {
+    'f-001': { ...baseRecord(), findingId: 'f-001', claim: '记忆检索缺少读全文的入口', recordedAt: 1 },
+    'f-002': { ...baseRecord(), findingId: 'f-002', claim: '窗口切换不等于认知需求', recordedAt: 2 },
+  }
+  assert.equal(searchFindings(findings, { query: '检索' }).total, 1)
+  assert.equal(searchFindings(findings, { query: '认知' }).total, 1)
+  assert.equal(searchFindings(findings, { query: '完全无关的词' }).total, 0)
+})
+
+test('searchFindings keeps the whole reply under the char budget by dropping rows', () => {
+  const findings = {}
+  for (let i = 1; i <= 12; i += 1) {
+    findings[`f-0${String(i).padStart(2, '0')}`] = {
+      ...baseRecord(),
+      findingId: `f-0${String(i).padStart(2, '0')}`,
+      claim: `共同前缀 memory 加上很长的尾巴 ${'x'.repeat(200)}`,
+      recordedAt: i,
+    }
+  }
+  const answer = searchFindings(findings, { query: 'memory', limit: 20 })
+  assert.equal(answer.total, 12)
+  assert.ok(answer.shown < 12, `expected fewer rows than matches, got ${answer.shown}`)
+  assert.ok(answer.shown >= 1)
+  assert.equal(answer.results.length, answer.shown)
+  assert.ok(JSON.stringify(answer).length <= SEARCH_BUDGET_CHARS)
+  // 削减只减行数，单条信息保持完整
+  for (const item of answer.results) {
+    assert.ok(item.line.length <= SEARCH_LINE_MAX)
+    assert.equal(typeof item.id, 'string')
+    assert.equal(typeof item.at, 'string')
+    assert.equal(typeof item.chars, 'number')
+  }
+  assert.equal(answer.hasMore, true)
+  assert.equal(answer.nextOffset, answer.shown)
+})
+
+test('searchFindings paginates without auto-advancing', () => {
+  const findings = {}
+  for (let i = 1; i <= 6; i += 1) {
+    findings[`f-00${i}`] = { ...baseRecord(), findingId: `f-00${i}`, claim: `共同词 alpha 第 ${i} 条`, recordedAt: i }
+  }
+  const first = searchFindings(findings, { query: 'alpha', limit: 2 })
+  assert.equal(first.total, 6)
+  assert.equal(first.shown, 2)
+  assert.equal(first.hasMore, true)
+  assert.equal(first.nextOffset, 2)
+  const second = searchFindings(findings, { query: 'alpha', limit: 2, offset: first.nextOffset })
+  assert.equal(second.shown, 2)
+  assert.equal(second.nextOffset, 4)
+  const last = searchFindings(findings, { query: 'alpha', limit: 2, offset: 6 })
+  assert.equal(last.shown, 0)
+  assert.equal(last.hasMore, false)
+  assert.equal(last.nextOffset, null)
+})
+
+test('searchFindings also reaches closed findings', () => {
+  const findings = {
+    'f-001': { ...baseRecord(), findingId: 'f-001', claim: '曾以为 cache 步骤在安装之后', status: 'refuted', recordedAt: 1 },
+    'f-002': { ...baseRecord(), findingId: 'f-002', claim: 'cache 步骤确实在安装之前', status: 'resolved', recordedAt: 2 },
+  }
+  const answer = searchFindings(findings, { query: 'cache 安装' })
+  assert.equal(answer.total, 2)
+  assert.deepEqual(answer.results.map((r) => r.status).sort(), ['refuted', 'resolved'])
+})
+
+test('searchFindings returns nothing for an empty or unmatched query', () => {
+  const findings = { 'f-001': { ...baseRecord(), findingId: 'f-001', claim: '只有这一条' } }
+  assert.equal(searchFindings(findings, { query: '' }).total, 0)
+  assert.equal(searchFindings(findings, { query: '   ' }).total, 0)
+  assert.equal(searchFindings(findings, { query: 'zzz-not-there' }).total, 0)
+  assert.equal(searchFindings({}, { query: '任何' }).total, 0)
+})
+
+test('searchFindings requires two hits for multi-word queries', () => {
+  // 中文二字滑窗会产生跨词边界的假 bigram（「到的」「全找」）。一句话查询要求至少两个
+  // 不同的词同时出现，否则一串无关的话会靠一个常见 bigram 蒙到一堆记录上。
+  const findings = {
+    'f-001': { ...baseRecord(), findingId: 'f-001', claim: '用与 f-004 完全相同的 claim 触发去重', recordedAt: 1 },
+  }
+  assert.equal(searchFindings(findings, { query: '无关的 描述 词' }).total, 0)
+  // 单个词（或单字）仍然命中即召回：短查询就是精确意图
+  assert.equal(searchFindings(findings, { query: '完全相同' }).total, 1)
+  assert.equal(searchFindings(findings, { query: '去重' }).total, 1)
+})
+
 test('normalizeClaim collapses whitespace and caps length', () => {
   assert.equal(normalizeClaim('  a   b\n c  '), 'a b c')
   assert.equal(normalizeClaim('x'.repeat(400)).length, 300)
@@ -162,15 +274,16 @@ function makeHarness() {
   return { ctx, registrations, written, append }
 }
 
-test('installFindings registers projection, context and record_finding', () => {
+test('installFindings registers projection, context and both memory tools', () => {
   const harness = makeHarness()
   installFindings(harness.ctx, { sessionId: 'session-test', root: process.cwd(), append: harness.append })
   assert.equal(harness.registrations.projection.key, FINDINGS_PROJECTION_KEY)
   assert.equal(harness.registrations.projection.stateVersion, 1)
   assert.equal(harness.registrations.contexts.length, 1)
   assert.equal(harness.registrations.contexts[0].name, 'hikari:findings')
-  assert.equal(harness.registrations.tools.length, 1)
+  assert.equal(harness.registrations.tools.length, 2)
   assert.equal(harness.registrations.tools[0].name, 'record_finding')
+  assert.equal(harness.registrations.tools[1].name, 'search_memory')
 })
 
 test('installFindings fails closed outside a git repository', () => {
