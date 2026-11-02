@@ -4,7 +4,7 @@
     maxParallelToolCalls: 10
     agents:
       - id: hikari
-        sessionId: session-hikari-v0
+        sessionId: session-hikari
         provider: deepseek-account
         model: deepseek-flash
         reasoningEffort: max
@@ -62,7 +62,7 @@
         root: 'G:\work\LAB\code\projects\own\hikari-new'
         limit: 5
 
-    # v0 formal state: perception + world + activation all serve session-hikari-v0.
+    # v0 formal state: perception + world + activation all serve session-hikari.
     - id: hikari-perception
       name: 'hikari-native-v0/perception'
       config:
@@ -71,14 +71,14 @@
     - id: hikari-world
       name: 'hikari-native-v0/world'
       config:
-        sessionId: session-hikari-v0
+        sessionId: session-hikari
         settleMs: 900
         cooldownMs: 45000
 
     - id: hikari-activation
       name: 'hikari-native-v0/activation'
       config:
-        sessionId: session-hikari-v0
+        sessionId: session-hikari
 
     # Replay is only for controlled v1 experiments. Disabled here so the
     # formal instance never injects frozen events into the formal session.
