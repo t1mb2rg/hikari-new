@@ -4,6 +4,7 @@ import {
   applyFindingRecord,
   installFindings,
   normalizeClaim,
+  readFinding,
   renderFindings,
   searchFindings,
   validateEvidence,
@@ -216,6 +217,64 @@ test('searchFindings requires two hits for multi-word queries', () => {
   assert.equal(searchFindings(findings, { query: '去重' }).total, 1)
 })
 
+test('readFinding returns one finding with status and its plain-language reading', () => {
+  const findings = {
+    'f-001': {
+      ...baseRecord(),
+      findingId: 'f-001',
+      status: 'confirmed',
+      provenance: 'tool-evidenced',
+      claim: 'cache 步骤在安装之前',
+      evidence: [{ kind: 'tool-result', seq: 42, callId: 'call-1' }],
+      recordedAt: 1793328082149,
+    },
+  }
+  const answer = readFinding(findings, { id: 'f-001' })
+  assert.equal(answer.id, 'f-001')
+  assert.equal(answer.findingId, 'f-001')
+  assert.equal(answer.status, 'confirmed')
+  assert.equal(answer.statusReading, '有工具证据支持，尚未独立验证')
+  assert.equal(answer.provenance, 'tool-evidenced')
+  assert.equal(answer.claim, 'cache 步骤在安装之前')
+  assert.deepEqual(answer.evidence, [{ kind: 'tool-result', seq: 42, callId: 'call-1' }])
+  assert.equal(answer.scope.project, 'C:/repo')
+  assert.equal(answer.text, 'cache 步骤在安装之前')
+  assert.equal(answer.offset, 0)
+  assert.equal(answer.totalChars, 13)
+  assert.equal(answer.truncated, false)
+  assert.equal(answer.recordedAt, 1793328082149)
+})
+
+test('readFinding gives every status a reading that does not overclaim', () => {
+  const make = (status) => readFinding({ 'f-001': { ...baseRecord(), findingId: 'f-001', status } }, { id: 'f-001' })
+  assert.equal(make('open').statusReading, '此前的假设，尚未验证')
+  assert.equal(make('confirmed').statusReading, '有工具证据支持，尚未独立验证')
+  assert.equal(make('resolved').statusReading, '基于后续证据作出的关闭判断，不保证问题永远不存在')
+  assert.equal(make('refuted').statusReading, '在此前的检验范围内被否定')
+})
+
+test('readFinding windows the text and reports truncation honestly', () => {
+  const claim = '一二三四五六七八九十'
+  const findings = { 'f-001': { ...baseRecord(), findingId: 'f-001', claim } }
+  const head = readFinding(findings, { id: 'f-001', limit: 4 })
+  assert.equal(head.text, '一二三四')
+  assert.equal(head.totalChars, 10)
+  assert.equal(head.truncated, true)
+  const tail = readFinding(findings, { id: 'f-001', offset: 8, limit: 4 })
+  assert.equal(tail.text, '九十')
+  assert.equal(tail.offset, 8)
+  assert.equal(tail.truncated, false)
+  const past = readFinding(findings, { id: 'f-001', offset: 99 })
+  assert.equal(past.text, '')
+  assert.equal(past.offset, 10)
+  assert.equal(past.truncated, false)
+})
+
+test('readFinding fails loudly on an unknown id', () => {
+  assert.throws(() => readFinding({}, { id: 'f-999' }), /unknown finding id "f-999"/)
+  assert.throws(() => readFinding({}, { id: '' }), /unknown finding id/)
+})
+
 test('normalizeClaim collapses whitespace and caps length', () => {
   assert.equal(normalizeClaim('  a   b\n c  '), 'a b c')
   assert.equal(normalizeClaim('x'.repeat(400)).length, 300)
@@ -274,16 +333,17 @@ function makeHarness() {
   return { ctx, registrations, written, append }
 }
 
-test('installFindings registers projection, context and both memory tools', () => {
+test('installFindings registers projection, context and all three memory tools', () => {
   const harness = makeHarness()
   installFindings(harness.ctx, { sessionId: 'session-test', root: process.cwd(), append: harness.append })
   assert.equal(harness.registrations.projection.key, FINDINGS_PROJECTION_KEY)
   assert.equal(harness.registrations.projection.stateVersion, 1)
   assert.equal(harness.registrations.contexts.length, 1)
   assert.equal(harness.registrations.contexts[0].name, 'hikari:findings')
-  assert.equal(harness.registrations.tools.length, 2)
-  assert.equal(harness.registrations.tools[0].name, 'record_finding')
-  assert.equal(harness.registrations.tools[1].name, 'search_memory')
+  assert.deepEqual(
+    harness.registrations.tools.map((tool) => tool.name),
+    ['record_finding', 'search_memory', 'read_memory'],
+  )
 })
 
 test('installFindings fails closed outside a git repository', () => {

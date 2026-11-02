@@ -30,6 +30,21 @@ export const SEARCH_MAX_LIMIT = 20
 export const SEARCH_LINE_MAX = 120
 export const SEARCH_BUDGET_CHARS = 800
 
+/** read_memory 的字符窗口：默认一次读完，上限防止单条把上下文撑爆。 */
+export const READ_DEFAULT_CHARS = 2000
+export const READ_MAX_CHARS = 6000
+
+/**
+ * 状态的人类口径。机器值 `confirmed` 不等于「现在仍然正确」——渲染与读取都必须
+ * 把这句话一起给出去，否则模型会把「当时有证据」读成「现在成立」。
+ */
+const STATUS_READING = {
+  open: '此前的假设，尚未验证',
+  confirmed: '有工具证据支持，尚未独立验证',
+  resolved: '基于后续证据作出的关闭判断，不保证问题永远不存在',
+  refuted: '在此前的检验范围内被否定',
+}
+
 const FINDING_ID_PATTERN = /^f-[a-z0-9][a-z0-9._-]{0,63}$/u
 const STATUSES = new Set(['open', 'confirmed', 'refuted', 'resolved'])
 const PROVENANCES = new Set(['model-claim', 'tool-evidenced'])
@@ -140,7 +155,7 @@ export function renderFindings(findings, { maxFindings = MAX_CONTEXT_FINDINGS, m
   let shown = 0
   for (const finding of current) {
     if (shown >= maxFindings) break
-    const label = finding.status === 'open' ? '此前的假设，尚未验证' : '有工具证据支持，尚未独立验证'
+    const label = STATUS_READING[finding.status] ?? finding.status
     const line = `- [${finding.findingId} · ${label}] ${finding.claim}`
     if (used + line.length > maxChars) break
     lines.push(line)
@@ -236,6 +251,42 @@ export function searchFindings(findings, { query, limit = SEARCH_DEFAULT_LIMIT, 
     answer = build(answer.results.slice(0, -1))
   }
   return answer
+}
+
+/**
+ * 读一条。一次只返回一条——批量读会把「读哪条」的选择权收回检索层。
+ *
+ * 返回里同时给机器状态与人类口径（`status` / `statusReading`），并原样带出
+ * `evidence` 指针：`seq` 是写入时的 Session 事件位置，跨重启不保证仍可解析，
+ * 它回答的是「这条从哪儿来」，不是「它现在仍然成立」。
+ */
+export function readFinding(findings, { id, offset = 0, limit = READ_DEFAULT_CHARS } = {}) {
+  const finding = asObject(findings)?.[String(id ?? '')]
+  if (finding === undefined) {
+    throw new Error(`unknown finding id "${String(id)}"; use search_memory to find one`)
+  }
+  const claim = String(finding.claim ?? '')
+  const chars = [...claim]
+  const totalChars = chars.length
+  const start = Math.min(Math.max(0, Math.floor(offset)), totalChars)
+  const cap = Math.min(READ_MAX_CHARS, Math.max(1, Math.floor(limit)))
+  const text = chars.slice(start, start + cap).join('')
+  return {
+    id: finding.findingId,
+    findingId: finding.findingId,
+    recordedAt: Number.isFinite(finding.recordedAt) ? finding.recordedAt : 0,
+    status: finding.status,
+    statusReading: STATUS_READING[finding.status] ?? finding.status,
+    provenance: finding.provenance,
+    claim,
+    evidence: Array.isArray(finding.evidence) ? finding.evidence : [],
+    scope: { project: String(asObject(finding.scope)?.project ?? '') },
+    text,
+    offset: start,
+    limit: cap,
+    totalChars,
+    truncated: start + [...text].length < totalChars,
+  }
 }
 
 function resolveProject(root) {  if (typeof root !== 'string' || root.length === 0) return undefined
@@ -517,6 +568,53 @@ export function installFindings(ctx, { sessionId, root, injectContext = true, ap
     },
     async execute(args) {
       return searchFindings(currentFindings(), args)
+    },
+  })
+
+  ctx.tools.register({
+    name: 'read_memory',
+    description:
+      'Read one persisted finding completely, by an id returned from search_memory. ' +
+      'Returns the claim, its recorded status together with a plain-language reading of what that status does and does not mean, ' +
+      'and the evidence pointers recorded when it was written. Those pointers locate the session events of that moment; ' +
+      'after a restart they may no longer resolve, and they never prove the claim still holds. One finding per call — ' +
+      'reading several is several decisions.',
+    parameters: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        id: { type: 'string', description: 'Finding id from search_memory (e.g. "f-004").' },
+        offset: { type: 'number', description: 'Character offset into the text, default 0.' },
+        limit: { type: 'number', description: 'Characters to return, default 2000, max 6000.' },
+      },
+      required: ['id'],
+    },
+    output: {
+      schema: {
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          id: { type: 'string' },
+          findingId: { type: 'string' },
+          recordedAt: { type: 'number' },
+          status: { type: 'string' },
+          statusReading: { type: 'string' },
+          provenance: { type: 'string' },
+          claim: { type: 'string' },
+          evidence: { type: 'array', items: { type: 'object', additionalProperties: true } },
+          scope: { type: 'object', additionalProperties: true },
+          text: { type: 'string' },
+          offset: { type: 'number' },
+          limit: { type: 'number' },
+          totalChars: { type: 'number' },
+          truncated: { type: 'boolean' },
+        },
+        required: ['id', 'status', 'statusReading', 'text'],
+      },
+      render: (args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+    },
+    async execute(args) {
+      return readFinding(currentFindings(), args)
     },
   })
 
