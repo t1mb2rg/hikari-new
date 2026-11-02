@@ -74,6 +74,11 @@
         sessionId: session-hikari
         settleMs: 900
         cooldownMs: 45000
+        # Without root the findings layer is never installed (world/index.js:128):
+        # no record_finding, no search_memory, no read_memory, no 「当前认识」
+        # section in the system prompt. It was missing until an instance
+        # noticed its own tool list had none of them.
+        root: 'G:\work\LAB\code\projects\own\hikari-new'
 
     - id: hikari-activation
       name: 'hikari-native-v0/activation'

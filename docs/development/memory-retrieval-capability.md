@@ -101,7 +101,7 @@ flowchart TD
   total,        // 命中总数
   shown,        // 实际返回条数（必须真实）
   hasMore,      // 还有没有下一页
-  nextOffset    // 下一页的 offset；hasMore=false 时为 null
+  nextOffset    // 下一页的 offset；hasMore=false 时**不出现该字段**（不是 null）
 }
 ```
 

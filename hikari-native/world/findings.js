@@ -232,7 +232,11 @@ export function searchFindings(findings, { query, limit = SEARCH_DEFAULT_LIMIT, 
   const build = (items) => {
     const shown = items.length
     const hasMore = start + shown < total
-    return { results: items, total, shown, hasMore, nextOffset: hasMore ? start + shown : null }
+    // nextOffset 只在还有下一页时出现：赋 undefined 会让 JSON 丢键，dsh-tools
+    // 判「value is not lossless JSON」并让整次调用失败（实测，见 f-001）。
+    const payload = { results: items, total, shown, hasMore }
+    if (hasMore) payload.nextOffset = start + shown
+    return payload
   }
 
   const results = page.map(({ finding }) => {
@@ -560,7 +564,9 @@ export function installFindings(ctx, { sessionId, root, injectContext = true, ap
           total: { type: 'number' },
           shown: { type: 'number' },
           hasMore: { type: 'boolean' },
-          nextOffset: { type: ['number', 'null'] },
+          // 只在还有下一页时出现。dsh-tools 不接受类型数组（type: ['number','null']），
+          // 实测会让整个 world 插件激活失败，所以这里只声明数字、缺省即无下一页。
+          nextOffset: { type: 'number' },
         },
         required: ['results', 'total', 'shown', 'hasMore'],
       },

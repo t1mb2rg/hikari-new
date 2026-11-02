@@ -118,7 +118,7 @@ test('searchFindings returns candidates, never the full text', () => {
   assert.equal(answer.total, 2)
   assert.equal(answer.shown, 2)
   assert.equal(answer.hasMore, false)
-  assert.equal(answer.nextOffset, null)
+  assert.ok(!('nextOffset' in answer), 'nextOffset must be absent when hasMore=false')
   // 两条都命中 read 相关；按命中词数降序，f-001 命中「read/围栏」两条，f-003 命中「read/越界」
   assert.deepEqual(answer.results.map((r) => r.id).sort(), ['f-001', 'f-003'])
   for (const item of answer.results) {
@@ -184,7 +184,9 @@ test('searchFindings paginates without auto-advancing', () => {
   const last = searchFindings(findings, { query: 'alpha', limit: 2, offset: 6 })
   assert.equal(last.shown, 0)
   assert.equal(last.hasMore, false)
-  assert.equal(last.nextOffset, null)
+  // 断言「键不存在」，不是「值为 undefined」——后者盖不住 not lossless JSON
+  // （dsh-tools 会把 undefined 值丢掉，宿主判工具输出无效）。见 f-001 / f-002。
+  assert.ok(!('nextOffset' in last), 'nextOffset must be absent, not undefined')
 })
 
 test('searchFindings also reaches closed findings', () => {
