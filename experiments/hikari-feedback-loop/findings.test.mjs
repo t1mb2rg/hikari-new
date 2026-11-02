@@ -68,7 +68,8 @@ test('renderFindings caps at 3 findings and 1200 characters', () => {
     findings[`f-00${i}`] = { ...baseRecord(), findingId: `f-00${i}`, claim: `claim-${i}`, recordedAt: i }
   }
   const text = renderFindings(findings)
-  const lines = text.split('\n').slice(1)
+  const [body, visibility] = text.split('\n\n记忆可见性：')
+  const lines = body.split('\n').slice(1)
   assert.equal(lines.length, 3)
   assert.match(text, /claim-5/)
   assert.match(text, /claim-4/)
@@ -76,8 +77,27 @@ test('renderFindings caps at 3 findings and 1200 characters', () => {
   assert.doesNotMatch(text, /claim-2/)
   assert.doesNotMatch(text, /claim-1/)
 
+  // 可见性独立于 1200 字符预算：它只说「还有更多」，不暗示哪些值得读。
+  assert.ok(visibility !== undefined)
+  assert.match(visibility, /^当前展示 3 条有效 Finding，另有 2 条有效 Finding 未注入/)
+  assert.match(visibility, /search_memory/)
+
   const long = renderFindings({ 'f-001': { ...baseRecord(), claim: 'x'.repeat(2000) } })
-  assert.ok(long.length <= 1200)
+  // 一条都放不下时，body 为空，整段只剩可见性——它不把超长 claim 带出来。
+  assert.match(long, /^记忆可见性：当前展示 0 条有效 Finding，另有 1 条/)
+  assert.ok(long.length < 200)
+})
+
+test('renderFindings visibility is independent of the content budget', () => {
+  // 字符预算连一条都放不下时，内容为空，但可见性仍要说清「有东西没注入」。
+  const long = renderFindings({ 'f-001': { ...baseRecord(), findingId: 'f-001', claim: 'x'.repeat(2000) } })
+  assert.doesNotMatch(long, /Hikari 当前认识/)
+  assert.match(long, /^记忆可见性：当前展示 0 条有效 Finding，另有 1 条/)
+
+  // 有效发现全部展示时，不出现可见性提示（不制造「你漏看了」的噪声）。
+  const single = renderFindings({ 'f-001': { ...baseRecord(), findingId: 'f-001', claim: '只有一条' } })
+  assert.match(single, /Hikari 当前认识/)
+  assert.doesNotMatch(single, /记忆可见性/)
 })
 
 test('renderFindings returns empty string without current findings', () => {

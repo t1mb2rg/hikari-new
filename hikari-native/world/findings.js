@@ -121,6 +121,9 @@ export function applyFindingRecord(state, event) {
 /**
  * 渲染当前认识。每个请求求值一次；预算 3 条 / 1200 字符。
  * 措辞贯彻「证据存在 ≠ 结论正确」。
+ *
+ * 可见性提示独立计额（不占 1200 字符预算）：只说明上下文里不止这些有效发现，
+ * 不暗示哪些值得读——读不读、读哪条由模型自己判断。
  */
 export function renderFindings(findings, { maxFindings = MAX_CONTEXT_FINDINGS, maxChars = MAX_CONTEXT_CHARS } = {}) {
   const current = Object.values(findings ?? {})
@@ -128,21 +131,26 @@ export function renderFindings(findings, { maxFindings = MAX_CONTEXT_FINDINGS, m
     .sort((a, b) => b.recordedAt - a.recordedAt)
   const lines = []
   let used = 0
+  let shown = 0
   for (const finding of current) {
-    if (lines.length >= maxFindings) break
+    if (shown >= maxFindings) break
     const label = finding.status === 'open' ? '此前的假设，尚未验证' : '有工具证据支持，尚未独立验证'
     const line = `- [${finding.findingId} · ${label}] ${finding.claim}`
     if (used + line.length > maxChars) break
     lines.push(line)
     used += line.length
+    shown += 1
   }
   const closed = Object.values(findings ?? {}).filter((finding) => finding.status === 'resolved' || finding.status === 'refuted').length
   if (closed > 0) {
     const summary = `- 已闭合 ${closed} 条（不计入当前认识）`
     if (used + summary.length <= maxChars) lines.push(summary)
   }
-  if (lines.length === 0) return ''
-  return ['Hikari 当前认识（来自本项目的持久发现）：', ...lines].join('\n')
+  const body = lines.length === 0 ? '' : ['Hikari 当前认识（来自本项目的持久发现）：', ...lines].join('\n')
+  const hidden = current.length - shown
+  if (hidden === 0) return body
+  const visibility = `记忆可见性：当前展示 ${shown} 条有效 Finding，另有 ${hidden} 条有效 Finding 未注入，可使用 search_memory 按需检索。`
+  return body === '' ? visibility : `${body}\n\n${visibility}`
 }
 
 function resolveProject(root) {
