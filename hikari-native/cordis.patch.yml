@@ -91,6 +91,9 @@
         root: 'G:\work\LAB\code\projects\own\hikari-new'
         intervalMs: 30000
         cooldownMs: 120000
+        # 诊断：一个只在内存里比较基线的定时器，从外面看不出它是「没变」还是
+        # 「根本没在跑」。方向 2 的第一次验证就卡在这里。留空则不写。
+        tracePath: 'G:\work\LAB\code\projects\own\hikari-new\experiments\hikari-project-watch\tmp\trace.jsonl'
 
     - id: hikari-activation
       name: 'hikari-native-v0/activation'
