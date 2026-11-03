@@ -21,6 +21,26 @@ export const FINDING_RECORD_TYPE = 'plugin:hikari/finding'
 export const FINDINGS_PROJECTION_KEY = 'hikari/world.findings'
 export const FINDINGS_STATE_VERSION = 1
 
+/** World 向其它插件暴露的只读检索 Service 名（单段，与 DSH 自身 service 同风格）。 */
+export const WORLD_FINDINGS_SERVICE = 'hikariWorldFindings'
+
+/**
+ * 暴露只读检索接口。对象被冻结、且 `search`/`read` 返回查询结果快照，
+ * 消费者拿不到 `findings` 内部结构，也改不动 World 的状态。
+ * `project` 为 undefined 时 `describe()` 明确报告「没有可用数据源」。
+ */
+export function provideWorldFindings(ctx, currentFindings, project) {
+  ctx.provide(WORLD_FINDINGS_SERVICE, Object.freeze({
+    search: (opts) => searchFindings(currentFindings(), opts),
+    read: (opts) => readFinding(currentFindings(), opts),
+    describe: () => ({
+      sources: ['findings'],
+      project: project ?? null,
+      available: project !== undefined,
+    }),
+  }))
+}
+
 export const MAX_CONTEXT_FINDINGS = 3
 export const MAX_CONTEXT_CHARS = 1200
 
@@ -383,6 +403,10 @@ export function installFindings(ctx, { sessionId, root, injectContext = true, ap
   const project = resolveProject(root)
   if (project === undefined) {
     ctx.logger.warn(`hikari findings: "${String(root)}" is not a git repository; record_finding disabled (fail-closed)`)
+    // 非 git 仓库仍然暴露 Service（空数据源）：Memory 的 inject 依赖它，若这里不
+    // provide，Memory 会停在 PENDING，模型连 search_memory / read_memory 都看不到。
+    // fail-closed 收敛为「没有可检索的数据源」，而不是「整条检索能力消失」。
+    provideWorldFindings(ctx, currentFindings, undefined)
     return { project: undefined }
   }
 
@@ -625,5 +649,12 @@ export function installFindings(ctx, { sessionId, root, injectContext = true, ap
   })
 
   ctx.logger.info(`hikari findings ready (session=${sessionId}, project=${project})`)
+
+  // 只读 Service：供 Memory 插件读取 findings，不暴露内部状态（不含改写入口，
+  // 返回的也是查询结果快照，不是 findings 数组本身）。必须放在本函数的最后一步：
+  // `inject: ['hikariWorldFindings']` 只保证消费者等到 Service 出现，不保证本插件
+  // 已跑完上面的工具注册——放在最后让「Service 可见」等价于「World 已完成注册」。
+  provideWorldFindings(ctx, currentFindings, project)
+
   return { project }
 }

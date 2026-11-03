@@ -45,6 +45,10 @@ M1-a 阶段末尾就是 `provide` 本身；M1-b 阶段 `provide` 排在 `record_
 
 **为什么冻结**：`Object.freeze` 阻止消费者给 Service 对象增删方法（`read` 改成写、挂一个 `delete()`），把「只读」从约定变成运行时事实。
 
+**fail-closed 路径也要 provide**：`resolveProject(root)` 返回 `undefined` 时，现有代码提前 return，只保留 projection、不注册任何工具。如果那里不 provide，Memory 的 `inject` 会永远等下去 → 整个 Memory 插件停在 `PENDING` → 模型连 `search_memory` / `read_memory` 都看不到。所以这条路径也调 `provideWorldFindings(ctx, currentFindings, undefined)`，把 fail-closed 收敛为「`describe().available === false`、没有 `record_finding`」，而不是「检索能力整体消失」。历史 findings 仍然可读——它们是会话里已经发生过的判断，与「当前目录是不是仓库」无关。
+
+**实现形态**：抽成具名函数 `provideWorldFindings(ctx, currentFindings, project)`（与 `WORLD_FINDINGS_SERVICE` 常量一起放在 `findings.js` 顶部导出），两条 return 路径各调一次，避免两处重复定义接口。
+
 **为什么这样切**：`searchFindings`（`:213`）与 `readFinding`（`:267`）返回的已经是模型可见形态（`{ id, line, at, status, chars }` / 带 `evidence` 指针的条目），不含 projection 内部结构。接口把它们原样转出去，Memory 就永远不需要知道 `hikari/world.findings` 这个键存在。
 
 **命名**：用单段 `hikariWorldFindings`，与 DSH 自身 service（`systemPrompt` / `tools` / `sessions`）同风格。**不要用点分名**——§8 的实测表明点分名只能通过 `ctx['hikari.worldFindings']` 访问，`ctx.hikari.worldFindings` 是 undefined，容易踩。
@@ -157,6 +161,7 @@ memory:                        # 新增段，放在 world 之后
 | 7 | Service 不暴露内部状态 | `Object.keys` 只三个、`Object.isFrozen` 为 true、赋值抛错 |
 | 8 | 改返回值不影响 World | 改 `search()` 结果的字段与数组，再读仍是原值 |
 | 9 | **重新加载后工具恢复** | 卸载后重新 `app.plugin(memoryPlugin)`，`ctx.tools.get('search_memory')` 又有定义，且调用结果与首次一致（无残留旧闭包） |
+| 10 | **非仓库目录不饿死 Memory** | `root` 指向非 git 目录时，Service 仍出现（`available: false`），Memory 正常激活、工具可注册；`record_finding` 不存在 |
 
 第 4 项是任务书要求的「CI 检查最终工具注册表」的可执行版本——它比 CI 更早发现问题，且不依赖 DSH 暴露注册表。**两种装配顺序都要测**：§8 场景 2 已证明消费者先声明时 `inject` 会等；要验的是「等到 Service 出现」是否足以保证「World 已完成注册」——这正是 §3.1 把 `provide` 移到最后要消除的竞态。
 
