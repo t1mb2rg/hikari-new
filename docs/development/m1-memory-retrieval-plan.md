@@ -203,6 +203,19 @@ memory:                        # 新增段，放在 world 之后
 
 结论：Cordis 的 `effect` 与 `provide` 都绑定在插件 fiber 上，`dispose()` 会回滚二者，重新装载会重建二者。`ctx.tools.register` 用的就是 `ctx.effect` 的 disposer（见 §5 说明），因此测试 5、9 可以直接用 `fiber.dispose()`，不需要手写注销逻辑。**若真 tools service 上这条推论不成立，那本身就是要报告的契约缺口**，不能改成手动注销掩盖过去。
 
+### 真 tools 链路（`experiments/m1-world-service/probe-real-tools.mjs`）
+
+用**真** `@deepseek-ai/dsh-tools` 的 `ToolRuntime`（不是假 tools 对象），只把与本验证无关的 `systemPrompt` / `sessions` / `sessionProjections` 换最小桩：
+
+| 时刻 | `record_finding` | `search_memory` | `read_memory` |
+|---|---|---|---|
+| World（`registerMemoryTools: false`）+ Memory 装载后 | 有 | 有 | 有 |
+| `memoryFiber.dispose()` 后 | **有** | **无** | **无** |
+
+另一条读数 `sameDefinition: true`：Memory 接管的三个工具定义（`description` + `parameters` 序列化）与 World 独占注册时**逐字相同**。
+
+这两条合起来证明：①「World 关开关、Memory 接管」在真 tools service 上成立；②工具注册确实随插件 fiber 回滚，无需手写注销；③迁移没有改模型看到的任何文字或 schema。
+
 ## 9. 提交切分
 
 M1-a 与 M1-b **各一次独立提交**，任一阶段可单独回滚：

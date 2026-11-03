@@ -130,7 +130,12 @@ export function apply(ctx, config) {
   }, 'hikari.world.settle-timer')
 
   if (typeof config?.root === 'string' && config.root.length > 0) {
-    installFindings(ctx, { sessionId, root: config.root, injectContext: config.injectContext !== false })
+    installFindings(ctx, {
+      sessionId,
+      root: config.root,
+      injectContext: config.injectContext !== false,
+      registerMemoryTools: config.registerMemoryTools !== false,
+    })
   }
 
   ctx.logger.info(`hikari world ready (session=${sessionId}, settle=${settleMs}ms, cooldown=${cooldownMs}ms)`)

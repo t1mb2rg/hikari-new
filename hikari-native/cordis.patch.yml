@@ -81,11 +81,18 @@
         # 方向 2：世界状态照旧记录前台窗口，但不再因为窗口变化醒来。
         # 窗口标题这一类事件在 v1 的 16 轮里 14 次只是切回同一个标签页。
         wakeOnWindowChange: false
-        # Without root the findings layer is never installed (world/index.js:128):
-        # no record_finding, no search_memory, no read_memory, no 「当前认识」
-        # section in the system prompt. It was missing until an instance
-        # noticed its own tool list had none of them.
+        # Without root the findings layer is never installed (world/index.js:132):
+        # no record_finding and no 「当前认识」 section in the system prompt.
+        # It was missing until an instance noticed its own tool list had none of them.
         root: 'G:\work\LAB\code\projects\own\hikari-new'
+        # 检索工具交给 hikari-memory 注册：World 仍独占 findings 数据，
+        # 但 search_memory / read_memory 的提供者是 Memory。两边同时注册会抛错。
+        registerMemoryTools: false
+
+    # Memory：统一检索入口，只读访问 World 的 findings Service。
+    # 它不拥有数据，也不复制数据；写仍然只有 World 的 record_finding。
+    - id: hikari-memory
+      name: 'hikari-native-v0/memory'
 
     # 方向 2 的驱动源：仓库真的变了才唤醒，而不是前台换了窗口。
     # 它只判断「有事发生」，不判断「这事重要」——后者留给模型。

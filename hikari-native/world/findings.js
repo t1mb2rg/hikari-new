@@ -371,7 +371,7 @@ function resolveAppendPluginRecord() {
  * 安装 findings：projection + context + record_finding 工具。
  * root 不是 git 仓库时 fail-closed：只保留 projection，不注册 tool/context。
  */
-export function installFindings(ctx, { sessionId, root, injectContext = true, append: injectedAppend }) {
+export function installFindings(ctx, { sessionId, root, injectContext = true, registerMemoryTools = true, append: injectedAppend }) {
   if (typeof sessionId !== 'string' || sessionId.length === 0) {
     throw new Error('hikari findings: sessionId is required')
   }
@@ -548,6 +548,9 @@ export function installFindings(ctx, { sessionId, root, injectContext = true, ap
     },
   })
 
+  // 检索工具归 Memory 所有时，这里不注册它们（默认 true，保持旧 patch 的行为）。
+  // 开关只包住这两个注册，`record_finding` 不受影响。
+  if (registerMemoryTools) {
   ctx.tools.register({
     name: 'search_memory',
     description:
@@ -647,6 +650,7 @@ export function installFindings(ctx, { sessionId, root, injectContext = true, ap
       return readFinding(currentFindings(), args)
     },
   })
+  }
 
   ctx.logger.info(`hikari findings ready (session=${sessionId}, project=${project})`)
 
