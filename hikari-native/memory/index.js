@@ -35,6 +35,14 @@ export function apply(ctx) {
 
   installMemoryTools(ctx, service)
 
+  // 只有在两个工具都注册成功之后才到这里；上面任何一步 throw 都不会打印。
+  // 这行日志是「谁在提供这两个工具」的唯一运行时可观测信号——冲突检测的失败
+  // 方式是抛错，若 World 那边还开着 registerMemoryTools，工具会退化成由 World
+  // 提供，行为一样但来源不同。看到 ready 才算 Memory 真的接管了。
+  // 只记来源与可用性，不记任何记忆内容、检索词或用户信息。
   const { sources, available } = service.describe()
-  ctx.logger.info(`hikari memory ready (sources=${sources.join(',')}, available=${available})`)
+  ctx.logger.info(
+    `[hikari-memory] ready — provider=${name}, tools=${MEMORY_TOOL_NAMES.join(',')}, ` +
+    `source=${sources.join(',')}, available=${available}`,
+  )
 }

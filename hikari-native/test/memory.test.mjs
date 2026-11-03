@@ -99,8 +99,10 @@ function fakePlugins() {
   return { plugins, holder }
 }
 
-async function boot({ worldConfig, withMemory }) {
+async function boot({ worldConfig, withMemory, logs }) {
   const app = new Context()
+  // 只截获 info 级，用来断言「ready 只在两个工具都注册成功之后出现」
+  if (logs) app.logger.info = (...a) => logs.push(a.map(String).join(' '))
   const { plugins, holder } = fakePlugins()
   for (const p of Object.values(plugins)) app.plugin(p)
   await new Promise((r) => setTimeout(r, 30))
@@ -193,4 +195,20 @@ test('非仓库目录：Memory 仍能激活，record_finding 不存在', async (
   assert.equal(tools.has('record_finding'), false)
   assert.equal(tools.has('search_memory'), true)
   assert.deepEqual(app.get('hikariWorldFindings').describe().available, false)
+})
+
+test('接管成功时输出一条 ready 日志，含 provider / tools / source', async () => {
+  const logs = []
+  await boot({ worldConfig: { registerMemoryTools: false }, withMemory: true, logs })
+  const ready = logs.filter((l) => l.includes('[hikari-memory] ready'))
+  assert.equal(ready.length, 1, `expected exactly one ready line, got: ${JSON.stringify(logs)}`)
+  assert.match(ready[0], /provider=hikari-memory/)
+  assert.match(ready[0], /tools=search_memory,read_memory/)
+  assert.match(ready[0], /source=findings/)
+})
+
+test('冲突时抛错且不输出 ready 日志', async () => {
+  const logs = []
+  await boot({ worldConfig: { registerMemoryTools: true }, withMemory: true, logs })
+  assert.equal(logs.filter((l) => l.includes('[hikari-memory] ready')).length, 0)
 })
