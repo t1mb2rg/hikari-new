@@ -101,8 +101,10 @@ function fakePlugins() {
 
 async function boot({ worldConfig, withMemory, logs }) {
   const app = new Context()
-  // 只截获 info 级，用来断言「ready 只在两个工具都注册成功之后出现」
-  if (logs) app.logger.info = (...a) => logs.push(a.map(String).join(' '))
+  // ready 走 console.error（见 memory/index.js 的注释：DSH 的 exporter 只放行 warn+），
+  // 所以这里截获 stderr，断言「ready 只在两个工具都注册成功之后出现」。
+  const originalError = console.error
+  if (logs) console.error = (...a) => logs.push(a.map(String).join(' '))
   const { plugins, holder } = fakePlugins()
   for (const p of Object.values(plugins)) app.plugin(p)
   await new Promise((r) => setTimeout(r, 30))
@@ -116,6 +118,7 @@ async function boot({ worldConfig, withMemory, logs }) {
     memory = app.plugin({ name: memoryName, inject: memoryInject, apply: memoryApply })
     await new Promise((r) => setTimeout(r, 40))
   }
+  console.error = originalError
   return { app, tools, world, memory }
 }
 

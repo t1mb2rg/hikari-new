@@ -40,8 +40,13 @@ export function apply(ctx) {
   // 方式是抛错，若 World 那边还开着 registerMemoryTools，工具会退化成由 World
   // 提供，行为一样但来源不同。看到 ready 才算 Memory 真的接管了。
   // 只记来源与可用性，不记任何记忆内容、检索词或用户信息。
+  //
+  // 为什么是 `console.error` 而不是 `ctx.logger.info`：DSH 的 `dsh-app-boot`
+  // 只注册了一个 `levels: { default: 2 }` 的 exporter（warn/error 才进 startupLogs，
+  // 且仅在启动失败时展示），info 级既不落盘也不进 GUI。写进 logger buffer 等于看不见。
+  // stderr 是这条启动路径上唯一确定可被接手的人看到的地方。
   const { sources, available } = service.describe()
-  ctx.logger.info(
+  console.error(
     `[hikari-memory] ready — provider=${name}, tools=${MEMORY_TOOL_NAMES.join(',')}, ` +
     `source=${sources.join(',')}, available=${available}`,
   )
