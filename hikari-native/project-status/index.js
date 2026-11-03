@@ -34,7 +34,7 @@ export function tidyOutput(stdout) {
   return stdout.replace(/\r?\n$/, '')
 }
 
-async function git(root, args) {
+export async function git(root, args) {
   const { stdout } = await run('git', ['-C', root, ...args], {
     timeout: 5000,
     windowsHide: true,

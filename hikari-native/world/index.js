@@ -47,6 +47,9 @@ export function apply(ctx, config) {
     : 'session-hikari-v0'
   const settleMs = positive(config?.settleMs, DEFAULT_SETTLE_MS)
   const cooldownMs = positive(config?.cooldownMs, DEFAULT_COOLDOWN_MS)
+  // 方向 2：驱动源换成项目事件后，窗口仍然照常记录进 world（她还是知道人在看
+  // 什么），但不再因为窗口变化醒来。默认保持 true，只有 patch 显式关掉。
+  const wakeOnWindow = config?.wakeOnWindowChange !== false
 
   const world = {
     current: undefined,
@@ -81,6 +84,7 @@ export function apply(ctx, config) {
     if (now - snapshot.at < settleMs) return
 
     world.lastConsumed = signatureOf(snapshot)
+    if (!wakeOnWindow) return
     world.lastWokenAt = now
     ctx.emit('hikari/attention/worth', {
       reason: 'window-changed',

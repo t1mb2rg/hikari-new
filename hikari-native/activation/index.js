@@ -27,13 +27,43 @@ function renderPrompt(event) {
   ].join('\n')
 }
 
+function renderProjectPrompt(event) {
+  const at = new Date(typeof event.at === 'number' ? event.at : Date.now())
+  const clock = at.toLocaleTimeString('zh-CN', { hour12: false })
+  const previous = event.previous ?? {}
+  const current = event.current ?? {}
+  const changed = Array.isArray(event.changed) ? event.changed : []
+
+  const lines = [`[Hikari 自主观察 ${clock}]`, '仓库状态变了。', '']
+  if (changed.includes('head')) {
+    lines.push(`- 提交：${previous.head?.short ?? '?'} → ${current.head?.short ?? '?'}（${current.head?.subject ?? '无标题'}）`)
+  }
+  if (changed.includes('branch')) {
+    lines.push(`- 分支：${previous.branch ?? '?'} → ${current.branch ?? '?'}`)
+  }
+  if (changed.includes('workingTree')) {
+    lines.push(`- 工作区：${previous.workingTree?.total ?? '?'} 个改动 → ${current.workingTree?.total ?? '?'} 个`)
+  }
+  lines.push(
+    '',
+    '这是你一直在看的那个项目。变了什么、意味着什么、值不值得继续看下去，你自己判断。',
+    '- 如果这个变化和你在意的事无关，就说无关，一句话说清为什么。',
+    '- 如果有关，或者你拿不准，就自己去看：读提交、读文件、搜关键词。看到什么就写什么。',
+    '- 想知道但现有条件查不到的，直接写出来。',
+    '',
+    '这是你自己的观察循环。不要联系用户。',
+  )
+  return lines.join('\n')
+}
+
 export function apply(ctx, config) {
   const sessionId = typeof config?.sessionId === 'string' && config.sessionId.length > 0
     ? config.sessionId
     : 'session-hikari-v0'
 
   const activate = (event) => {
-    if (event?.reason !== 'window-changed') return
+    const reason = event?.reason
+    if (reason !== 'window-changed' && reason !== 'project-changed') return
 
     const agent = ctx.agents.get(sessionId)
     if (agent === undefined) {
@@ -45,16 +75,20 @@ export function apply(ctx, config) {
       return
     }
 
+    const text = reason === 'project-changed' ? renderProjectPrompt(event) : renderPrompt(event)
     const message = {
       id: randomUUID(),
       role: 'user',
-      content: [{ type: 'text', text: renderPrompt(event) }],
+      content: [{ type: 'text', text }],
       source: { kind: 'user' },
     }
 
     try {
       agent.followup(message)
-      ctx.logger.info(`hikari activation: woke agent ${sessionId} for "${event.snapshot?.title ?? 'unknown window'}"`)
+      const what = reason === 'project-changed'
+        ? `project ${(event.changed ?? []).join('+')}`
+        : `window "${event.snapshot?.title ?? 'unknown'}"`
+      ctx.logger.info(`hikari activation: woke agent ${sessionId} for ${what}`)
     } catch (error) {
       ctx.logger.warn(`hikari activation: followup failed: ${error.message}`)
     }
