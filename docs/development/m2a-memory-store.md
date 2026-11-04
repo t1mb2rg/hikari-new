@@ -40,7 +40,7 @@ M2 §4 比较过四种持久化方案。选文件的三个理由：不引入新�
 
 ## 2. 恢复机制
 
-`MemoryStore.open`（`store.mjs:249-420`）按固定顺序做六件事：
+`MemoryStore.open`（`store.mjs:249-414`）按固定顺序做六件事：
 
 1. **解析并创建目录**（:252）。
 2. **读 meta**（:259-283）。文件不存在 → 当作全新存储，用 `emptyMeta` 初始化；存在但 `schemaVersion` 不等于 `MEMORY_SCHEMA_VERSION` → 抛 `SCHEMA_INCOMPATIBLE`（:274-281），**不迁移、不猜**。
@@ -89,19 +89,19 @@ M2 §4 比较过四种持久化方案。选文件的三个理由：不引入新�
 
 | 要求 | 落点 |
 |---|---|
-| 全局存储目录初始化 | `store.mjs:252` `mkdir(dir, {recursive:true})` |
+| 全局存储目录初始化 | `store.mjs:252` `mkdir(dir, {recursive:true})`；显式 `storeDir` 非绝对路径直接抛 `INVALID_INPUT`（`:67-78`） |
 | `memory.jsonl` append-only | `store.mjs:463-466`，只 `appendFile`，从不重写 |
 | `memory.meta.json` 元数据管理 | `store.mjs:259-283` 读、`:471-478` 写 |
 | 全局唯一 `memoryId` | `store.mjs:437` `m-${randomUUID()}` |
 | 顺序编号 `seq` | `store.mjs:446` `this.#lastSeq + 1` |
 | 内存索引构建 | `store.mjs:360-384` fold 进 `Map` + `seqOrder` |
-| 启动时恢复 | `store.mjs:249-420` |
+| 启动时恢复 | `store.mjs:249-414` |
 | 数据结构校验 | `store.mjs:89-142` |
 | Schema 版本管理 | `store.mjs:274-281` 校验、`:395` 写回 |
 
-测试覆盖任务书 §5 的十项（`hikari-native/test/memory-store.test.mjs`），另加两项：meta 重建、记录校验正反例。12 项全绿。全量 `npm test` 1098 项 / 1094 pass / 0 fail / 4 skip。
+测试覆盖任务书 §5 的十项（`hikari-native/test/memory-store.test.mjs`），另加六项：8b 中间行非 JSON、8c 中间行合法但记录无效、8d 重复 memoryId 的两种去向、9b 显式 `storeDir` 相对路径被拒、11 元数据重建、记录校验正反例。16 项全绿。全量 `npm test` 1102 项 / 1098 pass / 0 fail / 4 skip。
 
-数据完整性两条硬要求都有字节级断言：第 7 项先读原字节、追加残片后再读，断言前缀逐字节相同（原文件未被改写）；第 8 项断言 schema 不兼容时两个文件字节都不变。
+数据完整性几条硬要求都有字节级或错误码断言：第 7 项先读原字节、追加残片后再读，断言前缀逐字节相同（原文件未被改写）；第 8 项断言 schema 不兼容时两个文件字节都不变；8b 断言中间坏行拒绝启动且文件一个字节没动；8d 分别断言「内容相同→重放计数 1、size 仍是 1」与「内容不同→`DUPLICATE_MEMORY_ID` 且 `details.memoryId` 对得上」。
 
 ## 5. Architecture Review
 

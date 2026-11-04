@@ -16,7 +16,7 @@
 import { randomUUID } from 'node:crypto'
 import { appendFile, mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { isAbsolute, join, resolve } from 'node:path'
 
 /** 数据格式版本。改动记录字段的语义时必须 +1，且不写迁移代码（M2 §9.4）。 */
 export const MEMORY_SCHEMA_VERSION = 1
@@ -66,7 +66,15 @@ function expandTilde(path) {
  */
 export function resolveMemoryDir({ storeDir, env = process.env } = {}) {
   if (typeof storeDir === 'string' && storeDir.trim().length > 0) {
-    return resolve(expandTilde(storeDir.trim()))
+    const expanded = expandTilde(storeDir.trim())
+    // 显式配置也必须不依赖 cwd：相对路径会随调用方的工作目录变，而这是全局记忆。
+    if (!isAbsolute(expanded)) {
+      throw new MemoryStoreError(
+        'INVALID_INPUT',
+        `storeDir 必须是绝对路径，收到 "${storeDir}"：全局记忆不能建在当前工作目录下`,
+      )
+    }
+    return resolve(expanded)
   }
   const raw = env.DSH_HOME
   const home = typeof raw === 'string' && raw.trim().length > 0

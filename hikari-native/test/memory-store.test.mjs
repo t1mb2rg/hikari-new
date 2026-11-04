@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict'
 import { appendFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import { after, describe, it } from 'node:test'
 
 import {
@@ -254,6 +254,72 @@ describe('memory store', () => {
     assert.equal((await readFile(metaPath)).equals(metaBefore), true)
   })
 
+  it('8b. 中间行不是 JSON：拒绝启动、保留原文件，不跳过', async () => {
+    const dir = await tempDir()
+    const store = await MemoryStore.open({ storeDir: dir, env: {}, now: clockAt(8100) })
+    await store.append({ text: '第一条' })
+    await store.append({ text: '第二条' })
+    await store.close()
+
+    const jsonlPath = join(dir, MEMORY_JSONL)
+    const lines = (await readFile(jsonlPath, 'utf8')).split('\n').filter((line) => line.trim().length > 0)
+    assert.equal(lines.length, 2)
+    await writeFile(jsonlPath, [lines[0], '{ 这不是 JSON', lines[1]].join('\n') + '\n', 'utf8')
+    const before = await readFile(jsonlPath)
+
+    await assert.rejects(
+      () => MemoryStore.open({ storeDir: dir, env: {}, now: clockAt(8101) }),
+      (error) => error.code === 'CORRUPT_MIDDLE_LINE' && error.details.line === 2,
+    )
+    // 跳过中间行会让它后面的记录全部错位，所以这里只能停下；文件一个字节都不动。
+    assert.equal((await readFile(jsonlPath)).equals(before), true)
+  })
+
+  it('8c. 中间行是合法 JSON 但记录无效：同样拒绝启动', async () => {
+    const dir = await tempDir()
+    const store = await MemoryStore.open({ storeDir: dir, env: {}, now: clockAt(8110) })
+    await store.append({ text: '第一条' })
+    await store.append({ text: '第二条' })
+    await store.close()
+
+    const jsonlPath = join(dir, MEMORY_JSONL)
+    const lines = (await readFile(jsonlPath, 'utf8')).split('\n').filter((line) => line.trim().length > 0)
+    const half = JSON.stringify({ memoryId: 'm-33333333-3333-4333-8333-333333333333' })
+    await writeFile(jsonlPath, [lines[0], half, lines[1]].join('\n') + '\n', 'utf8')
+
+    await assert.rejects(
+      () => MemoryStore.open({ storeDir: dir, env: {}, now: clockAt(8111) }),
+      (error) => error.code === 'INVALID_MIDDLE_RECORD'
+        && error.details.line === 2
+        && error.details.errors.length > 0,
+    )
+  })
+
+  it('8d. 重复 memoryId：内容相同算重放并计数，内容不同直接报错', async () => {
+    const dir = await tempDir()
+    const store = await MemoryStore.open({ storeDir: dir, env: {}, now: clockAt(8200) })
+    await store.append({ text: '同一句话' })
+    await store.close()
+
+    const jsonlPath = join(dir, MEMORY_JSONL)
+    const line = (await readFile(jsonlPath, 'utf8')).split('\n').filter((l) => l.trim().length > 0)[0]
+    const original = JSON.parse(line)
+
+    // 内容相同、只有 seq 不同：这是重放（写到一半重试），保留后者并计数。
+    await writeFile(jsonlPath, `${line}\n${JSON.stringify({ ...original, seq: 2 })}\n`, 'utf8')
+    const replay = await MemoryStore.open({ storeDir: dir, env: {}, now: clockAt(8201) })
+    assert.equal(replay.size, 1)
+    assert.equal(replay.damage.skippedDuplicates, 1)
+    await replay.close()
+
+    // 内容不同：同一个 id 装两段话，猜哪一个对都是在编，只能报错。
+    await writeFile(jsonlPath, `${line}\n${JSON.stringify({ ...original, seq: 2, text: '换了一句' })}\n`, 'utf8')
+    await assert.rejects(
+      () => MemoryStore.open({ storeDir: dir, env: {}, now: clockAt(8202) }),
+      (error) => error.code === 'DUPLICATE_MEMORY_ID' && error.details.memoryId === original.memoryId,
+    )
+  })
+
   it('9. 全局存储：路径只由 DSH_HOME 决定，不看当前工作目录，两个「项目」读写同一份', async () => {
     const home = await tempDir('hikari-memory-home-')
     const elsewhere = await tempDir('hikari-memory-cwd-')
@@ -289,6 +355,22 @@ describe('memory store', () => {
     assert.equal(secondInstance.size, 1)
     assert.equal(secondInstance.all()[0].text, '在项目 A 里记下的')
     await secondInstance.close()
+  })
+
+  it('9b. 显式 storeDir 必须是绝对路径：相对路径拒绝，不按 cwd 猜', async () => {
+    // 显式配置这条分支原先直接 resolve()，相对路径会随调用方 cwd 变化——
+    // 默认路径不依赖 cwd 不足以让「全局记忆」成立，这条分支也必须 fail-closed。
+    assert.throws(
+      () => resolveMemoryDir({ storeDir: 'memory' }),
+      (error) => error.code === 'INVALID_INPUT' && error.message.includes('绝对路径'),
+    )
+    assert.throws(
+      () => resolveMemoryDir({ storeDir: './local/memory' }),
+      (error) => error.code === 'INVALID_INPUT',
+    )
+    // 绝对路径照旧可用，`~` 也照旧展开。
+    const absolute = resolveMemoryDir({ storeDir: tempDir('hikari-memory-abs-') })
+    assert.equal(isAbsolute(absolute), true)
   })
 
   it('10. 卸载与重新加载：close 后拒写，重新打开后数据完整且 seq 连续', async () => {
