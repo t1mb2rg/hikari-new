@@ -193,6 +193,11 @@ function sameContent(a, b) {
   return true
 }
 
+/** 对外快照：连 `source` 一起拷贝并冻结，避免调用方改到内部索引。 */
+function snapshotOf(record) {
+  return Object.freeze({ ...record, source: Object.freeze({ ...record.source }) })
+}
+
 export class MemoryStore {
   #dir
   #metaPath
@@ -205,6 +210,8 @@ export class MemoryStore {
   #needsNewline = false
   #now
   #closed = false
+  /** 串行化队列：并发的 append 一次只跑一个，否则两条会算出同一个 seq。 */
+  #pending = Promise.resolve()
 
   constructor(options) {
     this.#dir = options.dir
@@ -244,17 +251,18 @@ export class MemoryStore {
       skippedCorruptLines: this.#damage.skippedCorruptLines,
       metaRepaired: this.#damage.metaRepaired,
       metaUnreadable: this.#damage.metaUnreadable,
+      metaWriteFailed: this.#damage.metaWriteFailed === true,
     }
   }
 
   /** 按写入顺序返回全部记录的只读快照（不含内部引用）。 */
   all() {
-    return this.#seqOrder.map((id) => Object.freeze({ ...this.#records.get(id) }))
+    return this.#seqOrder.map((id) => snapshotOf(this.#records.get(id)))
   }
 
   get(memoryId) {
     const record = this.#records.get(memoryId)
-    return record === undefined ? undefined : Object.freeze({ ...record })
+    return record === undefined ? undefined : snapshotOf(record)
   }
 
   /**
@@ -277,6 +285,7 @@ export class MemoryStore {
       skippedCorruptLines: 0,
       metaRepaired: false,
       metaUnreadable: false,
+      metaWriteFailed: false,
     }
 
     // 1. meta：不存在或读不出来都从 jsonl 重建（meta 全是派生值，丢了不影响任何一条记录）；
@@ -319,12 +328,17 @@ export class MemoryStore {
     const records = new Map()
     const seqOrder = []
     let lastSeq = 0
-    let needsNewline = false
 
     const lines = raw.split('\n')
     // 末尾的空串是文件以换行结尾的正常产物，不是一行内容。
     const lastIndex = lines.length - 1
     const hasTrailingNewline = lines[lastIndex] === ''
+    // 追加前要不要先补一个换行：只看文件末尾有没有换行符，不看最后一行能不能解析。
+    // 只按「最后一行解析失败」判断会漏掉一种情况——写完一整条 JSON 但没来得及写 `\n`
+    // 就崩了。那种残片能正常解析、会被当成健康记录收下，可它没有行尾换行，
+    // 下一次 append 就会与它粘成一行，两条一起坏掉；重启时这行已经是中间行，
+    // 只能拒绝启动。
+    let needsNewline = raw.length > 0 && !hasTrailingNewline
 
     // 上一次启动报告过的损坏行。文件从不重写，所以坏字节还在原地、行号也稳定
     // （append-only 只往后长）。已经报告过的行继续跳过，但不重复报错——
@@ -357,7 +371,6 @@ export class MemoryStore {
           // 跳过它不影响任何其它数据。中间行坏掉说明中间丢了内容，不能猜。
           damage.tailCorrupt = { line: lineNo, bytes }
           stillCorrupt.push(lineNo)
-          needsNewline = !hasTrailingNewline
           break
         }
         throw new MemoryStoreError(
@@ -377,7 +390,6 @@ export class MemoryStore {
         if (isLastContentLine) {
           damage.tailCorrupt = { line: lineNo, bytes }
           stillCorrupt.push(lineNo)
-          needsNewline = !hasTrailingNewline
           break
         }
         throw new MemoryStoreError(
@@ -443,7 +455,17 @@ export class MemoryStore {
    * 顺序是「先写文件、再改内存」：写失败时内存索引仍然干净，不会出现
    * 「索引里有、文件里没有」这种下次重启就会对不上的状态。
    */
-  async append(input) {
+  append(input) {
+    const run = this.#pending.then(() => this.#appendOne(input))
+    // 队列自身不能因为一次失败就断掉：失败只传给这次调用方，后续 append 继续排队。
+    this.#pending = run.then(
+      () => undefined,
+      () => undefined,
+    )
+    return run
+  }
+
+  async #appendOne(input) {
     if (this.#closed) {
       throw new MemoryStoreError('STORE_CLOSED', '存储已关闭，不能再追加记录')
     }
@@ -498,9 +520,16 @@ export class MemoryStore {
       lastSeq: this.#lastSeq,
       tailCorrupt: this.#damage.tailCorrupt,
     }
-    await writeFile(this.#metaPath, `${JSON.stringify(this.#meta, null, 2)}\n`, 'utf8')
+    try {
+      await writeFile(this.#metaPath, `${JSON.stringify(this.#meta, null, 2)}\n`, 'utf8')
+    } catch {
+      // 提交点是 jsonl：它写完这条记录就算成功。meta 全是派生值，下次 open 会重建；
+      // 这里抛错会让调用方以为没写成功而重试，于是同一条内容被写第二遍——那才是
+      // 真正的「部分提交」问题。只记 damage，让 ready 行能看出来。
+      this.#damage.metaWriteFailed = true
+    }
 
-    return Object.freeze({ ...record })
+    return snapshotOf(record)
   }
 
   /**

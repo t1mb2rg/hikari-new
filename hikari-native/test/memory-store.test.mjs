@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Memory Store 测试（M2-a）。
  *
  * 覆盖 `TASK` §5 要求的 10 项。所有用例都写临时目录，不碰真实 `DSH_HOME`；
  * 时间由 `now` 注入，不依赖真实时钟。
  */
 import assert from 'node:assert/strict'
-import { appendFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { after, describe, it } from 'node:test'
@@ -473,5 +473,69 @@ describe('memory store — 记录校验', () => {
     assert.equal(verdict.ok, false)
     // 任务书 §2 冻结的十个字段之外一律不收：多一个字段就是 schema 漂移。
     assert.equal(verdict.errors.some((e) => e.includes('未知字段 projectId')), true)
+  })
+})
+
+// ---- M2-a 修订：四条缺陷的回归测试 ----
+
+describe('并发、快照隔离与提交点', () => {
+  it('并发 append 的 seq 唯一且连续', async (t) => {
+    const dir = await tempDir()
+    const store = await MemoryStore.open({ storeDir: dir })
+    t.after(() => store.close())
+
+    await Promise.all(Array.from({ length: 20 }, (_, i) => store.append({ text: `并发-${i}` })))
+    const seqs = store.all().map((r) => r.seq).sort((a, b) => a - b)
+    assert.deepEqual(seqs, Array.from({ length: 20 }, (_, i) => i + 1))
+  })
+
+  it('get / all / append 的返回值不泄漏内部 source 引用', async (t) => {
+    const dir = await tempDir()
+    const store = await MemoryStore.open({ storeDir: dir })
+    t.after(() => store.close())
+
+    const created = await store.append({ text: '带来源', source: { kind: 'finding', ref: 'f-001' } })
+    for (const snapshot of [created, store.get(created.memoryId), store.all()[0]]) {
+      assert.throws(() => {
+        snapshot.source.kind = 'polluted'
+      })
+    }
+    assert.equal(store.get(created.memoryId).source.kind, 'finding')
+  })
+
+  it('meta 写失败时 append 仍算成功，只记 damage', async (t) => {
+    const dir = await tempDir()
+    const store = await MemoryStore.open({ storeDir: dir })
+    t.after(() => store.close())
+    await store.append({ text: '第一条' })
+
+    // 把 meta 路径换成目录，writeFile 必然失败
+    await rm(join(dir, 'memory.meta.json'), { force: true })
+    await mkdir(join(dir, 'memory.meta.json'), { recursive: true })
+
+    const record = await store.append({ text: 'meta 写不进去' })
+    assert.equal(typeof record.memoryId, 'string')
+    assert.equal(store.size, 2)
+    assert.equal(store.damage.metaWriteFailed, true)
+  })
+
+  it('缺行尾换行的残片之后 append 不与它粘行', async (t) => {
+    const dir = await tempDir()
+    const first = await MemoryStore.open({ storeDir: dir })
+    const a = await first.append({ text: '第一条' })
+    await first.close()
+
+    const jsonlPath = join(dir, 'memory.jsonl')
+    await writeFile(jsonlPath, (await readFile(jsonlPath, 'utf8')).replace(/\n$/, ''))
+    await rm(join(dir, 'memory.meta.json'), { force: true })
+
+    const second = await MemoryStore.open({ storeDir: dir })
+    const b = await second.append({ text: '第二条' })
+    await second.close()
+
+    const lines = (await readFile(jsonlPath, 'utf8')).split('\n').filter((l) => l.trim().length > 0)
+    assert.equal(lines.length, 2)
+    const parsed = lines.map((l) => JSON.parse(l))
+    assert.deepEqual([parsed[0].memoryId, parsed[1].memoryId], [a.memoryId, b.memoryId])
   })
 })
