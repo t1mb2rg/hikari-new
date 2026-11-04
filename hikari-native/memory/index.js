@@ -1,20 +1,47 @@
 /**
- * Hikari Native — Memory 插件骨架（M1-b）。
+ * Hikari Native — Memory 插件（M1-b 接管检索工具；M2-a 接入全局存储）。
  *
  * 职责：接管 `search_memory` / `read_memory` 两个检索工具的注册权，
- * 数据仍然只来自 World 的只读 Service（`hikariWorldFindings`）。
+ * 并持有 Hikari 自己的长期记忆存储（`DSH_HOME/hikari/memory/`）。
  *
  * 边界：
- *   - 不拥有任何数据。Findings 的所有者始终是 World；这里只读。
- *   - 不做 Finding → Memory 同步，不新增持久化，不引入检索算法。
- *   - 不提供统一入口之外的任何写能力：写仍然只有 World 的 `record_finding`。
+ *   - 检索数据仍然只来自 World 的只读 Service（`hikariWorldFindings`）——
+ *     M2-a 只把存储层立起来，还不往里面写，也不从里面读。
+ *   - 不拥有 Findings。`record_finding` 永远是 World 的。
+ *   - 不做 Finding → Memory 同步，不新增检索算法，不做自动分类与过期。
  */
+import { homedir } from 'node:os'
+
+import { MemoryStore } from './store.mjs'
 import { installMemoryTools, MEMORY_TOOL_NAMES } from './tools.js'
 
 export const name = 'hikari-memory'
 export const inject = ['tools', 'hikariWorldFindings']
 
-export function apply(ctx) {
+/**
+ * 把绝对路径缩成可读形式。ready 日志会进 stderr，没必要把用户名和完整目录
+ * 打出去——任务书 §3 要求日志不含用户信息。
+ */
+function presentDir(dir) {
+  const home = homedir()
+  if (dir === home) return '~'
+  if (dir.startsWith(`${home}/`) || dir.startsWith(`${home}\\`)) {
+    return `~${dir.slice(home.length)}`
+  }
+  return dir
+}
+
+/** 把 damage 计数压成一行；全为 0 时写 none，避免日志里出现四个零。 */
+function presentDamage(damage) {
+  const parts = []
+  if (damage.tailCorrupt !== null) parts.push(`tailCorrupt@${damage.tailCorrupt.line}`)
+  if (damage.skippedCorruptLines > 0) parts.push(`skippedCorrupt=${damage.skippedCorruptLines}`)
+  if (damage.skippedDuplicates > 0) parts.push(`skippedDup=${damage.skippedDuplicates}`)
+  if (damage.metaRepaired) parts.push('metaRepaired')
+  return parts.length === 0 ? 'none' : parts.join('+')
+}
+
+export async function apply(ctx, config = {}) {
   const service = ctx.get('hikariWorldFindings')
   if (service === undefined) {
     throw new Error(
@@ -33,13 +60,21 @@ export function apply(ctx) {
     }
   }
 
+  // 存储先于工具打开：打不开（schema 不兼容、中间行损坏）就整插件拒绝加载，
+  // 而不是先把工具挂上去、再在第一次使用时才暴露问题。任务书 §3.2 要求
+  // 「无法安全恢复的数据明确报错」——拒绝加载就是最明确的那种报错。
+  const store = await MemoryStore.open({ storeDir: config.storeDir })
+  ctx.effect(() => () => {
+    void store.close()
+  })
+
   installMemoryTools(ctx, service)
 
   // 只有在两个工具都注册成功之后才到这里；上面任何一步 throw 都不会打印。
   // 这行日志是「谁在提供这两个工具」的唯一运行时可观测信号——冲突检测的失败
   // 方式是抛错，若 World 那边还开着 registerMemoryTools，工具会退化成由 World
   // 提供，行为一样但来源不同。看到 ready 才算 Memory 真的接管了。
-  // 只记来源与可用性，不记任何记忆内容、检索词或用户信息。
+  // 只记来源、可用性与存储计数，不记任何记忆内容、检索词或用户信息。
   //
   // 为什么是 `console.error` 而不是 `ctx.logger.info`：DSH 的 `dsh-app-boot`
   // 只注册了一个 `levels: { default: 2 }` 的 exporter（warn/error 才进 startupLogs，
@@ -48,6 +83,8 @@ export function apply(ctx) {
   const { sources, available } = service.describe()
   console.error(
     `[hikari-memory] ready — provider=${name}, tools=${MEMORY_TOOL_NAMES.join(',')}, ` +
-    `source=${sources.join(',')}, available=${available}`,
+    `source=${sources.join(',')}, available=${available}, ` +
+    `store=${presentDir(store.dir)}, records=${store.size}, seq=${store.lastSeq}, ` +
+    `damage=${presentDamage(store.damage)}`,
   )
 }

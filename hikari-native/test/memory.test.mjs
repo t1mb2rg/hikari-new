@@ -10,8 +10,10 @@
 //    `ToolRuntime`，验真注册表上的可见集与回滚，以及工具定义逐字不变。
 // 两处的结论必须一致；任一处不成立都是契约缺口，不能改成手动注销掩盖。
 import assert from 'node:assert/strict'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import test from 'node:test'
+import test, { after } from 'node:test'
 import { fileURLToPath } from 'node:url'
 
 import { Context, Service } from '@deepseek-ai/cordis'
@@ -103,8 +105,38 @@ function fakePlugins() {
   return { plugins, holder }
 }
 
+// 每个用例一个独立的临时存储目录。Memory 插件现在会打开真实存储
+// （`DSH_HOME/hikari/memory/`），测试若不传 storeDir 就会写到用户主目录里——
+// 那是副作用，不是验证。
+const storeDirs = []
+async function freshStoreDir() {
+  const dir = await mkdtemp(join(tmpdir(), 'hikari-memory-plugin-'))
+  storeDirs.push(dir)
+  return dir
+}
+after(async () => {
+  for (const dir of storeDirs) await rm(dir, { recursive: true, force: true })
+})
+
+/**
+ * 等到某个条件成立。
+ *
+ * 为什么需要它：Memory 的 `apply` 现在是 async（要先打开存储），固定毫秒的
+ * `setTimeout` 在单文件跑时够用，但全量 `npm test` 并行时会不够——工具还没注册完
+ * 断言就已经执行了。轮询等「真的出现」，不猜时间。
+ */
+async function until(predicate, { timeout = 5000, label = 'condition' } = {}) {
+  const started = Date.now()
+  while (Date.now() - started < timeout) {
+    if (predicate()) return
+    await new Promise((r) => setTimeout(r, 10))
+  }
+  throw new Error(`timed out after ${timeout} ms waiting for ${label}`)
+}
+
 async function boot({ worldConfig, withMemory, logs }) {
   const app = new Context()
+  const storeDir = await freshStoreDir()
   // ready 走 console.error（见 memory/index.js 的注释：DSH 的 exporter 只放行 warn+），
   // 所以这里截获 stderr，断言「ready 只在两个工具都注册成功之后出现」。
   const originalError = console.error
@@ -119,11 +151,13 @@ async function boot({ worldConfig, withMemory, logs }) {
 
   let memory
   if (withMemory) {
-    memory = app.plugin({ name: memoryName, inject: memoryInject, apply: memoryApply })
-    await new Promise((r) => setTimeout(r, 40))
+    memory = app.plugin({ name: memoryName, inject: memoryInject, apply: memoryApply }, { storeDir })
+    // 这里不能用 until(tools.has)：冲突用例里 Memory 的 apply 会抛错、工具永远不出现，
+    // 等工具会把那个用例拖到超时。给足固定窗口即可，代价只是几十毫秒。
+    await new Promise((r) => setTimeout(r, 150))
   }
   console.error = originalError
-  return { app, tools, world, memory }
+  return { app, tools, world, memory, storeDir }
 }
 
 test('World 独占注册时，三个工具都由 World 提供', async () => {
@@ -165,12 +199,12 @@ test('卸载 Memory 后两个检索工具消失，record_finding 仍在', async 
 })
 
 test('重新加载 Memory 后工具恢复，结果与首次一致', async () => {
-  const { app, tools, memory } = await boot({ worldConfig: { registerMemoryTools: false }, withMemory: true })
+  const { app, tools, memory, storeDir } = await boot({ worldConfig: { registerMemoryTools: false }, withMemory: true })
   const first = await tools.get('search_memory').execute({ query: '窗口' })
   await memory.dispose()
   await new Promise((r) => setTimeout(r, 40))
-  app.plugin({ name: memoryName, inject: memoryInject, apply: memoryApply })
-  await new Promise((r) => setTimeout(r, 40))
+  app.plugin({ name: memoryName, inject: memoryInject, apply: memoryApply }, { storeDir })
+  await until(() => tools.has('search_memory'), { label: 'search_memory restored after reload' })
   assert.equal(tools.has('search_memory'), true)
   const again = await tools.get('search_memory').execute({ query: '窗口' })
   assert.deepEqual(again, first)
@@ -188,6 +222,7 @@ test('Service 只读：改返回值不影响 World 的 findings', async () => {
 
 test('非仓库目录：Memory 仍能激活，record_finding 不存在', async () => {
   const app = new Context()
+  const storeDir = await freshStoreDir()
   const { plugins, holder } = fakePlugins()
   for (const p of Object.values(plugins)) app.plugin(p)
   await new Promise((r) => setTimeout(r, 30))
@@ -197,7 +232,7 @@ test('非仓库目录：Memory 仍能激活，record_finding 不存在', async (
     { root: join(ROOT, '__definitely_not_a_repo__'), registerMemoryTools: false },
   )
   await new Promise((r) => setTimeout(r, 40))
-  app.plugin({ name: memoryName, inject: memoryInject, apply: memoryApply })
+  app.plugin({ name: memoryName, inject: memoryInject, apply: memoryApply }, { storeDir })
   await new Promise((r) => setTimeout(r, 40))
   assert.equal(tools.has('record_finding'), false)
   assert.equal(tools.has('search_memory'), true)
