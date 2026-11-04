@@ -14,6 +14,7 @@ import { homedir } from 'node:os'
 
 import { MemoryStore } from './store.mjs'
 import { installMemoryTools, MEMORY_TOOL_NAMES } from './tools.js'
+import { installMemoryWriteTools } from './writing.js'
 
 export const name = 'hikari-memory'
 export const inject = ['tools', 'hikariWorldFindings']
@@ -71,6 +72,9 @@ export async function apply(ctx, config = {}) {
   })
 
   installMemoryTools(ctx, service)
+  // 写入工具拿到的是 store 本身（不是 World 的只读 service）：写记忆不需要读 findings，
+  // 而读记忆也不该顺手拿到写权限。两者注册在同一 fiber 下，卸载时一起消失。
+  installMemoryWriteTools(ctx, store)
 
   // 只有在两个工具都注册成功之后才到这里；上面任何一步 throw 都不会打印。
   // 这行日志是「谁在提供这两个工具」的唯一运行时可观测信号——冲突检测的失败

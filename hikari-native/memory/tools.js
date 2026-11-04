@@ -6,7 +6,9 @@
  *
  * 边界：这里只做「检索与读取」，不写、不改状态、不做 Finding → Memory 同步。
  */
-export const MEMORY_TOOL_NAMES = ['search_memory', 'read_memory']
+// 四个名字：两个检索（World 也能提供）与两个写入（只由本插件提供，见 writing.js）。
+// 顺序即 ready 行与测试里 tools.order 的顺序。
+export const MEMORY_TOOL_NAMES = ['search_memory', 'read_memory', 'write_memory', 'revise_memory']
 
 export function installMemoryTools(ctx, service) {
   ctx.tools.register({
