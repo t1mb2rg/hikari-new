@@ -1,4 +1,4 @@
-# M2-a Architecture Review
+﻿# M2-a Architecture Review
 
 **评审对象**：Memory Store 的引入是否守住了 M0/M2 已经冻结的边界。
 **评审方法**：对照 `docs/architecture/hikari-base-plugin-architecture-v0.1.md` 的所有权表与 `docs/architecture/memory-core-m2-architecture-v0.1.md` 的 §1/§2/§9，逐条核对代码落点；看 `git diff --stat` 确认改动范围。
@@ -9,7 +9,7 @@
 | 边界 | 判定 | 依据 |
 |---|---|---|
 | Memory 不拥有 Findings | 守住 | `record_finding` 仍在 `hikari-native/world/findings.js`；`store.mjs` 不 import 任何 world 模块 |
-| 不复制其他插件的内部状态 | 守住 | `store.mjs` 只依赖 `node:fs`/`node:path`/`node:os`/`node:crypto`/`node:url` |
+| 不复制其他插件的内部状态 | 守住 | `store.mjs:16-19` 只依赖 `node:crypto`、`node:fs/promises`、`node:os`、`node:path` 四个内置模块 |
 | 依赖单向 `memory → world` | 守住 | `memory/index.js` 的 `inject` 仍是 `['tools','hikariWorldFindings']`；World 不引用 Memory |
 | 不建项目级隔离 | 守住 | `resolveMemoryDir` 只认 `storeDir`/`DSH_HOME`/`homedir()`，三条都不含仓库路径 |
 | 不改 Runtime | 守住 | 改动只在 `hikari-native/memory/`、`hikari-native/test/`、`docs/`、`experiments/` |
