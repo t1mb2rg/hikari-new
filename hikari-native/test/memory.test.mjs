@@ -10,13 +10,17 @@
 //    `ToolRuntime`，验真注册表上的可见集与回滚，以及工具定义逐字不变。
 // 两处的结论必须一致；任一处不成立都是契约缺口，不能改成手动注销掩盖。
 import assert from 'node:assert/strict'
+import { join } from 'node:path'
 import test from 'node:test'
-import { Context, Service } from 'file:///G:/work/LAB/code/_poc/poc01/node_modules/@deepseek-ai/cordis/lib/index.js'
+import { fileURLToPath } from 'node:url'
+
+import { Context, Service } from '@deepseek-ai/cordis'
 
 import { apply as worldApply, name as worldName, inject as worldInject } from '../world/index.js'
 import { apply as memoryApply, name as memoryName, inject as memoryInject } from '../memory/index.js'
 
-const ROOT = 'G:/work/LAB/code/projects/own/hikari-new'
+// 仓库根：本文件在 `hikari-native/test/`，上两级就是根。不写死盘符，CI 上一样跑。
+const ROOT = fileURLToPath(new URL('../..', import.meta.url)).replace(/[\\/]+$/, '')
 const SESSION_ID = 'session-hikari'
 
 const findingsState = {
@@ -190,7 +194,7 @@ test('非仓库目录：Memory 仍能激活，record_finding 不存在', async (
   const tools = holder.tools
   app.plugin(
     { name: worldName, inject: worldInject, apply: worldApply },
-    { root: 'G:/tmp/definitely-not-a-repo', registerMemoryTools: false },
+    { root: join(ROOT, '__definitely_not_a_repo__'), registerMemoryTools: false },
   )
   await new Promise((r) => setTimeout(r, 40))
   app.plugin({ name: memoryName, inject: memoryInject, apply: memoryApply })
