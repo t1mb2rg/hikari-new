@@ -81,6 +81,7 @@ M2 §4 比较过四种持久化方案。选文件的三个理由：不引入新�
 - **不做迁移**：`schemaVersion` 一变就拒绝启动。改字段语义时必须同时决定升级路径，不能指望这里自动兼容。
 - **明文**：记忆是明文 JSONL，访问控制依赖文件系统权限。任务书没有要求加密，这里如实记下。
 - **日志不含内容**：ready 行只记计数与损坏分类（`memory/index.js:84-89`），路径经 `presentDir`（:25-33）把用户主目录缩成 `~`。
+- **`apply` 从同步变 async（本轮新引入的行为变化）**：`await MemoryStore.open()` 之后才注册工具，所以 `app.plugin(...)` 返回的那一刻 `search_memory` / `read_memory` 还不存在，要等存储打开完成。DSH 目前没有启动期工具快照（工具由模型按需调用），所以现在没有影响；但任何「插件加载完成即工具可用」的假设都会踩到。这不是理论风险——本轮 CI 上就因此失败过两个用例（Windows runner 的慢盘让 `open` 超过了测试的固定等待窗口），见 `experiments/m2a-ci-verify.md` 第二节。
 
 ## 4. Functional Review
 
