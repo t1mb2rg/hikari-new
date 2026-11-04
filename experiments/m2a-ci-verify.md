@@ -1,20 +1,20 @@
 # M2-a 验收读数：CI 两个平台与工作区边界
 
-记录时间：2026-11-04。基线 `ce12a15` → 交付 `53dd845`。
+记录时间：2026-11-04。基线 `ce12a15` → 交付 `9d1fe68`。
 
 ## 一、本地全量测试
 
 ```
 npm test
-ℹ tests 1098
+ℹ tests 1103
 ℹ suites 2
-ℹ pass 1094
+ℹ pass 1099
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 4
 ```
 
-改前 1086 项，新增 12 项（`hikari-native/test/memory-store.test.mjs`）。4 项 skip 是仓库原有的平台相关跳过，非本轮引入。
+改前 1086 项，新增 **17** 项（`hikari-native/test/memory-store.test.mjs`）。4 项 skip 是仓库原有的平台相关跳过，非本轮引入。
 
 ## 二、CI 第一轮：Windows 上两项失败
 
@@ -40,27 +40,25 @@ run `41844631032`，`surface` job 的「Test the runtime」步骤失败，`test`
 
 **修法**（commit `53dd845`）：把固定窗口换成 `until()` 等真实条件——有 `logs` 时等 ready 行出现，无 `logs` 时等 `search_memory` 注册完成；冲突用例显式传 `expectReady: false`，因为它本来就不该打 ready，等它会拖到超时。
 
-## 三、CI 第二轮：两个平台通过
+## 三、CI 第二至四轮：两个平台通过
 
-run `41845324643`（head `53dd845`）：
+| run | head | `test`（ubuntu） | `surface`（windows） |
+|---|---|---|---|
+| `41845324643` | `53dd845` | success | success |
+| `41847403448` | `d501a47` | success | success |
+| `41849551288` | `9d1fe68` | success | success |
 
-| job | 平台 | 结论 |
-|---|---|---|
-| `test` | ubuntu-latest | success |
-| `surface` | windows-latest | success |
-
-overall `conclusion: success`。
+最后一轮是评估者七条修正（meta 损坏可重建、两条分支相对路径 fail-closed、8b/8c/8d/8e/9b 测试、两份独立 review）之后的读数。
 
 ## 四、工作区边界
 
 ```
-git status --porcelain -- hikari-native      → 空
-git diff --stat HEAD~3 -- hikari-native/world hikari-native/memory/tools.js hikari-native/cordis.patch.yml → 空
+git status --porcelain -- hikari-native/world hikari-native/memory/tools.js hikari-native/cordis.patch.yml  → 空
 ```
 
-即：World 插件、`memory/tools.js`（两个检索工具的定义与行为）、`cordis.patch.yml`（装配配置）相对 `ce12a15` **零改动**。本轮动的是 `memory/store.mjs`（新增）、`memory/index.js`（open/close 与 ready 行）、`test/memory-store.test.mjs`（新增）、`test/memory.test.mjs`（时序与临时目录）。
+即：World 插件、`memory/tools.js`（两个检索工具的定义与行为）、`cordis.patch.yml`（装配配置）相对 `ce12a15` **零改动**。本轮动的是 `memory/store.mjs`（新增）、`memory/index.js`（open/close、ready 行、一条注释）、`test/memory-store.test.mjs`（新增）、`test/memory.test.mjs`（时序与临时目录）。
 
-仓库里没有 `src/` 或 Runtime 目录的改动，`git diff --stat HEAD~3 -- src/` 输出为空。
+仓库里没有 `src/` 或 Runtime 目录的改动，`git diff --stat -- src/` 输出为空。
 
 ## 五、这一轮暴露的一个真实风险（已写进文档 §3）
 
@@ -70,3 +68,4 @@ git diff --stat HEAD~3 -- hikari-native/world hikari-native/memory/tools.js hika
 
 - 未在真实 DSH 实例里验证 ready 行的 `store=` 是否落成 `~/.dsh/hikari/memory`（本轮只在测试临时目录里跑过）。桌面实例上一轮起的是旧代码，要重启才会加载 store。
 - 未测多进程同时写同一个 store（设计上是单写入者假设，见文档 §3）。
+- 未测大文件性能（启动全量重放的拐点），M2 已把这条列为接受的代价。
