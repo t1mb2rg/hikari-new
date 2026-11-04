@@ -1,4 +1,4 @@
-# Memory Store（M2-a）
+﻿# Memory Store（M2-a）
 
 这一阶段只做一件事：让 Hikari 第一次拥有**自己的**持久化数据。存储层独立于任何项目与 Session，随 `hikari-memory` 插件加载与释放。写入工具、检索、自动分类、自动过期都不在这一阶段。
 
@@ -12,9 +12,9 @@
 └── memory.meta.json  # 派生元数据，可重建
 ```
 
-目录由 `resolveMemoryDir`（`hikari-native/memory/store.mjs:67-92`）解析，优先级：显式 `config.storeDir` > `$DSH_HOME` > `~/.dsh`，之后拼 `hikari/memory`。空白 `$DSH_HOME` 视为未设（:89）——这条与 DSH 自己的 `resolveDshHome` 一致。
+目录由 `resolveMemoryDir`（`hikari-native/memory/store.mjs:67-92`）解析，优先级：显式 `config.storeDir` > `$DSH_HOME` > `~/.dsh`，之后拼 `hikari/memory`。空白 `$DSH_HOME` 视为未设（:80）——这条与 DSH 自己的 `resolveDshHome` 一致。
 
-**两条分支都拒绝相对路径**（`storeDir` :72-78、`DSH_HOME` :84-90），抛 `INVALID_INPUT`。原因很简单：「不看 `process.cwd()`」这条约束不能只对默认路径成立——只要有一条分支悄悄按 cwd 解析，这个存储就不再是全局的了。默认分支完全不碰 cwd（:91-92 只用 `homedir()`）。
+**两条分支都拒绝相对路径**（`storeDir` 的 throw 在 :72、`DSH_HOME` 的 throw 在 :84），抛 `INVALID_INPUT`。原因很简单：「不看 `process.cwd()`」这条约束不能只对默认路径成立——只要有一条分支悄悄按 cwd 解析，这个存储就不再是全局的了。默认分支完全不碰 cwd（:91 只用 `homedir()`）。
 
 ### 记录
 
@@ -95,12 +95,12 @@ M2 §4 比较过四种持久化方案。选文件的三个理由：不引入新�
 
 | 要求 | 落点 |
 |---|---|
-| 全局存储目录初始化 | `store.mjs:269` `mkdir(dir, {recursive:true})`；两条路径分支都拒绝对路径以下的形式（`storeDir` :72-78、`DSH_HOME` :84-90） |
+| 全局存储目录初始化 | `store.mjs:269` `mkdir(dir, {recursive:true})`；两条路径分支都拒绝相对路径（`storeDir` throw :72、`DSH_HOME` throw :84） |
 | `memory.jsonl` append-only | `store.mjs:488`，只 `appendFile`，无任何重写路径 |
 | `memory.meta.json` 元数据管理 | `store.mjs:285-295` 读、`:426` 写 |
 | 全局唯一 `memoryId` | `store.mjs:461` `m-${randomUUID()}` |
 | 顺序编号 `seq` | `store.mjs:470` `this.#lastSeq + 1` |
-| 内存索引构建 | `store.mjs:396-402` fold 进 `Map` + `seqOrder` |
+| 内存索引构建 | `store.mjs:319-403` 逐行 fold 进 `Map` + `seqOrder` |
 | 启动时恢复 | `store.mjs:266-437` |
 | 数据结构校验 | `store.mjs:105-158` |
 | Schema 版本管理 | `store.mjs:298-303` 校验、`:423` 写回 |
