@@ -77,10 +77,18 @@ export function resolveMemoryDir({ storeDir, env = process.env } = {}) {
     return resolve(expanded)
   }
   const raw = env.DSH_HOME
-  const home = typeof raw === 'string' && raw.trim().length > 0
-    ? resolve(expandTilde(raw.trim()))
-    : join(homedir(), '.dsh')
-  return join(home, 'hikari', 'memory')
+  if (typeof raw === 'string' && raw.trim().length > 0) {
+    const expanded = expandTilde(raw.trim())
+    // 与显式 storeDir 同理：相对路径会随 cwd 变，「全局记忆」不成立。
+    if (!isAbsolute(expanded)) {
+      throw new MemoryStoreError(
+        'INVALID_INPUT',
+        `DSH_HOME 必须是绝对路径，收到 "${raw}"：全局记忆不能建在当前工作目录下`,
+      )
+    }
+    return join(expanded, 'hikari', 'memory')
+  }
+  return join(homedir(), '.dsh', 'hikari', 'memory')
 }
 
 function isNullableTimestamp(value) {
@@ -235,6 +243,7 @@ export class MemoryStore {
       skippedDuplicates: this.#damage.skippedDuplicates,
       skippedCorruptLines: this.#damage.skippedCorruptLines,
       metaRepaired: this.#damage.metaRepaired,
+      metaUnreadable: this.#damage.metaUnreadable,
     }
   }
 
@@ -262,18 +271,25 @@ export class MemoryStore {
     const metaPath = join(dir, MEMORY_META)
     const jsonlPath = join(dir, MEMORY_JSONL)
 
-    const damage = { tailCorrupt: null, skippedDuplicates: 0, skippedCorruptLines: 0, metaRepaired: false }
+    const damage = {
+      tailCorrupt: null,
+      skippedDuplicates: 0,
+      skippedCorruptLines: 0,
+      metaRepaired: false,
+      metaUnreadable: false,
+    }
 
-    // 1. meta：不存在就当作全新存储；存在但版本不符则拒绝启动（不迁移、不猜）。
+    // 1. meta：不存在或读不出来都从 jsonl 重建（meta 全是派生值，丢了不影响任何一条记录）；
+    //    只有「读得出来、版本不符」才拒绝启动——那说明是别的版本写的，不能就地迁移。
     let meta
     try {
       const text = await readFile(metaPath, 'utf8')
       meta = JSON.parse(text)
     } catch (error) {
       if (error.code !== 'ENOENT') {
-        throw new MemoryStoreError('META_UNREADABLE', `无法读取 ${MEMORY_META}：${error.message}`, {
-          path: metaPath,
-        })
+        // 一条都读不出来时按损坏处理会把整个存储永久锁死：jsonl 里明明有三条有效记忆，
+        // 却因为一个派生的元数据文件打不开而全部不可达，这比「静默丢一条」更糟。
+        damage.metaUnreadable = true
       }
       meta = emptyMeta(clock())
     }
@@ -395,7 +411,7 @@ export class MemoryStore {
     // 3. meta 与 jsonl 对不上：以 jsonl 为准重建。meta 里的 recordCount/lastSeq
     //    都只是 jsonl 的派生值，没有任何信息是 jsonl 推不出来的——所以不存在
     //    「以 meta 为准」能救回一条记忆的情形。
-    if (meta.recordCount !== records.size || meta.lastSeq !== lastSeq) {
+    if (damage.metaUnreadable || meta.recordCount !== records.size || meta.lastSeq !== lastSeq) {
       damage.metaRepaired = true
     }
     const repairedMeta = {

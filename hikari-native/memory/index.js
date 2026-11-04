@@ -49,8 +49,10 @@ export async function apply(ctx, config = {}) {
     )
   }
 
-  // 最终工具注册表里每个工具只能有一个提供者。DSH 自己不做这个检查
-  // （`tools.register` 无同名校验），所以防护写在这里。
+  // 最终工具注册表里每个工具只能有一个提供者。DSH 在同一 layer 内重名注册时确实会抛
+  // （`dsh-tools` 的 NamedEntries），但只说 "already registered"；这里先查一遍，是为了
+  // 把「在同一个 patch 里设 world.registerMemoryTools: false」这个解法写进错误信息里。
+  // 注意：跨 `agent.ctx` 的 scope 注册是 shadow，不会抛——那条路径不归这里管。
   for (const toolName of MEMORY_TOOL_NAMES) {
     if (ctx.tools.get(toolName) !== undefined) {
       throw new Error(

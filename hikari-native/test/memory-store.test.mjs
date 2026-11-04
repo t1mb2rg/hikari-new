@@ -320,6 +320,28 @@ describe('memory store', () => {
     )
   })
 
+  it('8e. meta 本身损坏：从 jsonl 重建而不是把整个存储锁死', async () => {
+    const dir = await tempDir()
+    const store = await MemoryStore.open({ storeDir: dir, env: {}, now: clockAt(8300) })
+    await store.append({ text: '第一条' })
+    await store.append({ text: '第二条' })
+    await store.append({ text: '第三条' })
+    await store.close()
+
+    // meta 全是派生值：它坏了不该让 jsonl 里三条有效记忆全部不可达。
+    await writeFile(join(dir, MEMORY_META), '{ 这不是 JSON', 'utf8')
+    const reopened = await MemoryStore.open({ storeDir: dir, env: {}, now: clockAt(8301) })
+    assert.equal(reopened.size, 3)
+    assert.equal(reopened.damage.metaUnreadable, true)
+    assert.equal(reopened.damage.metaRepaired, true)
+    await reopened.close()
+
+    // 重建后的 meta 是合法的，下次启动不再报损坏。
+    const meta = await readMeta(dir)
+    assert.equal(meta.schemaVersion, MEMORY_SCHEMA_VERSION)
+    assert.equal(meta.recordCount, 3)
+  })
+
   it('9. 全局存储：路径只由 DSH_HOME 决定，不看当前工作目录，两个「项目」读写同一份', async () => {
     const home = await tempDir('hikari-memory-home-')
     const elsewhere = await tempDir('hikari-memory-cwd-')
@@ -371,6 +393,12 @@ describe('memory store', () => {
     // 绝对路径照旧可用，`~` 也照旧展开。
     const absolute = resolveMemoryDir({ storeDir: tempDir('hikari-memory-abs-') })
     assert.equal(isAbsolute(absolute), true)
+
+    // DSH_HOME 这条分支同理：相对路径同样会随 cwd 变，不能只是「默认路径不看 cwd」。
+    assert.throws(
+      () => resolveMemoryDir({ env: { DSH_HOME: 'relative-home' } }),
+      (error) => error.code === 'INVALID_INPUT' && error.message.includes('DSH_HOME'),
+    )
   })
 
   it('10. 卸载与重新加载：close 后拒写，重新打开后数据完整且 seq 连续', async () => {
