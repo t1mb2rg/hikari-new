@@ -134,7 +134,7 @@ async function until(predicate, { timeout = 5000, label = 'condition' } = {}) {
   throw new Error(`timed out after ${timeout} ms waiting for ${label}`)
 }
 
-async function boot({ worldConfig, withMemory, logs }) {
+async function boot({ worldConfig, withMemory, logs, expectReady = Boolean(logs) }) {
   const app = new Context()
   const storeDir = await freshStoreDir()
   // ready 走 console.error（见 memory/index.js 的注释：DSH 的 exporter 只放行 warn+），
@@ -152,9 +152,14 @@ async function boot({ worldConfig, withMemory, logs }) {
   let memory
   if (withMemory) {
     memory = app.plugin({ name: memoryName, inject: memoryInject, apply: memoryApply }, { storeDir })
-    // 这里不能用 until(tools.has)：冲突用例里 Memory 的 apply 会抛错、工具永远不出现，
-    // 等工具会把那个用例拖到超时。给足固定窗口即可，代价只是几十毫秒。
-    await new Promise((r) => setTimeout(r, 150))
+    if (expectReady) {
+      // 等到 ready 真的打出来再恢复 console.error。用固定窗口时，慢盘上 ready 会迟到、
+      // 掉进下一个用例截获的数组里——Windows CI 上实测过（`expected exactly one` 收到两条）。
+      await until(() => logs.some((l) => l.includes('[hikari-memory] ready')), { label: 'memory ready line' })
+    } else {
+      // 冲突用例里 Memory 的 apply 会抛错、永远不打 ready，等它会把用例拖到超时。
+      await new Promise((r) => setTimeout(r, 200))
+    }
   }
   console.error = originalError
   return { app, tools, world, memory, storeDir }
@@ -233,7 +238,8 @@ test('非仓库目录：Memory 仍能激活，record_finding 不存在', async (
   )
   await new Promise((r) => setTimeout(r, 40))
   app.plugin({ name: memoryName, inject: memoryInject, apply: memoryApply }, { storeDir })
-  await new Promise((r) => setTimeout(r, 40))
+  // Memory 的 apply 是 async（要 open 存储），固定窗口在慢盘上不够——等工具真的出现。
+  await until(() => tools.has('search_memory'), { label: 'search_memory registered' })
   assert.equal(tools.has('record_finding'), false)
   assert.equal(tools.has('search_memory'), true)
   assert.deepEqual(app.get('hikariWorldFindings').describe().available, false)
@@ -251,6 +257,6 @@ test('接管成功时输出一条 ready 日志，含 provider / tools / source',
 
 test('冲突时抛错且不输出 ready 日志', async () => {
   const logs = []
-  await boot({ worldConfig: { registerMemoryTools: true }, withMemory: true, logs })
+  await boot({ worldConfig: { registerMemoryTools: true }, withMemory: true, logs, expectReady: false })
   assert.equal(logs.filter((l) => l.includes('[hikari-memory] ready')).length, 0)
 })
