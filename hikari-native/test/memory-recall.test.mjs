@@ -21,7 +21,7 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import { apply as worldApply, name as worldName, inject as worldInject } from '../world/index.js'
 import { apply as memoryApply, name as memoryName, inject as memoryInject } from '../memory/index.js'
 import { MemoryStore } from '../memory/store.mjs'
-import { installMemoryRecallTools } from '../memory/recall.js'
+import { installMemoryRecallTools, matchStrength } from '../memory/recall.js'
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url)).replace(/[\\/]+$/, '')
 const SESSION_ID = 'session-hikari'
@@ -393,4 +393,97 @@ test('[12] 全量回归：写了记忆之后，search_memory 的结果里仍然�
   assert.equal(findings.results[0].id, 'f-001')
   assert.equal(findings.results.some((r) => String(r.id).startsWith('m-')), false, 'findings 检索不应返回记忆 id')
   assert.equal(typeof findings.total, 'number', 'search_memory 的输出形状未变')
+})
+
+// ---- M2-d：匹配口径（`docs/architecture/m2d-memory-matching-interface-freeze.md` §5）----
+//
+// B1 现场那四条 query 原本一条都没命中（`experiments/m2c-live/s3-recall.md`）。这里用
+// **会话 A 真正写进去的那段正文**重放：正文取自 `experiments/m2c-live/store/memory.jsonl`
+// 第 1 行（954 个码元），只此一条记录，不另造语料。
+const REAL_TEXT = [
+  'Hikari 的 Memory 修订约定（可作为后续讨论的前提，已在源码核实成立）：「修订只能改链头，旧记录永不改」。',
+  '',
+  '核实位置：',
+  '- `hikari-native/memory/writing.js` 的 `assertReviseTarget`（约 253-281 行）：先 `store.get(id)` 确认记录存在，再 `store.all().find(r => r.supersedes === id)` 查后继；一旦已有后继就抛 `MEMORY_SUPERSEDES_NOT_HEAD`，并在消息里点名当前链头，要求改那条。因此只能修订当前版本（链头）。',
+  '- `revise_memory` 的实现（约 463-481 行）：判链头与写入在同一个 `enqueue` 串行回调里完成，写入走 `store.append(toAppendInput(input, { supersedes: target }))`——只追加新记录，`supersedes` 由工具层从 memoryId 复制，模型无法自己写。',
+  '- `hikari-native/memory/store.mjs`：文件被注释与实现共同限定为 append-only（只 `appendFile` JSONL；`writeFile` 只用于 meta 计数器），没有 update/delete 路径；`supersedes` 必须指向已存在记录，不能指向自己（自指/悬挂会被 `INVALID_RECORD`/`INVALID_INPUT` 拒绝）。',
+  '- 工具描述里也写死了：「The old record is kept forever; nothing is edited or deleted.」',
+  '',
+  '已知局限（不是反例，但讨论时要记住）：串行队列只覆盖单进程；两个进程共写同一 store 没有文件锁，跨进程并发修订仍可能各自写出后继而分叉（`writing.js` 约 288-292 行、`docs/development/m2a-memory-store.md` 风险清单第 1 条）。因此「只能改链头」在单进程内是强制的，跨进程是尽力而为；而「旧记录永不改」在两种情况下都由 append-only 存储保证。',
+].join('\n')
+
+test('[13] matchStrength：整串命中 1、片段按覆盖率、拉丁词元必须落在正文词元里', () => {
+  // 整串子串（含大小写）→ 满分
+  assert.equal(matchStrength('修订只能改链头', REAL_TEXT), 1)
+  assert.equal(matchStrength('memory 修订约定', REAL_TEXT), 1)
+  // 片段覆盖率：`memory 修订 规则 是什么` 的中文片段只中 `修订`，1/4 = 0.25
+  assert.equal(matchStrength('memory 修订 规则 是什么', REAL_TEXT), 0.25)
+  // 拉丁词元必须被正文某个词元包含：`script` 里的 `typescript` 不算命中
+  assert.equal(matchStrength('typescript', REAL_TEXT), null)
+  // 只有拉丁词元、且整串不是子串（写成连字符）→ 0.5：两个词都在，但没有原文依据
+  assert.equal(matchStrength('revise-memory', REAL_TEXT), 0.5)
+  // 反过来，`revise` 本身就是正文子串 → 走快速路径拿满分
+  assert.equal(matchStrength('revise', REAL_TEXT), 1)
+  // 覆盖率不足 0.25 一律不中：单字假阳性（`完`/`不`/`存`/`在`/`的`）就是这样被挡住的
+  assert.equal(matchStrength('完全不存在的词', REAL_TEXT), null)
+  // 0.25 是硬线：命中 1/4 = 0.25 进，命中 1/5 = 0.20 不进
+  assert.equal(matchStrength('修订 规则 词汇 语义 关系', REAL_TEXT), null)
+})
+
+test('[14] B1 现场四条 query 在只有一条记录时各命中一条（M2-d 的主证据）', async () => {
+  const { store, search } = await openTools()
+  const written = await store.append({ text: REAL_TEXT })
+  const queries = [
+    'hikari 记忆修订',
+    'revise memory 旧记录',
+    '记忆修订 只能修订哪一条 旧记录是否改动',
+    '记忆 修订 约定',
+  ]
+  for (const query of queries) {
+    const hit = await search({ query })
+    assert.equal(hit.results.length, 1, `「${query}」应当命中会话 A 写的那条`)
+    assert.equal(hit.results[0].memoryId, written.memoryId)
+  }
+})
+
+test('[15] 无关 query 仍然空集（收紧口径不能换来假阳性）', async () => {
+  const { store, search } = await openTools()
+  await store.append({ text: REAL_TEXT })
+  await store.append({ text: '记忆修订的补充：跨进程没有文件锁，分叉只能事后发现。' })
+  for (const query of [
+    '完全不存在的词',
+    '部署脚本 代理',
+    'TypeScript 编译错误',
+    '今天的天气',
+    'npm test 跑多久',
+    '会议纪要 待办事项',
+    'how to revise a memory without losing history',
+  ]) {
+    const hit = await search({ query })
+    assert.deepEqual(hit.results, [], `「${query}」不该命中`)
+  }
+})
+
+test('[16] 排序按命中强度：整串命中压过片段命中，即使后者更新', async () => {
+  const { store, search } = await openTools()
+  const exact = await store.append({ text: '修订只能改链头' })
+  const partial = await store.append({ text: '修订 只能改链头（补充：跨进程没有文件锁）' })
+  assert.equal(partial.seq > exact.seq, true, '片段命中那条更新')
+
+  const hit = await search({ query: '修订只能改链头' })
+  assert.deepEqual(
+    hit.results.map((r) => r.memoryId),
+    [exact.memoryId, partial.memoryId],
+    '整串命中必须先出现',
+  )
+
+  // 同强度时按 seq 倒序（新的在前）：后三条都是片段命中、覆盖率相同
+  const older = await store.append({ text: '修订 只能改链头（旧，另一个库）' })
+  const newer = await store.append({ text: '修订 只能改链头（新，另一个库）' })
+  const tied = await search({ query: '修订只能改链头' })
+  assert.deepEqual(
+    tied.results.slice(1).map((r) => r.memoryId),
+    [newer.memoryId, older.memoryId, partial.memoryId],
+    '同强度按新到旧',
+  )
 })
