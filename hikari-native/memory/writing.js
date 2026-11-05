@@ -18,7 +18,13 @@
  *      所以 `occurredAt` 等在它不知道时会大量为 `null`——本模块不替它猜，也不回落到 `recordedAt`。
  *   2. 模型无法回读 memoryId：`search_memory` / `read_memory` 只查 World findings。修订能力
  *      实际只在同一上下文内可用，跨 session 接续要等 M2-c。
+ *
+ * M2-e 追加的一件旁路：被拒绝的写入会往同目录的 `memory.rejections.jsonl` 记一行诊断
+ * （见 `rejections.js`）。它不改变校验、不改变错误、不进入检索——只是让"记忆为什么缺"
+ * 事后可回答。留痕自身失败时一律吞掉，绝不让调用者看到另一个错误。
  */
+
+import { logRejection, describeRejection } from './rejections.js'
 
 /** `text` 的上限。理由见架构审阅 §2.7：既是输入规模约束，也不是存储原子性的证明。 */
 export const MAX_TEXT = 4000
@@ -363,6 +369,26 @@ const SOURCE_PARAMETER = {
 export function installMemoryWriteTools(ctx, store) {
   const enqueue = createQueue()
 
+  /**
+   * 把"被拒"记一行再原样抛出。
+   *
+   * 只用 `store.dir`（`store.mjs` 的公开 getter），不碰 store 内部；留痕失败吞掉，
+   * 保证调用者拿到的永远是最初那条 `MEMORY_*` 错误。
+   */
+  const logged = (tool, run) =>
+    async function executeLogged(args) {
+      try {
+        return await run(args)
+      } catch (error) {
+        try {
+          await logRejection(store.dir, describeRejection(tool, args, error))
+        } catch {
+          // 旁路失败不影响写入语义。
+        }
+        throw error
+      }
+    }
+
   ctx.tools.register({
     name: 'write_memory',
     description: WRITE_DESCRIPTION,
@@ -403,7 +429,7 @@ export function installMemoryWriteTools(ctx, store) {
       },
       render: (args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
     },
-    async execute(args) {
+    execute: logged('write_memory', async (args) => {
       const input = normalizeInput(args)
       assertText(input.text)
       assertHint(input.validHint)
@@ -416,7 +442,7 @@ export function installMemoryWriteTools(ctx, store) {
         throw storeRejected(error)
       }
       return presentWrite(record)
-    },
+    }),
   })
 
   ctx.tools.register({
@@ -460,7 +486,7 @@ export function installMemoryWriteTools(ctx, store) {
       render: (args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
     },
     // 判链头与写入必须在同一个队列回调里完成，否则两个并发修订会各自看到"目标没有后继"。
-    execute(args) {
+    execute: logged('revise_memory', async (args) => {
       return enqueue(async () => {
         const input = normalizeInput(args)
         assertText(input.text)
@@ -478,6 +504,6 @@ export function installMemoryWriteTools(ctx, store) {
         }
         return { ...presentWrite(record), supersedes: target }
       })
-    },
+    }),
   })
 }
