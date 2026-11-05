@@ -105,7 +105,7 @@
 
 形态上，静态页优先于命令行：命令行是"我去查一下"，页面是"它一直在那儿"。但**页面必须是本地的、随开随关的**，不起服务、不开机启动——否则就从"档案"变成"服务"，那是另一片的事。
 
-[v0] 人侧第一版已落地：`hikari-native/viewer/render.mjs`（`--store` / `--format html|text` / `--out`），读 `memory.jsonl` 与 `memory.rejections.jsonl` 渲染三块（记忆时间线、拒绝样本、它不知道的）；6 个用例在 `hikari-native/test/memory-view.test.mjs`。模型侧（5.1）尚未实现。
+[v0] 人侧第一版已落地：`hikari-native/viewer/render.mjs`（`--store` / `--format html|text` / `--out`），读 `memory.jsonl` 与 `memory.rejections.jsonl` 渲染三块（记忆时间线、拒绝样本、它不知道的）；6 个用例在 `hikari-native/test/memory-view.test.mjs`。模型侧（5.1）已落地：`memory_status`（`hikari-native/memory/status.js`，10 个用例在 `hikari-native/test/memory-status.test.mjs`），契约见 `docs/architecture/m2f-memory-status-interface-freeze.md`。
 
 ### 5.3 这一层明确不做
 

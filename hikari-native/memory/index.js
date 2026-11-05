@@ -16,6 +16,7 @@ import { MemoryStore } from './store.mjs'
 import { installMemoryTools, MEMORY_TOOL_NAMES } from './tools.js'
 import { installMemoryWriteTools } from './writing.js'
 import { installMemoryRecallTools } from './recall.js'
+import { installMemoryStatusTool } from './status.js'
 
 export const name = 'hikari-memory'
 export const inject = ['tools', 'hikariWorldFindings']
@@ -78,6 +79,8 @@ export async function apply(ctx, config = {}) {
   installMemoryWriteTools(ctx, store)
   // 发现工具同样是只读的 store 使用者：检索与读取长期记忆，不碰 findings、不写盘。
   installMemoryRecallTools(ctx, store)
+  // 状态汇总：回答「一共记了几条、最近记了什么、刚拒了什么」，只读、不做匹配。
+  installMemoryStatusTool(ctx, store)
 
   // 只有在两个工具都注册成功之后才到这里；上面任何一步 throw 都不会打印。
   // 这行日志是「谁在提供这两个工具」的唯一运行时可观测信号——冲突检测的失败

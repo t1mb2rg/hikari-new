@@ -6,7 +6,8 @@
  *
  * 边界：这里只做「检索与读取」，不写、不改状态、不做 Finding → Memory 同步。
  */
-// 六个名字：两个检索（World 也能提供）、两个写入（writing.js）、两个发现（recall.js）。
+// 七个名字：两个检索（World 也能提供）、两个写入（writing.js）、两个发现（recall.js）、
+// 一个状态汇总（status.js）。
 // 顺序即 ready 行与测试里 tools.order 的顺序。
 export const MEMORY_TOOL_NAMES = [
   'search_memory',
@@ -15,6 +16,7 @@ export const MEMORY_TOOL_NAMES = [
   'revise_memory',
   'search_memories',
   'get_memory',
+  'memory_status',
 ]
 
 export function installMemoryTools(ctx, service) {

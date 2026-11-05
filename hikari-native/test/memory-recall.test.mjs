@@ -364,9 +364,9 @@ async function boot({ worldConfig = { registerMemoryTools: false } } = {}) {
   return { app, tools: holder.tools, memory, storeDir }
 }
 
-test('[11] 卸载后六个工具消失，重载后恢复', async () => {
+test('[11] 卸载后七个工具消失，重载后恢复', async () => {
   const { app, tools, memory, storeDir } = await boot()
-  const memoryTools = ['search_memory', 'read_memory', 'write_memory', 'revise_memory', 'search_memories', 'get_memory']
+  const memoryTools = ['search_memory', 'read_memory', 'write_memory', 'revise_memory', 'search_memories', 'get_memory', 'memory_status']
   for (const name of memoryTools) assert.equal(tools.has(name), true, `${name} should be registered`)
   assert.equal(tools.has('record_finding'), true)
 
