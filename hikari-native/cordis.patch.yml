@@ -109,6 +109,15 @@
         # 「根本没在跑」。方向 2 的第一次验证就卡在这里。留空则不写。
         tracePath: 'G:\work\LAB\code\projects\own\hikari-new\experiments\hikari-project-watch\tmp\trace.jsonl'
 
+    # 时间驱动源：每隔一段时间说明一次「时间过去了」。
+    # project-watch 盯的是仓库 diff——仓库不变就永不唤醒；没有这一条，
+    # 「她在没有指令时也活着」只是说法，不是可发生的事实。
+    # 它同样只发事件，不判断值不值得在意（那由模型判断）。
+    - id: hikari-heartbeat
+      name: 'hikari-native-v0/heartbeat'
+      config:
+        intervalMs: 1800000
+
     - id: hikari-activation
       name: 'hikari-native-v0/activation'
       config:

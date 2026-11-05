@@ -6,6 +6,10 @@ import { randomUUID } from 'node:crypto'
  * Consumes Attention decisions and wakes the DSH agent configured by
  * `agent-loop`. The agent is created and owned by DSH; this plugin never
  * creates or disposes it, so reloading Activation does not end the agent.
+ *
+ * 三个消费理由：`window-changed`（perception）、`project-changed`
+ * （project-watch）、`time-passed`（heartbeat）。三种提示词都只描述发生了什么，
+ * 不替模型判断值不值得在意。
  */
 export const name = 'hikari-activation'
 export const inject = ['agents']
@@ -24,6 +28,23 @@ function renderPrompt(event) {
     '- 如果有关，或者你拿不准，就自己去找：读文件、搜关键词。找到之后写下你发现了什么；如果想知道的东西现有条件查不到，就把它写出来。',
     '',
     '这是你自己的观察循环。不要联系用户。',
+  ].join('\n')
+}
+
+function renderHeartbeatPrompt(event) {
+  const at = new Date(typeof event.at === 'number' ? event.at : Date.now())
+  const clock = at.toLocaleTimeString('zh-CN', { hour12: false })
+  const minutes = Math.round((typeof event.intervalMs === 'number' ? event.intervalMs : 0) / 60000)
+  const gap = Number.isFinite(minutes) && minutes >= 1 ? `已经过了 ${minutes} 分钟` : '过了一会'
+  return [
+    `[Hikari 自主观察 ${clock}]`,
+    `${gap}，这段时间没有人跟你说话。`,
+    '',
+    '- 手上有没有没做完的事？有就接着做。',
+    '- 没有的话，先看看这段时间发生了什么：读文件、查记忆、看仓库状态，再决定要不要继续。',
+    '- 什么都不想做，就说一句「没什么」然后停下。不要为了填满这一轮编一件事出来。',
+    '',
+    '这是你自己的循环。不要联系用户。',
   ].join('\n')
 }
 
@@ -63,7 +84,7 @@ export function apply(ctx, config) {
 
   const activate = (event) => {
     const reason = event?.reason
-    if (reason !== 'window-changed' && reason !== 'project-changed') return
+    if (reason !== 'window-changed' && reason !== 'project-changed' && reason !== 'time-passed') return
 
     const agent = ctx.agents.get(sessionId)
     if (agent === undefined) {
@@ -75,7 +96,11 @@ export function apply(ctx, config) {
       return
     }
 
-    const text = reason === 'project-changed' ? renderProjectPrompt(event) : renderPrompt(event)
+    const text = reason === 'project-changed'
+      ? renderProjectPrompt(event)
+      : reason === 'time-passed'
+        ? renderHeartbeatPrompt(event)
+        : renderPrompt(event)
     const message = {
       id: randomUUID(),
       role: 'user',
@@ -87,7 +112,9 @@ export function apply(ctx, config) {
       agent.followup(message)
       const what = reason === 'project-changed'
         ? `project ${(event.changed ?? []).join('+')}`
-        : `window "${event.snapshot?.title ?? 'unknown'}"`
+        : reason === 'time-passed'
+          ? 'elapsed time'
+          : `window "${event.snapshot?.title ?? 'unknown'}"`
       ctx.logger.info(`hikari activation: woke agent ${sessionId} for ${what}`)
     } catch (error) {
       ctx.logger.warn(`hikari activation: followup failed: ${error.message}`)
