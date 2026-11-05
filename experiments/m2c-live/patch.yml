@@ -1,0 +1,49 @@
+# hikari-verify 的 profile patch：headless 应用 + hikari-native 的 world/memory 两个插件。
+#
+# 不用 hikari-native-v0 这个 bundle：bundle 自带的 patch 会装上 perception /
+# project-watch / activation 和 Hikari 的观察者人格（"你没有在跟用户对话"），
+# 那是常驻实例的形态，不是一次可对话的验证运行。这里只取 world（提供 findings
+# Service）与 memory（六个记忆工具），其余走 dsh-base 的默认工具面。
+#
+# 记忆目录指向实验目录，绝不碰 ~/.dsh/hikari/memory 里的真实数据。
+
+# headless 的 patch 关掉了 authorization / credentials / deepseek-account：
+# 它假设无人值守运行不需要账号。本机唯一可用的模型凭据就是
+# deepseek-account-platform 里那份 grant，所以这三行都要打开，
+# 否则模型调用以 ACCOUNT_SIGN_IN_REQUIRED 失败。
+- id: authorization
+  disabled: false
+
+- id: credentials
+  disabled: false
+
+- id: deepseek-account
+  disabled: false
+
+- id: agent-default-model
+  name: '@deepseek-ai/dsh-agent-default-model'
+  config:
+    provider: deepseek-account
+    model: deepseek-flash
+    # 验证跑，不用 max：三个会话各自几十秒即可。
+    reasoningEffort: low
+
+- insert:
+    # World 拥有 findings，并向外提供 hikariWorldFindings Service。
+    - id: hikari-world
+      name: 'hikari-native-v0/world'
+      config:
+        sessionId: m2c-live
+        settleMs: 300
+        cooldownMs: 0
+        wakeOnWindowChange: false
+        root: 'G:\work\LAB\code\projects\own\hikari-new'
+        # 检索工具交给 hikari-memory 注册；World 只留 record_finding。
+        registerMemoryTools: false
+
+    # Memory：六个工具（search_memory / read_memory / write_memory /
+    # revise_memory / search_memories / get_memory），存储在本实验目录。
+    - id: hikari-memory
+      name: 'hikari-native-v0/memory'
+      config:
+        storeDir: 'G:\work\LAB\code\projects\own\hikari-new\experiments\m2c-live\store'
