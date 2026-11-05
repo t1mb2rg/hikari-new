@@ -135,7 +135,7 @@ service 依赖与冲突检查；接线最后做，失败时能立刻区分"工�
 `FakeTools extends Service`（注册走 `ctx.effect`）、`freshStoreDir()` 用 `mkdtemp` + `after` 清理、`until()` 轮询。
 
 下表"实现落点"里的 `writing.js` 指 `hikari-native/memory/writing.js`、`store.mjs` 指 `hikari-native/memory/store.mjs`。
-**行号已按实施结果复核**（2026-11-05，`writing.js` 共 434 行），不再沿用 §3 的计划值；测试名列的是实测的用例名。
+**行号已按实施结果复核**（2026-11-05，`writing.js` 共 483 行），不再沿用 §3 的计划值；测试名列的是实测的用例名。
 
 | # | 测试名（都在 `hikari-native/test/memory-writing.test.mjs`） | 断言要点 | 实现落点（`文件:行号`） |
 |---|---|---|---|
@@ -144,12 +144,12 @@ service 依赖与冲突检查；接线最后做，失败时能立刻区分"工�
 | 3 | `[3] 全局 memoryId 唯一：两次写入不同 id，重开后仍不重复` | 两个 id 不同；重开后 `all()` 无重复 id | `store.mjs:483`（`m-${randomUUID()}`，工程生成） |
 | 4 | `[4] 工程字段不可伪造：schema 不暴露，绕过 schema 直接进 store 被白名单拒绝` | 结构化断言：`parameters.properties` 不含 `memoryId`/`recordedAt`/`seq`/`supersedes`，`additionalProperties === false`；行为断言：`store.append({ text:'x', memoryId:'m-x' })` 被拒，判 `error.code === 'INVALID_INPUT'`（该错误码在字段上，不在 message 里） | `writing.js:368-419`（schema 只有六个字段）+ `store.mjs:475-480`（白名单拒绝） |
 | 5 | `[5] 非法输入逐条被拒绝且不落盘` | 空正文 / 超长正文（4001） / 超长 `validHint`（401） / 非整数时间 / 负时间 / `validTo<validFrom` / `occurredAt>now` / `kind` 非法 / 模型显式填 `unknown` / `inference` 带 `ref` / 缺 `ref` 的 `finding` / 空白 `ref` / 超长 `ref`；每条断言错误码前缀 + `store.size` 不变。另两条**成功**用例：`validHint` 400 字落 400 字、`validHint` 全空白落 `null` | `writing.js:67-78`（规范化）+ `:81-91`（`assertText`）+ `:94-115`（`assertHint`）+ `:118-145`（`assertTimestamps`）+ `:148-212`（`assertSource`） |
-| 6 | `[6] 正常修订：追加一条新记录并指向旧记录，旧记录不动` | 新 `memoryId` ≠ 目标；`supersedes === 目标`；`size === 2` | `writing.js:422-434`（`revise_memory`，`supersedes` 由工具层复制） |
+| 6 | `[6] 正常修订：追加一条新记录并指向旧记录，旧记录不动` | 新 `memoryId` ≠ 目标；`supersedes === 目标`；`size === 2` | `writing.js:422-482`（`revise_memory`，`supersedes` 由工具层复制；`store.append` 在 `:475`） |
 | 7 | `[7] 修订后旧记录仍然存在，且一个字段都没被改写` | `get(目标)` 十字段与修订前 `deepStrictEqual`；对象无 `supersededBy` 键；重开后仍相等 | `store.mjs:510`（唯一写入路径是 `appendFile`，无重写） |
 | 8 | `[8] supersedes 指向正确，链可两跳，且并发修订不产生分叉` | `b.supersedes === a.memoryId`；再修订 `b` 得 `c.supersedes === b.memoryId`；对 `a` 再修订抛 `NOT_HEAD` 且消息带后继 id；20 个并发修订恰 1 成功、指向目标的记录恰 1 条 | `writing.js:253-290`（`assertReviseTarget`）+ `:293-302`（私有串行队列）+ `store.mjs:499-505` |
 | 9 | `[9] 不存在的修订目标被拒绝且不落盘` | `MEMORY_SUPERSEDES_UNKNOWN` 且消息**不**提 `search_memory`；`size` 不变；`f-001` 抛 `MEMORY_SUPERSEDES_NOT_MEMORY` | `writing.js:253-290` |
 | 10 | `[10] 并发追加 20 次，seq 连续无洞` | `seq` 集合 === `{1..20}`；`size === 20`；`lastSeq === 20` | `store.mjs:458-466`（`#pending` 串行队列）+ `:492`（`#lastSeq + 1`） |
-| 11 | `[11] 插件卸载后四个工具消失，重载后恢复且可写入` | 卸载后四个名字全部消失、`record_finding` 仍在；重载后四个都在且能写 | `writing.js:363-434`（注册走 `ctx.tools.register`，由 fiber 回收）；对照 `memory.test.mjs:202-213`（卸载）、`:215-225`（重载） |
+| 11 | `[11] 插件卸载后四个工具消失，重载后恢复且可写入` | 卸载后四个名字全部消失、`record_finding` 仍在；重载后四个都在且能写 | `writing.js:363-483`（注册走 `ctx.tools.register`，由 fiber 回收）；对照 `memory.test.mjs:202-213`（卸载）、`:215-225`（重载） |
 | 12 | `[12] 检索工具与 World findings 不受影响，且检索结果里没有 m- 记录` | 复用既有断言（`search_memory`/`read_memory` 输出与 World 直调一致）；写入前后 `search_memory` 结果 `deepEqual` 相等且无 `m-` 前缀 id；`record_finding` 定义未变（不 execute：它要解析 host 的 `@deepseek-ai/dsh-session`） | `memory.test.mjs:168-171`（World 独占仍是三工具）、`:173-190`（Memory 接管，顺序断言在 `:175-181`）、`:202-213`（`record_finding` 仍在）、`:227-235`（Service 只读）；实现侧 `tools.js:11` 只加名字 |
 
 **一条测试设计上的诚实说明**：`FakeTools.register` 只保存 definition，**不执行 schema 校验**。
