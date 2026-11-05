@@ -53,25 +53,45 @@
 <main>
   <header>
     <h1>Hikari</h1>
-    <p>只读面板 · 生成于 2026-11-05 22:46</p>
+    <p>只读面板 · 生成于 2026-11-05 23:16</p>
   </header>
   
 <section id="home">
   <h2>她现在</h2>
   <div class="stats">
-    <div class="stat"><div class="stat-value">0</div><div class="stat-label">记忆条数</div><div class="stat-hint">0 条现行 · 0 条被修订</div></div>
+    <div class="stat"><div class="stat-value">2</div><div class="stat-label">记忆条数</div><div class="stat-hint">2 条现行 · 0 条被修订</div></div>
     <div class="stat"><div class="stat-value">107</div><div class="stat-label">认识的实体</div><div class="stat-hint">26 个变过</div></div>
-    <div class="stat"><div class="stat-value">221</div><div class="stat-label">最近被唤醒</div><div class="stat-hint">按会话日志里的唤醒提示计</div></div>
+    <div class="stat"><div class="stat-value">222</div><div class="stat-label">最近被唤醒</div><div class="stat-hint">按会话日志里的唤醒提示计</div></div>
     <div class="stat"><div class="stat-value">0</div><div class="stat-label">被拒写入</div><div class="stat-hint">拒绝了什么，记在下面</div></div>
-    <div class="stat"><div class="stat-value">约 13 小时前</div><div class="stat-label">最后一次痕迹</div><div class="stat-hint">近似值：看文件最后写入时间</div></div>
+    <div class="stat"><div class="stat-value">约 刚刚</div><div class="stat-label">最后一次痕迹</div><div class="stat-hint">近似值：看文件最后写入时间</div></div>
   </div>
   <p class="note">这个面板只读。它不向 Hikari 注入任何东西，也不替她判断哪条重要。</p>
-  <p class="caution">记忆库还不存在（生产库目前 recordCount 0）：这一页显示的是&quot;她还没记过&quot;，不是&quot;读取失败&quot;。</p>
+  <p class="caution">1 条记忆的发生时间是未知的——她当时不知道现在几点，这里也不替她编。</p>
 </section>
   
 <section id="memory">
   <h2>她记住了什么</h2>
-  <p class="empty">还没有任何记忆。她第一次调用 <code>write_memory</code> 之后，这里会出现第一条。</p>
+  <ol class="timeline">
+    <li>
+      <div class="row-head">
+        <span class="seq">#2</span>
+        <span class="tag">现行</span>
+        <span class="time">记于 2026-11-05 23:16</span>
+        <span class="time">2026-11-05 23:10</span>
+      </div>
+      <p class="text">这台机器的主人叫 t1mb2rg，称呼他 t1mb2rg。他的规矩：我在 hikari-new 里做实验产生的产物一律放到 experiments/&lt;主题&gt;/ 下，不要散落在仓库根目录。这条对以后所有实验都算数，包括临时脚本、观测输出、tr…</p>
+      <p class="meta">session · turn: current · 134 字 · 有效提示：长期有效，除非 t1mb2rg 改规矩</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">#1</span>
+        <span class="tag">现行</span>
+        <span class="time">记于 2026-11-05 23:02</span>
+        <span class="time"><span class="unknown">发生时间未知</span></span>
+      </div>
+      <p class="text">空读数不等于没有变化。同一个形状一天之内踩了三次：project-watch 的 trace 在 18:01:05 之后静默停止，没有任何停止标记；DSH 里 ctx.logger.info 既不落盘也不进 GUI，那条「谁在提供记忆工具」…</p>
+      <p class="meta">finding · f-011 · 342 字 · 有效提示：这是一条关于我自己怎么读证据的教训，只要我还这样读证据就一直有效</p>
+    </li></ol>
   <h3>拒绝留下的痕迹</h3>
   <p class="empty">没有拒绝记录。</p>
   <p class="note">被拒的内容不会变成记忆，也不会被她检索到；这里只是"她试过但没被收下"的痕迹。</p>
@@ -1152,17 +1172,71 @@
     </li></ol>
   <p class="note">编号只在会话内唯一：<code>f-001</code> 在不同会话里不是同一条。上面每条都标了会话。
   读的是 103 / 154 个会话（近 14 天有写入的），
-  48139 帧 / 82547 条记录。</p>
+  48803 帧 / 83657 条记录。</p>
 </section>
   
 <section id="awareness">
   <h2>她观察到了什么</h2>
   <p class="note">只有一半：仓库变化有结构化轨迹；窗口切换没有落盘，只在她被唤醒时的提示词里留过一句话。</p>
   <div class="stats">
-    <div class="stat"><div class="stat-value">221</div><div class="stat-label">被唤醒次数</div><div class="stat-hint">近 14 天，按日志计</div></div>
-    <div class="stat"><div class="stat-value">28</div><div class="stat-label">仓库变化事件</div><div class="stat-hint">共 567 条轨迹，去掉安静时段</div></div>
+    <div class="stat"><div class="stat-value">222</div><div class="stat-label">被唤醒次数</div><div class="stat-hint">近 14 天，按日志计</div></div>
+    <div class="stat"><div class="stat-value">37</div><div class="stat-label">仓库变化事件</div><div class="stat-hint">共 609 条轨迹，去掉安静时段</div></div>
   </div>
   <table class="trace"><thead><tr><th>时间</th><th>类型</th><th>HEAD</th><th>工作区</th></tr></thead><tbody>
+    <tr>
+      <td>2026-11-05 23:08</td>
+      <td><code>baseline</code></td>
+      <td>809a5c4</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 23:05</td>
+      <td><code>baseline</code></td>
+      <td>809a5c4</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 23:04</td>
+      <td><code>baseline</code></td>
+      <td>809a5c4</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 23:03</td>
+      <td><code>baseline</code></td>
+      <td>809a5c4</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 23:02</td>
+      <td><code>baseline</code></td>
+      <td>809a5c4</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 23:01</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 23:01</td>
+      <td><code>baseline</code></td>
+      <td>809a5c4</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 22:52</td>
+      <td><code>baseline</code></td>
+      <td>809a5c4</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 22:49</td>
+      <td><code>baseline</code></td>
+      <td>809a5c4</td>
+      <td>—</td>
+    </tr>
     <tr>
       <td>2026-11-05 09:32</td>
       <td><code>baseline</code></td>
