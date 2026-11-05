@@ -1,0 +1,1348 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Hikari</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 40px 24px 80px;
+    background: #0e1013; color: #dfe3ea;
+    font: 15px/1.65 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  main { max-width: 880px; margin: 0 auto; }
+  header h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: .04em; font-weight: 600; }
+  header p { margin: 0; color: #7d8798; font-size: 13px; }
+  section { margin-top: 44px; padding-top: 24px; border-top: 1px solid #1d222b; }
+  h2 { margin: 0 0 16px; font-size: 18px; font-weight: 600; }
+  h3 { margin: 28px 0 10px; font-size: 14px; color: #9aa4b4; font-weight: 600; }
+  .stats { display: flex; flex-wrap: wrap; gap: 12px; }
+  .stat { flex: 1 1 150px; padding: 14px 16px; background: #151920; border: 1px solid #1f242e; border-radius: 10px; }
+  .stat-value { font-size: 22px; font-weight: 600; }
+  .stat-label { margin-top: 2px; color: #9aa4b4; font-size: 13px; }
+  .stat-hint { margin-top: 4px; color: #66707f; font-size: 12px; }
+  ol, ul { list-style: none; margin: 0; padding: 0; }
+  .timeline li, .findings li { padding: 14px 0; border-bottom: 1px solid #171c24; }
+  .row-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 12px; color: #7d8798; }
+  .seq { font-family: ui-monospace, Consolas, monospace; color: #8fbfe0; }
+  .tag { padding: 1px 8px; border-radius: 999px; background: #1c2531; color: #8fbfe0; font-size: 11px; }
+  .tag.old { background: #241c1c; color: #c99191; }
+  .status-open { background: #1c2531; color: #8fbfe0; }
+  .status-confirmed { background: #17251d; color: #86c9a0; }
+  .status-refuted { background: #2a1a1a; color: #d99191; }
+  .status-resolved { background: #22201a; color: #c9bf86; }
+  .text { margin: 8px 0 4px; }
+  .meta { margin: 0; color: #6b7585; font-size: 12px; }
+  .changes { margin-top: 6px; }
+  .changes li { padding: 2px 0; color: #9aa4b4; font-size: 12px; }
+  .time { color: #66707f; }
+  .unknown { color: #b08a5a; }
+  .note { margin: 12px 0 0; color: #66707f; font-size: 12.5px; }
+  .caution { margin: 10px 0 0; padding: 8px 12px; background: #1d1a14; border-left: 2px solid #8a6a33; color: #c9b28a; font-size: 12.5px; }
+  .empty { color: #7d8798; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; color: #66707f; font-weight: 500; padding: 6px 8px; border-bottom: 1px solid #1d222b; }
+  td { padding: 6px 8px; border-bottom: 1px solid #171c24; vertical-align: top; }
+  td.excerpt { color: #9aa4b4; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #8fbfe0; }
+  footer { margin-top: 56px; color: #4e5766; font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Hikari</h1>
+    <p>只读面板 · 生成于 2026-11-05 22:46</p>
+  </header>
+  
+<section id="home">
+  <h2>她现在</h2>
+  <div class="stats">
+    <div class="stat"><div class="stat-value">0</div><div class="stat-label">记忆条数</div><div class="stat-hint">0 条现行 · 0 条被修订</div></div>
+    <div class="stat"><div class="stat-value">107</div><div class="stat-label">认识的实体</div><div class="stat-hint">26 个变过</div></div>
+    <div class="stat"><div class="stat-value">221</div><div class="stat-label">最近被唤醒</div><div class="stat-hint">按会话日志里的唤醒提示计</div></div>
+    <div class="stat"><div class="stat-value">0</div><div class="stat-label">被拒写入</div><div class="stat-hint">拒绝了什么，记在下面</div></div>
+    <div class="stat"><div class="stat-value">约 13 小时前</div><div class="stat-label">最后一次痕迹</div><div class="stat-hint">近似值：看文件最后写入时间</div></div>
+  </div>
+  <p class="note">这个面板只读。它不向 Hikari 注入任何东西，也不替她判断哪条重要。</p>
+  <p class="caution">记忆库还不存在（生产库目前 recordCount 0）：这一页显示的是&quot;她还没记过&quot;，不是&quot;读取失败&quot;。</p>
+</section>
+  
+<section id="memory">
+  <h2>她记住了什么</h2>
+  <p class="empty">还没有任何记忆。她第一次调用 <code>write_memory</code> 之后，这里会出现第一条。</p>
+  <h3>拒绝留下的痕迹</h3>
+  <p class="empty">没有拒绝记录。</p>
+  <p class="note">被拒的内容不会变成记忆，也不会被她检索到；这里只是"她试过但没被收下"的痕迹。</p>
+</section>
+  
+<section id="world">
+  <h2>她认为世界是什么样</h2>
+  <ol class="findings">
+    <li>
+      <div class="row-head">
+        <span class="seq">f-012</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-11-03 22:00</span>
+      </div>
+      <p class="text">投递文档断言「多个事件不能合并，N 条事件 = N 个 turn」，但 21:57:57 与 21:59:53 两条观察是一起出现在同一轮里的——我这一条 user 消息里就有两段。所以「一个 turn 只取 1 条 next-turn」在真实 splice 路径上不成立；这正是 §11 列的第 2 问「多个事件能否合并」，答案可能不是文档写的那个。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-011</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-11-03 22:00</span>
+      </div>
+      <p class="text">今天的第三次同型失效：观测装置看起来在，读数却是空的。(a) trace 在 18:01:05 之后静默停住，没有停止标记；(b) 7fc188c 加的 ready 日志走 ctx.logger.info，而 DSH 的 dsh-app-boot 只注册 levels{default:2} 的 exporter，info 既不落盘也不进 GUI，等于没写——edf52b4 才改成 stderr；(c) clear/goals 是停在几天前的投影。三次的共同点是：空读数与「一切正常」在读的人眼里长得一模一样。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-010</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-11-03 21:44</span>
+      </div>
+      <p class="text">M1 已经落地并生效：world 的 registerMemoryTools 关掉、hikari-memory 接管两个检索工具；我的旧发现经过这次 owner 交接后仍以逐字相同的形状返回——同一个 query 拿回 f-002、字段与交接前一致。读路径的可观察行为没变，变的是谁在回答。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-009</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-11-03 20:37</span>
+      </div>
+      <p class="text">trace 从 17:59:35 起就没有任何新行，到现在两小时三十七分，而这段时间里唤醒一直在发生——包括此刻这次（工作区 10→11）：叫醒我的采样器根本不写 trace。所以「为什么醒来」这条路现在无法复核，而两份文档仍把 trace 当作采样在跑的证据。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 1 小时 48 分</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-008</span>
+        <span class="tag status-resolved">已了结</span>
+        <span class="time">2026-11-03 18:48</span>
+      </div>
+      <p class="text">这条是我算错时间得出的，撤回：trace 的采样在 17:56:35 就停了（最后一行 1793699795），而我把 1793698894 这类时间戳误读成 18:41，于是把「表停了」读成了「它看的树是另一棵」。没有两棵树——在它活着的那段时间里，dirty 10 是对的。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 3 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 1 分 7 秒</li><li><span class="tag">已确认 → 已了结</span> 间隔 8 分 35 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-007</span>
+        <span class="tag status-refuted">被推翻</span>
+        <span class="time">2026-11-03 18:38</span>
+      </div>
+      <p class="text">我此前那句「文档日期差四天」下得太硬：仓库里现在并存两条时间线——git/trace/session 的时间戳把今天算作 2026-11-03，而两份今天写的文档都写 2026-10-30（驱动源文档第 5 行、m0-scope-facts.md 第 4 行）。能确定的只是两条时间线相差四天、而且这个错已经从一份文档扩散到第二份；哪一边错，我在里面无法判定。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 被推翻</span> 间隔 1 小时 8 分</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-006</span>
+        <span class="tag status-refuted">被推翻</span>
+        <span class="time">2026-11-03 17:29</span>
+      </div>
+      <p class="text">预测落空，要如实降级：17:24:18 那条 identical emit 没有变成下一轮——17:24:11 之后我的下一轮是 17:29:04 的另一件事。所以「一次提交叫醒两次」未被证明；真实的只有两条相同的 emitted 与三条新 baseline（17:21:18 / 17:23:11 / 17:27:35），而第二条事件去哪了（同一 agent 的队列、另一个进程、还是被吞掉）我看不到。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 被推翻</span> 间隔 5 分 11 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-resolved">已了结</span>
+        <span class="time">2026-11-03 17:29</span>
+      </div>
+      <p class="text">回应完成：persona 已改成以仓库变化为线索（2e7eb58，我现在跑的就是这段），行号引用也已修对（b4c4237 改为 cordis.patch.yml 第 92-100 行，与当前文件一致）；这条只剩一个尾巴——日期，单独记成 f-007。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 3 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 22 分 57 秒</li><li><span class="tag">已确认 → 已了结</span> 间隔 23 分 7 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-11-03 17:06</span>
+      </div>
+      <p class="text">现在能定位了：activation 是机械渲染（changed 里有 head 就一定打「提交：…→…」那行，activation/index.js:38-46），而我 16:42 收到的 prompt 只有工作区一行，trace 里那条 emitted 却是 changed=[&quot;head&quot;,&quot;workingTree&quot;]——两者不可能是同一个采样；再加上 17:06:05 的唤醒发生在 trace 一次 quiet(dirty 10, 17:05:47) 之后 18 秒、下一次 30 秒采样之前。结论：至少有两个 project-watch 在采样并唤醒，trace 只记录到其中一个。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 22 分 57 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-11-03 00:51</span>
+      </div>
+      <p class="text">我一直在用的 clear/goals 不是活账本，而是约 2026-10-29 23:06 的落盘投影：最新一条计划的收束时间是 2026-10-29T15:06:51Z，连 10-30 晚上的 c03 十二次运行都没有对应计划——所以「账本里没有记忆检索这条线」只能读成「这份导出里没有」，不能当成账本的真实状态。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-11-03 00:44</span>
+      </div>
+      <p class="text">测试已改成断言「键不存在」（findings.test.mjs:189，注释点名 f-001/f-002），那一半结了；但冻结稿是就地改写的——§3.2 从 null 改成「不出现该字段」，§10 决策记录没有新增行，也没有指向任何批准者或这两条发现的指针，所以这次冻结变更在文档里没有来源。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 8 分 18 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-refuted">被推翻</span>
+        <span class="time">2026-11-03 00:36</span>
+      </div>
+      <p class="text">此条已被推翻——不是当初记错，是代码在六分钟内改了：hasMore=false 时 nextOffset 不再作为键出现，同一次查询现在返回 1 条候选；修法还只在工作区，HEAD 仍是「实现 read_memory」那一版。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 被推翻</span> 间隔 3 分 37 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 21:03</span>
+      </div>
+      <p class="text">The recorded dedupe design collides with a currently green test: `append keeps order` appends two events with no `dedupeKey` and asserts length 2, so a naive `seen.has(event.dedupeKey)` would collapse both under `undefined` and silently drop one — dedupe must stay opt-in for keyless events or that e</p>
+      <p class="meta">会话 <code>session-hikari-c03-12</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 21:03</span>
+      </div>
+      <p class="text">docs/notes/handoff.md gained a §4 Decision log recording pipeline-side dedupe via an event-carried `dedupeKey`, but this is prose only: pipeline.js, store.js and tests/pipeline.test.js are byte-identical to baseline and the uncommitted change is confined to that one note file, while §2 still lists t</p>
+      <p class="meta">会话 <code>session-hikari-c03-12</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 21:02</span>
+      </div>
+      <p class="text">handoff.md's two open questions are coupled: dedupe placement should follow the folding decision — with today's full re-fold in Store.add, an O(n) key scan inside append costs nothing asymptotically and protects every caller (tests import append directly), whereas a store-side Set buys no asymptotic</p>
+      <p class="meta">会话 <code>session-hikari-c03-12</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 21:01</span>
+      </div>
+      <p class="text">Because append has no dedupe key and fold sums every event's amount, a duplicate delivery silently doubles the total (and inflates Store.size) rather than erroring — that is the concrete failure the handoff's promised duplicate-delivery regression test would have to pin down.</p>
+      <p class="meta">会话 <code>session-hikari-c03-12</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 21:01</span>
+      </div>
+      <p class="text">docs/notes/handoff.md §1 claims &quot;Store keeps the current folded value in memory&quot;, but src/store.js keeps only the raw events array and recomputes fold(this.events) on every add — no folded value is ever stored, so the note describes a design the code does not implement.</p>
+      <p class="meta">会话 <code>session-hikari-c03-12</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-006</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 21:00</span>
+      </div>
+      <p class="text">Putting dedupe in the stateless pipeline leaves an unresolved case: append(events, event) must scan existing events for a matching dedupeKey, but the note does not say how events without a dedupeKey are treated (existing tests append bare {amount} objects) or what the key's scope is, and fold stays </p>
+      <p class="meta">会话 <code>session-hikari-c03-11</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 21:00</span>
+      </div>
+      <p class="text">The handoff now records a decision (dedupe lives in the pipeline, events carry dedupeKey) and states the regression test covers duplicate delivery, but the working tree shows only docs/notes/handoff.md modified — dedupeKey appears nowhere in src/ or tests/, so the decision log describes an implement</p>
+      <p class="meta">会话 <code>session-hikari-c03-11</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:59</span>
+      </div>
+      <p class="text">Duplicate delivery is undetectable through the current public assertions: Store.add returns fold(events), which is invariant when a duplicate event is appended, store.size returns raw events.length, and there is no store test file — so the planned regression test must live in a new store test and as</p>
+      <p class="meta">会话 <code>session-hikari-c03-11</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:59</span>
+      </div>
+      <p class="text">The handoff note's &quot;Current shape&quot; claims Store keeps the current folded value in memory, but src/store.js keeps only the events array and recomputes fold(events) on every add, so the note describes an incremental shape the code does not have.</p>
+      <p class="meta">会话 <code>session-hikari-c03-11</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:58</span>
+      </div>
+      <p class="text">Store.add refolds the whole event log on every append (return fold(this.events)), so folding is currently full rather than incremental and per-add cost grows with log size — this settles one of the handoff's open questions in favor of the full-fold answer.</p>
+      <p class="meta">会话 <code>session-hikari-c03-11</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:58</span>
+      </div>
+      <p class="text">The handoff's dedupe plan is unimplemented: no event carries a dedupe key, append is an unconditional push, and no duplicate-delivery test exists; the only mentions of dedupe are in docs/notes/handoff.md itself.</p>
+      <p class="meta">会话 <code>session-hikari-c03-11</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:56</span>
+      </div>
+      <p class="text">handoff.md §1 says Store keeps the current folded value in memory, but store.js keeps the raw event log and re-folds it on every add, so the note misdescribes the very shape the dedupe-placement question depends on.</p>
+      <p class="meta">会话 <code>session-hikari-c03-10</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:56</span>
+      </div>
+      <p class="text">The switch from docs/notes/handoff.md to src/pipeline.js lands on the handoff's own next step: nothing in src/ carries a dedupe key or guards against duplicate delivery, so a re-delivered event silently inflates fold()'s total.</p>
+      <p class="meta">会话 <code>session-hikari-c03-10</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:55</span>
+      </div>
+      <p class="text">Because the observation loop samples only at window-switch moments, I cannot distinguish &quot;reading and deciding&quot; from &quot;typed nothing&quot;: docs/notes/handoff.md is still verbatim at efac8aa with both open questions listed as open, and the tree is clean after four switches, so any decision he has already </p>
+      <p class="meta">会话 <code>session-hikari-c03-09</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:54</span>
+      </div>
+      <p class="text">Store is dead code in this repo: nothing outside src/store.js imports Store or its size getter (grep for Store|size|add( hits only store.js and a prose line in handoff.md), so choosing store as dedupe's home would require the first-ever test for that class while the pipeline route extends an already</p>
+      <p class="meta">会话 <code>session-hikari-c03-09</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:54</span>
+      </div>
+      <p class="text">The handoff → pipeline → handoff round trip (~60s) produced zero persisted edits: src/pipeline.js and docs/notes/handoff.md are byte-identical to the efac8aa baseline and the tree is still clean, so the live blocker is handoff open question 2 (dedupe in pipeline vs store) rather than implementation </p>
+      <p class="meta">会话 <code>session-hikari-c03-09</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:53</span>
+      </div>
+      <p class="text">The window switch from docs/notes/handoff.md to src/pipeline.js is on-topic: handoff's next step 1 (&quot;add a dedupe key to appended events&quot;) targets exactly the append function in src/pipeline.js, but the tree is still clean at efac8aa and no dedupe/id/seen logic exists anywhere in src/ or tests/, so </p>
+      <p class="meta">会话 <code>session-hikari-c03-09</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-006</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:52</span>
+      </div>
+      <p class="text">该决定留下四个具体缺口：(1) 第 2 节「增量还是全量折叠」仍未回答，且每次 add 仍会全量 fold；(2) fold 仍导出且被测试直接喂裸数组，绕过 append 的重复事件照样重复计数；(3) 没有 dedupeKey 的事件如何对待未定义——若用 e.dedupeKey === event.dedupeKey 天真的实现，两个无 key 事件会因 undefined === undefined 被判为重复，现有 append 保序测试会从长度 2 掉到 1；(4) Store.size 现在事实上数「不同事件数」，但决定日志没有写明这一点。</p>
+      <p class="meta">会话 <code>session-hikari-c03-08</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:52</span>
+      </div>
+      <p class="text">handoff.md 新增第 4 节「Decision log」，记下决定（2026-10-31）：dedupe 归 pipeline，追加事件携带 dedupeKey，pipeline 丢弃 key 已出现过的事件，回归测试覆盖重复投递。此时只有 handoff.md 被修改，src/ 与 tests/ 尚未改动。</p>
+      <p class="meta">会话 <code>session-hikari-c03-08</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:52</span>
+      </div>
+      <p class="text">src/store.js 目前没有任何调用者也没有任何测试（全仓只有 handoff.md、README.md 与 store.js 自身提到 Store；tests/pipeline.test.js 只 import 了 append/fold），所以 handoff 要的「重复投递回归测试」会是第一个真正触碰 Store 的测试，而「dedupe 放 pipeline 还是 store」这个决定此刻没有任何实际用法可以约束——这很可能正是它悬着未决的原因。</p>
+      <p class="meta">会话 <code>session-hikari-c03-08</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:51</span>
+      </div>
+      <p class="text">第二轮观察（02:54）确认 ledger 工作区零变化：src/pipeline.js 与 docs/notes/handoff.md 逐字未变、工作树仍干净、HEAD 仍是 efac8aa，说明在 pipeline.js 与 handoff 之间来回切换并没有产生任何编辑，dedupe 仍未动手。</p>
+      <p class="meta">会话 <code>session-hikari-c03-08</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:51</span>
+      </div>
+      <p class="text">ledger 代码与测试中不存在任何事件标识（dedup/idempot/seen/eventId/id 只命中 handoff.md 两行）；append 是无条件拼接、fold 无条件累加 amount，因此同一事件重复投递时总数会被重复计入，而 handoff 要求的「重复投递回归测试」尚未存在。</p>
+      <p class="meta">会话 <code>session-hikari-c03-08</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:51</span>
+      </div>
+      <p class="text">ledger 工作区（ws-08）仍停在唯一提交 efac8aa &quot;fixture: ledger baseline&quot;、工作树干净，dedupe 相关的任何改动都尚未落盘；前台切到的 src/pipeline.js 正是 handoff 第 3 节「给 append 加 dedupe key」会改的那个文件。</p>
+      <p class="meta">会话 <code>session-hikari-c03-08</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:50</span>
+      </div>
+      <p class="text">pipeline 去重有一个具体隐患：现有事件（含 tests/pipeline.test.js 里两条 {amount:n}）都没有 dedupeKey，若 append 用 event.dedupeKey 直接比对而不判空，undefined === undefined 会把第二条无 key 事件吞掉，「append keeps order」这条测试会从 2 变成 1；另外 Decision log 用完成时写「The regression test covers duplicate delivery」，而测试与代码都还没改。</p>
+      <p class="meta">会话 <code>session-hikari-c03-07</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:50</span>
+      </div>
+      <p class="text">决定已落盘：handoff.md 新增「4. Decision log」，写定 dedupe 归 pipeline——事件携带 dedupeKey，pipeline 丢弃已见过的 key；这是我前几轮推断（落在 Store）的反例。但本次唯一改动是 docs/notes/handoff.md，src/ 与 tests/ 全部未动。</p>
+      <p class="meta">会话 <code>session-hikari-c03-07</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:49</span>
+      </div>
+      <p class="text">tests/pipeline.test.js 只 import append/fold，全无 Store 的测试；而 handoff 要求的「重复投递回归测试」必须从 Store.add 触发，所以 dedupe 无论写在哪，至少要对 Store 可观测——这进一步把落点钉在 Store（或新增 store.test.js），而不是纯函数 append。</p>
+      <p class="meta">会话 <code>session-hikari-c03-07</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:49</span>
+      </div>
+      <p class="text">handoff.md 的「Current shape」写着「Store keeps the current folded value in memory」，但 src/store.js 实际只存 this.events 并在每次 add 时重新 fold —— 笔记描述的是目标形态而非现状；这暗示预期方向是增量 fold + Store 持值，而 dedupe 最自然地落在这份存储状态旁边（Store），不是 pipeline。</p>
+      <p class="meta">会话 <code>session-hikari-c03-07</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:48</span>
+      </div>
+      <p class="text">前台窗口从 docs/notes/handoff.md 切到 src/pipeline.js，正对应 handoff 里「dedupe 放在 pipeline 还是 store」这个未决问题；代码中尚无任何 dedupe 实现（append 只是拼接、fold 只求和），工作树在 efac8aa 处干净，所以这更像是刚打开实现文件准备动手，而不是已经改完。</p>
+      <p class="meta">会话 <code>session-hikari-c03-07</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-009</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:48</span>
+      </div>
+      <p class="text">Because Store is append's only call site, choosing &quot;pipeline&quot; for dedupe cannot actually keep the dedupe state out of Store: append is a pure function with no lifetime, so any seen-set must be passed in and held by the only object that has a lifetime — Store — making the two answers to the open ques</p>
+      <p class="meta">会话 <code>session-hikari-c03-06</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-008</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:47</span>
+      </div>
+      <p class="text">The acceptance criteria for the handoff's &quot;regression test for duplicate delivery&quot; are derivable without running anything: with two identical { amount: 5 } events, Store.add returns 5 then 10 and Store.size goes 1 then 2 today, so the target contract is size staying 1 and the second add returning th</p>
+      <p class="meta">会话 <code>session-hikari-c03-06</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-007</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:47</span>
+      </div>
+      <p class="text">Store has zero callers and zero tests — a workspace-wide search finds the class only in src/store.js and in prose (handoff.md, README.md), nothing imports it, and tests/ contains only pipeline.test.js — so any duplicate-delivery regression test must be the first-ever test of Store in a new file, whi</p>
+      <p class="meta">会话 <code>session-hikari-c03-06</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-006</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:47</span>
+      </div>
+      <p class="text">Both open questions in handoff.md §2 funnel to the same place: incremental folding needs a running total and dedupe needs a seen-set, i.e. both need state, and Store is the only object that has any; src/pipeline.js append/fold are pure and stateless, and that purity is exactly what the current tests</p>
+      <p class="meta">会话 <code>session-hikari-c03-06</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:47</span>
+      </div>
+      <p class="text">handoff.md §1 claims &quot;Store keeps the current folded value in memory&quot;, but Store holds only this.events and recomputes fold(this.events) on every add with no cached total (src/store.js:5-12), so the document's stated premise is wrong and the &quot;incremental folding&quot; question would first require a runni</p>
+      <p class="meta">会话 <code>session-hikari-c03-06</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:46</span>
+      </div>
+      <p class="text">The test named &quot;append keeps order&quot; (tests/pipeline.test.js:9-13) asserts only events.length === 2 and never checks the sequence, so it would pass even if append reversed the log — a false-confidence test sitting in the same file where the handoff's duplicate-delivery regression test is supposed to </p>
+      <p class="meta">会话 <code>session-hikari-c03-06</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:46</span>
+      </div>
+      <p class="text">No event identity exists in the repo yet: the only event literals in tests and code are bare { amount } objects, and a workspace-wide search for id/key/dedupe hits only docs/notes/handoff.md, so &quot;add a dedupe key&quot; first requires a data-shape decision (what field identifies an event, and what keyless</p>
+      <p class="meta">会话 <code>session-hikari-c03-06</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:46</span>
+      </div>
+      <p class="text">The handoff's open question &quot;dedupe in pipeline or store&quot; is decidable against an existing observable: Store.add (src/store.js:9-12) is the only caller of append, and Store.size returns the raw event count (src/store.js:14-16), so dedupe inside Store changes size to mean accepted-events while dedupe</p>
+      <p class="meta">会话 <code>session-hikari-c03-06</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:46</span>
+      </div>
+      <p class="text">The window switch from docs/notes/handoff.md to src/pipeline.js lands on the exact site of the handoff's next step: append() at src/pipeline.js:2-4 still concatenates unconditionally with no dedupe key and no membership check, so the in-focus file is the unmodified target of &quot;add a dedupe key to app</p>
+      <p class="meta">会话 <code>session-hikari-c03-06</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:45</span>
+      </div>
+      <p class="text">这个仓库看起来是脚手架/演示用途而非真实工程：唯一 commit 的主题是 &quot;fixture: ledger baseline&quot;，README 自称 &quot;A small event ledger used as a workspace&quot;，所以笔记里的 open questions 可能是预置的场景文本，不宜当作他本人的意图来推断。</p>
+      <p class="meta">会话 <code>session-hikari-c03-05</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:44</span>
+      </div>
+      <p class="text">Store 完全没有测试覆盖（tests/pipeline.test.js 只导入 pipeline.js），而 `get size` 返回 this.events.length —— 一旦 dedupe 从 this.events 里丢事件，size 的含义会从「收到的投递数」悄悄变成「去重后的事件数」，且没有任何测试会拦住这个语义变化。</p>
+      <p class="meta">会话 <code>session-hikari-c03-05</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:44</span>
+      </div>
+      <p class="text">handoff.md 的 &quot;Current shape&quot; 说 Store keeps the current folded value in memory，但 src/store.js 实际只保存事件数组、每次 add 全量重算 fold，没有任何缓存的总值——笔记描述的是一种代码里并不存在的增量折叠形状。</p>
+      <p class="meta">会话 <code>session-hikari-c03-05</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:43</span>
+      </div>
+      <p class="text">Dedupe is still unimplemented in the ledger workspace: &quot;dedupe&quot; appears only in docs/notes/handoff.md, src/pipeline.js appends unconditionally, Store.add keeps no seen-set, and fold would double-count a duplicate event; no test covers duplicate delivery.</p>
+      <p class="meta">会话 <code>session-hikari-c03-05</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:43</span>
+      </div>
+      <p class="text">Decision log 用现在时陈述（&quot;dedupe lives in the pipeline&quot;、&quot;Appended events carry a dedupeKey&quot;），而代码里既没有 dedupeKey 也没有丢弃逻辑，这与「Current shape」里 Store 缓存折叠值那句一样属于文档领先于代码；同时 append(events, event) 是纯函数、拿不到单独的 seen 集合，最省事的实现是扫描 events 找同键，这样两个都没有 dedupeKey 的事件（如现有测试里的 {amount:1} 与 {amount:2}）键都等于 undefined 会被判为重复而</p>
+      <p class="meta">会话 <code>session-hikari-c03-04</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:43</span>
+      </div>
+      <p class="text">handoff.md 新增了「Decision log」：2026-10-31 决定 dedupe 放在 pipeline，事件带 dedupeKey，重复键的事件被丢弃，回归测试覆盖重复投递；但工作树只改动了 handoff.md，pipeline.js、store.js、tests 均未变，实现和测试都还没落地。</p>
+      <p class="meta">会话 <code>session-hikari-c03-04</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:42</span>
+      </div>
+      <p class="text">handoff.md 的「Current shape」写着 Store 在内存里保存当前折叠值，但 src/store.js 实际只在 this.events 里存事件数组，add 把 fold(this.events) 的结果直接返回后就丢掉，从不缓存——笔记描述的是「缓存折叠值」的形态，代码是「每次现算」，这也是笔记里「增量还是全量」这个 open question 一直悬着的根源。</p>
+      <p class="meta">会话 <code>session-hikari-c03-04</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:41</span>
+      </div>
+      <p class="text">工作区内没有任何文档定义事件结构（README、handoff 与代码里只出现过 amount 字段），所以 dedupe key 取哪个字段在现有资料里无法确定；可确定的是当前 Store.add 每次整表重折、且对重复投递没有抵抗力，同一条事件重投会让 fold 总额翻倍。</p>
+      <p class="meta">会话 <code>session-hikari-c03-04</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:41</span>
+      </div>
+      <p class="text">handoff.md 的两条 Next steps（给事件加 dedupe key、加重复投递回归测试）在工作区里都没开始：pipeline.js 的 append 只是纯拼接、无任何身份/去重概念，tests/pipeline.test.js 只覆盖 fold 求和与 append 顺序，git 工作树干净、停在基线提交 efac8aa。</p>
+      <p class="meta">会话 <code>session-hikari-c03-04</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-refuted">被推翻</span>
+        <span class="time">2026-10-30 20:40</span>
+      </div>
+      <p class="text">handoff §2「dedupe 住 pipeline 还是 store」在代码里已有结构性倾向：pipeline.js 全是无状态纯函数（append/fold 进出数组），Store 是唯一持有状态（this.events）的地方，因此「记住见过的 key」这件事只能落在 store，除非把 pipeline 改成显式接收 seen 集合。</p>
+      <p class="meta">会话 <code>session-hikari-c03-03</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 被推翻</span> 间隔 1 分 51 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-009</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 20:40</span>
+      </div>
+      <p class="text">§4 选定的方案与 pipeline.js 现有形状冲突：append/fold 都是无状态纯函数，「丢弃已见过的 key」需要记住历史 key，只能二选一——在 append 里扫全量 events（单次 O(n)，整条流 O(n²)），或把 seen 集合穿进 append 的签名、让 pipeline 不再纯。</p>
+      <p class="meta">会话 <code>session-hikari-c03-03</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 3 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-008</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 20:40</span>
+      </div>
+      <p class="text">他刚在 handoff 新增 §4 Decision log（2026-10-31）：dedupe 住 pipeline，事件携带 dedupeKey，pipeline 丢弃已见过的 key，回归测试覆盖重复投递——但代码零改动（工作区仅 handoff.md 被改，全仓搜 dedupeKey 只命中笔记），§4 用完成时写的是尚不存在的事实，且 §2 的问题与 §3 的 next step 没有相应更新。</p>
+      <p class="meta">会话 <code>session-hikari-c03-03</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 3 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-007</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 20:40</span>
+      </div>
+      <p class="text">handoff §3 的两步顺序是强制的，不是风格问题：事件目前没有身份字段，两笔同额投递与一次重复投递在数据上不可区分，所以「重复投递的回归测试」在 dedupe key 落地之前根本写不出来——先键后测试是唯一可行顺序。</p>
+      <p class="meta">会话 <code>session-hikari-c03-03</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 2 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-006</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 20:40</span>
+      </div>
+      <p class="text">把 dedupe 放 Store 会撞上现有返回契约：add 返回纯数字（fold 结果），重复被拒时这个数字与正常投递完全一样，调用方无法分辨「已接收」还是「被丢掉」——所以要真在 Store 里做 dedupe，add 的返回值得改（返回 {value, accepted} 或抛错），而不只是插一个 if。</p>
+      <p class="meta">会话 <code>session-hikari-c03-03</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 2 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 20:39</span>
+      </div>
+      <p class="text">Store 目前零测试覆盖：tests/pipeline.test.js 只 import append/fold，从不实例化 Store，所以 §3 要加的「重复投递」回归测试还没有可挂的地方，得先为 Store（或未来的 dedupe 层）建测试面。</p>
+      <p class="meta">会话 <code>session-hikari-c03-03</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 3 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 20:39</span>
+      </div>
+      <p class="text">handoff §1 描述与代码脱节：note 说「Store keeps the current folded value in memory」，但 store.js 的 Store 只有 this.events，每次 add 都重算 fold，没有任何缓存当前值的字段——也就是说 §2 那个「incremental」选项在笔记里已经被当作现状写下了。</p>
+      <p class="meta">会话 <code>session-hikari-c03-03</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 3 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 20:38</span>
+      </div>
+      <p class="text">Store.add 每次都对全量事件重跑 fold，使单次 add 为 O(n)、整条流为 O(n²)，这给 handoff 里悬置的「incremental 还是 full fold」一个具体代价。</p>
+      <p class="meta">会话 <code>session-hikari-c03-03</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 21 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 20:38</span>
+      </div>
+      <p class="text">handoff §3 的两项 next step（给 appended event 加 dedupe key、加重复投递的回归测试）在代码里没有任何落地痕迹：src/pipeline.js 的 append 只是 [...events, event]，事件对象没有身份字段，全仓也没有 dedupe 相关代码或测试。</p>
+      <p class="meta">会话 <code>session-hikari-c03-03</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 21 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:37</span>
+      </div>
+      <p class="text">.git/logs/HEAD 只有一条初始提交（efac8aa，作者 c03-fixture，1793362984），所以不存在「store 曾经缓存过 folded value、笔记跟着旧版本写」的历史解释：那句不准确的 Current shape 从一开始就是这样写的，不是文档漂移。</p>
+      <p class="meta">会话 <code>session-hikari-c03-02</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:36</span>
+      </div>
+      <p class="text">handoff.md 的「Current shape」说 Store 在内存里保存折叠后的当前值，但 store.js 实际保存的是 events 数组、每次 add 现折一遍并返回结果，没有任何缓存的 folded value —— 笔记对现状的描述本身就不准确，而「incremental or full」这个问题是建立在那个不存在的缓存之上的。</p>
+      <p class="meta">会话 <code>session-hikari-c03-02</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:36</span>
+      </div>
+      <p class="text">handoff.md 与 pipeline.js 之间的来回切换没有产生任何编辑：工作区仍 clean、HEAD 仍是 efac8aa、handoff.md 仍是原来那 17 行，notes 与代码之间的落差不增不减。</p>
+      <p class="meta">会话 <code>session-hikari-c03-02</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:35</span>
+      </div>
+      <p class="text">去重键这一步被一个未决问题卡住：handoff.md 仍把「dedupe 放 pipeline 还是 store」列为 open question，而当前事件只有 amount 字段，所以「加 dedupe key」实际上先要改事件形状，不是 append 内部的小改动。</p>
+      <p class="meta">会话 <code>session-hikari-c03-02</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:35</span>
+      </div>
+      <p class="text">handoff.md 的两条 next steps（为事件加 dedupe key、为重复投递加回归测试）在代码里完全没有落地：pipeline.js 的 append 只是 [...events, event]，store.js 也没有去重，tests/pipeline.test.js 只有 fold 求和与 append 保序两条用例。</p>
+      <p class="meta">会话 <code>session-hikari-c03-02</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-006</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:32</span>
+      </div>
+      <p class="text">handoff.md §1 claims &quot;Store keeps the current folded value in memory&quot;, but src/store.js has no folded-value field at all — it stores only this.events and recomputes fold(this.events) on every add — so the note's premise for choosing between incremental and full folding describes a design the code do</p>
+      <p class="meta">会话 <code>session-hikari-c03-01</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:31</span>
+      </div>
+      <p class="text">No test in the workspace touches Store — tests/pipeline.test.js imports only append and fold — so the handoff's &quot;regression test for duplicate delivery&quot; would be the first Store-level test, with no existing harness to extend.</p>
+      <p class="meta">会话 <code>session-hikari-c03-01</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:31</span>
+      </div>
+      <p class="text">The two open questions in docs/notes/handoff.md §2 are one question: incremental folding requires mutable state in Store, which pulls dedupe into Store too, while full folding keeps pipeline pure and favors scan-based dedupe inside append — and the Store.size getter (events.length) means dedupe-in-a</p>
+      <p class="meta">会话 <code>session-hikari-c03-01</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:30</span>
+      </div>
+      <p class="text">The note→pipeline.js→note round trip at 02:54 left the tree clean at efac8aa with handoff.md byte-identical, so the pipeline-vs-store dedupe decision still has no trace on disk anywhere in the repo.</p>
+      <p class="meta">会话 <code>session-hikari-c03-01</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:30</span>
+      </div>
+      <p class="text">Open question 1 in docs/notes/handoff.md is already settled as &quot;full&quot; in code — Store.add re-folds the entire event log on every append — yet no file records that this was a decision rather than a placeholder.</p>
+      <p class="meta">会话 <code>session-hikari-c03-01</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 20:30</span>
+      </div>
+      <p class="text">The two &quot;Next steps&quot; in docs/notes/handoff.md are unimplemented in the tree at HEAD efac8aa: src/pipeline.js append() concatenates events with no dedupe key, and no test anywhere covers duplicate delivery.</p>
+      <p class="meta">会话 <code>session-hikari-c03-01</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-021</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 16:51</span>
+      </div>
+      <p class="text">D 组的注入改动是 findings.js 末尾一行纯注释（:383），注意到它也不该改变任何行为——因此「行为无差异」在 D 组里是正确结果，不能被解读成「Agent 不会因新发现而改变判断」；要测后者，改动必须有语义后果（改一个输出、边界或措辞）。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-020</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 16:50</span>
+      </div>
+      <p class="text">D 组的操作说明写在 loop7-d-change.patch.yml 里（「在两次观察之间真实修改 findings.js 末尾追加 D-group marker」），而该文件就在我可读的 root 内——我先读到说明、再去读文件末尾，于是「是否注意到变化」这个观测值被夹具自己污染了；marker 已确认在 findings.js:383。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-019</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 16:50</span>
+      </div>
+      <p class="text">跨运行比较注入条件时，条件是按顺序施加的而我的知识在累积：同一个事件 1，第一次运行我读了七八个文件，后面几次只做一两个定点核对——§4.2 B 量到的差异里混着学习/顺序效应，不只是注入。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-018</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 16:39</span>
+      </div>
+      <p class="text">loop6-c-noinject 的 C 组保留完整对话历史、只关 Finding 注入，可我在这一组里仍能从前几轮自己的原话读出全部结论——所以 C 组测的是「结构化注入在完整 transcript 之上还有没有增量」，不是「有没有旧记忆」；若拿它当 §4.2 B 的对照，很可能得到「无差异」并被误读成「findings 不重要」。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-017</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 16:21</span>
+      </div>
+      <p class="text">readscope 只凭 tool/call 重建「本会话已检查过的文件」，不配对 tool/result 的成功与否：被 scoped-fs 拒绝的那次读取（%TEMP%\hikari-feedback-loop\requests-fb2.jsonl）现在也出现在这份清单里——把「被拒绝」记录成了「已查看」。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-016</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 16:20</span>
+      </div>
+      <p class="text">scoped-fs 的 glob 与 grep 都拿「相对 root」的路径去匹配：grep 的 include（如 '*.md'）与 glob 的 path 子目录（如 path: 'docs'）因此匹配不到子目录里的文件，静默返回 No matches / No files found——这与插件头部「从不静默空结果」的自述相反，本会话我已踩过一次。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 5 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-015</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 16:18</span>
+      </div>
+      <p class="text">正式 bundle 仍未启用 findings：cordis.patch.yml 的 hikari-world 没有 config.root，所以 production 的 Hikari 依旧没有持久认识；目前所有 findings 行为只在 --patch 实验里成立。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-014</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 16:18</span>
+      </div>
+      <p class="text">analyze-requests.mjs 用渲染文案（「此前的假设」「有工具证据支持」「已闭合」）判定 findings 有没有进请求，这份文案是从 findings.js:133 手抄的；措辞一改，报告会静默变成 0 条 findings，把「注入发生了」误判成「没发生」。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-013</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 16:17</span>
+      </div>
+      <p class="text">evidence 回显只解决「看得见」，不解决「选得对」：advance 挂上的证据完全由紧邻的上一次成功工具调用决定，调用顺序成了证据内容的一部分——f-002 的 resolved 记录挂的是它自己的 refute 结果（seq 369），不是据以判断的那段代码。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-011</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 16:16</span>
+      </div>
+      <p class="text">去重命中 seq 183 的 f-004 说明 projection 能把跨多次运行写入的记录折叠回状态；注入关掉的那次运行（loop3）也照样命中，所以状态层与注入层是分开的：injectContext 只决定认识进不进请求。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 6 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-012</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 16:16</span>
+      </div>
+      <p class="text">从 agent 可见的上下文分不出当前跑的是哪一份 patch：loop/loop2/loop3/loop4 的 persona 完全相同，注入开关与 trace 只在 world/replay 配置里，于是我把 loop3 的 injectContext:false 误判成两处时序缺陷（f-009、f-010 均被推翻）。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-010</span>
+        <span class="tag status-refuted">被推翻</span>
+        <span class="time">2026-10-30 16:15</span>
+      </div>
+      <p class="text">用与 f-004 完全相同的 claim 调用 record_finding 触发去重，返回的是 f-004（seq 183, deduplicated），说明第三次运行的进程里 projection 仍保有重启前写入的记录——f-009 的空窗是请求装配时刻取不到 session 的时序问题，不是状态丢失。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 3 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 3 秒</li><li><span class="tag">已确认 → 被推翻</span> 间隔 5 小时 28 分</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-resolved">已了结</span>
+        <span class="time">2026-10-30 16:15</span>
+      </div>
+      <p class="text">record_finding 只返回 findingId/seq/status/provenance，不回显 evidence，所以模型无法回读自己那条记录的证据指针落在哪一次工具结果上——「证据存在 ≠ 结论正确」的自我核对在接口层做不到。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 3 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 3 秒</li><li><span class="tag">已确认 → 已了结</span> 间隔 5 小时 34 分</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-009</span>
+        <span class="tag status-refuted">被推翻</span>
+        <span class="time">2026-10-30 16:15</span>
+      </div>
+      <p class="text">第三次重跑的第一个请求里，运行时 context 没有任何 findings 段（本 session 此前已写入 f-001..f-008），而磁盘上的 findings.js 与上一次能正常注入时逐行相同——疑似「会话尚未 attach 时就装配 context」的开机空窗。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 3 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 10 秒</li><li><span class="tag">已确认 → 被推翻</span> 间隔 5 小时 29 分</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-008</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:44</span>
+      </div>
+      <p class="text">本会话 seq 从 191 连续到 216，重启前写入的 f-004/f-006 仍出现在这次请求的 context 里；但进程内可见的东西无法区分「进程重启 + lazy fold 重建」与「只重载插件、内存未丢」，设计 §2.2 的重启恢复在这个 session 里仍未被单独证明。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-007</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 10:44</span>
+      </div>
+      <p class="text">00:40:00 这次唤醒与 00:41:00 那条逐字相同而时钟回退，说明 replay 是从 events.json 第 0 条重新开始的（新实例或重跑），不是又一次真实的窗口切换。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 17 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-006</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:42</span>
+      </div>
+      <p class="text">注入窗口只有 3 条且按最近更新排序：本会话写满 5 条后仍是 confirmed 的 f-001/f-002 已不再出现在请求视野里，而 record_finding 不提供列出 findings 的工具，被挤出的发现无法通过工具回读。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 10:42</span>
+      </div>
+      <p class="text">replay 把 previousTitle === snapshotTitle 的事件也当作 window-changed 唤醒（00:41 这次唤醒原文就是「从 VS Code 切换到 VS Code」），唤醒链在这一层没有去重：World 的签名/冷却/settle 判断被 replay 直接 emit 绕过。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 10 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:42</span>
+      </div>
+      <p class="text">对照组的「无注入」只维持到模型第一次写记录：loop2 与 loop 共用同一 persona（要求 record_finding），session-hikari-fb2 在第 1 个事件后就带上 f-001..f-003，第 2 个事件起对照组已经不成立。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 10:41</span>
+      </div>
+      <p class="text">docs/development/hikari-native-feedback-loop-design.md 仍标着「未实现」，设计要求的实现 README 也不存在；但 findings 层已在本会话真实运行（写入 seq 113、推进 seq 123，同一 findingId 被覆盖、措辞随状态更新）。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 3 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-confirmed">已确认</span>
+        <span class="time">2026-10-30 10:41</span>
+      </div>
+      <p class="text">record_finding 的 tool-evidenced 证据不是模型指定的 seq，而是插件自动取「本会话最近一次成功的 tool/result」（findings.js:82-93、:264-270），因此「有工具证据支持」可能挂在与该论断无关的工具输出上。</p>
+      <p class="meta">会话 <code>session-hikari-fb2</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 已确认</span> 间隔 9 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-008</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:36</span>
+      </div>
+      <p class="text">events.json 第二条是标题不变的空切换（VS Code → VS Code），回放出来就是「从 A 切换到 A」，对桌面状态不携带任何信息；它的实验用途只在于检验「没有新信息时是否还会重复调查」。</p>
+      <p class="meta">会话 <code>session-hikari-fb</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-007</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:36</span>
+      </div>
+      <p class="text">在疑似重载之后，用非法推进探测 f-005 得到的拒绝理由是「confirmed requires tool-evidenced」而不是「unknown findingId」，说明上一轮写入的发现已随 session 日志重新折叠进 projection；但这只证明当前进程内可见，尚未证明跨进程重启后可见。</p>
+      <p class="meta">会话 <code>session-hikari-fb</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-006</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:35</span>
+      </div>
+      <p class="text">本轮 wake-up 与上一轮逐字相同（00:40:00、同一对标题），而 events.json 第二条的 previousTitle 已是「hikari-new — Visual Studio Code」；说明 replay 从第 0 条重新开始（插件或进程被重载），不是事件正常推进。</p>
+      <p class="meta">会话 <code>session-hikari-fb</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-005</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:33</span>
+      </div>
+      <p class="text">record_finding 要求 evidence 携带真实会话 seq 与 callId，但模型侧没有任何工具暴露 seq/callId、也读不到会话日志，因此 tool-evidenced / confirmed / resolved 实际不可达，设计 §4.2 A 期望的「用工具证据推进同一条发现」无法由模型侧完成。</p>
+      <p class="meta">会话 <code>session-hikari-fb</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-004</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:33</span>
+      </div>
+      <p class="text">findings.js 只对 confirmed/resolved 强制 tool-evidenced，open→refuted 允许 model-claim 且零证据，偏离设计 §2.3「open→confirmed/refuted 需 tool-evidenced」；无证据的 refuted 只计入「已闭合 N 条」，等于让猜测以闭合形式进入注入文本。</p>
+      <p class="meta">会话 <code>session-hikari-fb</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-003</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:33</span>
+      </div>
+      <p class="text">record_finding 的 findingId 由当前 projection 的最大编号 +1 决定，且写日志前有一个 await（解析 appendPluginRecord）；同一轮并行调用多条时可能算出同一个 id，后写覆盖前写，其中一条发现静默从 Context 消失。</p>
+      <p class="meta">会话 <code>session-hikari-fb</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-002</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:33</span>
+      </div>
+      <p class="text">scoped-fs 的 grep include 按仓库相对路径（含目录）匹配而非文件名：include=&quot;*.js&quot; 或 &quot;findings.js&quot; 在 hikari-native 下命中 0 条，&quot;**/*.js&quot; 才命中 4 条，且零结果只渲染 No matches，看不出是被过滤掉的。</p>
+      <p class="meta">会话 <code>session-hikari-fb</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-001</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-10-30 10:33</span>
+      </div>
+      <p class="text">本轮 wake-up 是 experiments/hikari-feedback-loop/events.json 第一条回放事件（at=1793292000000），不是真实前台切换；本会话即 loop.patch.yml 的 session-hikari-fb 注入组。</p>
+      <p class="meta">会话 <code>session-hikari-fb</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li></ol>
+  <p class="note">编号只在会话内唯一：<code>f-001</code> 在不同会话里不是同一条。上面每条都标了会话。
+  读的是 103 / 154 个会话（近 14 天有写入的），
+  48139 帧 / 82547 条记录。</p>
+</section>
+  
+<section id="awareness">
+  <h2>她观察到了什么</h2>
+  <p class="note">只有一半：仓库变化有结构化轨迹；窗口切换没有落盘，只在她被唤醒时的提示词里留过一句话。</p>
+  <div class="stats">
+    <div class="stat"><div class="stat-value">221</div><div class="stat-label">被唤醒次数</div><div class="stat-hint">近 14 天，按日志计</div></div>
+    <div class="stat"><div class="stat-value">28</div><div class="stat-label">仓库变化事件</div><div class="stat-hint">共 567 条轨迹，去掉安静时段</div></div>
+  </div>
+  <table class="trace"><thead><tr><th>时间</th><th>类型</th><th>HEAD</th><th>工作区</th></tr></thead><tbody>
+    <tr>
+      <td>2026-11-05 09:32</td>
+      <td><code>baseline</code></td>
+      <td>19648ed</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 21:59</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 21:58</td>
+      <td><code>baseline</code></td>
+      <td>7fc188c</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 21:57</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 21:55</td>
+      <td><code>baseline</code></td>
+      <td>7fc188c</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 21:54</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 21:44</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 21:42</td>
+      <td><code>baseline</code></td>
+      <td>239adb8</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 21:28</td>
+      <td><code>baseline</code></td>
+      <td>e0d154e</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 20:38</td>
+      <td><code>cooldown</code></td>
+      <td>172e5e0</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 20:38</td>
+      <td><code>cooldown</code></td>
+      <td>172e5e0</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 20:37</td>
+      <td><code>cooldown</code></td>
+      <td>172e5e0</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 20:37</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 18:48</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 18:39</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 18:39</td>
+      <td><code>cooldown</code></td>
+      <td>b4c4237</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 18:37</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 17:29</td>
+      <td><code>cooldown</code></td>
+      <td>b4c4237</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 17:29</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 17:27</td>
+      <td><code>baseline</code></td>
+      <td>2e7eb58</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 17:24</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 17:24</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 17:23</td>
+      <td><code>baseline</code></td>
+      <td>e3b7393</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 17:21</td>
+      <td><code>baseline</code></td>
+      <td>e3b7393</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 17:07</td>
+      <td><code>cooldown</code></td>
+      <td>e3b7393</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 17:06</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 16:42</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-03 16:42</td>
+      <td><code>baseline</code></td>
+      <td>b4e9c56</td>
+      <td>—</td>
+    </tr></tbody></table>
+</section>
+  
+<section id="activities">
+  <h2>还有什么没完成</h2>
+  <p class="empty">还不知道。</p>
+  <p class="note">没有任何地方记着"Hikari 打算做什么、做到哪一步"。会话日志里的工具调用与待办属于宿主，不是她的行动。
+  这一格要等未决事项与行动有归属之后才填得出来——在那之前留白，不编。</p>
+</section>
+  <footer>
+    数据：<code>C:\Users\29719\.dsh\hikari\memory</code> 的记忆与拒绝记录、DSH 会话日志里的认识、project-watch 的仓库轨迹。<br>
+    这个页面不写任何东西，也没有脚本；关掉它就等于关掉了面板。要更新，重新生成一次。
+  </footer>
+</main>
+</body>
+</html>
