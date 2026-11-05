@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>Hikari 记忆</title>
+<style>
+:root{--bg:#12131a;--card:#1b1d27;--line:#2b2e3c;--fg:#e6e8f0;--dim:#9aa1b5;--warn:#e0a44b;--ok:#6fcf97}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.65 ui-sans-serif,system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+header.top{padding:28px 32px 12px;border-bottom:1px solid var(--line)}
+h1{margin:0 0 6px;font-size:20px;font-weight:600}
+.sub{color:var(--dim);font-size:13px}
+.stats{display:flex;gap:28px;flex-wrap:wrap;padding:16px 32px;border-bottom:1px solid var(--line)}
+.stat b{display:block;font-size:22px;font-weight:600}
+.stat span{color:var(--dim);font-size:12px}
+main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:24px;padding:24px 32px 64px}
+@media (max-width:1000px){main{grid-template-columns:1fr}}
+h2{font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:0 0 12px}
+.card,.reject{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.card header,.reject header{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:8px}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px;color:#b8c0d8}
+.seq{color:var(--dim);font-size:12px}
+.text{margin:0 0 10px;white-space:pre-wrap;word-break:break-word}
+dl{display:grid;grid-template-columns:64px 1fr;gap:2px 10px;margin:0;font-size:13px}
+dt{color:var(--dim)}dd{margin:0;word-break:break-word}
+.unknown{color:var(--warn)}
+.empty{color:var(--dim);font-size:13px}
+a{color:#8fb4ff;text-decoration:none}a:hover{text-decoration:underline}
+ul{margin:0;padding-left:18px;font-size:13px}
+hr{border:0;border-top:1px solid var(--line);margin:20px 0}
+</style></head>
+<body>
+<header class="top">
+  <h1>Hikari 记忆</h1>
+  <div class="sub">G:\work\LAB\code\projects\own\hikari-new\experiments\m2c-live\store · 渲染于 2026-11-05 13:20Z · 只读</div>
+</header>
+<div class="stats">
+  <div class="stat"><b>2</b><span>记忆</span></div>
+  <div class="stat"><b>1</b><span>链头</span></div>
+  <div class="stat"><b>1</b><span>被修订过</span></div>
+  <div class="stat"><b class="unknown">2</b><span>发生时间未知</span></div>
+  <div class="stat"><b>0</b><span>拒绝样本</span></div>
+  <div class="stat"><b>2</b><span>最新 seq</span></div>
+</div>
+<main>
+  <section>
+    <h2>记忆 · 新的在上</h2>
+    <article class="card" id="m-124371ee-e4cb-4ffb-a1d1-386bf23a1e62">
+  <header><code>m-124371ee-e4cb-4ffb-a1d1-386bf23a1e62</code><span class="seq">seq 2</span></header>
+  <p class="text">Hikari 的 Memory 修订约定（可作为后续讨论的前提，已在源码核实成立）：「修订只能改链头，旧记录永不改」。
+
+核实位置：
+- `hikari-native/memory/writing.js` 的 `assertReviseTarget`（约 253-281 行）：先 `store.get(id)` 确认记录存在，再 `store.all().find(r =&gt; r.supersedes === id)` 查后继；一旦已有后继就抛 `MEMORY_SUPERSEDES_NOT_HEAD`，并在消息里点名当前链头，要求改那条。因此只能修订当前版本（链头）。
+- `revise_memory` 的实现（约 463-481 行）：判链头与写入在同一个 `enqueue` 串行回调里完成，写入走 `store.append(toAppendInput(input, { supersedes: target }))`——只追加新记录，`supersedes` 由工具层从 memoryId 复制，模型无法自己写。
+- `hikari-native/memory/store.mjs`：文件被注释与实现共同限定为 append-only（只 `appendFile` JSONL；`writeFile` 只用于 meta 计数器），没有 update/delete 路径；`supersedes` 必须指向已存在记录，不能指向自己（自指/悬挂会被 `INVALID_RECORD`/`INVALID_INPUT` 拒绝）。
+- 工具描述里也写死了：「The old record is kept forever; nothing is edited or deleted.」
+
+已知局限（不是反例，但讨论时要记住）：串行队列只覆盖单进程，其实现在 `writing.js` 的 `createQueue`（293-303 行，JSDoc 283-292 行，局限说明见 290-291 行）；两个进程共写同一 store 没有文件锁，跨进程并发修订仍可能各自写出后继而分叉（`docs/development/m2a-memory-store.md` 风险清单第 1 条）。因此「只能改链头」在单进程内是强制的，跨进程是尽力而为；而「旧记录永不改」在两种情况下都由 append-only 存储保证。</p>
+  <dl>
+    <dt>记录于</dt><dd>2026-11-05 01:48Z</dd>
+    <dt>发生</dt><dd><span class="unknown">发生时间未知</span></dd>
+    <dt>来源</dt><dd><code>file:hikari-native/memory/writing.js:253</code></dd>
+    <dt>有效期</dt><dd>长期有效，除非 writing.js / store.mjs 的修订契约被重新审阅修改。</dd>
+    <dt>链</dt><dd>修订自 <a href="#m-9cf20a36-1bb9-4d9d-a0d8-c2fa061a759b">m-9cf20a36-1bb9-4d9d-a0d8-c2fa061a759b</a></dd>
+  </dl>
+</article>
+<article class="card" id="m-9cf20a36-1bb9-4d9d-a0d8-c2fa061a759b">
+  <header><code>m-9cf20a36-1bb9-4d9d-a0d8-c2fa061a759b</code><span class="seq">seq 1</span></header>
+  <p class="text">Hikari 的 Memory 修订约定（可作为后续讨论的前提，已在源码核实成立）：「修订只能改链头，旧记录永不改」。
+
+核实位置：
+- `hikari-native/memory/writing.js` 的 `assertReviseTarget`（约 253-281 行）：先 `store.get(id)` 确认记录存在，再 `store.all().find(r =&gt; r.supersedes === id)` 查后继；一旦已有后继就抛 `MEMORY_SUPERSEDES_NOT_HEAD`，并在消息里点名当前链头，要求改那条。因此只能修订当前版本（链头）。
+- `revise_memory` 的实现（约 463-481 行）：判链头与写入在同一个 `enqueue` 串行回调里完成，写入走 `store.append(toAppendInput(input, { supersedes: target }))`——只追加新记录，`supersedes` 由工具层从 memoryId 复制，模型无法自己写。
+- `hikari-native/memory/store.mjs`：文件被注释与实现共同限定为 append-only（只 `appendFile` JSONL；`writeFile` 只用于 meta 计数器），没有 update/delete 路径；`supersedes` 必须指向已存在记录，不能指向自己（自指/悬挂会被 `INVALID_RECORD`/`INVALID_INPUT` 拒绝）。
+- 工具描述里也写死了：「The old record is kept forever; nothing is edited or deleted.」
+
+已知局限（不是反例，但讨论时要记住）：串行队列只覆盖单进程；两个进程共写同一 store 没有文件锁，跨进程并发修订仍可能各自写出后继而分叉（`writing.js` 约 288-292 行、`docs/development/m2a-memory-store.md` 风险清单第 1 条）。因此「只能改链头」在单进程内是强制的，跨进程是尽力而为；而「旧记录永不改」在两种情况下都由 append-only 存储保证。</p>
+  <dl>
+    <dt>记录于</dt><dd>2026-11-05 01:36Z</dd>
+    <dt>发生</dt><dd><span class="unknown">发生时间未知</span></dd>
+    <dt>来源</dt><dd><code>file:hikari-native/memory/writing.js:253</code></dd>
+    <dt>有效期</dt><dd>长期有效，除非 writing.js / store.mjs 的修订契约被重新审阅修改。</dd>
+    <dt>链</dt><dd>已被 <a href="#m-124371ee-e4cb-4ffb-a1d1-386bf23a1e62">m-124371ee-e4cb-4ffb-a1d1-386bf23a1e62</a> 修订</dd>
+  </dl>
+</article>
+  </section>
+  <aside>
+    <h2>它不知道的</h2>
+    <ul><li><a href="#m-9cf20a36-1bb9-4d9d-a0d8-c2fa061a759b">m-9cf20a36-1bb9-4d9d-a0d8-c2fa061a759b</a> · 记录于 2026-11-05 01:36Z</li><li><a href="#m-124371ee-e4cb-4ffb-a1d1-386bf23a1e62">m-124371ee-e4cb-4ffb-a1d1-386bf23a1e62</a> · 记录于 2026-11-05 01:48Z</li></ul>
+    <hr>
+    <h2>拒绝样本 · 想记却没记成</h2>
+    <p class="empty">没有被拒的样本。</p>
+    <hr>
+    <h2>来源分布</h2>
+    <ul><li>file × 2</li></ul>
+    
+    
+  </aside>
+</main>
+</body></html>
