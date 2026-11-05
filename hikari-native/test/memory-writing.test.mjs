@@ -360,7 +360,7 @@ test('[10] 并发追加 20 次，seq 连续无洞', async () => {
   await store.close()
 })
 
-test('[11] 插件卸载后四个工具消失，重载后恢复且可写入', async () => {
+test('[11] 插件卸载后六个工具消失，重载后恢复且可写入', async () => {
   const { app, tools, memory, storeDir } = await boot()
   assert.deepEqual(tools.order, [
     'record_finding',
@@ -368,10 +368,12 @@ test('[11] 插件卸载后四个工具消失，重载后恢复且可写入', asy
     'read_memory',
     'write_memory',
     'revise_memory',
+    'search_memories',
+    'get_memory',
   ])
   await memory.dispose()
   await new Promise((r) => setTimeout(r, 40))
-  for (const name of ['search_memory', 'read_memory', 'write_memory', 'revise_memory']) {
+  for (const name of ['search_memory', 'read_memory', 'write_memory', 'revise_memory', 'search_memories', 'get_memory']) {
     assert.equal(tools.has(name), false, `${name} must disappear with the plugin`)
   }
   assert.equal(tools.has('record_finding'), true)

@@ -178,6 +178,8 @@ test('World 关掉检索工具、Memory 接管后，各自只提供属于自己�
     'read_memory',
     'write_memory',
     'revise_memory',
+    'search_memories',
+    'get_memory',
   ])
   assert.equal(tools.get('record_finding').name, 'record_finding')
   // 两个检索工具的执行体来自 Memory 的 tools.js，输出结构与 World 直调一致
@@ -199,16 +201,19 @@ test('两边同时注册时必然报错，且 Memory 给出可操作的提示', 
   assert.equal(dup.length, 1)
 })
 
-test('卸载 Memory 后四个工具消失，record_finding 仍在', async () => {
+test('卸载 Memory 后六个工具消失，record_finding 仍在', async () => {
   const { tools, memory } = await boot({ worldConfig: { registerMemoryTools: false }, withMemory: true })
   assert.equal(tools.has('search_memory'), true)
   assert.equal(tools.has('write_memory'), true)
+  assert.equal(tools.has('search_memories'), true)
   await memory.dispose()
   await new Promise((r) => setTimeout(r, 40))
   assert.equal(tools.has('search_memory'), false)
   assert.equal(tools.has('read_memory'), false)
   assert.equal(tools.has('write_memory'), false)
   assert.equal(tools.has('revise_memory'), false)
+  assert.equal(tools.has('search_memories'), false)
+  assert.equal(tools.has('get_memory'), false)
   assert.equal(tools.has('record_finding'), true)
 })
 
@@ -260,7 +265,7 @@ test('接管成功时输出一条 ready 日志，含 provider / tools / source',
   const ready = logs.filter((l) => l.includes('[hikari-memory] ready'))
   assert.equal(ready.length, 1, `expected exactly one ready line, got: ${JSON.stringify(logs)}`)
   assert.match(ready[0], /provider=hikari-memory/)
-  assert.match(ready[0], /tools=search_memory,read_memory,write_memory,revise_memory/)
+  assert.match(ready[0], /tools=search_memory,read_memory,write_memory,revise_memory,search_memories,get_memory/)
   assert.match(ready[0], /source=findings/)
 })
 

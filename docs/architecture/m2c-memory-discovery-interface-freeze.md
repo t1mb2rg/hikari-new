@@ -3,7 +3,7 @@
 日期：2026-11-05
 前置：`docs/development/m2c-memory-discovery-functional-review.md`（七问七答）、`docs/architecture/m2c-memory-discovery-architecture-review.md`（八条前提对照、D-1..D-7）
 本文只冻结实施边界，不重开架构问题。
-状态：**冻结候选，待人批准**。批准前不改实现代码。
+状态：**已批准并实施**（2026-11-05 人明确「进入实施吧」）。以下冻结面即公开契约；实现落点见 §7（已按实施结果回填）。
 
 ---
 
@@ -183,21 +183,20 @@
 
 ---
 
-## 7. 实现落点（预估，实施后须回填实际行号）
+## 7. 实现落点（已按实施结果回填）
 
-| 段 | 计划位置 | 内容 |
+`hikari-native/memory/recall.js`，共 **332 行**（内容行；文件以换行结束）：
+
+| 段 | 实际位置 | 内容 |
 | --- | --- | --- |
-| 1 | `recall.js:1-40` | 常量（`SNIPPET_CHARS = 120`、`DEFAULT_LIMIT = 10`、`MAX_LIMIT = 20`） |
-| 2 | `recall.js:42-90` | `normalizeSearchInput(args)` |
-| 3 | `recall.js:92-150` | `matchMemories(records, input)`（过滤 + 排序 + 切片） |
-| 4 | `recall.js:152-200` | `indexSupersedes(records)`（一次性建 `Map<oldId, newId>`） |
-| 5 | `recall.js:202-280` | `presentCandidate(record, supersededBy)` |
-| 6 | `recall.js:282-400` | 两个工具的 name/description/parameters/output/execute |
-| 7 | `recall.js:402-430` | `installMemoryRecallTools(ctx, store)` |
+| 1 | `recall.js:23-38` | 常量（`SNIPPET_CHARS = 120` 在 `:26`、`DEFAULT_LIMIT`、`MAX_LIMIT`）与 `fail`/`present` |
+| 2 | `:57-102` | `normalizeBound`（`:57`）+ `normalizeSearchInput`（`:72`） |
+| 3 | `:105-135` | `indexSupersedes`（`:105`）+ `matchMemories`（`:119`） |
+| 4 | `:137-172` | `snippetOf`（`:137`）+ `presentCandidate`（`:143`）+ `presentMemory`（`:159`） |
+| 5 | `:176-219` | `assertKnownMemory`（`:176`）、两段 description（`:194`、`:201`）、`NULLABLE_TIME`（`:207`） |
+| 6 | `:221-332` | `installMemoryRecallTools`（`:221`）：`search_memories` 注册起 `:223`（execute `:277`），`get_memory` 注册起 `:291`（execute `:327`） |
 
-注：行号是**计划值**，实施后必须按实际结果回填（M2-b 的教训：计划行号直接写进验收表会造成文档漂移）。
-
----
+验收测试在 `hikari-native/test/memory-recall.test.mjs`（用例 `:78`–`:383`），另改了两个既有测试：`hikari-native/test/memory.test.mjs:173-192`（工具顺序五项 → 七项）、`:204-218`（卸载六个）、`:220-230`（重载）。
 
 ## 8. Contract Creation Gate
 

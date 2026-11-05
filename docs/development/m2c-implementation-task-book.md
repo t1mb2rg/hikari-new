@@ -32,25 +32,25 @@
 
 ## 3. 分阶段落点
 
-> 下表行号是**计划值**，实施完成后必须按实际结果回填（M2-b 的教训：计划行号直接写进验收表会造成文档漂移）。
+> 下表行号已按实施结果回填（2026-11-05）。`hikari-native/memory/recall.js` 共 **332 行**（内容行）。
 
 ### 阶段 P1：检索主干（`recall.js` 六段）
 
-| 段 | 计划行号 | 内容 | 探针断言 |
+| 段 | 实际行号 | 内容 | 探针断言 |
 | --- | --- | --- | --- |
-| 1 | `:1-40` | 常量：`SNIPPET_CHARS = 120`、`DEFAULT_LIMIT = 10`、`MAX_LIMIT = 20`、`SOURCE` 无关 | 导出与冻结面一致 |
-| 2 | `:42-90` | `normalizeSearchInput(args)`：query trim 判空、since/until 折叠 null、limit 夹取、nextOffset 归零 | `''`/`'   '` → `MEMORY_QUERY_EMPTY`；`limit: 999` → 20；`nextOffset: -1` → 0 |
-| 3 | `:92-150` | `matchMemories(records, input)`：子串（大小写不敏感）→ 时间窗（闭区间，null 不命中）→ `headOnly` → `seq` 倒序 | 三条记录命中两条；`occurredAt: null` 在给 `since` 时被排除 |
-| 4 | `:152-200` | `indexSupersedes(records)`：一次遍历建 `Map<oldId, newId>` | 两个修订 → 两个映射，旧 id 全部有后继 |
-| 5 | `:202-280` | `presentCandidate(record, supersededBy)`：五键 + snippet（`slice(0,120)`，截断加 `…`） | 长文本 snippet 长度 121（含省略号），短文本原样 |
-| 6 | `:282-400` | 两个工具的 name/description/parameters/output/execute | `parameters.additionalProperties === false`；`required` 分别 `['query']`、`['memoryId']` |
+| 1 | `:23-38` | 常量：`SNIPPET_CHARS = 120`（`:26`）、`DEFAULT_LIMIT`、`MAX_LIMIT`、`fail`/`present` | 导出与冻结面一致 |
+| 2 | `:57-102` | `normalizeBound`（`:57`）+ `normalizeSearchInput`（`:72`）：query trim 判空、since/until 折叠 null、limit 夹取、nextOffset 归零 | `''`/`'   '` → `MEMORY_QUERY_EMPTY`；`limit: 999` → 20；`nextOffset: -1` → 0 |
+| 3 | `:105-135` | `indexSupersedes`（`:105`）+ `matchMemories`（`:119`）：子串（大小写不敏感）→ 时间窗（闭区间，null 不命中）→ `headOnly` → `seq` 倒序 | 三条记录命中两条；`occurredAt: null` 在给 `since` 时被排除 |
+| 4 | `:137-172` | `snippetOf`（`:137`）+ `presentCandidate`（`:143`）+ `presentMemory`（`:159`）：五键摘要、十字段 + `supersededBy` | 长文本 snippet 长度 121（含省略号），短文本原样 |
+| 5 | `:176-219` | `assertKnownMemory`（`:176`）与两段 description / `NULLABLE_TIME` | `f-` → `MEMORY_NOT_A_MEMORY`；未知 `m-` → `MEMORY_UNKNOWN_ID` |
+| 6 | `:221-332` | 两个工具的 name/description/parameters/output/execute | `parameters.additionalProperties === false`；`required` 分别 `['query']`、`['memoryId']` |
 
 ### 阶段 P2：读取与链
 
-| 段 | 计划行号 | 内容 | 探针断言 |
+| 段 | 实际行号 | 内容 | 探针断言 |
 | --- | --- | --- | --- |
-| 7 | `:402-430` | `installMemoryRecallTools(ctx, store)`：注册两个工具，`execute` 直接返回对象 | 注册两个名字；`ctx.tools.get` 冲突时抛可操作消息（与 `index.js:57-64` 同风格） |
-| — | — | `get_memory` 的 execute：`f-` 前缀 → `MEMORY_NOT_A_MEMORY`；`store.get` 未命中 → `MEMORY_UNKNOWN_ID`；命中 → 十字段 + `supersededBy` | 三种分支各一条 |
+| 7 | `:221-332` | `installMemoryRecallTools`：注册两个工具，`execute` 直接返回对象 | 注册两个名字；卸载随 fiber 回滚（`memory.test.mjs:204-218`） |
+| — | `:291-331` | `get_memory` 的 execute（`:327`）：`f-` 前缀 → `MEMORY_NOT_A_MEMORY`；`store.get` 未命中 → `MEMORY_UNKNOWN_ID`；命中 → 十字段 + `supersededBy` | 三种分支各一条（测试 🔢[8]） |
 
 ### 阶段 P3：接线与生命周期
 
@@ -69,22 +69,24 @@
 
 ---
 
-## 4. 12 项验收 → 测试名
+## 4. 12 项验收 → 测试名（已按实施结果回填）
 
-| # | 验收 | 测试名 | 落点 |
+全部在 `hikari-native/test/memory-recall.test.mjs`，用例名前缀 `[n]`；第 11 项另涉及两个既有测试文件。
+
+| # | 验收 | 测试名（实际） | 落点 |
 | --- | --- | --- | --- |
-| 1 | 正常检索返回五键、不给全文 | `[1] 检索命中：返回 memoryId/snippet/occurredAt/validHint/supersededBy` | `recall.js:202-280`（presentCandidate）+ `:282-360`（search execute）；测试 `memory-recall.test.mjs:120-150`（计划） |
-| 2 | 子串匹配、大小写不敏感、无关 query 不命中（返回空集） | `[2] 正文子串匹配、大小写不敏感，无关 query 返回空集` | `recall.js:92-150`；测试 `:152-175`（计划） |
-| 3 | 时间窗闭区间、null 不命中 | `[3] since/until 是闭区间，occurredAt 为 null 时不命中时间窗` | `recall.js:92-150`；测试 `:177-205`（计划） |
-| 4 | `headOnly` 排除被修订记录 | `[4] headOnly 排除已被修订的旧记录` | `recall.js:92-150` + `:152-200`；测试 `:207-230`（计划） |
-| 5 | 按 `seq` 倒序 + 翻页 | `[5] 结果按 seq 倒序，limit/nextOffset 可翻页` | `recall.js:92-150`；测试 `:232-258`（计划） |
-| 6 | 参数非法被拒 | `[6] 空 query、非整数时间、since>until 分别被拒` | `recall.js:42-90`；测试 `:260-285`（计划） |
-| 7 | `get_memory` 返回完整十字段 + `supersededBy` | `[7] get_memory 返回完整十字段与派生 supersededBy` | `recall.js:362-400`；测试 `:287-315`（计划） |
-| 8 | 前缀与不存在分别报错 | `[8] f- 前缀报 MEMORY_NOT_A_MEMORY，未知 m- 报 MEMORY_UNKNOWN_ID` | `recall.js:362-400`；测试 `:317-340`（计划） |
-| 9 | 修订后链关系正确 | `[9] 修订后旧记录仍在，get_memory(旧) 的 supersededBy 指向新记录` | `recall.js:152-200` + `:362-400`；测试 `:342-372`（计划） |
-| 10 | 空存储返回空集且无 `nextOffset`；检索只读（前后 `memory.jsonl` 字节与 `store.size` 不变） | `[10] 空存储返回空数组且不带 nextOffset；检索前后 memory.jsonl 与 store.size 不变` | `recall.js:282-360`；测试 `:374-392`（计划） |
-| 11 | 插件生命周期 | `[11] 卸载后六个工具消失，重载后恢复` | `hikari-native/test/memory.test.mjs`（现有用例改造）；测试 `:394-410`（计划，boot 版本） |
-| 12 | 回归 | `[12] 全量测试全绿，search_memory 结果里没有 m- 前缀 id` | 全量 + 现有 `memory.test.mjs` |
+| 1 | 正常检索返回五键、不给全文 | `[1] 检索命中：返回 memoryId/snippet/occurredAt/validHint/supersededBy`（`:78`） | `recall.js:143-157`（presentCandidate）+ `:277-289`（search execute） |
+| 2 | 子串匹配、大小写不敏感、无关 query 不命中 | `[2] 正文子串匹配、大小写不敏感，无关 query 返回空集`（`:113`） | `recall.js:119-135` |
+| 3 | 时间窗闭区间、null 不命中 | `[3] since/until 是闭区间，occurredAt 为 null 时不命中时间窗`（`:131`） | `recall.js:119-135` |
+| 4 | `headOnly` 排除被修订记录 | `[4] headOnly 排除已被修订的旧记录`（`:158`） | `recall.js:105-117` + `:119-135` |
+| 5 | 按 `seq` 倒序 + 翻页 | `[5] 结果按 seq 倒序，limit/nextOffset 可翻页`（`:173`） | `recall.js:119-135` + `:277-289` |
+| 6 | 参数非法被拒 | `[6] 空 query、非整数时间、since>until 分别被拒`（`:199`） | `recall.js:57-102` |
+| 7 | `get_memory` 返回完整十字段 + `supersededBy` | `[7] get_memory 返回完整十字段与派生 supersededBy`（`:214`） | `recall.js:159-172` + `:327-331` |
+| 8 | 前缀与不存在分别报错 | `[8] f- 前缀报 MEMORY_NOT_A_MEMORY，未知 m- 报 MEMORY_UNKNOWN_ID`（`:247`） | `recall.js:176-192` |
+| 9 | 修订后链关系正确 | `[9] 修订后旧记录仍在，get_memory(旧) 的 supersededBy 指向新记录`（`:264`） | `recall.js:105-117` + `:159-172` |
+| 10 | 空存储返回空集且无 `nextOffset`；检索只读 | `[10] 空存储返回空数组且不带 nextOffset；检索前后 memory.jsonl 与 store.size 不变`（`:288`） | `recall.js:277-289` |
+| 11 | 插件生命周期 | `[11] 卸载后六个工具消失，重载后恢复`（`:367`）；既有用例 `memory.test.mjs:204-218`/`:220-230`、`memory-writing.test.mjs:363-380` | `recall.js:221-332` 的注册随 fiber 回滚 |
+| 12 | 回归 | `[12] 全量回归：写了记忆之后，search_memory 的结果里仍然没有 m- 前缀 id`（`:383`） | 全量 `npm test` |
 
 补充说明：
 
@@ -113,7 +115,7 @@ node .gitnexus/run.cjs detect-changes --scope all --repo .
 git status --short
 ```
 
-预期：`memory-recall` 12 pass；`memory-writing` 12 pass；`memory` 9 pass（改后仍 9）；`memory-store` 21 pass；全量 `npm test` exit 0（实施前基线 1119 / 1115 pass / 0 fail / 4 skip）。
+实测（2026-11-05）：`memory-recall` **12 pass**；`memory-writing` **12 pass**；`memory` **9 pass**；`memory-store` **21 pass**；全量 `npm test` = **1131 tests / 1127 pass / 0 fail / 4 skip**，exit 0（实施前基线 1119 / 1115）。
 
 ---
 
