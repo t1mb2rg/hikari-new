@@ -53,7 +53,7 @@
 <main>
   <header>
     <h1>Hikari</h1>
-    <p>只读面板 · 生成于 2026-11-06 22:25</p>
+    <p>只读面板 · 生成于 2026-11-06 22:37</p>
   </header>
   
 <section id="home">
@@ -62,12 +62,12 @@
     <div class="stat"><div class="stat-value">7</div><div class="stat-label">记忆条数</div><div class="stat-hint">5 条现行 · 2 条被修订</div></div>
     <div class="stat"><div class="stat-value">111</div><div class="stat-label">认识的实体</div><div class="stat-hint">28 个变过</div></div>
     <div class="stat"><div class="stat-value">1 条</div><div class="stat-label">还没做完的事</div><div class="stat-hint">共 1 条承诺</div></div>
-    <div class="stat"><div class="stat-value">245</div><div class="stat-label">最近被唤醒</div><div class="stat-hint">近 14 天，按会话日志里的唤醒提示计</div></div>
+    <div class="stat"><div class="stat-value">247</div><div class="stat-label">最近被唤醒</div><div class="stat-hint">近 14 天，按会话日志里的唤醒提示计</div></div>
     <div class="stat"><div class="stat-value">0</div><div class="stat-label">被拒写入</div><div class="stat-hint">拒绝了什么，记在下面</div></div>
   </div>
   <div class="stats">
-    <div class="stat"><div class="stat-value">约 2 分钟前</div><div class="stat-label">最后一次被叫醒</div><div class="stat-hint">会话日志里最新一条记录 · 说明她还在运行</div></div>
-    <div class="stat"><div class="stat-value">约 刚刚</div><div class="stat-label">最后一次留下东西</div><div class="stat-hint">记忆 / 拒绝 / 目标 / 有变化的仓库轨迹（30 秒一次的安静采样不算）</div></div>
+    <div class="stat"><div class="stat-value">约 1 分钟前</div><div class="stat-label">最后一次被叫醒</div><div class="stat-hint">会话日志里最新一条记录 · 说明她获得过一次运行机会</div></div>
+    <div class="stat"><div class="stat-value">约 1 小时前</div><div class="stat-label">最后一次留下自己的记录</div><div class="stat-hint">只算她自己写的：记忆 / 拒绝 / 目标（观察系统的记录不在此列）</div></div>
   </div>
   <p class="note">这个面板只读。它不向 Hikari 注入任何东西，也不替她判断哪条重要。</p>
   <p class="caution">6 条记忆的发生时间是未知的——她当时不知道现在几点，这里也不替她编。</p>
@@ -1283,17 +1283,36 @@
     </li></ol>
   <p class="note">编号只在会话内唯一：<code>f-001</code> 在不同会话里不是同一条。上面每条都标了会话。
   读的是 112 / 163 个会话（近 14 天有写入的），
-  50817 帧 / 87063 条记录。</p>
+  50960 帧 / 87297 条记录。</p>
 </section>
   
 <section id="awareness">
   <h2>她观察到了什么</h2>
   <p class="note">只有一半：仓库变化有结构化轨迹；窗口切换没有落盘，只在她被唤醒时的提示词里留过一句话。</p>
   <div class="stats">
-    <div class="stat"><div class="stat-value">245</div><div class="stat-label">被唤醒次数</div><div class="stat-hint">近 14 天，按日志计</div></div>
-    <div class="stat"><div class="stat-value">56</div><div class="stat-label">仓库变化事件</div><div class="stat-hint">共 2398 条轨迹，去掉安静时段</div></div>
+    <div class="stat"><div class="stat-value">247</div><div class="stat-label">被唤醒次数</div><div class="stat-hint">近 14 天，按日志计</div></div>
+    <div class="stat"><div class="stat-value">59</div><div class="stat-label">仓库变化事件</div><div class="stat-hint">共 2422 条轨迹，去掉安静时段</div></div>
+    <div class="stat"><div class="stat-value">约 刚刚</div><div class="stat-label">最近一次环境变化</div><div class="stat-hint">感知子系统记的，不是她写的</div></div>
   </div>
   <table class="trace"><thead><tr><th>时间</th><th>类型</th><th>HEAD</th><th>工作区</th></tr></thead><tbody>
+    <tr>
+      <td>2026-11-06 22:37</td>
+      <td><code>cooldown</code></td>
+      <td>d484e94</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 22:36</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 22:26</td>
+      <td><code>cooldown</code></td>
+      <td>d484e94</td>
+      <td>—</td>
+    </tr>
     <tr>
       <td>2026-11-06 22:25</td>
       <td><code>emitted</code></td>
@@ -1514,24 +1533,6 @@
       <td>2026-11-03 21:28</td>
       <td><code>baseline</code></td>
       <td>e0d154e</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 20:38</td>
-      <td><code>cooldown</code></td>
-      <td>172e5e0</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 20:38</td>
-      <td><code>cooldown</code></td>
-      <td>172e5e0</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 20:37</td>
-      <td><code>cooldown</code></td>
-      <td>172e5e0</td>
       <td>—</td>
     </tr></tbody></table>
 </section>

@@ -360,8 +360,8 @@ describe('目标', () => {
   })
 })
 
-describe('两种"最后时间"', () => {
-  test('[11] 她只醒过、没写东西：最后被叫醒是新的，最后留下东西还是旧的', () => {
+describe('三种时间各归各的', () => {
+  test('[11] 她只醒过、没写东西：被叫醒是新的，自己留下记录还是旧的，环境变化单列', () => {
     const dir = tempDir('wake-time')
     const store = path.join(dir, 'store')
     fs.mkdirSync(store, { recursive: true })
@@ -386,10 +386,18 @@ describe('两种"最后时间"', () => {
       { type: 'assistant/message', seq: 2, time: 1793980012345, data: { text: '没什么。' } },
     ])
 
+    // 外部改动的轨迹：由感知子系统写，不该算成她的记录
+    const trace = path.join(dir, 'trace.jsonl')
+    fs.writeFileSync(
+      trace,
+      `${JSON.stringify({ at: 1793980050000, kind: 'emitted', head: 'abc12345', dirty: true, changed: ['workingTree'] })}\n`,
+      'utf8',
+    )
+
     const panel = buildPanel({
       storeDir: store,
       sessionsDir: sessions,
-      tracePath: path.join(dir, 'no-trace.jsonl'),
+      tracePath: trace,
       now: 1793980100000,
     })
 
@@ -397,11 +405,15 @@ describe('两种"最后时间"', () => {
     assert.equal(panel.home.lastWake, 1793980000000)
     // 会话日志里最新一条记录（含她自己的回答）
     assert.equal(panel.home.lastTouch, 1793980012345)
-    // 她这一轮没写记忆、没写认识、没写轨迹：留下东西的时间仍是记忆文件的
-    assert.equal(panel.home.lastArtifact, 1793842597808)
+    // 她这一轮没写记忆、没写目标、没被拒：她自己留下的记录仍是记忆文件的时间
+    assert.equal(panel.home.lastOwnRecord, 1793842597808)
+    // 环境变化单列在观察区
+    assert.equal(panel.awareness.lastChange, 1793980050000)
 
     const html = renderPanel(panel)
     assert.ok(html.includes('最后一次被叫醒'))
-    assert.ok(html.includes('最后一次留下东西'))
+    assert.ok(html.includes('最后一次留下自己的记录'))
+    assert.ok(html.includes('最近一次环境变化'))
+    assert.ok(html.includes('感知子系统记的，不是她写的'))
   })
 })

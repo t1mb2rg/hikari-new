@@ -341,8 +341,12 @@ export function buildPanel({
   const changed = entities.length - heads
   // "留下了东西"= 记忆、拒绝、目标、或一条真正有变化的仓库轨迹，任一被写过。
   // 不含会话日志本身（那是"醒着"的证据），也不含 trace 文件 mtime（每 30 秒都会变）。
-  const lastArtifact = newestOf(memoryMtime, rejections.mtime, goalFile.mtime, trace.lastAt)
-  const lastActivity = newestOf(lastArtifact, sessions.lastAt)
+  // 三种"时间"分属三件事，面板不合并它们（人 2026-11-06 裁决）：
+  //   被叫醒   ← 会话日志（她获得了一次运行机会）
+  //   她自己写下记录 ← 记忆 / 拒绝 / 目标（她主动表达，或被工程拒绝）
+  //   环境变化 ← project-watch 的非 quiet 轨迹（感知子系统记录了外部变化，不是她的动作）
+  const lastOwnRecord = newestOf(memoryMtime, rejections.mtime, goalFile.mtime)
+  const lastActivity = newestOf(lastOwnRecord, sessions.lastAt)
 
   return {
     generatedAt: now,
@@ -359,7 +363,8 @@ export function buildPanel({
       // "在线"只能是近似：没有任何进程自报在场。
       // 所以拆成两个数：她被叫醒过（会话日志），她留下过东西（文件）。
       lastWake: sessions.lastWakeAt,
-      lastArtifact,
+      // 只算她自己写的：记忆、拒绝、目标。不含会话日志，也不含 project-watch 的轨迹。
+      lastOwnRecord,
       lastTouch: lastActivity,
       openGoals: goals.open.length,
       goals: goals.total,
@@ -391,6 +396,8 @@ export function buildPanel({
     awareness: {
       wakes: sessions.wakes,
       trace,
+      // 感知子系统最近一次记下外部变化的时间——不是她的动作，所以放在这一区，不挤进 Home。
+      lastChange: trace.lastAt,
     },
   }
 }
@@ -451,7 +458,7 @@ function stat(value, label, hint = '') {
 function renderHome(panel) {
   const { home, store, goals } = panel
   const lastWake = home.lastWake === null ? '还没有' : `约 ${ago(home.lastWake, panel.generatedAt)}`
-  const lastArtifact = home.lastArtifact === null ? '还没有' : `约 ${ago(home.lastArtifact, panel.generatedAt)}`
+  const lastOwn = home.lastOwnRecord === null ? '还没有' : `约 ${ago(home.lastOwnRecord, panel.generatedAt)}`
 
   const cautions = []
   if (!store.exists) {
@@ -478,8 +485,8 @@ function renderHome(panel) {
     ${stat(home.rejections, '被拒写入', '拒绝了什么，记在下面')}
   </div>
   <div class="stats">
-    ${stat(lastWake, '最后一次被叫醒', '会话日志里最新一条记录 · 说明她还在运行')}
-    ${stat(lastArtifact, '最后一次留下东西', '记忆 / 拒绝 / 目标 / 有变化的仓库轨迹（30 秒一次的安静采样不算）')}
+    ${stat(lastWake, '最后一次被叫醒', '会话日志里最新一条记录 · 说明她获得过一次运行机会')}
+    ${stat(lastOwn, '最后一次留下自己的记录', '只算她自己写的：记忆 / 拒绝 / 目标（观察系统的记录不在此列）')}
   </div>
   <p class="note">这个面板只读。它不向 Hikari 注入任何东西，也不替她判断哪条重要。</p>
   ${cautions.map((text) => `<p class="caution">${escapeHtml(text)}</p>`).join('\n  ')}
@@ -593,7 +600,7 @@ function renderWorld(panel) {
 }
 
 function renderAwareness(panel) {
-  const { wakes, trace } = panel.awareness
+  const { wakes, trace, lastChange } = panel.awareness
   const rows = trace.recent
     .map(
       (row) => `
@@ -613,6 +620,7 @@ function renderAwareness(panel) {
   <div class="stats">
     ${stat(wakes, '被唤醒次数', '近 14 天，按日志计')}
     ${stat(trace.exists ? trace.meaningful : '无', '仓库变化事件', trace.exists ? `共 ${trace.total} 条轨迹，去掉安静时段` : '没找到轨迹文件')}
+    ${stat(lastChange === null ? '还没有' : `约 ${ago(lastChange, panel.generatedAt)}`, '最近一次环境变化', '感知子系统记的，不是她写的')}
   </div>
   ${
     rows === ''
