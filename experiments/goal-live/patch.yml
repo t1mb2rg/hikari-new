@@ -1,0 +1,48 @@
+# hikari-goal-verify 的 profile patch：headless 应用 + world / memory / goal 三个插件。
+#
+# 与 experiments/m2c-live/patch.yml 同一套做法：不挂 hikari-native-v0 这个
+# bundle（bundle 自带 perception / project-watch / activation 与观察者人格），
+# 只取验证需要的那几个插件，全部状态指向本实验目录，绝不碰
+# ~/.dsh/hikari 下的真实数据。
+#
+# 两个会话各自独立进程：A 写目标、B 只看注入（另有三次试跑，见 evidence.md §5）。
+
+- id: authorization
+  disabled: false
+
+- id: credentials
+  disabled: false
+
+- id: deepseek-account
+  disabled: false
+
+- id: agent-default-model
+  name: '@deepseek-ai/dsh-agent-default-model'
+  config:
+    provider: deepseek-account
+    model: deepseek-flash
+    reasoningEffort: low
+
+- insert:
+    - id: hikari-world
+      name: 'hikari-native-v0/world'
+      config:
+        sessionId: goal-live
+        settleMs: 300
+        cooldownMs: 0
+        wakeOnWindowChange: false
+        root: 'G:\work\LAB\code\projects\own\hikari-new'
+        registerMemoryTools: false
+
+    # 记忆库独立目录：验证只关心 goal，但 Memory 要能激活（它依赖 findings Service）。
+    - id: hikari-memory
+      name: 'hikari-native-v0/memory'
+      config:
+        storeDir: 'G:\work\LAB\code\projects\own\hikari-new\experiments\goal-live\memory'
+
+    # 被验证的那一个。stateDir 指到实验目录 → 目标是
+    # experiments/goal-live/state/hikari/goal/goals.jsonl。
+    - id: hikari-goal
+      name: 'hikari-native-v0/goal'
+      config:
+        stateDir: 'G:\work\LAB\code\projects\own\hikari-new\experiments\goal-live\state'

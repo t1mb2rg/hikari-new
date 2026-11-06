@@ -97,6 +97,12 @@
     - id: hikari-memory
       name: 'hikari-native-v0/memory'
 
+    # Goal：她自己许下、还没做完的事。一张只追加的清单，跨 Session 唯一。
+    # 每个请求都把她自己写下的未完成项原样摆回眼前（最多 5 条，不排序）。
+    # 不自动创建、不拆解、不判断完成——推进仍然是她自己的事。
+    - id: hikari-goal
+      name: 'hikari-native-v0/goal'
+
     # 方向 2 的驱动源：仓库真的变了才唤醒，而不是前台换了窗口。
     # 它只判断「有事发生」，不判断「这事重要」——后者留给模型。
     - id: hikari-project-watch
