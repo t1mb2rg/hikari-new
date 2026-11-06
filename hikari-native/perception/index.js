@@ -1,11 +1,18 @@
 import { spawn } from 'node:child_process'
 
+import { appendWindowLog, provideWindowLog } from './window-log.js'
+
 /**
  * Hikari Native v0 — Desktop Perception.
  *
  * Observes the real Windows foreground window and emits one event whenever
  * the (process, title) pair changes. This plugin reports what the operating
  * system says; it does not interpret meaning and it does not wake agents.
+ *
+ * It also keeps a short in-memory buffer of those observations (see
+ * ./window-log.js) and exposes it read-only as `hikariWindowLog`, so that a
+ * later wake (the 30-minute heartbeat) can be told what the foreground was
+ * doing in the meantime. The buffer never touches disk.
  */
 export const name = 'hikari-perception'
 export const inject = []
@@ -64,17 +71,22 @@ export function apply(ctx, config) {
   let stopping = false
   let child
 
+  const windowLog = []
+  provideWindowLog(ctx, windowLog)
+
   const observe = (snapshot) => {
     if (typeof snapshot.title !== 'string' || snapshot.title.length === 0) return
     const signature = `${snapshot.process}\u0000${snapshot.title}`
     if (signature === lastSignature) return
     lastSignature = signature
+    const at = Date.now()
+    appendWindowLog(windowLog, { at, process: snapshot.process, title: snapshot.title })
     ctx.emit('hikari/perception/window', {
       hwnd: snapshot.hwnd,
       pid: snapshot.pid,
       process: snapshot.process,
       title: snapshot.title,
-      at: Date.now(),
+      at,
     })
   }
 
