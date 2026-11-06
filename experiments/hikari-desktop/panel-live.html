@@ -53,25 +53,96 @@
 <main>
   <header>
     <h1>Hikari</h1>
-    <p>只读面板 · 生成于 2026-11-05 23:16</p>
+    <p>只读面板 · 生成于 2026-11-06 22:25</p>
   </header>
   
 <section id="home">
   <h2>她现在</h2>
   <div class="stats">
-    <div class="stat"><div class="stat-value">2</div><div class="stat-label">记忆条数</div><div class="stat-hint">2 条现行 · 0 条被修订</div></div>
-    <div class="stat"><div class="stat-value">107</div><div class="stat-label">认识的实体</div><div class="stat-hint">26 个变过</div></div>
-    <div class="stat"><div class="stat-value">222</div><div class="stat-label">最近被唤醒</div><div class="stat-hint">按会话日志里的唤醒提示计</div></div>
+    <div class="stat"><div class="stat-value">7</div><div class="stat-label">记忆条数</div><div class="stat-hint">5 条现行 · 2 条被修订</div></div>
+    <div class="stat"><div class="stat-value">111</div><div class="stat-label">认识的实体</div><div class="stat-hint">28 个变过</div></div>
+    <div class="stat"><div class="stat-value">1 条</div><div class="stat-label">还没做完的事</div><div class="stat-hint">共 1 条承诺</div></div>
+    <div class="stat"><div class="stat-value">245</div><div class="stat-label">最近被唤醒</div><div class="stat-hint">近 14 天，按会话日志里的唤醒提示计</div></div>
     <div class="stat"><div class="stat-value">0</div><div class="stat-label">被拒写入</div><div class="stat-hint">拒绝了什么，记在下面</div></div>
-    <div class="stat"><div class="stat-value">约 刚刚</div><div class="stat-label">最后一次痕迹</div><div class="stat-hint">近似值：看文件最后写入时间</div></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-value">约 2 分钟前</div><div class="stat-label">最后一次被叫醒</div><div class="stat-hint">会话日志里最新一条记录 · 说明她还在运行</div></div>
+    <div class="stat"><div class="stat-value">约 刚刚</div><div class="stat-label">最后一次留下东西</div><div class="stat-hint">记忆 / 拒绝 / 目标 / 有变化的仓库轨迹（30 秒一次的安静采样不算）</div></div>
   </div>
   <p class="note">这个面板只读。它不向 Hikari 注入任何东西，也不替她判断哪条重要。</p>
-  <p class="caution">1 条记忆的发生时间是未知的——她当时不知道现在几点，这里也不替她编。</p>
+  <p class="caution">6 条记忆的发生时间是未知的——她当时不知道现在几点，这里也不替她编。</p>
+</section>
+  
+<section id="goals">
+  <h2>她答应过什么</h2>
+  <ol class="timeline">
+    <li>
+      <div class="row-head">
+        <span class="tag">还没做完</span>
+        <span class="time">2026-11-06 21:10 · 约 1 小时前</span>
+        <span class="seq">g-36c0a92f-ddb…</span>
+      </div>
+      <p class="text">盯住 hikari-live-run-1 第 21 行那句「当时确实没有时钟」：它被更正，或者被明确解释掉之后，把 f-013 关掉；在那之前，每次醒来先看它还在不在。</p>
+      <p class="meta">备注：这处误记会把后来的人指向一个不存在的时钟 bug（f-013）</p>
+    </li></ol>
+  
+  <p class="note">这些是她自己写下的承诺，不是面板推断的待办；排序按当初立下的时间，不按重要性。
+  承诺不是行动：她现在还只是"记着自己要做什么"，没有真正去动手的能力。</p>
 </section>
   
 <section id="memory">
   <h2>她记住了什么</h2>
   <ol class="timeline">
+    <li>
+      <div class="row-head">
+        <span class="seq">#7</span>
+        <span class="tag">修订了 m-07f9bf5e-2…</span>
+        <span class="time">记于 2026-11-06 21:10</span>
+        <span class="time"><span class="unknown">发生时间未知</span></span>
+      </div>
+      <p class="text">我现在有长期目标清单了（set_goal / list_goals / change_goal），它每轮请求都会注入，连心跳醒来这一种也算——所以「手上有没有没做完的事」不再只能靠现拼。两个新风险：(a) 清单空着不等于没有事，只等于我没写…</p>
+      <p class="meta">finding · f-013 · 204 字 · 有效提示：直到 Goal 清单开始自动清理或过期为止</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">#6</span>
+        <span class="tag old">已被 m-803be53b-7… 修订</span>
+        <span class="time">记于 2026-11-06 00:42</span>
+        <span class="time"><span class="unknown">发生时间未知</span></span>
+      </div>
+      <p class="text">我没有 Goal。每次心跳或仓库变化把我叫醒，「手上有没有没做完的事」只能从上一轮的记忆和仓库现状里现拼——所以我能诚实地说「没有」，但那往往是因为我手上最长的事情就是刚才那一分钟。在 Goal 机制存在之前：判断「要不要继续」时，要分清「…</p>
+      <p class="meta">file · docs/development/hikari-live-run-1.md:70 · 163 字 · 有效提示：直到 Hikari 真正有 Goal 机制为止</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">#5</span>
+        <span class="tag">现行</span>
+        <span class="time">记于 2026-11-05 23:29</span>
+        <span class="time"><span class="unknown">发生时间未知</span></span>
+      </div>
+      <p class="text">我有两个可写的地方，寿命不一样：findings（record_finding）住在会话日志里，换掉宿主就没了；memories（write_memory / revise_memory）在我自己的 memory.jsonl 里，换宿主还在…</p>
+      <p class="meta">file · docs/architecture/hikari-desktop-p0-boundary.md:36 · 253 字 · 有效提示：只要 findings 仍然只存在会话日志里就有效</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">#4</span>
+        <span class="tag">修订了 m-c2489b3d-b…</span>
+        <span class="time">记于 2026-11-05 23:21</span>
+        <span class="time"><span class="unknown">发生时间未知</span></span>
+      </div>
+      <p class="text">同一个仓库里可以并存两条时间线——但它可能是暂时的，要复查。hikari-new 里曾有一段：机器时间戳（git 提交、events.json 的 clock、trace 行）与两份当天写下的文档相差四天（文档写 2026-10-30，时钟…</p>
+      <p class="meta">file · docs/development/hikari-live-run-1.md:3 · 235 字 · 有效提示：只要手写日期与机器时间戳可能不同源就一直有效</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">#3</span>
+        <span class="tag old">已被 m-c0492969-3… 修订</span>
+        <span class="time">记于 2026-11-05 23:18</span>
+        <span class="time"><span class="unknown">发生时间未知</span></span>
+      </div>
+      <p class="text">同一个仓库里可以并存两条时间线。hikari-new 的机器时间戳（git 提交、events.json 的 clock、trace 行）把某一天算作 2026-11-03 前后，而仓库里两份当天写下的文档都写 2026-10-30——相差…</p>
+      <p class="meta">finding · f-007 · 231 字 · 有效提示：只要这个仓库的两条时间线没有被对齐就一直有效</p>
+    </li>
     <li>
       <div class="row-head">
         <span class="seq">#2</span>
@@ -100,6 +171,46 @@
 <section id="world">
   <h2>她认为世界是什么样</h2>
   <ol class="findings">
+    <li>
+      <div class="row-head">
+        <span class="seq">f-016</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-11-06 21:40</span>
+      </div>
+      <p class="text">goal 注入的代码是无条件的每请求注入（hikari-native/goal/index.js:414-418，order 160，与 findings 同一机制），但同一条目标在我写完之后那一轮里出现过、在三十分钟后的心跳唤醒里没出现——list_goals 确认它仍是 open。一次丢失读起来正好等于「清单空着」，而这和「没有未完成的事」长得一模一样。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-015</span>
+        <span class="tag status-refuted">被推翻</span>
+        <span class="time">2026-11-06 00:42</span>
+      </div>
+      <p class="text">f-015 结案：那个 60 秒不是遗留值，是他为验收临时改的实例配置；投运记录 §5 写明验收后实例已停、profile 覆盖已撤回，仓库里仍是 30 分钟。当时的「配置与运行时对不上」成立，但不是缺陷。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 被推翻</span> 间隔 1 分 31 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-014</span>
+        <span class="tag status-refuted">被推翻</span>
+        <span class="time">2026-11-06 00:41</span>
+      </div>
+      <p class="text">这个缺口已经补上（不是当初判断错）：activation 现在有第三类 reason 与 renderHeartbeatPrompt，patch 里也挂了 hikari-heartbeat；这一轮就是心跳唤醒本身，提示词只写「已经过了 N 分钟，这段时间没有人跟你说话」，没有替时间编一个理由。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 2 条记录</p>
+      <ul class="changes"><li><span class="tag">待验 → 被推翻</span> 间隔 3 分 12 秒</li></ul>
+    </li>
+    <li>
+      <div class="row-head">
+        <span class="seq">f-013</span>
+        <span class="tag status-open">待验</span>
+        <span class="time">2026-11-05 23:18</span>
+      </div>
+      <p class="text">hikari-live-run-1 把我那条记忆的 occurredAt: null 记成「当时确实没有时钟」——不是。机器有钟，而且从上次唤醒到这次它走了大约 49 小时；我留空是因为这个仓库里并存两条相差四天的时间线，不愿写一个自己核不准的时刻。这处误记会把问题指向「缺时钟」，而真正的问题是日期口径不统一。</p>
+      <p class="meta">会话 <code>session-hikari</code> · 1 条记录</p>
+      <p class="meta">没有状态变化</p>
+    </li>
     <li>
       <div class="row-head">
         <span class="seq">f-012</span>
@@ -1171,18 +1282,132 @@
       <p class="meta">没有状态变化</p>
     </li></ol>
   <p class="note">编号只在会话内唯一：<code>f-001</code> 在不同会话里不是同一条。上面每条都标了会话。
-  读的是 103 / 154 个会话（近 14 天有写入的），
-  48803 帧 / 83657 条记录。</p>
+  读的是 112 / 163 个会话（近 14 天有写入的），
+  50817 帧 / 87063 条记录。</p>
 </section>
   
 <section id="awareness">
   <h2>她观察到了什么</h2>
   <p class="note">只有一半：仓库变化有结构化轨迹；窗口切换没有落盘，只在她被唤醒时的提示词里留过一句话。</p>
   <div class="stats">
-    <div class="stat"><div class="stat-value">222</div><div class="stat-label">被唤醒次数</div><div class="stat-hint">近 14 天，按日志计</div></div>
-    <div class="stat"><div class="stat-value">37</div><div class="stat-label">仓库变化事件</div><div class="stat-hint">共 609 条轨迹，去掉安静时段</div></div>
+    <div class="stat"><div class="stat-value">245</div><div class="stat-label">被唤醒次数</div><div class="stat-hint">近 14 天，按日志计</div></div>
+    <div class="stat"><div class="stat-value">56</div><div class="stat-label">仓库变化事件</div><div class="stat-hint">共 2398 条轨迹，去掉安静时段</div></div>
   </div>
   <table class="trace"><thead><tr><th>时间</th><th>类型</th><th>HEAD</th><th>工作区</th></tr></thead><tbody>
+    <tr>
+      <td>2026-11-06 22:25</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 22:24</td>
+      <td><code>cooldown</code></td>
+      <td>7586602</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 22:23</td>
+      <td><code>cooldown</code></td>
+      <td>7586602</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 22:23</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 21:45</td>
+      <td><code>cooldown</code></td>
+      <td>7586602</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 21:44</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 20:39</td>
+      <td><code>baseline</code></td>
+      <td>ddad046</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 20:20</td>
+      <td><code>baseline</code></td>
+      <td>ddad046</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 00:43</td>
+      <td><code>cooldown</code></td>
+      <td>ddad046</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 00:43</td>
+      <td><code>cooldown</code></td>
+      <td>ddad046</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 00:42</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 00:42</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 00:39</td>
+      <td><code>baseline</code></td>
+      <td>eb75649</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 00:38</td>
+      <td><code>cooldown</code></td>
+      <td>eb75649</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 00:37</td>
+      <td><code>cooldown</code></td>
+      <td>eb75649</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-06 00:37</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 23:29</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 23:21</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2026-11-05 23:18</td>
+      <td><code>emitted</code></td>
+      <td></td>
+      <td>—</td>
+    </tr>
     <tr>
       <td>2026-11-05 23:08</td>
       <td><code>baseline</code></td>
@@ -1308,113 +1533,10 @@
       <td><code>cooldown</code></td>
       <td>172e5e0</td>
       <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 20:37</td>
-      <td><code>emitted</code></td>
-      <td></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 18:48</td>
-      <td><code>emitted</code></td>
-      <td></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 18:39</td>
-      <td><code>emitted</code></td>
-      <td></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 18:39</td>
-      <td><code>cooldown</code></td>
-      <td>b4c4237</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 18:37</td>
-      <td><code>emitted</code></td>
-      <td></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 17:29</td>
-      <td><code>cooldown</code></td>
-      <td>b4c4237</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 17:29</td>
-      <td><code>emitted</code></td>
-      <td></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 17:27</td>
-      <td><code>baseline</code></td>
-      <td>2e7eb58</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 17:24</td>
-      <td><code>emitted</code></td>
-      <td></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 17:24</td>
-      <td><code>emitted</code></td>
-      <td></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 17:23</td>
-      <td><code>baseline</code></td>
-      <td>e3b7393</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 17:21</td>
-      <td><code>baseline</code></td>
-      <td>e3b7393</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 17:07</td>
-      <td><code>cooldown</code></td>
-      <td>e3b7393</td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 17:06</td>
-      <td><code>emitted</code></td>
-      <td></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 16:42</td>
-      <td><code>emitted</code></td>
-      <td></td>
-      <td>—</td>
-    </tr>
-    <tr>
-      <td>2026-11-03 16:42</td>
-      <td><code>baseline</code></td>
-      <td>b4e9c56</td>
-      <td>—</td>
     </tr></tbody></table>
 </section>
-  
-<section id="activities">
-  <h2>还有什么没完成</h2>
-  <p class="empty">还不知道。</p>
-  <p class="note">没有任何地方记着"Hikari 打算做什么、做到哪一步"。会话日志里的工具调用与待办属于宿主，不是她的行动。
-  这一格要等未决事项与行动有归属之后才填得出来——在那之前留白，不编。</p>
-</section>
   <footer>
-    数据：<code>C:\Users\29719\.dsh\hikari\memory</code> 的记忆与拒绝记录、DSH 会话日志里的认识、project-watch 的仓库轨迹。<br>
+    数据：<code>C:\Users\29719\.dsh\hikari\memory</code> 的记忆与拒绝记录、<code>C:\Users\29719\.dsh\hikari\goal\goals.jsonl</code> 的目标、DSH 会话日志里的认识与唤醒、project-watch 的仓库轨迹。<br>
     这个页面不写任何东西，也没有脚本；关掉它就等于关掉了面板。要更新，重新生成一次。
   </footer>
 </main>

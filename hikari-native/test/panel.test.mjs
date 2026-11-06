@@ -15,7 +15,7 @@ import zlib from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
-import { buildPanel, renderPanel, readSessions, readZstdFrames } from '../panel/build.mjs'
+import { buildPanel, defaultGoalPath, renderPanel, readSessions, readZstdFrames } from '../panel/build.mjs'
 
 const run = promisify(execFile)
 const HERE = path.dirname(fileURLToPath(import.meta.url))
@@ -246,7 +246,9 @@ describe('说实话', () => {
     assert.ok(html.includes('&lt;script&gt;'))
     assert.ok(!html.includes('<script'))
     assert.ok(!/https?:\/\//u.test(html))
-    assert.ok(html.includes('还不知道'))
+    assert.ok(!/<script/iu.test(html))
+    // 没有目标库时照实说，不编一条"要做的事"
+    assert.ok(html.includes('还没给自己立过任何承诺'))
   })
 
   test('[7] 生成物是自包含的单页：没有外链、没有脚本、没有第二个数据源', () => {
@@ -285,5 +287,121 @@ describe('命令行', () => {
     const html = fs.readFileSync(out, 'utf8')
     assert.ok(html.includes('记忆条数'))
     assert.ok(html.includes('Hikari 的 Memory 修订约定'))
+  })
+})
+
+describe('目标', () => {
+  /** 一个目标库：两条还开着、一条已了结；同编号再出现以最后一条为准。 */
+  function goalsAt(dir) {
+    const file = path.join(dir, 'goal', 'goals.jsonl')
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    const rows = [
+      { goalId: 'g-aaaaaaaa-1111-4111-8111-111111111111', text: '把清单接进自主唤醒', status: 'open', note: null, at: 1793967683137 },
+      { goalId: 'g-bbbbbbbb-2222-4222-8222-222222222222', text: '给面板加自动重建', status: 'open', note: '先看清楚再动', at: 1793967683141 },
+      { goalId: 'g-bbbbbbbb-2222-4222-8222-222222222222', text: '给面板加自动重建', status: 'done', note: '先看清楚再动', at: 1793967684036 },
+      { goalId: 'g-cccccccc-3333-4333-8333-333333333333', text: '盯住那条误记', status: 'open', note: null, at: 1793970610320 },
+    ]
+    fs.writeFileSync(file, rows.map((row) => `${JSON.stringify(row)}\n`).join(''), 'utf8')
+    return file
+  }
+
+  test('[9] 目标库：同编号最后一条算数，open 与已收口分开', () => {
+    const dir = tempDir('goals')
+    const store = path.join(dir, 'store')
+    fs.mkdirSync(store, { recursive: true })
+    const file = goalsAt(dir)
+
+    // 默认路径由记忆库的兄弟目录推出来，与 hikari-goal 的落盘位置一致
+    assert.equal(defaultGoalPath(store), file)
+
+    const panel = buildPanel({
+      storeDir: store,
+      sessionsDir: path.join(dir, 'no-sessions'),
+      tracePath: path.join(dir, 'no-trace.jsonl'),
+    })
+
+    assert.equal(panel.goals.exists, true)
+    assert.equal(panel.goals.total, 3) // 同一编号折叠后是三条，不是四行
+    assert.equal(panel.goals.open.length, 2)
+    assert.equal(panel.goals.closed.length, 1)
+    assert.equal(panel.home.openGoals, 2)
+    assert.equal(panel.home.goals, 3)
+    // open 按立下时间升序
+    assert.deepEqual(
+      panel.goals.open.map((goal) => goal.goalId.slice(2, 10)),
+      ['aaaaaaaa', 'cccccccc'],
+    )
+    // 折掉的那条 bbbb 是 done
+    assert.equal(panel.goals.closed[0].status, 'done')
+  })
+
+  test('[10] 目标在她自己的面板里看得见，且明说"承诺不是行动"', () => {
+    const dir = tempDir('goals-html')
+    const store = path.join(dir, 'store')
+    fs.mkdirSync(store, { recursive: true })
+    goalsAt(dir)
+
+    const html = renderPanel(
+      buildPanel({
+        storeDir: store,
+        sessionsDir: path.join(dir, 'no-sessions'),
+        tracePath: path.join(dir, 'no-trace.jsonl'),
+      }),
+    )
+
+    assert.ok(html.includes('她答应过什么'))
+    assert.ok(html.includes('把清单接进自主唤醒'))
+    assert.ok(html.includes('盯住那条误记'))
+    assert.ok(html.includes('先看清楚再动'))
+    assert.ok(html.includes('已经收口的'))
+    assert.ok(html.includes('承诺不是行动'))
+    // 没做完的事在首页也有一格
+    assert.ok(html.includes('还没做完的事'))
+  })
+})
+
+describe('两种"最后时间"', () => {
+  test('[11] 她只醒过、没写东西：最后被叫醒是新的，最后留下东西还是旧的', () => {
+    const dir = tempDir('wake-time')
+    const store = path.join(dir, 'store')
+    fs.mkdirSync(store, { recursive: true })
+    const memoryFile = path.join(store, 'memory.jsonl')
+    fs.writeFileSync(
+      memoryFile,
+      `${JSON.stringify(
+        memoryRecord({
+          memoryId: 'm-99999999-9999-4999-8999-999999999999',
+          seq: 1,
+          text: '早期的一条记忆',
+          recordedAt: 1793842597808,
+        }),
+      )}\n`,
+      'utf8',
+    )
+    fs.utimesSync(memoryFile, new Date(1793842597808), new Date(1793842597808))
+
+    const sessions = tempDir('wake-sessions')
+    writeSession(sessions, '--ws--', 'session-hikari', [
+      { type: 'user/message', seq: 1, time: 1793980000000, data: { text: '[Hikari 自主观察 09:00] 已经过了 30 分钟' } },
+      { type: 'assistant/message', seq: 2, time: 1793980012345, data: { text: '没什么。' } },
+    ])
+
+    const panel = buildPanel({
+      storeDir: store,
+      sessionsDir: sessions,
+      tracePath: path.join(dir, 'no-trace.jsonl'),
+      now: 1793980100000,
+    })
+
+    assert.equal(panel.home.wakes, 1)
+    assert.equal(panel.home.lastWake, 1793980000000)
+    // 会话日志里最新一条记录（含她自己的回答）
+    assert.equal(panel.home.lastTouch, 1793980012345)
+    // 她这一轮没写记忆、没写认识、没写轨迹：留下东西的时间仍是记忆文件的
+    assert.equal(panel.home.lastArtifact, 1793842597808)
+
+    const html = renderPanel(panel)
+    assert.ok(html.includes('最后一次被叫醒'))
+    assert.ok(html.includes('最后一次留下东西'))
   })
 })

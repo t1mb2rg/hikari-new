@@ -4,7 +4,8 @@
 // 这个文件只做一件事：把散在三处的东西读出来，拼成一个能双击打开的 HTML。
 //
 //   - 记忆与拒绝：<store>/memory.jsonl、<store>/memory.rejections.jsonl
-//   - 认识变化：DSH 会话日志里的 plugin:hikari/finding 记录（多帧 zstd）
+//   - 目标：<记忆库的兄弟目录>/goal/goals.jsonl（与 hikari-goal 同一折叠规则）
+//   - 认识与唤醒：DSH 会话日志（多帧 zstd）——认识变化、被叫醒几次、最后一次被叫醒
 //   - 仓库观察：hikari-project-watch 的 trace.jsonl（产线已开）
 //
 // 边界（见 docs/architecture/hikari-desktop-p0-boundary.md §6）：
@@ -27,8 +28,10 @@ import { buildView, defaultStoreDir } from '../viewer/render.mjs'
 const ZSTD_MAGIC = Buffer.from([0x28, 0xb5, 0x2f, 0xfd])
 const MEMORY_JSONL = 'memory.jsonl'
 const REJECTIONS_FILE = 'memory.rejections.jsonl'
+const GOAL_JSONL = 'goals.jsonl'
 const FINDING_TYPE = 'plugin:hikari/finding'
 const WAKE_PREFIX = '[Hikari 自主观察'
+const TIME_PATTERN = /"time":(\d+)/u
 const DEFAULT_TRACE = path.join('experiments', 'hikari-project-watch', 'tmp', 'trace.jsonl')
 const SNIPPET_CHARS = 120
 const TRACE_ROWS = 40
@@ -36,6 +39,38 @@ const TRACE_ROWS = 40
 export function defaultSessionsDir(env = process.env, home = homedir()) {
   const root = env.DSH_HOME ?? path.join(home, '.dsh')
   return path.join(root, 'sessions')
+}
+
+/**
+ * 目标库和记忆库是兄弟目录（~/.dsh/hikari/memory 与 ~/.dsh/hikari/goal）。
+ * 传实验库时同理：experiments/x/store → experiments/x/goal/goals.jsonl。
+ * 只推导路径，不替她判断哪条目标还在进行——折叠规则与 hikari-goal 一致：同编号最后一行算数。
+ */
+export function defaultGoalPath(storeDir) {
+  return path.join(path.dirname(storeDir), 'goal', GOAL_JSONL)
+}
+
+/** 把 goals.jsonl 折成"每个编号最后一条"，分出还没做完的与已经收口的。 */
+export function summarizeGoals(records) {
+  const byId = new Map()
+  let badRecords = 0
+  for (const record of records) {
+    if (record === null || typeof record !== 'object') {
+      badRecords++
+      continue
+    }
+    if (typeof record.goalId !== 'string' || record.goalId === '') {
+      badRecords++
+      continue
+    }
+    byId.set(record.goalId, record)
+  }
+  const goals = [...byId.values()]
+  const open = goals
+    .filter((goal) => goal.status === 'open')
+    .sort((a, b) => (a.at ?? 0) - (b.at ?? 0) || a.goalId.localeCompare(b.goalId))
+  const closed = goals.filter((goal) => goal.status !== 'open')
+  return { total: goals.length, open, closed, badRecords }
 }
 
 /** 读一个 JSONL；坏行不抛错，只计数（与 viewer 一致）。 */
@@ -116,6 +151,10 @@ export function readSessions(sessionsDir, { sinceMs = null, maxSessions = 400 } 
     bytes: 0,
     badFrames: 0,
     badLines: 0,
+    // 会话日志里最新一条记录的时间：她"刚刚有动作"的直接证据，
+    // 与"最后一次留下东西"（记忆/认识/轨迹）是两件事，一个是"活着"，一个是"留下痕迹"。
+    lastAt: null,
+    lastWakeAt: null,
   }
   if (!fs.existsSync(sessionsDir)) return { ...empty, missing: true }
 
@@ -154,6 +193,16 @@ export function readSessions(sessionsDir, { sinceMs = null, maxSessions = 400 } 
       for (const line of chunk.split('\n')) {
         if (line === '') continue
         out.records++
+        // 每条记录都带顶层 time（毫秒）。为了不把 8 万行全部 JSON.parse，
+        // 先按字面取时间；取不到就当这条没有时间，不猜、也不编。
+        const at = TIME_PATTERN.exec(line)
+        if (at !== null) {
+          const ms = Number(at[1])
+          if (Number.isFinite(ms) && (out.lastAt === null || ms > out.lastAt)) out.lastAt = ms
+          if (line.includes(WAKE_PREFIX) && line.includes('"type":"user/message"')) {
+            if (out.lastWakeAt === null || ms > out.lastWakeAt) out.lastWakeAt = ms
+          }
+        }
         if (line.includes(FINDING_TYPE)) {
           let record
           try {
@@ -233,12 +282,16 @@ export function summarizeFindings(findings) {
 export function readTrace(tracePath, { rows = TRACE_ROWS } = {}) {
   const { records, mtime } = readJsonlFile(tracePath)
   const meaningful = records.filter((row) => row?.kind !== 'quiet')
+  // 文件的 mtime 不能当"她留下了什么"：project-watch 每 30 秒都会写一行 quiet，
+  // 那只是心跳式采样，不是她的动作。所以取最后一条真正有变化的行的时间。
+  const lastAt = meaningful.length === 0 ? null : (meaningful[meaningful.length - 1]?.at ?? null)
   return {
     path: tracePath,
     exists: mtime !== null,
     total: records.length,
     meaningful: meaningful.length,
     recent: meaningful.slice(-rows).reverse(),
+    lastAt,
     mtime,
   }
 }
@@ -264,14 +317,18 @@ export function buildPanel({
   storeDir,
   sessionsDir,
   tracePath,
+  goalPath,
   now = Date.now(),
   sinceDays = 14,
 } = {}) {
   const store = storeDir ?? defaultStoreDir()
   const memoryFile = path.join(store, MEMORY_JSONL)
   const rejectionsFile = path.join(store, REJECTIONS_FILE)
+  const goalsFile = goalPath ?? defaultGoalPath(store)
   const { records, badLines, mtime: memoryMtime } = readJsonlFile(memoryFile)
   const rejections = readJsonlFile(rejectionsFile)
+  const goalFile = readJsonlFile(goalsFile)
+  const goals = summarizeGoals(goalFile.records)
 
   const view = buildView(records, rejections.records, { unreadableLines: rejections.badLines })
   const sessions = readSessions(sessionsDir ?? defaultSessionsDir(), {
@@ -282,6 +339,10 @@ export function buildPanel({
 
   const heads = entities.filter((entity) => entity.transitions.length === 0).length
   const changed = entities.length - heads
+  // "留下了东西"= 记忆、拒绝、目标、或一条真正有变化的仓库轨迹，任一被写过。
+  // 不含会话日志本身（那是"醒着"的证据），也不含 trace 文件 mtime（每 30 秒都会变）。
+  const lastArtifact = newestOf(memoryMtime, rejections.mtime, goalFile.mtime, trace.lastAt)
+  const lastActivity = newestOf(lastArtifact, sessions.lastAt)
 
   return {
     generatedAt: now,
@@ -295,8 +356,21 @@ export function buildPanel({
       findings: entities.length,
       findingsChanged: changed,
       wakes: sessions.wakes,
-      // "在线"只能是近似：没有任何进程自报在场，只能看文件最后被谁碰过。
-      lastTouch: newestOf(memoryMtime, rejections.mtime, trace.mtime),
+      // "在线"只能是近似：没有任何进程自报在场。
+      // 所以拆成两个数：她被叫醒过（会话日志），她留下过东西（文件）。
+      lastWake: sessions.lastWakeAt,
+      lastArtifact,
+      lastTouch: lastActivity,
+      openGoals: goals.open.length,
+      goals: goals.total,
+    },
+    goals: {
+      path: goalsFile,
+      exists: goalFile.mtime !== null,
+      badLines: goalFile.badLines,
+      total: goals.total,
+      open: goals.open,
+      closed: goals.closed,
     },
     memory: {
       // timeline 已是"新的在上"（buildView 里 reverse 过）
@@ -375,11 +449,9 @@ function stat(value, label, hint = '') {
 }
 
 function renderHome(panel) {
-  const { home, store } = panel
-  const online =
-    home.lastTouch === null
-      ? '没有痕迹'
-      : `约 ${ago(home.lastTouch, panel.generatedAt)}`
+  const { home, store, goals } = panel
+  const lastWake = home.lastWake === null ? '还没有' : `约 ${ago(home.lastWake, panel.generatedAt)}`
+  const lastArtifact = home.lastArtifact === null ? '还没有' : `约 ${ago(home.lastArtifact, panel.generatedAt)}`
 
   const cautions = []
   if (!store.exists) {
@@ -391,6 +463,9 @@ function renderHome(panel) {
   if (panel.world.missing) {
     cautions.push('没找到会话日志目录：认识变化这一格是空的，不是"她没想过"。')
   }
+  if (!goals.exists) {
+    cautions.push('还没有目标库：她还没给自己立过任何承诺，不是读取失败。')
+  }
 
   return `
 <section id="home">
@@ -398,9 +473,13 @@ function renderHome(panel) {
   <div class="stats">
     ${stat(home.memories, '记忆条数', `${home.heads} 条现行 · ${home.revised} 条被修订`)}
     ${stat(home.findings, '认识的实体', `${home.findingsChanged} 个变过`)}
-    ${stat(home.wakes, '最近被唤醒', '按会话日志里的唤醒提示计')}
+    ${stat(`${home.openGoals} 条`, '还没做完的事', `共 ${home.goals} 条承诺`)}
+    ${stat(home.wakes, '最近被唤醒', '近 14 天，按会话日志里的唤醒提示计')}
     ${stat(home.rejections, '被拒写入', '拒绝了什么，记在下面')}
-    ${stat(online, '最后一次痕迹', '近似值：看文件最后写入时间')}
+  </div>
+  <div class="stats">
+    ${stat(lastWake, '最后一次被叫醒', '会话日志里最新一条记录 · 说明她还在运行')}
+    ${stat(lastArtifact, '最后一次留下东西', '记忆 / 拒绝 / 目标 / 有变化的仓库轨迹（30 秒一次的安静采样不算）')}
   </div>
   <p class="note">这个面板只读。它不向 Hikari 注入任何东西，也不替她判断哪条重要。</p>
   ${cautions.map((text) => `<p class="caution">${escapeHtml(text)}</p>`).join('\n  ')}
@@ -543,13 +622,53 @@ function renderAwareness(panel) {
 </section>`
 }
 
-function renderActivities() {
+const GOAL_STATUS_LABEL = {
+  open: '还没做完',
+  done: '已了结',
+  dropped: '已放下',
+}
+
+function renderGoals(panel) {
+  const { goals } = panel
+  const rows = (list, closed) =>
+    list
+      .map(
+        (goal) => `
+    <li>
+      <div class="row-head">
+        <span class="tag${closed ? ' old' : ''}">${escapeHtml(GOAL_STATUS_LABEL[goal.status] ?? goal.status ?? '状态未知')}</span>
+        <span class="time">${escapeHtml(stamp(goal.at))} · 约 ${escapeHtml(ago(goal.at, panel.generatedAt))}</span>
+        <span class="seq">${escapeHtml(goal.goalId.slice(0, 14))}…</span>
+      </div>
+      <p class="text">${escapeHtml(goal.text ?? '（没有正文）')}</p>
+      ${goal.note === null || goal.note === undefined || goal.note === '' ? '' : `<p class="meta">备注：${escapeHtml(goal.note)}</p>`}
+    </li>`,
+      )
+      .join('')
+
+  const openRows = rows(goals.open, false)
+  const closedRows = rows(goals.closed.slice().reverse(), true)
+
   return `
-<section id="activities">
-  <h2>还有什么没完成</h2>
-  <p class="empty">还不知道。</p>
-  <p class="note">没有任何地方记着"Hikari 打算做什么、做到哪一步"。会话日志里的工具调用与待办属于宿主，不是她的行动。
-  这一格要等未决事项与行动有归属之后才填得出来——在那之前留白，不编。</p>
+<section id="goals">
+  <h2>她答应过什么</h2>
+  ${
+    !goals.exists
+      ? '<p class="empty">还没有目标库：她还没给自己立过任何承诺。等她第一次调用 <code>set_goal</code>，这里会出现第一条。</p>'
+      : openRows === ''
+        ? '<p class="empty">没有还没做完的事。她立下的承诺目前都收口了。</p>'
+        : `<ol class="timeline">${openRows}</ol>`
+  }
+  ${
+    closedRows === ''
+      ? ''
+      : `<h3>已经收口的</h3>
+  <ol class="timeline closed">${closedRows}</ol>`
+  }
+  <p class="note">这些是她自己写下的承诺，不是面板推断的待办；排序按当初立下的时间，不按重要性。
+  承诺不是行动：她现在还只是"记着自己要做什么"，没有真正去动手的能力。${
+    goals.badLines === 0 ? '' : `（目标库里有 ${escapeHtml(goals.badLines)} 行读不懂，已跳过。）`
+  }</p>
 </section>`
 }
 
@@ -613,12 +732,12 @@ export function renderPanel(panel) {
     <p>只读面板 · 生成于 ${escapeHtml(generated)}</p>
   </header>
   ${renderHome(panel)}
+  ${renderGoals(panel)}
   ${renderMemory(panel)}
   ${renderWorld(panel)}
   ${renderAwareness(panel)}
-  ${renderActivities()}
   <footer>
-    数据：<code>${escapeHtml(panel.store.dir)}</code> 的记忆与拒绝记录、DSH 会话日志里的认识、project-watch 的仓库轨迹。<br>
+    数据：<code>${escapeHtml(panel.store.dir)}</code> 的记忆与拒绝记录、<code>${escapeHtml(panel.goals.path)}</code> 的目标、DSH 会话日志里的认识与唤醒、project-watch 的仓库轨迹。<br>
     这个页面不写任何东西，也没有脚本；关掉它就等于关掉了面板。要更新，重新生成一次。
   </footer>
 </main>
@@ -627,13 +746,14 @@ export function renderPanel(panel) {
 `
 }
 
-const USAGE = `usage: node hikari-native/panel/build.mjs [--store <dir>] [--sessions <dir>] [--trace <file>] [--out <file>] [--since-days <n>]`
+const USAGE = `usage: node hikari-native/panel/build.mjs [--store <dir>] [--sessions <dir>] [--trace <file>] [--goals <file>] [--out <file>] [--since-days <n>]`
 
 function parseArgs(argv) {
   const options = {
     store: null,
     sessions: null,
     trace: null,
+    goals: null,
     out: null,
     sinceDays: 14,
   }
@@ -646,6 +766,7 @@ function parseArgs(argv) {
     if (arg === '--store') options.store = next()
     else if (arg === '--sessions') options.sessions = next()
     else if (arg === '--trace') options.trace = next()
+    else if (arg === '--goals') options.goals = next()
     else if (arg === '--out') options.out = next()
     else if (arg === '--since-days') options.sinceDays = Number(next())
     else if (arg === '--help' || arg === '-h') {
@@ -660,10 +781,12 @@ function parseArgs(argv) {
 
 async function main() {
   const options = parseArgs(process.argv.slice(2))
+  const storeDir = options.store ?? defaultStoreDir()
   const panel = buildPanel({
-    storeDir: options.store ?? defaultStoreDir(),
+    storeDir,
     sessionsDir: options.sessions ?? defaultSessionsDir(),
     tracePath: options.trace ?? path.join(process.cwd(), DEFAULT_TRACE),
+    goalPath: options.goals ?? defaultGoalPath(storeDir),
     sinceDays: options.sinceDays,
   })
   const html = renderPanel(panel)
@@ -672,7 +795,7 @@ async function main() {
   } else {
     fs.writeFileSync(options.out, html, 'utf8')
     process.stderr.write(
-      `panel: ${options.out}（记忆 ${panel.home.memories} 条 · 认识 ${panel.home.findings} 条 · 拒绝 ${panel.home.rejections} 条）\n`,
+      `panel: ${options.out}（记忆 ${panel.home.memories} 条 · 认识 ${panel.home.findings} 条 · 目标 ${panel.home.openGoals} 条没做完 · 拒绝 ${panel.home.rejections} 条）\n`,
     )
   }
 }
